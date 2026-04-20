@@ -137,16 +137,76 @@
   },
   "home": {
     "greeting": "أهلاً بك",
-    "subtitle": "نظرة سريعة على محفظتك",
-    "quickActions": "إجراءات سريعة",
-    "newContract": "عقد جديد",
-    "newNote": "سند لأمر",
-    "customers": "العملاء",
-    "reports": "التقارير",
-    "overview": "ملخّص الشهر",
-    "activeContracts": "عقود نشطة",
-    "dueSoon": "مستحقات قريبة",
-    "collected": "المُحصَّل"
+    "subtitle": "ملخّص نشاطك لهذا الشهر",
+    "eligibilityTitle": "أهلية التأجير",
+    "eligibilitySub": "رصيدك المعتمد لإبرام العقود",
+    "remaining": "المتبقي",
+    "of": "من",
+    "used": "المستخدم",
+    "viewDetails": "عرض التفاصيل",
+    "summaryInvoices": "فواتير",
+    "summaryContracts": "عقود",
+    "summaryNotes": "سندات",
+    "viewAll": "عرض الكل"
+  },
+  "sections": {
+    "activeInvoices": "الفواتير الجارية",
+    "activeContracts": "العقود النشطة",
+    "activeNotes": "السندات النشطة",
+    "history": "سجل الإيجارات السابقة",
+    "due": "الاستحقاق",
+    "monthly": "القسط الشهري",
+    "closedOn": "تاريخ الإقفال",
+    "ref": "المرجع",
+    "counterparty": "الطرف الآخر",
+    "noInvoices": "لا توجد فواتير جارية",
+    "noContracts": "لا توجد عقود نشطة",
+    "noNotes": "لا توجد سندات نشطة",
+    "noHistory": "لا يوجد سجل إيجار سابق",
+    "emptyHint": "سيظهر هنا كل جديد فور تفعيله."
+  },
+  "status": {
+    "invoice": {
+      "due": "مستحقة",
+      "overdue": "متأخرة",
+      "paid": "مدفوعة"
+    },
+    "contract": {
+      "active": "نشِط",
+      "pending": "قيد التوقيع",
+      "ended": "منتهٍ"
+    },
+    "note": {
+      "signed": "موقَّع",
+      "pending": "قيد الإصدار",
+      "defaulted": "متعثِّر"
+    },
+    "history": {
+      "completed": "مكتمل",
+      "closed": "مُقفل",
+      "cancelled": "ملغى"
+    }
+  },
+  "eligibility": {
+    "title": "أهلية التأجير",
+    "subtitle": "حدّ مالي مُعتمد لعقود التأجير الخاصة بك.",
+    "limit": "الحد الكلي",
+    "used": "المستخدم",
+    "remaining": "المتبقي",
+    "tier": "المستوى",
+    "usageOfLimit": "المستخدم من الحد",
+    "assignedBy": "معتمَد من",
+    "assignedOn": "تاريخ الاعتماد",
+    "adminNotice": "يتم تخصيص الأهلية يدوياً من قبل فريق AppLux بناءً على ملفك وسجلك.",
+    "breakdown": "توزيع الاستخدام",
+    "contractsShare": "التزامات العقود النشطة",
+    "invoicesShare": "الفواتير المستحقة",
+    "noUsage": "لا يوجد استخدام حالي",
+    "tiers": {
+      "standard": "قياسي",
+      "premium": "متميّز",
+      "elite": "نخبة"
+    }
   },
   "contracts": {
     "title": "العقود",

@@ -7,6 +7,18 @@ import {
   useState,
   type ReactNode,
 } from 'react';
+import {
+  DEFAULT_ELIGIBILITY,
+  SEED_CONTRACTS,
+  SEED_HISTORY,
+  SEED_INVOICES,
+  SEED_NOTES,
+  type Contract,
+  type HistoryItem,
+  type Invoice,
+  type PromissoryNote,
+  type RentalEligibility,
+} from './data';
 
 export type RegistrationDraft = {
   fullName: string;
@@ -48,6 +60,11 @@ type StoreContextValue = {
   resetDraft: () => void;
   completeRegistration: (nafathVerified: boolean) => UserProfile;
   signOut: () => void;
+  eligibility: RentalEligibility;
+  invoices: Invoice[];
+  contracts: Contract[];
+  notes: PromissoryNote[];
+  history: HistoryItem[];
 };
 
 const STORAGE_KEY = 'applux.session';
@@ -102,9 +119,39 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     setDraft(emptyRegistration);
   }, []);
 
+  const eligibility = DEFAULT_ELIGIBILITY;
+  const invoices = SEED_INVOICES;
+  const contracts = SEED_CONTRACTS;
+  const notes = SEED_NOTES;
+  const history = SEED_HISTORY;
+
   const value = useMemo<StoreContextValue>(
-    () => ({ session, draft, updateDraft, resetDraft, completeRegistration, signOut }),
-    [session, draft, updateDraft, resetDraft, completeRegistration, signOut],
+    () => ({
+      session,
+      draft,
+      updateDraft,
+      resetDraft,
+      completeRegistration,
+      signOut,
+      eligibility,
+      invoices,
+      contracts,
+      notes,
+      history,
+    }),
+    [
+      session,
+      draft,
+      updateDraft,
+      resetDraft,
+      completeRegistration,
+      signOut,
+      eligibility,
+      invoices,
+      contracts,
+      notes,
+      history,
+    ],
   );
 
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>;

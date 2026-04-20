@@ -1,37 +1,41 @@
+import { Link, useNavigate } from 'react-router-dom';
 import { Header, Screen } from '@/components/layout';
 import {
   Avatar,
-  Button,
   Card,
-  CardHeader,
+  EmptyState,
   IconButton,
+  ProgressBar,
   SectionHeader,
-  StatCard,
   StatusChip,
 } from '@/components/ui';
 import {
   ArrowIcon,
   BellIcon,
-  ChartIcon,
   DocIcon,
-  PlusIcon,
-  UsersIcon,
+  HistoryIcon,
+  ReceiptIcon,
   WalletIcon,
 } from '@/components/icons';
 import { useI18n, useT } from '@/lib/i18n';
 import { useStore } from '@/lib/store';
+import { cn } from '@/lib/cn';
+import {
+  ContractRow,
+  HistoryRow,
+  InvoiceRow,
+  NoteRow,
+} from '@/components/rental/Rows';
+import type { ReactNode } from 'react';
 
 export default function Home() {
   const t = useT();
-  const { formatCurrency, dir } = useI18n();
-  const { session } = useStore();
+  const { dir, formatCurrency } = useI18n();
+  const { session, eligibility, invoices, contracts, notes, history } = useStore();
+  const navigate = useNavigate();
 
-  const quickActions = [
-    { key: 'newContract', icon: <DocIcon size={20} />, tone: 'bg-brand-50 text-brand-600' },
-    { key: 'newNote', icon: <WalletIcon size={20} />, tone: 'bg-[#FBF2DD] text-gold-600' },
-    { key: 'customers', icon: <UsersIcon size={20} />, tone: 'bg-success-50 text-success-600' },
-    { key: 'reports', icon: <ChartIcon size={20} />, tone: 'bg-ink-100 text-ink-700' },
-  ] as const;
+  const firstName = session?.fullName?.split(' ')[0] ?? '';
+  const usagePct = Math.round((eligibility.used / eligibility.limit) * 100);
 
   return (
     <>
@@ -41,7 +45,7 @@ export default function Home() {
         title={
           <span className="text-white">
             {t('home.greeting')}
-            {session?.fullName ? `، ${session.fullName.split(' ')[0]}` : ''}
+            {firstName && `، ${firstName}`}
           </span>
         }
         subtitle={t('home.subtitle')}
@@ -52,98 +56,230 @@ export default function Home() {
         }
       />
       <Screen>
-        <Card padded className="-mt-10 relative">
-          <div className="flex items-start justify-between">
-            <div>
+        {/* Eligibility summary card */}
+        <Card padded className="-mt-10 relative space-y-4">
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
               <div className="text-[12px] font-medium text-ink-400 uppercase tracking-wide">
-                {t('home.collected')}
+                {t('home.eligibilityTitle')}
               </div>
-              <div className="mt-1 text-2xl font-bold text-ink-900 num">
-                {formatCurrency(128450)}
-              </div>
-              <div className="mt-1 flex items-center gap-2">
-                <StatusChip tone="success" label="+12.4%" />
-                <span className="text-[12px] text-ink-400">{t('home.overview')}</span>
+              <div className="text-[12.5px] text-ink-500 mt-0.5">
+                {t('home.eligibilitySub')}
               </div>
             </div>
-            <Button size="sm" variant="secondary" trailing={<ArrowIcon size={16} className={dir === 'rtl' ? 'rotate-180' : ''} />}>
-              {t('common.viewAll')}
-            </Button>
+            <StatusChip
+              tone="gold"
+              dot={false}
+              label={t(`eligibility.tiers.${eligibility.tier}`)}
+            />
           </div>
-        </Card>
 
-        <div>
-          <SectionHeader title={t('home.quickActions')} />
-          <div className="grid grid-cols-4 gap-2">
-            {quickActions.map((a) => (
+          <div>
+            <div className="flex items-baseline gap-2">
+              <span className="text-[28px] font-bold text-ink-900 num leading-none">
+                {formatCurrency(eligibility.remaining)}
+              </span>
+              <span className="text-[12px] text-ink-400">{t('home.remaining')}</span>
+            </div>
+            <div className="mt-1 text-[12px] text-ink-400">
+              {t('home.of')} {formatCurrency(eligibility.limit)}
+            </div>
+          </div>
+
+          <div>
+            <ProgressBar value={eligibility.used} max={eligibility.limit} tone="brand" />
+            <div className="mt-2 flex items-center justify-between text-[11.5px]">
+              <span className="text-ink-500">
+                {t('home.used')}{' '}
+                <span className="text-ink-900 font-semibold num">
+                  {formatCurrency(eligibility.used)}
+                </span>{' '}
+                <span className="text-ink-400 num">({usagePct}%)</span>
+              </span>
               <button
-                key={a.key}
                 type="button"
-                className="flex flex-col items-center gap-2 rounded-xl2 bg-white p-3 ring-1 ring-ink-100 hover:shadow-soft active:scale-[0.98] transition"
+                onClick={() => navigate('/eligibility')}
+                className="inline-flex items-center gap-1 text-brand-600 font-semibold"
               >
-                <span className={`h-11 w-11 rounded-xl grid place-items-center ${a.tone}`}>
-                  {a.icon}
-                </span>
-                <span className="text-[11.5px] font-medium text-ink-700 leading-tight text-center">
-                  {t(`home.${a.key}`)}
-                </span>
+                {t('home.viewDetails')}
+                <ArrowIcon size={14} className={cn(dir === 'rtl' ? 'rotate-180' : '')} />
               </button>
-            ))}
-          </div>
-        </div>
-
-        <div className="grid grid-cols-2 gap-3">
-          <StatCard
-            tone="brand"
-            label={t('home.activeContracts')}
-            value="24"
-            hint="—"
-            icon={<DocIcon size={18} />}
-          />
-          <StatCard
-            tone="warn"
-            label={t('home.dueSoon')}
-            value="6"
-            hint="—"
-            icon={<WalletIcon size={18} />}
-          />
-        </div>
-
-        <Card padded>
-          <CardHeader
-            title={t('contracts.title')}
-            subtitle="—"
-            action={
-              <IconButton variant="subtle" label={t('home.newContract')}>
-                <PlusIcon size={18} />
-              </IconButton>
-            }
-          />
-          <div className="mt-3 space-y-2">
-            <div className="flex items-center justify-between py-2">
-              <div className="flex items-center gap-3 min-w-0">
-                <Avatar name="م ح" tone="brand" size="sm" />
-                <div className="min-w-0">
-                  <div className="text-[13.5px] font-medium text-ink-900 truncate">—</div>
-                  <div className="text-[12px] text-ink-400">—</div>
-                </div>
-              </div>
-              <StatusChip tone="success" label={t('common.active')} />
-            </div>
-            <div className="h-px bg-ink-100" />
-            <div className="flex items-center justify-between py-2">
-              <div className="flex items-center gap-3 min-w-0">
-                <Avatar name="ع ف" tone="ink" size="sm" />
-                <div className="min-w-0">
-                  <div className="text-[13.5px] font-medium text-ink-900 truncate">—</div>
-                  <div className="text-[12px] text-ink-400">—</div>
-                </div>
-              </div>
-              <StatusChip tone="warn" label={t('common.pending')} />
             </div>
           </div>
         </Card>
+
+        {/* Summary chips */}
+        <div className="grid grid-cols-3 gap-2">
+          <SummaryChip
+            label={t('home.summaryInvoices')}
+            value={invoices.length}
+            icon={<ReceiptIcon size={16} />}
+            tone="bg-brand-50 text-brand-600"
+          />
+          <SummaryChip
+            label={t('home.summaryContracts')}
+            value={contracts.length}
+            icon={<DocIcon size={16} />}
+            tone="bg-ink-100 text-ink-700"
+          />
+          <SummaryChip
+            label={t('home.summaryNotes')}
+            value={notes.length}
+            icon={<WalletIcon size={16} />}
+            tone="bg-[#FBF2DD] text-gold-600"
+          />
+        </div>
+
+        {/* Active rental invoices */}
+        <Section
+          title={t('sections.activeInvoices')}
+          viewAllHref="/contracts"
+          t={t}
+          empty={
+            invoices.length === 0 ? (
+              <EmptyState
+                icon={<ReceiptIcon size={20} />}
+                title={t('sections.noInvoices')}
+                description={t('sections.emptyHint')}
+              />
+            ) : null
+          }
+        >
+          {invoices.slice(0, 3).map((inv, i, arr) => (
+            <div key={inv.id}>
+              <InvoiceRow invoice={inv} />
+              {i < arr.length - 1 && <div className="h-px bg-ink-100" />}
+            </div>
+          ))}
+        </Section>
+
+        {/* Active contracts */}
+        <Section
+          title={t('sections.activeContracts')}
+          viewAllHref="/contracts"
+          t={t}
+          empty={
+            contracts.length === 0 ? (
+              <EmptyState
+                icon={<DocIcon size={20} />}
+                title={t('sections.noContracts')}
+                description={t('sections.emptyHint')}
+              />
+            ) : null
+          }
+        >
+          {contracts.slice(0, 3).map((c, i, arr) => (
+            <div key={c.id}>
+              <ContractRow contract={c} />
+              {i < arr.length - 1 && <div className="h-px bg-ink-100" />}
+            </div>
+          ))}
+        </Section>
+
+        {/* Active promissory notes */}
+        <Section
+          title={t('sections.activeNotes')}
+          viewAllHref="/contracts"
+          t={t}
+          empty={
+            notes.length === 0 ? (
+              <EmptyState
+                icon={<WalletIcon size={20} />}
+                title={t('sections.noNotes')}
+                description={t('sections.emptyHint')}
+              />
+            ) : null
+          }
+        >
+          {notes.slice(0, 3).map((n, i, arr) => (
+            <div key={n.id}>
+              <NoteRow note={n} />
+              {i < arr.length - 1 && <div className="h-px bg-ink-100" />}
+            </div>
+          ))}
+        </Section>
+
+        {/* Previous rental history preview */}
+        <Section
+          title={t('sections.history')}
+          viewAllHref="/contracts"
+          t={t}
+          empty={
+            history.length === 0 ? (
+              <EmptyState
+                icon={<HistoryIcon size={20} />}
+                title={t('sections.noHistory')}
+                description={t('sections.emptyHint')}
+              />
+            ) : null
+          }
+        >
+          {history.slice(0, 3).map((h, i, arr) => (
+            <div key={h.id}>
+              <HistoryRow item={h} />
+              {i < arr.length - 1 && <div className="h-px bg-ink-100" />}
+            </div>
+          ))}
+        </Section>
       </Screen>
     </>
+  );
+}
+
+function SummaryChip({
+  label,
+  value,
+  icon,
+  tone,
+}: {
+  label: string;
+  value: number;
+  icon: ReactNode;
+  tone: string;
+}) {
+  return (
+    <div className="rounded-xl2 bg-white ring-1 ring-ink-100 p-3 flex flex-col gap-2">
+      <span className={cn('h-8 w-8 rounded-lg grid place-items-center', tone)}>{icon}</span>
+      <div>
+        <div className="text-[18px] font-bold text-ink-900 num leading-none">{value}</div>
+        <div className="mt-1 text-[11.5px] text-ink-400">{label}</div>
+      </div>
+    </div>
+  );
+}
+
+function Section({
+  title,
+  viewAllHref,
+  children,
+  empty,
+  t,
+}: {
+  title: string;
+  viewAllHref: string;
+  children: ReactNode;
+  empty: ReactNode;
+  t: (k: string) => string;
+}) {
+  return (
+    <section>
+      <SectionHeader
+        title={title}
+        action={
+          empty ? null : (
+            <Link to={viewAllHref} className="font-medium text-brand-600">
+              {t('home.viewAll')}
+            </Link>
+          )
+        }
+      />
+      {empty ? (
+        empty
+      ) : (
+        <Card padded={false} className="px-4">
+          {children}
+        </Card>
+      )}
+    </section>
   );
 }

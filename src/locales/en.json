@@ -137,16 +137,76 @@
   },
   "home": {
     "greeting": "Welcome back",
-    "subtitle": "A snapshot of your portfolio",
-    "quickActions": "Quick actions",
-    "newContract": "New contract",
-    "newNote": "Promissory note",
-    "customers": "Customers",
-    "reports": "Reports",
-    "overview": "Monthly overview",
+    "subtitle": "Your activity this month",
+    "eligibilityTitle": "Rental eligibility",
+    "eligibilitySub": "Your approved ceiling for active contracts",
+    "remaining": "Remaining",
+    "of": "of",
+    "used": "Used",
+    "viewDetails": "View details",
+    "summaryInvoices": "Invoices",
+    "summaryContracts": "Contracts",
+    "summaryNotes": "Notes",
+    "viewAll": "View all"
+  },
+  "sections": {
+    "activeInvoices": "Active invoices",
     "activeContracts": "Active contracts",
-    "dueSoon": "Due soon",
-    "collected": "Collected"
+    "activeNotes": "Active promissory notes",
+    "history": "Rental history",
+    "due": "Due",
+    "monthly": "Monthly",
+    "closedOn": "Closed on",
+    "ref": "Reference",
+    "counterparty": "Counterparty",
+    "noInvoices": "No active invoices",
+    "noContracts": "No active contracts",
+    "noNotes": "No active notes",
+    "noHistory": "No rental history yet",
+    "emptyHint": "New items will appear here automatically."
+  },
+  "status": {
+    "invoice": {
+      "due": "Due",
+      "overdue": "Overdue",
+      "paid": "Paid"
+    },
+    "contract": {
+      "active": "Active",
+      "pending": "Pending",
+      "ended": "Ended"
+    },
+    "note": {
+      "signed": "Signed",
+      "pending": "Pending",
+      "defaulted": "Defaulted"
+    },
+    "history": {
+      "completed": "Completed",
+      "closed": "Closed",
+      "cancelled": "Cancelled"
+    }
+  },
+  "eligibility": {
+    "title": "Rental eligibility",
+    "subtitle": "Your approved financial ceiling for rental contracts.",
+    "limit": "Total limit",
+    "used": "Used",
+    "remaining": "Remaining",
+    "tier": "Tier",
+    "usageOfLimit": "Used of total",
+    "assignedBy": "Assigned by",
+    "assignedOn": "Assigned on",
+    "adminNotice": "Eligibility is assigned manually by the AppLux team based on your profile and history.",
+    "breakdown": "Usage breakdown",
+    "contractsShare": "Active contract commitments",
+    "invoicesShare": "Outstanding invoices",
+    "noUsage": "No active usage",
+    "tiers": {
+      "standard": "Standard",
+      "premium": "Premium",
+      "elite": "Elite"
+    }
   },
   "contracts": {
     "title": "Contracts",

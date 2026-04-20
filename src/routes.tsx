@@ -3,6 +3,7 @@ import { Navigate, Route, Routes } from 'react-router-dom';
 import { AppLayout, AuthLayout } from '@/components/layout';
 import { useStore } from '@/lib/store';
 import Home from '@/pages/Home';
+import Eligibility from '@/pages/Eligibility';
 import Contracts from '@/pages/Contracts';
 import Notifications from '@/pages/Notifications';
 import Profile from '@/pages/Profile';
@@ -45,6 +46,7 @@ export function AppRoutes() {
         }
       >
         <Route path="/home" element={<Home />} />
+        <Route path="/eligibility" element={<Eligibility />} />
         <Route path="/contracts" element={<Contracts />} />
         <Route path="/notifications" element={<Notifications />} />
         <Route path="/profile" element={<Profile />} />

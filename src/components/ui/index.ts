@@ -10,3 +10,4 @@ export { EmptyState } from './EmptyState';
 export { Skeleton } from './Skeleton';
 export { Sheet } from './Sheet';
 export { SectionHeader } from './SectionHeader';
+export { ProgressBar } from './ProgressBar';
