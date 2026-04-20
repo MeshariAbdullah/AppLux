@@ -5,6 +5,7 @@
   },
   "nav": {
     "home": "الرئيسية",
+    "stores": "المتاجر",
     "contracts": "العقود",
     "notifications": "الإشعارات",
     "profile": "حسابي"
@@ -186,6 +187,33 @@
       "closed": "مُقفل",
       "cancelled": "ملغى"
     }
+  },
+  "stores": {
+    "title": "المتاجر الشركاء",
+    "subtitle": "تصفّح شركاءنا المعتمدين من المعارض والمزوّدين.",
+    "searchPlaceholder": "ابحث باسم المتجر أو المدينة",
+    "filters": {
+      "all": "الكل",
+      "cars": "سيارات",
+      "properties": "عقارات",
+      "equipment": "معدات",
+      "other": "أخرى"
+    },
+    "count": "{count} شريك",
+    "verified": "شريك معتمد",
+    "about": "عن المتجر",
+    "hours": "ساعات العمل",
+    "location": "الموقع",
+    "branches": "الفروع",
+    "rating": "التقييم",
+    "branchesCount": "{count} فرع",
+    "emptySearch": "لا توجد نتائج مطابقة",
+    "emptyHint": "جرّب كلمات مفتاحية مختلفة أو غيّر التصفية.",
+    "notice": "للاطلاع فقط — لا يتم إنشاء عقود من هذه الصفحة.",
+    "callBranch": "اتصال بالفرع",
+    "openMap": "فتح في الخريطة",
+    "notFound": "لم يتم العثور على المتجر",
+    "goBack": "العودة للقائمة"
   },
   "eligibility": {
     "title": "أهلية التأجير",

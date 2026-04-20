@@ -167,3 +167,52 @@ export const SparkleIcon = (p: IconProps) => (
     <path d="M12 3v4M12 17v4M3 12h4M17 12h4M5.5 5.5 8 8M16 16l2.5 2.5M5.5 18.5 8 16M16 8l2.5-2.5" />
   </svg>
 );
+
+export const MapPinIcon = (p: IconProps) => (
+  <svg {...base(p)}>
+    <path d="M12 22s7-7.5 7-13a7 7 0 1 0-14 0c0 5.5 7 13 7 13Z" />
+    <circle cx="12" cy="9" r="2.5" />
+  </svg>
+);
+
+export const PhoneIcon = (p: IconProps) => (
+  <svg {...base(p)}>
+    <path d="M5 4h4l2 5-3 2a11 11 0 0 0 5 5l2-3 5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2Z" />
+  </svg>
+);
+
+export const StarIcon = (p: IconProps) => (
+  <svg {...base(p)}>
+    <path d="m12 3 2.9 5.9 6.6.9-4.8 4.6 1.2 6.5L12 17.8 6.1 20.9l1.2-6.5L2.5 9.8l6.6-.9L12 3Z" />
+  </svg>
+);
+
+export const CarIcon = (p: IconProps) => (
+  <svg {...base(p)}>
+    <path d="M4 13 6 8h12l2 5" />
+    <path d="M4 13v5h2v-1.5h12V18h2v-5" />
+    <circle cx="7.5" cy="15.5" r="1.2" />
+    <circle cx="16.5" cy="15.5" r="1.2" />
+  </svg>
+);
+
+export const BuildingIcon = (p: IconProps) => (
+  <svg {...base(p)}>
+    <path d="M4 21V5a2 2 0 0 1 2-2h7a2 2 0 0 1 2 2v16" />
+    <path d="M15 10h4a1 1 0 0 1 1 1v10" />
+    <path d="M8 7h2M8 11h2M8 15h2" />
+  </svg>
+);
+
+export const ToolsIcon = (p: IconProps) => (
+  <svg {...base(p)}>
+    <path d="M14.5 6.5a3.5 3.5 0 0 0-4.9 4.9L3 18l3 3 6.6-6.6a3.5 3.5 0 0 0 4.9-4.9l-2.3 2.3-2.5-2.5 2.3-2.3Z" />
+  </svg>
+);
+
+export const PackageIcon = (p: IconProps) => (
+  <svg {...base(p)}>
+    <path d="m3 8 9-5 9 5v8l-9 5-9-5V8Z" />
+    <path d="m3 8 9 5 9-5M12 13v8" />
+  </svg>
+);

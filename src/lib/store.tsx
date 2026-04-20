@@ -13,9 +13,11 @@ import {
   SEED_HISTORY,
   SEED_INVOICES,
   SEED_NOTES,
+  SEED_STORES,
   type Contract,
   type HistoryItem,
   type Invoice,
+  type PartnerStore,
   type PromissoryNote,
   type RentalEligibility,
 } from './data';
@@ -65,6 +67,7 @@ type StoreContextValue = {
   contracts: Contract[];
   notes: PromissoryNote[];
   history: HistoryItem[];
+  stores: PartnerStore[];
 };
 
 const STORAGE_KEY = 'applux.session';
@@ -124,6 +127,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const contracts = SEED_CONTRACTS;
   const notes = SEED_NOTES;
   const history = SEED_HISTORY;
+  const stores = SEED_STORES;
 
   const value = useMemo<StoreContextValue>(
     () => ({
@@ -138,6 +142,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       contracts,
       notes,
       history,
+      stores,
     }),
     [
       session,
@@ -151,6 +156,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       contracts,
       notes,
       history,
+      stores,
     ],
   );
 

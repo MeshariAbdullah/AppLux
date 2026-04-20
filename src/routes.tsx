@@ -4,6 +4,8 @@ import { AppLayout, AuthLayout } from '@/components/layout';
 import { useStore } from '@/lib/store';
 import Home from '@/pages/Home';
 import Eligibility from '@/pages/Eligibility';
+import Stores from '@/pages/Stores';
+import StoreDetails from '@/pages/StoreDetails';
 import Contracts from '@/pages/Contracts';
 import Notifications from '@/pages/Notifications';
 import Profile from '@/pages/Profile';
@@ -47,6 +49,8 @@ export function AppRoutes() {
       >
         <Route path="/home" element={<Home />} />
         <Route path="/eligibility" element={<Eligibility />} />
+        <Route path="/stores" element={<Stores />} />
+        <Route path="/stores/:id" element={<StoreDetails />} />
         <Route path="/contracts" element={<Contracts />} />
         <Route path="/notifications" element={<Notifications />} />
         <Route path="/profile" element={<Profile />} />

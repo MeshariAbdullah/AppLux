@@ -5,6 +5,7 @@
   },
   "nav": {
     "home": "Home",
+    "stores": "Stores",
     "contracts": "Contracts",
     "notifications": "Alerts",
     "profile": "Profile"
@@ -186,6 +187,33 @@
       "closed": "Closed",
       "cancelled": "Cancelled"
     }
+  },
+  "stores": {
+    "title": "Partner stores",
+    "subtitle": "Browse our verified dealerships and providers.",
+    "searchPlaceholder": "Search by store name or city",
+    "filters": {
+      "all": "All",
+      "cars": "Cars",
+      "properties": "Properties",
+      "equipment": "Equipment",
+      "other": "Other"
+    },
+    "count": "{count} partners",
+    "verified": "Verified partner",
+    "about": "About",
+    "hours": "Opening hours",
+    "location": "Location",
+    "branches": "Branches",
+    "rating": "Rating",
+    "branchesCount": "{count} branches",
+    "emptySearch": "No matching stores",
+    "emptyHint": "Try a different keyword or filter.",
+    "notice": "Informational only — contracts are not created from this page.",
+    "callBranch": "Call branch",
+    "openMap": "Open in maps",
+    "notFound": "Store not found",
+    "goBack": "Back to list"
   },
   "eligibility": {
     "title": "Rental eligibility",
