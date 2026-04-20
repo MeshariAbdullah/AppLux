@@ -1,5 +1,6 @@
+import { useNavigate } from 'react-router-dom';
 import { Header, Screen } from '@/components/layout';
-import { Avatar, Card, SectionHeader, StatusChip } from '@/components/ui';
+import { Avatar, Button, Card, SectionHeader, StatusChip } from '@/components/ui';
 import { ChevronIcon, GlobeIcon, InfoIcon, ShieldIcon, SupportIcon } from '@/components/icons';
 import { useI18n, useT } from '@/lib/i18n';
 import { useStore } from '@/lib/store';
@@ -9,7 +10,13 @@ import type { ReactNode } from 'react';
 export default function Profile() {
   const t = useT();
   const { locale, setLocale, dir } = useI18n();
-  const { session } = useStore();
+  const { session, signOut } = useStore();
+  const navigate = useNavigate();
+
+  const onSignOut = () => {
+    signOut();
+    navigate('/welcome', { replace: true });
+  };
 
   return (
     <>
@@ -17,14 +24,17 @@ export default function Profile() {
       <Screen>
         <Card padded>
           <div className="flex items-center gap-3">
-            <Avatar name={session?.name ?? 'A'} size="lg" tone="gold" />
+            <Avatar name={session?.fullName ?? 'A'} size="lg" tone="gold" />
             <div className="min-w-0">
               <div className="text-[15px] font-semibold text-ink-900 truncate">
-                {session?.name ?? '—'}
+                {session?.fullName ?? '—'}
               </div>
-              <div className="text-[12.5px] text-ink-400 truncate">{session?.company ?? '—'}</div>
-              <div className="mt-1.5">
+              <div className="text-[12.5px] text-ink-400 truncate">{session?.email ?? '—'}</div>
+              <div className="mt-1.5 flex items-center gap-1.5">
                 <StatusChip tone="gold" label={t('app.name')} />
+                {session?.nafathVerified && (
+                  <StatusChip tone="success" label={t('nafath.verified')} />
+                )}
               </div>
             </div>
           </div>
@@ -72,6 +82,10 @@ export default function Profile() {
             dir={dir}
           />
         </Card>
+
+        <Button variant="secondary" block onClick={onSignOut}>
+          {t('profile.signOut')}
+        </Button>
       </Screen>
     </>
   );

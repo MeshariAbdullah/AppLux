@@ -37,11 +37,11 @@ export default function Home() {
     <>
       <Header
         variant="hero"
-        leading={<Avatar name={session?.name ?? 'A'} tone="gold" />}
+        leading={<Avatar name={session?.fullName ?? 'A'} tone="gold" />}
         title={
           <span className="text-white">
             {t('home.greeting')}
-            {session ? `، ${session.name}` : ''}
+            {session?.fullName ? `، ${session.fullName.split(' ')[0]}` : ''}
           </span>
         }
         subtitle={t('home.subtitle')}

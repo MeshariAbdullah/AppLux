@@ -9,7 +9,7 @@ type Tab = { to: string; label: string; icon: (props: { size?: number }) => Reac
 export function BottomNav() {
   const t = useT();
   const tabs: Tab[] = [
-    { to: '/', label: t('nav.home'), icon: HomeIcon },
+    { to: '/home', label: t('nav.home'), icon: HomeIcon },
     { to: '/contracts', label: t('nav.contracts'), icon: DocIcon },
     { to: '/notifications', label: t('nav.notifications'), icon: BellIcon },
     { to: '/profile', label: t('nav.profile'), icon: UserIcon },
@@ -25,7 +25,7 @@ export function BottomNav() {
           <li key={tab.to}>
             <NavLink
               to={tab.to}
-              end={tab.to === '/'}
+              end
               className={({ isActive }) =>
                 cn(
                   'flex flex-col items-center justify-center gap-1 py-2.5 text-[11px] font-medium transition-colors',
