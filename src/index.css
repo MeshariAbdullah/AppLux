@@ -1,0 +1,57 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: linear-gradient(180deg, #0D1224 0%, #141A33 100%);
+  color: #0D1224;
+}
+
+html[dir='rtl'] body {
+  font-family: 'IBM Plex Sans Arabic', 'Noto Naskh Arabic', system-ui, sans-serif;
+}
+html[dir='ltr'] body {
+  font-family: 'Inter', system-ui, sans-serif;
+}
+
+/* Hide scrollbars in mobile shell */
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+/* Logical properties helpers (RTL aware) */
+@layer utilities {
+  .ps-safe { padding-inline-start: env(safe-area-inset-left); }
+  .pe-safe { padding-inline-end: env(safe-area-inset-right); }
+  .divide-border > * + * { border-top: 1px solid #EEF0F7; }
+}
+
+/* Tap highlight off for native feel */
+button, [role='button'] {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Pretty number rendering */
+.num {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum';
+}
+
+/* Subtle dotted pattern used on hero cards */
+.pattern-dots {
+  background-image: radial-gradient(rgba(255,255,255,0.12) 1px, transparent 1px);
+  background-size: 18px 18px;
+}
