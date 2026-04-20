@@ -535,6 +535,271 @@ export const SEED_SCANS: ScannedPackage[] = [
   },
 ];
 
+export type MerchantRentalCategory = 'car' | 'property' | 'equipment';
+export type MerchantRentalStatus = 'active' | 'due-soon' | 'overdue' | 'returned';
+export type MerchantRental = {
+  id: string;
+  customerName: string;
+  customerInitials: string;
+  customerCity: string;
+  item: string;
+  category: MerchantRentalCategory;
+  branchId: string;
+  startDate: string;
+  endDate: string;
+  nextDueDate: string;
+  monthlyAmount: number;
+  paidInstallments: number;
+  totalInstallments: number;
+  status: MerchantRentalStatus;
+};
+
+export type MerchantApprovalStage =
+  | 'awaiting-customer'
+  | 'awaiting-nafith'
+  | 'awaiting-review';
+export type MerchantApproval = {
+  id: string;
+  customerName: string;
+  customerInitials: string;
+  item: string;
+  category: MerchantRentalCategory;
+  amount: number;
+  submittedAt: string;
+  branchId: string;
+  stage: MerchantApprovalStage;
+};
+
+export type MerchantDamageSeverity = 'partial' | 'total' | 'non-return';
+export type MerchantDamageStatus = 'reported' | 'investigating' | 'settled';
+export type MerchantDamageCase = {
+  id: string;
+  rentalId: string;
+  customerName: string;
+  customerInitials: string;
+  item: string;
+  severity: MerchantDamageSeverity;
+  claimAmount: number;
+  reportedAt: string;
+  status: MerchantDamageStatus;
+};
+
+export type MerchantHistoryOutcome = 'completed' | 'cancelled' | 'defaulted';
+export type MerchantHistoryRecord = {
+  id: string;
+  customerName: string;
+  item: string;
+  closedAt: string;
+  totalAmount: number;
+  outcome: MerchantHistoryOutcome;
+};
+
+export const SEED_MERCHANT_RENTALS: MerchantRental[] = [
+  {
+    id: 'MR-2026-031',
+    customerName: 'فهد العتيبي',
+    customerInitials: 'FA',
+    customerCity: 'riyadh',
+    item: 'تويوتا لاند كروزر 2024',
+    category: 'car',
+    branchId: 'rm-olaya',
+    startDate: '2026-02-15',
+    endDate: '2027-02-14',
+    nextDueDate: '2026-04-25',
+    monthlyAmount: 4800,
+    paidInstallments: 2,
+    totalInstallments: 12,
+    status: 'due-soon',
+  },
+  {
+    id: 'MR-2026-028',
+    customerName: 'سارة المطيري',
+    customerInitials: 'SM',
+    customerCity: 'riyadh',
+    item: 'هوندا أكورد 2024',
+    category: 'car',
+    branchId: 'rm-olaya',
+    startDate: '2026-01-05',
+    endDate: '2027-01-04',
+    nextDueDate: '2026-04-05',
+    monthlyAmount: 2650,
+    paidInstallments: 2,
+    totalInstallments: 12,
+    status: 'overdue',
+  },
+  {
+    id: 'MR-2026-026',
+    customerName: 'عبدالرحمن الشهري',
+    customerInitials: 'AS',
+    customerCity: 'jeddah',
+    item: 'نيسان باترول 2023',
+    category: 'car',
+    branchId: 'rm-malqa',
+    startDate: '2025-12-20',
+    endDate: '2026-12-19',
+    nextDueDate: '2026-05-02',
+    monthlyAmount: 3900,
+    paidInstallments: 4,
+    totalInstallments: 12,
+    status: 'active',
+  },
+  {
+    id: 'MR-2026-024',
+    customerName: 'نوف القحطاني',
+    customerInitials: 'NQ',
+    customerCity: 'riyadh',
+    item: 'لكزس ES 2024',
+    category: 'car',
+    branchId: 'rm-olaya',
+    startDate: '2026-03-08',
+    endDate: '2027-03-07',
+    nextDueDate: '2026-05-08',
+    monthlyAmount: 5200,
+    paidInstallments: 1,
+    totalInstallments: 12,
+    status: 'active',
+  },
+  {
+    id: 'MR-2026-019',
+    customerName: 'خالد الدوسري',
+    customerInitials: 'KD',
+    customerCity: 'riyadh',
+    item: 'كيا سبورتاج 2023',
+    category: 'car',
+    branchId: 'rm-malqa',
+    startDate: '2025-10-15',
+    endDate: '2026-10-14',
+    nextDueDate: '2026-04-15',
+    monthlyAmount: 2100,
+    paidInstallments: 6,
+    totalInstallments: 12,
+    status: 'overdue',
+  },
+  {
+    id: 'MR-2026-015',
+    customerName: 'منى الزهراني',
+    customerInitials: 'MZ',
+    customerCity: 'riyadh',
+    item: 'فورد إكسبلورر 2023',
+    category: 'car',
+    branchId: 'rm-olaya',
+    startDate: '2025-09-01',
+    endDate: '2026-08-31',
+    nextDueDate: '2026-05-01',
+    monthlyAmount: 3450,
+    paidInstallments: 7,
+    totalInstallments: 12,
+    status: 'active',
+  },
+];
+
+export const SEED_MERCHANT_APPROVALS: MerchantApproval[] = [
+  {
+    id: 'MA-2026-041',
+    customerName: 'ياسر السبيعي',
+    customerInitials: 'YS',
+    item: 'تويوتا كامري 2024',
+    category: 'car',
+    amount: 2450,
+    submittedAt: '2026-04-19',
+    branchId: 'rm-olaya',
+    stage: 'awaiting-nafith',
+  },
+  {
+    id: 'MA-2026-040',
+    customerName: 'دانة الحربي',
+    customerInitials: 'DH',
+    item: 'لكزس NX 2024',
+    category: 'car',
+    amount: 3800,
+    submittedAt: '2026-04-18',
+    branchId: 'rm-malqa',
+    stage: 'awaiting-customer',
+  },
+  {
+    id: 'MA-2026-039',
+    customerName: 'سلطان الغامدي',
+    customerInitials: 'SG',
+    item: 'نيسان ألتيما 2023',
+    category: 'car',
+    amount: 2100,
+    submittedAt: '2026-04-17',
+    branchId: 'rm-olaya',
+    stage: 'awaiting-review',
+  },
+];
+
+export const SEED_MERCHANT_DAMAGES: MerchantDamageCase[] = [
+  {
+    id: 'DM-2026-007',
+    rentalId: 'MR-2026-028',
+    customerName: 'سارة المطيري',
+    customerInitials: 'SM',
+    item: 'هوندا أكورد 2024',
+    severity: 'partial',
+    claimAmount: 8400,
+    reportedAt: '2026-04-10',
+    status: 'investigating',
+  },
+  {
+    id: 'DM-2026-005',
+    rentalId: 'MR-2025-112',
+    customerName: 'عبدالله الشمري',
+    customerInitials: 'AS',
+    item: 'كيا سورنتو 2023',
+    severity: 'non-return',
+    claimAmount: 145000,
+    reportedAt: '2026-03-28',
+    status: 'reported',
+  },
+  {
+    id: 'DM-2026-002',
+    rentalId: 'MR-2025-088',
+    customerName: 'ريم الأحمدي',
+    customerInitials: 'RA',
+    item: 'تويوتا راف فور 2023',
+    severity: 'partial',
+    claimAmount: 3100,
+    reportedAt: '2026-02-14',
+    status: 'settled',
+  },
+];
+
+export const SEED_MERCHANT_HISTORY: MerchantHistoryRecord[] = [
+  {
+    id: 'MH-2025-118',
+    customerName: 'ماجد القرني',
+    item: 'هيونداي سوناتا 2023',
+    closedAt: '2026-03-22',
+    totalAmount: 24600,
+    outcome: 'completed',
+  },
+  {
+    id: 'MH-2025-102',
+    customerName: 'لمى العنزي',
+    item: 'مازدا CX-9 2022',
+    closedAt: '2026-02-05',
+    totalAmount: 31200,
+    outcome: 'completed',
+  },
+  {
+    id: 'MH-2025-091',
+    customerName: 'ناصر الشمري',
+    item: 'جي إم سي يوكن 2022',
+    closedAt: '2025-12-18',
+    totalAmount: 28800,
+    outcome: 'defaulted',
+  },
+  {
+    id: 'MH-2025-077',
+    customerName: 'جواهر العمري',
+    item: 'فورد تورس 2022',
+    closedAt: '2025-11-02',
+    totalAmount: 18400,
+    outcome: 'cancelled',
+  },
+];
+
 export const SEED_HISTORY: HistoryItem[] = [
   {
     id: 'HS-2025-011',

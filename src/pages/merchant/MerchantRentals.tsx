@@ -1,0 +1,196 @@
+import { useMemo, useState } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
+import { Header, Screen } from '@/components/layout';
+import {
+  Card,
+  EmptyState,
+  SectionHeader,
+  StatusChip,
+  type StatusTone,
+} from '@/components/ui';
+import {
+  CarIcon,
+  ChevronIcon,
+  InfoIcon,
+  PlusIcon,
+} from '@/components/icons';
+import { useI18n, useT } from '@/lib/i18n';
+import { useStore } from '@/lib/store';
+import type { MerchantRental, MerchantRentalStatus } from '@/lib/data';
+import { cn } from '@/lib/cn';
+
+type Filter = 'all' | 'active' | 'due-soon' | 'overdue';
+
+const FILTERS: { key: Filter; labelKey: string }[] = [
+  { key: 'all', labelKey: 'merchant.rentals.filterAll' },
+  { key: 'active', labelKey: 'merchant.rentals.filterActive' },
+  { key: 'due-soon', labelKey: 'merchant.rentals.filterDue' },
+  { key: 'overdue', labelKey: 'merchant.rentals.filterOverdue' },
+];
+
+export default function MerchantRentals() {
+  const t = useT();
+  const { dir } = useI18n();
+  const { merchantRentals } = useStore();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const initialFilter = (searchParams.get('filter') as Filter | null) ?? 'all';
+  const [filter, setFilter] = useState<Filter>(
+    FILTERS.some((f) => f.key === initialFilter) ? initialFilter : 'all',
+  );
+
+  const filtered = useMemo(() => {
+    if (filter === 'all') return merchantRentals;
+    return merchantRentals.filter((r) => r.status === filter);
+  }, [filter, merchantRentals]);
+
+  const onFilter = (next: Filter) => {
+    setFilter(next);
+    const params = new URLSearchParams(searchParams);
+    if (next === 'all') params.delete('filter');
+    else params.set('filter', next);
+    setSearchParams(params, { replace: true });
+  };
+
+  return (
+    <>
+      <Header
+        title={t('merchant.rentals.title')}
+        subtitle={t('merchant.rentals.count', { count: filtered.length })}
+        showBack
+        trailing={
+          <Link
+            to="/merchant/invoice/new"
+            className="h-9 w-9 grid place-items-center rounded-full bg-brand-500 text-white hover:bg-brand-600"
+            aria-label={t('merchant.home.quickInvoice')}
+          >
+            <PlusIcon size={16} />
+          </Link>
+        }
+      />
+      <Screen padded={false} className="bg-ink-50">
+        <div className="px-4 pt-3 pb-8 space-y-3">
+          <div
+            className="flex gap-2 overflow-x-auto scrollbar-none -mx-1 px-1"
+            role="tablist"
+          >
+            {FILTERS.map((f) => {
+              const active = f.key === filter;
+              return (
+                <button
+                  key={f.key}
+                  type="button"
+                  onClick={() => onFilter(f.key)}
+                  className={cn(
+                    'h-8 px-3 rounded-full text-[12.5px] font-semibold whitespace-nowrap transition-colors ring-1 ring-inset',
+                    active
+                      ? 'bg-ink-900 text-white ring-ink-900'
+                      : 'bg-white text-ink-600 ring-ink-100',
+                  )}
+                >
+                  {t(f.labelKey)}
+                </button>
+              );
+            })}
+          </div>
+
+          <SectionHeader title={t('merchant.rentals.subtitle')} />
+
+          {filtered.length === 0 ? (
+            <EmptyState
+              icon={<InfoIcon size={22} />}
+              title={t('merchant.rentals.empty')}
+              description={t('merchant.rentals.emptyHint')}
+            />
+          ) : (
+            <div className="space-y-2.5">
+              {filtered.map((r) => (
+                <RentalCard key={r.id} rental={r} dir={dir} />
+              ))}
+            </div>
+          )}
+        </div>
+      </Screen>
+    </>
+  );
+}
+
+function toneForStatus(status: MerchantRentalStatus): StatusTone {
+  if (status === 'overdue') return 'danger';
+  if (status === 'due-soon') return 'warn';
+  if (status === 'returned') return 'neutral';
+  return 'success';
+}
+
+function RentalCard({ rental, dir }: { rental: MerchantRental; dir: 'rtl' | 'ltr' }) {
+  const t = useT();
+  const { formatCurrency, formatDate } = useI18n();
+  const progress = (rental.paidInstallments / rental.totalInstallments) * 100;
+  const tone = toneForStatus(rental.status);
+  return (
+    <Card padded interactive className="space-y-3">
+      <div className="flex items-center gap-3">
+        <span className="h-10 w-10 shrink-0 rounded-xl bg-ink-100 text-ink-700 grid place-items-center">
+          <CarIcon size={18} />
+        </span>
+        <div className="flex-1 min-w-0">
+          <div className="text-[13.5px] font-semibold text-ink-900 truncate">
+            {rental.customerName}
+          </div>
+          <div className="mt-0.5 text-[12px] text-ink-400 truncate">
+            {rental.item}
+          </div>
+        </div>
+        <StatusChip
+          size="sm"
+          tone={tone}
+          dot
+          label={t(`merchant.rentals.status.${rental.status}`)}
+        />
+      </div>
+
+      <div className="h-1.5 rounded-full bg-ink-100 overflow-hidden">
+        <div
+          className={cn(
+            'h-full rounded-full transition-all',
+            tone === 'danger' ? 'bg-danger-500' : tone === 'warn' ? 'bg-warn-500' : 'bg-brand-500',
+          )}
+          style={{ width: `${Math.min(100, progress)}%` }}
+        />
+      </div>
+
+      <div className="grid grid-cols-3 gap-2 text-[11.5px]">
+        <div>
+          <div className="text-ink-400 uppercase tracking-wide text-[10.5px]">
+            {t('merchant.rentals.monthly')}
+          </div>
+          <div className="mt-0.5 font-semibold text-ink-900 num">
+            {formatCurrency(rental.monthlyAmount)}
+          </div>
+        </div>
+        <div>
+          <div className="text-ink-400 uppercase tracking-wide text-[10.5px]">
+            {t('merchant.rentals.nextDue')}
+          </div>
+          <div className="mt-0.5 font-semibold text-ink-900 num">
+            {formatDate(rental.nextDueDate)}
+          </div>
+        </div>
+        <div className="text-end">
+          <div className="text-ink-400 uppercase tracking-wide text-[10.5px]">
+            {rental.id}
+          </div>
+          <div className="mt-0.5 text-[11.5px] text-ink-500">
+            {t('merchant.rentals.installments', {
+              paid: rental.paidInstallments,
+              total: rental.totalInstallments,
+            })}
+          </div>
+        </div>
+      </div>
+
+      <div className="flex items-center justify-end text-[11.5px] text-ink-400">
+        <ChevronIcon size={14} className={cn(dir === 'rtl' ? 'rotate-180' : '')} />
+      </div>
+    </Card>
+  );
+}

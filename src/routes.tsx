@@ -27,6 +27,11 @@ import MerchantLogin from '@/pages/merchant/MerchantLogin';
 import MerchantRegister from '@/pages/merchant/MerchantRegister';
 import MerchantPending from '@/pages/merchant/MerchantPending';
 import MerchantHome from '@/pages/merchant/MerchantHome';
+import MerchantRentals from '@/pages/merchant/MerchantRentals';
+import MerchantApprovals from '@/pages/merchant/MerchantApprovals';
+import MerchantDamages from '@/pages/merchant/MerchantDamages';
+import MerchantHistoryPage from '@/pages/merchant/MerchantHistoryPage';
+import MerchantInvoiceNew from '@/pages/merchant/MerchantInvoiceNew';
 
 function RequireAuth({ children }: { children: ReactElement }) {
   const { session } = useStore();
@@ -55,6 +60,11 @@ export function AppRoutes() {
         <Route path="/merchant/register" element={<MerchantRegister />} />
         <Route path="/merchant/pending" element={<MerchantPending />} />
         <Route path="/merchant/home" element={<MerchantHome />} />
+        <Route path="/merchant/rentals" element={<MerchantRentals />} />
+        <Route path="/merchant/approvals" element={<MerchantApprovals />} />
+        <Route path="/merchant/damages" element={<MerchantDamages />} />
+        <Route path="/merchant/history" element={<MerchantHistoryPage />} />
+        <Route path="/merchant/invoice/new" element={<MerchantInvoiceNew />} />
       </Route>
 
       <Route

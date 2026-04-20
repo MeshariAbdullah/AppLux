@@ -1,30 +1,43 @@
-import { useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useEffect, useMemo } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { Header, Screen } from '@/components/layout';
 import {
   Button,
   Card,
   SectionHeader,
   StatusChip,
+  type StatusTone,
 } from '@/components/ui';
 import { LangToggle } from '@/components/auth/LangToggle';
 import {
+  AlertIcon,
   BadgeCheckIcon,
-  BuildingIcon,
+  CarIcon,
   ChartIcon,
   ChevronIcon,
+  ClockIcon,
+  GavelIcon,
+  HistoryIcon,
   PackageIcon,
-  SparkleIcon,
+  PlusIcon,
+  ReceiptIcon,
 } from '@/components/icons';
 import { useI18n, useT } from '@/lib/i18n';
 import { useStore } from '@/lib/store';
 import { cn } from '@/lib/cn';
+import type { MerchantRental } from '@/lib/data';
 
 export default function MerchantHome() {
   const t = useT();
-  const { formatDate, dir } = useI18n();
+  const { formatDate, formatCurrency, dir } = useI18n();
   const navigate = useNavigate();
-  const { merchant, signOutMerchant } = useStore();
+  const {
+    merchant,
+    signOutMerchant,
+    merchantRentals,
+    merchantApprovals,
+    merchantDamages,
+  } = useStore();
 
   useEffect(() => {
     if (!merchant) {
@@ -36,26 +49,76 @@ export default function MerchantHome() {
     }
   }, [merchant, navigate]);
 
+  const overdueCount = useMemo(
+    () => merchantRentals.filter((r) => r.status === 'overdue').length,
+    [merchantRentals],
+  );
+  const activeCount = useMemo(
+    () => merchantRentals.filter((r) => r.status !== 'returned').length,
+    [merchantRentals],
+  );
+  const pendingCount = merchantApprovals.length;
+  const openDamageCount = useMemo(
+    () => merchantDamages.filter((d) => d.status !== 'settled').length,
+    [merchantDamages],
+  );
+
+  const monthlyRevenue = useMemo(
+    () =>
+      merchantRentals
+        .filter((r) => r.status !== 'returned')
+        .reduce((sum, r) => sum + r.monthlyAmount, 0),
+    [merchantRentals],
+  );
+
+  const recent = useMemo(
+    () =>
+      [...merchantRentals]
+        .sort((a, b) => a.nextDueDate.localeCompare(b.nextDueDate))
+        .slice(0, 3),
+    [merchantRentals],
+  );
+
   if (!merchant) return null;
 
-  const quickActions = [
+  const quickActions: QuickAction[] = [
     {
-      icon: <PackageIcon size={18} />,
-      title: t('merchant.home.quickIssue'),
-      desc: t('merchant.home.quickIssueDesc'),
-      tone: 'bg-brand-50 text-brand-600',
+      title: t('merchant.home.quickInvoice'),
+      desc: t('merchant.home.quickInvoiceDesc'),
+      icon: <PlusIcon size={18} />,
+      to: '/merchant/invoice/new',
+      tone: 'bg-brand-50 text-brand-600 ring-brand-100',
+      featured: true,
     },
     {
-      icon: <BuildingIcon size={18} />,
-      title: t('merchant.home.quickBranches'),
-      desc: t('merchant.home.quickBranchesDesc'),
-      tone: 'bg-ink-100 text-ink-700',
+      title: t('merchant.home.quickRentals'),
+      desc: t('merchant.home.quickRentalsDesc'),
+      icon: <CarIcon size={18} />,
+      to: '/merchant/rentals',
+      tone: 'bg-ink-100 text-ink-700 ring-ink-100',
     },
     {
-      icon: <ChartIcon size={18} />,
-      title: t('merchant.home.quickReports'),
-      desc: t('merchant.home.quickReportsDesc'),
-      tone: 'bg-[#FBF2DD] text-gold-600',
+      title: t('merchant.home.quickApprovals'),
+      desc: t('merchant.home.quickApprovalsDesc'),
+      icon: <ReceiptIcon size={18} />,
+      to: '/merchant/approvals',
+      tone: 'bg-[#FBF2DD] text-gold-600 ring-gold-400/30',
+      count: pendingCount,
+    },
+    {
+      title: t('merchant.home.quickDamages'),
+      desc: t('merchant.home.quickDamagesDesc'),
+      icon: <GavelIcon size={18} />,
+      to: '/merchant/damages',
+      tone: 'bg-danger-50 text-danger-600 ring-danger-500/20',
+      count: openDamageCount,
+    },
+    {
+      title: t('merchant.home.quickHistory'),
+      desc: t('merchant.home.quickHistoryDesc'),
+      icon: <HistoryIcon size={18} />,
+      to: '/merchant/history',
+      tone: 'bg-ink-50 text-ink-500 ring-ink-100',
     },
   ];
 
@@ -67,10 +130,13 @@ export default function MerchantHome() {
       />
       <Screen padded={false} className="bg-ink-50">
         <div className="px-4 pt-4 pb-8 space-y-4">
-          {/* Approved hero */}
+          {/* Hero */}
           <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-ink-900 via-ink-800 to-ink-900 text-white p-5 shadow-float">
             <div aria-hidden className="pointer-events-none absolute inset-0 pattern-dots opacity-25" />
-            <div aria-hidden className="pointer-events-none absolute -top-10 end-[-15%] h-48 w-48 rounded-full bg-success-500/25 blur-3xl" />
+            <div
+              aria-hidden
+              className="pointer-events-none absolute -top-10 end-[-15%] h-48 w-48 rounded-full bg-brand-500/25 blur-3xl"
+            />
             <div className="relative flex items-start justify-between gap-3">
               <div className="min-w-0 flex-1">
                 <span className="inline-flex items-center gap-1.5 rounded-full bg-success-500/15 ring-1 ring-success-400/30 px-2.5 py-1 text-[11.5px] font-semibold text-success-200">
@@ -80,88 +146,154 @@ export default function MerchantHome() {
                 <h1 className="mt-3 text-[22px] leading-tight font-bold truncate">
                   {t('merchant.home.welcome', { name: merchant.companyName })}
                 </h1>
-                <p className="mt-2 text-[13px] text-white/70 leading-relaxed max-w-[36ch]">
+                <p className="mt-1.5 text-[13px] text-white/65 leading-relaxed max-w-[36ch]">
                   {t('merchant.home.subtitle')}
                 </p>
               </div>
-              <span className="h-12 w-12 shrink-0 rounded-2xl bg-success-500/20 ring-1 ring-success-400/30 text-success-200 grid place-items-center">
-                <BadgeCheckIcon size={22} />
+              <span className="h-11 w-11 shrink-0 rounded-2xl bg-white/10 ring-1 ring-white/15 grid place-items-center">
+                <ChartIcon size={20} />
               </span>
             </div>
 
-            <div className="relative mt-5 grid grid-cols-2 gap-3 text-[12px]">
-              <div>
-                <div className="text-white/55 uppercase tracking-wide text-[11px]">
-                  {t('merchant.pending.requestId')}
+            <div className="relative mt-5 rounded-2xl bg-white/5 ring-1 ring-white/10 p-3.5 backdrop-blur">
+              <div className="flex items-end justify-between gap-3">
+                <div className="min-w-0">
+                  <div className="text-[11px] text-white/60 uppercase tracking-wide">
+                    {t('merchant.home.monthlyRevenue')}
+                  </div>
+                  <div className="mt-1 text-[24px] font-bold num leading-none">
+                    {formatCurrency(monthlyRevenue)}
+                  </div>
                 </div>
-                <div className="mt-0.5 font-semibold num truncate">{merchant.id}</div>
-              </div>
-              <div>
-                <div className="text-white/55 uppercase tracking-wide text-[11px]">
-                  {t('merchant.home.approvedAt')}
-                </div>
-                <div className="mt-0.5 font-semibold num">
-                  {merchant.approvedAt ? formatDate(merchant.approvedAt) : '—'}
-                </div>
-              </div>
-              <div>
-                <div className="text-white/55 uppercase tracking-wide text-[11px]">
-                  {t('merchant.register.commercialReg')}
-                </div>
-                <div className="mt-0.5 font-semibold num">{merchant.commercialReg}</div>
-              </div>
-              <div>
-                <div className="text-white/55 uppercase tracking-wide text-[11px]">
-                  {t('merchant.register.steps.branches')}
-                </div>
-                <div className="mt-0.5 font-semibold">
-                  {t('merchant.home.branchesCount', { count: merchant.branches.length })}
+                <div className="text-end shrink-0 text-[11.5px] text-white/70">
+                  <div className="num font-semibold">{activeCount}</div>
+                  <div>{t('merchant.home.summaryActive')}</div>
                 </div>
               </div>
             </div>
           </div>
 
+          {/* Alerts */}
+          {(overdueCount > 0 || openDamageCount > 0) && (
+            <section>
+              <SectionHeader title={t('merchant.home.alertsTitle')} />
+              <div className="space-y-2.5">
+                {overdueCount > 0 && (
+                  <AlertRow
+                    tone="danger"
+                    icon={<ClockIcon size={16} />}
+                    title={t('merchant.home.overdueAlert', { count: overdueCount })}
+                    hint={t('merchant.home.overdueAlertHint')}
+                    to="/merchant/rentals?filter=overdue"
+                    cta={t('merchant.home.viewAlert')}
+                    dir={dir}
+                  />
+                )}
+                {openDamageCount > 0 && (
+                  <AlertRow
+                    tone="warn"
+                    icon={<AlertIcon size={16} />}
+                    title={t('merchant.home.damageAlert', { count: openDamageCount })}
+                    hint={t('merchant.home.damageAlertHint')}
+                    to="/merchant/damages"
+                    cta={t('merchant.home.viewAlert')}
+                    dir={dir}
+                  />
+                )}
+              </div>
+            </section>
+          )}
+
+          {/* Summary */}
+          <section>
+            <SectionHeader title={t('merchant.home.summaryTitle')} />
+            <div className="grid grid-cols-2 gap-2.5">
+              <SummaryTile
+                label={t('merchant.home.summaryActive')}
+                value={activeCount}
+                icon={<PackageIcon size={16} />}
+                tone="bg-brand-50 text-brand-600"
+              />
+              <SummaryTile
+                label={t('merchant.home.summaryPending')}
+                value={pendingCount}
+                icon={<ReceiptIcon size={16} />}
+                tone="bg-[#FBF2DD] text-gold-600"
+              />
+              <SummaryTile
+                label={t('merchant.home.summaryOverdue')}
+                value={overdueCount}
+                icon={<ClockIcon size={16} />}
+                tone="bg-danger-50 text-danger-600"
+                emphasize={overdueCount > 0}
+              />
+              <SummaryTile
+                label={t('merchant.home.summaryDamages')}
+                value={openDamageCount}
+                icon={<GavelIcon size={16} />}
+                tone="bg-ink-100 text-ink-700"
+                emphasize={openDamageCount > 0}
+              />
+            </div>
+          </section>
+
           {/* Quick actions */}
           <section>
             <SectionHeader title={t('merchant.home.quickActionsTitle')} />
             <div className="space-y-2.5">
-              {quickActions.map((a, i) => (
-                <Card
-                  key={i}
-                  padded
-                  interactive
-                  className="flex items-center gap-3"
-                >
-                  <span className={cn('h-10 w-10 shrink-0 rounded-xl grid place-items-center', a.tone)}>
-                    {a.icon}
-                  </span>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <div className="text-[13.5px] font-semibold text-ink-900 truncate">
-                        {a.title}
+              {quickActions.map((a) => (
+                <Link key={a.to} to={a.to} className="block">
+                  <Card padded interactive className="flex items-center gap-3">
+                    <span
+                      className={cn(
+                        'h-10 w-10 shrink-0 rounded-xl grid place-items-center ring-1 ring-inset',
+                        a.tone,
+                      )}
+                    >
+                      {a.icon}
+                    </span>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <div className="text-[13.5px] font-semibold text-ink-900 truncate">
+                          {a.title}
+                        </div>
+                        {typeof a.count === 'number' && a.count > 0 && (
+                          <span className="ms-auto num text-[11.5px] font-bold bg-ink-900 text-white rounded-full h-5 min-w-5 px-1.5 grid place-items-center">
+                            {a.count}
+                          </span>
+                        )}
                       </div>
-                      <StatusChip
-                        size="sm"
-                        tone="neutral"
-                        dot={false}
-                        icon={<SparkleIcon size={11} />}
-                        label={t('merchant.home.comingSoon')}
-                      />
+                      <div className="mt-0.5 text-[12px] text-ink-400 leading-relaxed truncate">
+                        {a.desc}
+                      </div>
                     </div>
-                    <div className="mt-0.5 text-[12px] text-ink-400 leading-relaxed">
-                      {a.desc}
-                    </div>
-                  </div>
-                  <ChevronIcon
-                    size={16}
-                    className={cn('text-ink-300 shrink-0', dir === 'rtl' ? 'rotate-180' : '')}
-                  />
-                </Card>
+                    <ChevronIcon
+                      size={16}
+                      className={cn(
+                        'text-ink-300 shrink-0',
+                        dir === 'rtl' ? 'rotate-180' : '',
+                      )}
+                    />
+                  </Card>
+                </Link>
               ))}
             </div>
-            <p className="mt-3 text-[12px] text-ink-400 leading-relaxed text-center">
-              {t('merchant.home.comingSoonHint')}
-            </p>
+          </section>
+
+          {/* Recent activity */}
+          <section>
+            <SectionHeader
+              title={t('merchant.home.recentTitle')}
+              action={<Link to="/merchant/rentals">{t('merchant.home.viewAll')}</Link>}
+            />
+            <Card padded className="space-y-1">
+              {recent.map((r, i) => (
+                <div key={r.id}>
+                  <RecentRow rental={r} formatDate={formatDate} formatCurrency={formatCurrency} t={t} />
+                  {i < recent.length - 1 && <div className="h-px bg-ink-100" />}
+                </div>
+              ))}
+            </Card>
           </section>
 
           {/* Sign out */}
@@ -180,5 +312,138 @@ export default function MerchantHome() {
         </div>
       </Screen>
     </>
+  );
+}
+
+type QuickAction = {
+  title: string;
+  desc: string;
+  icon: React.ReactNode;
+  to: string;
+  tone: string;
+  featured?: boolean;
+  count?: number;
+};
+
+type AlertRowProps = {
+  tone: 'danger' | 'warn';
+  icon: React.ReactNode;
+  title: React.ReactNode;
+  hint: React.ReactNode;
+  cta: React.ReactNode;
+  to: string;
+  dir: 'rtl' | 'ltr';
+};
+
+function AlertRow({ tone, icon, title, hint, cta, to, dir }: AlertRowProps) {
+  const skin =
+    tone === 'danger'
+      ? 'bg-danger-50 ring-danger-500/25 text-danger-700'
+      : 'bg-warn-50 ring-warn-500/25 text-warn-700';
+  const iconSkin =
+    tone === 'danger' ? 'bg-danger-500/10 text-danger-600' : 'bg-warn-500/10 text-warn-600';
+  return (
+    <Link to={to} className="block">
+      <div
+        className={cn(
+          'rounded-xl2 ring-1 ring-inset px-3.5 py-3 flex items-center gap-3 transition-transform active:scale-[0.995]',
+          skin,
+        )}
+      >
+        <span
+          className={cn(
+            'h-9 w-9 shrink-0 rounded-xl grid place-items-center',
+            iconSkin,
+          )}
+        >
+          {icon}
+        </span>
+        <div className="min-w-0 flex-1">
+          <div className="text-[13px] font-semibold truncate">{title}</div>
+          <div className="mt-0.5 text-[11.5px] opacity-80 truncate">{hint}</div>
+        </div>
+        <div className="flex items-center gap-1 shrink-0 text-[12px] font-semibold">
+          {cta}
+          <ChevronIcon size={14} className={cn(dir === 'rtl' ? 'rotate-180' : '')} />
+        </div>
+      </div>
+    </Link>
+  );
+}
+
+function SummaryTile({
+  label,
+  value,
+  icon,
+  tone,
+  emphasize,
+}: {
+  label: React.ReactNode;
+  value: number;
+  icon: React.ReactNode;
+  tone: string;
+  emphasize?: boolean;
+}) {
+  return (
+    <Card padded className={cn('space-y-2', emphasize && 'ring-danger-500/20')}>
+      <div className="flex items-center justify-between">
+        <div className={cn('h-8 w-8 rounded-lg grid place-items-center', tone)}>
+          {icon}
+        </div>
+      </div>
+      <div>
+        <div className="text-[11px] font-medium uppercase tracking-wide text-ink-400">
+          {label}
+        </div>
+        <div className="mt-0.5 text-[22px] font-bold text-ink-900 num leading-none">
+          {value}
+        </div>
+      </div>
+    </Card>
+  );
+}
+
+function RecentRow({
+  rental,
+  formatDate,
+  formatCurrency,
+  t,
+}: {
+  rental: MerchantRental;
+  formatDate: (d: string) => string;
+  formatCurrency: (n: number) => string;
+  t: (key: string, vars?: Record<string, string | number>) => string;
+}) {
+  const tone: StatusTone =
+    rental.status === 'overdue'
+      ? 'danger'
+      : rental.status === 'due-soon'
+        ? 'warn'
+        : 'success';
+  return (
+    <Link to="/merchant/rentals" className="flex items-center gap-3 py-2.5">
+      <span className="h-10 w-10 shrink-0 rounded-xl bg-ink-100 text-ink-700 grid place-items-center font-semibold text-[12px]">
+        {rental.customerInitials}
+      </span>
+      <div className="flex-1 min-w-0">
+        <div className="text-[13.5px] font-semibold text-ink-900 truncate">
+          {rental.customerName}
+        </div>
+        <div className="mt-0.5 text-[12px] text-ink-400 truncate">
+          {rental.item} · {t('merchant.rentals.nextDue')} {formatDate(rental.nextDueDate)}
+        </div>
+      </div>
+      <div className="flex flex-col items-end gap-1 shrink-0">
+        <div className="text-[13px] font-semibold num text-ink-900">
+          {formatCurrency(rental.monthlyAmount)}
+        </div>
+        <StatusChip
+          size="sm"
+          tone={tone}
+          dot
+          label={t(`merchant.rentals.status.${rental.status}`)}
+        />
+      </div>
+    </Link>
   );
 }

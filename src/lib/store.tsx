@@ -12,12 +12,20 @@ import {
   SEED_CONTRACTS,
   SEED_HISTORY,
   SEED_INVOICES,
+  SEED_MERCHANT_APPROVALS,
+  SEED_MERCHANT_DAMAGES,
+  SEED_MERCHANT_HISTORY,
+  SEED_MERCHANT_RENTALS,
   SEED_NOTES,
   SEED_SCANS,
   SEED_STORES,
   type Contract,
   type HistoryItem,
   type Invoice,
+  type MerchantApproval,
+  type MerchantDamageCase,
+  type MerchantHistoryRecord,
+  type MerchantRental,
   type PartnerStore,
   type PromissoryNote,
   type RentalEligibility,
@@ -123,6 +131,10 @@ type StoreContextValue = {
   submitMerchantApproval: () => MerchantProfile;
   approveMerchant: () => void;
   signOutMerchant: () => void;
+  merchantRentals: MerchantRental[];
+  merchantApprovals: MerchantApproval[];
+  merchantDamages: MerchantDamageCase[];
+  merchantHistory: MerchantHistoryRecord[];
 };
 
 export type ApprovalRecord = {
@@ -257,6 +269,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const history = SEED_HISTORY;
   const stores = SEED_STORES;
   const scans = SEED_SCANS;
+  const merchantRentals = SEED_MERCHANT_RENTALS;
+  const merchantApprovals = SEED_MERCHANT_APPROVALS;
+  const merchantDamages = SEED_MERCHANT_DAMAGES;
+  const merchantHistory = SEED_MERCHANT_HISTORY;
 
   const value = useMemo<StoreContextValue>(
     () => ({
@@ -282,6 +298,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       submitMerchantApproval,
       approveMerchant,
       signOutMerchant,
+      merchantRentals,
+      merchantApprovals,
+      merchantDamages,
+      merchantHistory,
     }),
     [
       session,
@@ -306,6 +326,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       submitMerchantApproval,
       approveMerchant,
       signOutMerchant,
+      merchantRentals,
+      merchantApprovals,
+      merchantDamages,
+      merchantHistory,
     ],
   );
 
