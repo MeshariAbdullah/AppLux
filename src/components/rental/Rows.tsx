@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { Link } from 'react-router-dom';
 import { cn } from '@/lib/cn';
 import { useI18n, useT } from '@/lib/i18n';
 import type { Contract, HistoryItem, Invoice, PromissoryNote } from '@/lib/data';
@@ -30,9 +31,16 @@ function RowShell({
   amountHint,
   right,
   className,
-}: RowShellProps) {
-  return (
-    <div className={cn('flex items-center gap-3 py-3', className)}>
+  to,
+}: RowShellProps & { to?: string }) {
+  const content = (
+    <div
+      className={cn(
+        'flex items-center gap-3 py-3 -mx-1 px-1 rounded-lg transition-colors',
+        to && 'hover:bg-ink-50/60 active:bg-ink-50',
+        className,
+      )}
+    >
       <span
         className={cn(
           'h-10 w-10 shrink-0 rounded-xl grid place-items-center',
@@ -52,6 +60,13 @@ function RowShell({
       </div>
     </div>
   );
+  return to ? (
+    <Link to={to} className="block">
+      {content}
+    </Link>
+  ) : (
+    content
+  );
 }
 
 export function InvoiceRow({ invoice }: { invoice: Invoice }) {
@@ -59,6 +74,7 @@ export function InvoiceRow({ invoice }: { invoice: Invoice }) {
   const { formatCurrency, formatDate } = useI18n();
   return (
     <RowShell
+      to={`/track/invoice/${invoice.id}`}
       icon={<ReceiptIcon size={18} />}
       iconTone="bg-brand-50 text-brand-600"
       title={invoice.title}
@@ -74,6 +90,7 @@ export function ContractRow({ contract }: { contract: Contract }) {
   const { formatCurrency } = useI18n();
   return (
     <RowShell
+      to={`/track/contract/${contract.id}`}
       icon={<DocIcon size={18} />}
       iconTone="bg-ink-100 text-ink-700"
       title={contract.title}
@@ -89,6 +106,7 @@ export function NoteRow({ note }: { note: PromissoryNote }) {
   const { formatCurrency } = useI18n();
   return (
     <RowShell
+      to={`/track/note/${note.id}`}
       icon={<WalletIcon size={18} />}
       iconTone="bg-[#FBF2DD] text-gold-600"
       title={note.reference}

@@ -377,5 +377,95 @@
     "downloadContract": "تنزيل العقد (PDF)",
     "downloadNote": "تنزيل السند (PDF)",
     "support": "طلب دعم"
+  },
+  "track": {
+    "invoiceTitle": "متابعة الفاتورة",
+    "contractTitle": "متابعة العقد",
+    "noteTitle": "متابعة السند لأمر",
+    "details": "التفاصيل",
+    "status": "الحالة",
+    "summary": "الملخّص",
+    "activity": "النشاط",
+    "history": "السجل",
+    "open": "عرض",
+    "notFound": "المستند غير موجود",
+    "back": "العودة للرئيسية",
+    "linkedContract": "العقد المرتبط",
+    "linkedNote": "السند المرتبط",
+    "linkedInvoice": "فاتورة مرتبطة",
+    "documents": "المستندات",
+    "downloadPdf": "تنزيل PDF",
+    "share": "مشاركة",
+    "contactSupport": "التواصل مع الدعم",
+    "invoice": {
+      "amountDue": "المبلغ المستحق",
+      "paidOn": "تاريخ السداد",
+      "dueOn": "تاريخ الاستحقاق",
+      "issuedOn": "تاريخ الإصدار",
+      "contractRef": "رقم العقد",
+      "overdueBanner": "هذه الفاتورة متأخرة، يرجى السداد لتجنّب إجراءات التحصيل.",
+      "paidBanner": "تم استلام السداد بنجاح وتحديث حالة العقد.",
+      "payNow": "سداد الآن",
+      "paymentPlan": "جدول السداد",
+      "events": {
+        "issued": "تم إصدار الفاتورة",
+        "sent": "تم إرسال الفاتورة للعميل",
+        "reminder": "تم إرسال تذكير بالسداد",
+        "due": "تاريخ الاستحقاق",
+        "overdue": "تجاوزت موعد الاستحقاق",
+        "paid": "تم السداد",
+        "escalated": "تم التصعيد للتحصيل"
+      }
+    },
+    "contract": {
+      "monthly": "القسط الشهري",
+      "startOn": "بداية العقد",
+      "endOn": "نهاية العقد",
+      "duration": "المدة",
+      "months": "{count} شهراً",
+      "lessor": "المؤجِّر",
+      "parties": "أطراف العقد",
+      "keyTerms": "الشروط الأساسية",
+      "linkedDocs": "المستندات المرتبطة",
+      "openContract": "عرض العقد الكامل",
+      "events": {
+        "created": "تم إنشاء العقد",
+        "nafathVerified": "تم التحقق من الهوية عبر نفاذ",
+        "signed": "تم توقيع العقد",
+        "nafithAttested": "تم توثيق العقد عبر نافذ",
+        "active": "العقد أصبح نشِطاً",
+        "installment": "سداد قسط شهري",
+        "renewal": "نافذة التجديد",
+        "ended": "انتهاء العقد"
+      }
+    },
+    "note": {
+      "principal": "القيمة الاسمية",
+      "dueDate": "تاريخ الاستحقاق",
+      "beneficiary": "المستفيد",
+      "issuedOn": "تاريخ الإصدار",
+      "attested": "موثَّق رقمياً عبر نافذ",
+      "defaultedBanner": "تم تسجيل تعثّر في هذا السند وجاري التصعيد لجهة التنفيذ.",
+      "events": {
+        "issued": "تم إصدار السند",
+        "nafithAttested": "تم توثيق السند عبر نافذ",
+        "active": "السند أصبح ملزماً",
+        "reminder": "تم إرسال تذكير قبل الاستحقاق",
+        "settled": "تمت التسوية الكاملة",
+        "defaulted": "تم تسجيل التعثّر",
+        "execution": "إحالة إلى محكمة التنفيذ"
+      }
+    },
+    "placeholders": {
+      "nafath": "نفاذ",
+      "nafathDesc": "منصّة التحقق الحكومي من الهوية",
+      "nafith": "نافذ",
+      "nafithDesc": "المنصّة الرسمية لتوثيق السندات الرقمية",
+      "execution": "محكمة التنفيذ",
+      "executionDesc": "الجهة المختصة بتنفيذ السندات المتعثِّرة",
+      "verified": "مُوثَّق",
+      "pending": "قيد الإجراء",
+      "escalated": "قيد التصعيد"
+    }
   }
 }

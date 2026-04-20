@@ -377,5 +377,95 @@
     "downloadContract": "Download contract (PDF)",
     "downloadNote": "Download note (PDF)",
     "support": "Request support"
+  },
+  "track": {
+    "invoiceTitle": "Invoice tracking",
+    "contractTitle": "Contract tracking",
+    "noteTitle": "Promissory note tracking",
+    "details": "Details",
+    "status": "Status",
+    "summary": "Summary",
+    "activity": "Activity",
+    "history": "History",
+    "open": "Open",
+    "notFound": "Document not found",
+    "back": "Back to home",
+    "linkedContract": "Linked contract",
+    "linkedNote": "Linked note",
+    "linkedInvoice": "Linked invoice",
+    "documents": "Documents",
+    "downloadPdf": "Download PDF",
+    "share": "Share",
+    "contactSupport": "Contact support",
+    "invoice": {
+      "amountDue": "Amount due",
+      "paidOn": "Paid on",
+      "dueOn": "Due on",
+      "issuedOn": "Issued on",
+      "contractRef": "Contract ref",
+      "overdueBanner": "This invoice is overdue. Please pay to avoid collections.",
+      "paidBanner": "Payment received and contract status updated.",
+      "payNow": "Pay now",
+      "paymentPlan": "Payment plan",
+      "events": {
+        "issued": "Invoice issued",
+        "sent": "Invoice sent to customer",
+        "reminder": "Payment reminder sent",
+        "due": "Due date",
+        "overdue": "Past due",
+        "paid": "Payment received",
+        "escalated": "Escalated to collections"
+      }
+    },
+    "contract": {
+      "monthly": "Monthly installment",
+      "startOn": "Start date",
+      "endOn": "End date",
+      "duration": "Duration",
+      "months": "{count} months",
+      "lessor": "Lessor",
+      "parties": "Contract parties",
+      "keyTerms": "Key terms",
+      "linkedDocs": "Linked documents",
+      "openContract": "Open full contract",
+      "events": {
+        "created": "Contract created",
+        "nafathVerified": "Identity verified via Nafath",
+        "signed": "Contract signed",
+        "nafithAttested": "Attested via Nafith",
+        "active": "Contract active",
+        "installment": "Monthly installment paid",
+        "renewal": "Renewal window",
+        "ended": "Contract ended"
+      }
+    },
+    "note": {
+      "principal": "Principal amount",
+      "dueDate": "Due date",
+      "beneficiary": "Beneficiary",
+      "issuedOn": "Issued on",
+      "attested": "Digitally attested via Nafith",
+      "defaultedBanner": "This note is in default and is being escalated to execution court.",
+      "events": {
+        "issued": "Note issued",
+        "nafithAttested": "Attested via Nafith",
+        "active": "Note is now binding",
+        "reminder": "Reminder sent before due date",
+        "settled": "Fully settled",
+        "defaulted": "Default recorded",
+        "execution": "Referred to execution court"
+      }
+    },
+    "placeholders": {
+      "nafath": "Nafath",
+      "nafathDesc": "Government identity verification platform",
+      "nafith": "Nafith",
+      "nafithDesc": "Official platform for digital promissory notes",
+      "execution": "Execution court",
+      "executionDesc": "Authority responsible for enforcing defaulted notes",
+      "verified": "Verified",
+      "pending": "Pending",
+      "escalated": "Escalated"
+    }
   }
 }

@@ -13,6 +13,9 @@ import Scan from '@/pages/Scan';
 import Review from '@/pages/Review';
 import Approval from '@/pages/Approval';
 import Tracking from '@/pages/Tracking';
+import InvoiceTracking from '@/pages/InvoiceTracking';
+import ContractTracking from '@/pages/ContractTracking';
+import NoteTracking from '@/pages/NoteTracking';
 import Welcome from '@/pages/auth/Welcome';
 import AuthEntry from '@/pages/auth/AuthEntry';
 import Login from '@/pages/auth/Login';
@@ -62,6 +65,9 @@ export function AppRoutes() {
         <Route path="/review/:token" element={<Review />} />
         <Route path="/approval/:token" element={<Approval />} />
         <Route path="/tracking/:token" element={<Tracking />} />
+        <Route path="/track/invoice/:id" element={<InvoiceTracking />} />
+        <Route path="/track/contract/:id" element={<ContractTracking />} />
+        <Route path="/track/note/:id" element={<NoteTracking />} />
       </Route>
 
       <Route path="*" element={<Navigate to="/" replace />} />
