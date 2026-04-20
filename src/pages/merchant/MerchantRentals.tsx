@@ -127,6 +127,7 @@ function RentalCard({ rental, dir }: { rental: MerchantRental; dir: 'rtl' | 'ltr
   const progress = (rental.paidInstallments / rental.totalInstallments) * 100;
   const tone = toneForStatus(rental.status);
   return (
+    <Link to={`/merchant/rentals/${rental.id}`} className="block">
     <Card padded interactive className="space-y-3">
       <div className="flex items-center gap-3">
         <span className="h-10 w-10 shrink-0 rounded-xl bg-ink-100 text-ink-700 grid place-items-center">
@@ -192,5 +193,6 @@ function RentalCard({ rental, dir }: { rental: MerchantRental; dir: 'rtl' | 'ltr
         <ChevronIcon size={14} className={cn(dir === 'rtl' ? 'rotate-180' : '')} />
       </div>
     </Card>
+    </Link>
   );
 }

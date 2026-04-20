@@ -618,6 +618,116 @@
         "returned": "مُرجَع"
       }
     },
+    "rental": {
+      "title": "متابعة التأجير",
+      "hero": {
+        "current": "التأجير الحالي",
+        "progress": "التقدّم"
+      },
+      "approval": {
+        "title": "موافقة العميل",
+        "approved": "تمت الموافقة",
+        "awaiting": "بانتظار العميل",
+        "approvedOn": "تمت الموافقة في {at}"
+      },
+      "docs": {
+        "title": "المستندات",
+        "hint": "اضغط للفتح",
+        "contract": "عقد الإيجار",
+        "note": "سند لأمر",
+        "state": {
+          "draft": "مسودة",
+          "ready": "جاهز",
+          "sent": "مُرسل",
+          "signed": "موقَّع"
+        }
+      },
+      "nafith": {
+        "title": "اعتماد ناجز",
+        "hint": "التوقيع الإلكتروني الرسمي على سند لأمر عبر منصّة ناجز.",
+        "submit": "الإرسال إلى ناجز",
+        "submitSub": "يُرسَل السند إلى العميل لتوقيعه إلكترونياً.",
+        "approve": "موافقة ناجز",
+        "approveSub": "تُسجَّل مصادقة ناجز الرقمية المُلزِمة.",
+        "state": {
+          "done": "تمّ",
+          "current": "قيد التنفيذ",
+          "pending": "معلَّق",
+          "approved": "معتمد",
+          "submitted": "أُرسل"
+        }
+      },
+      "timeline": {
+        "title": "خط الحالة",
+        "hint": "دورة الحياة",
+        "inProgress": "قيد التنفيذ",
+        "pending": "معلَّق",
+        "stage": {
+          "created": "إنشاء الفاتورة",
+          "customer-approved": "موافقة العميل",
+          "documents-ready": "جاهزية المستندات",
+          "nafith-submitted": "الإرسال إلى ناجز",
+          "nafith-approved": "اعتماد ناجز",
+          "activated": "تفعيل التأجير"
+        }
+      },
+      "activity": {
+        "title": "سجل النشاط",
+        "count": "{count} حدث"
+      },
+      "events": {
+        "created": "تم إنشاء الفاتورة",
+        "customer-approved": "وافق العميل",
+        "contract-ready": "العقد جاهز",
+        "note-ready": "السند جاهز",
+        "nafith-submitted": "أُرسل إلى ناجز",
+        "nafith-approved": "اعتمد ناجز",
+        "activated": "تم تفعيل التأجير",
+        "payment-received": "تم استلام الدفعة",
+        "due-reminder": "تذكير بالاستحقاق",
+        "returned": "تم إرجاع الأصل"
+      },
+      "actions": {
+        "openContract": "فتح تفاصيل العقد",
+        "openNote": "فتح سند لأمر",
+        "backToRental": "العودة للتأجير"
+      },
+      "contract": {
+        "title": "عقد الإيجار",
+        "refLabel": "مرجع العقد",
+        "parties": "الأطراف",
+        "lessor": "المؤجِّر",
+        "lessee": "المستأجر",
+        "keyTerms": "الشروط الرئيسية",
+        "monthly": "القسط الشهري",
+        "duration": "المدة",
+        "months": "{count} شهر",
+        "startOn": "تاريخ البدء",
+        "endOn": "تاريخ الانتهاء",
+        "item": "الأصل المؤجَّر",
+        "itemValue": "قيمة الأصل",
+        "clauses": "بنود العقد",
+        "clausesCount": "{count} بند",
+        "readiness": "الجاهزية",
+        "readyAt": "جاهز منذ",
+        "signedAt": "تم التوقيع في"
+      },
+      "note": {
+        "title": "سند لأمر",
+        "refLabel": "مرجع السند",
+        "summary": "الملخّص",
+        "beneficiary": "المستفيد",
+        "principal": "المبلغ",
+        "principalFull": "قيمة السند",
+        "principalHint": "الحدّ الأعلى للمسؤولية المغطّاة بهذا السند.",
+        "purpose": "الغرض",
+        "dueDate": "تاريخ الاستحقاق",
+        "attestation": "اعتماد ناجز",
+        "issuedAt": "تاريخ الإصدار",
+        "attestedAt": "تاريخ الاعتماد",
+        "attestedBanner": "هذا السند مُلزِم رقمياً وجاهز للتنفيذ عند الحاجة."
+      }
+    },
     "approvals": {
       "title": "الموافقات المعلّقة",
       "subtitle": "طلبات التأجير التي تنتظر إجراءً من المنشأة أو العميل.",

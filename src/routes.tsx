@@ -28,6 +28,9 @@ import MerchantRegister from '@/pages/merchant/MerchantRegister';
 import MerchantPending from '@/pages/merchant/MerchantPending';
 import MerchantHome from '@/pages/merchant/MerchantHome';
 import MerchantRentals from '@/pages/merchant/MerchantRentals';
+import MerchantRentalDetails from '@/pages/merchant/MerchantRentalDetails';
+import MerchantRentalContract from '@/pages/merchant/MerchantRentalContract';
+import MerchantRentalNote from '@/pages/merchant/MerchantRentalNote';
 import MerchantApprovals from '@/pages/merchant/MerchantApprovals';
 import MerchantDamages from '@/pages/merchant/MerchantDamages';
 import MerchantHistoryPage from '@/pages/merchant/MerchantHistoryPage';
@@ -61,6 +64,12 @@ export function AppRoutes() {
         <Route path="/merchant/pending" element={<MerchantPending />} />
         <Route path="/merchant/home" element={<MerchantHome />} />
         <Route path="/merchant/rentals" element={<MerchantRentals />} />
+        <Route path="/merchant/rentals/:id" element={<MerchantRentalDetails />} />
+        <Route
+          path="/merchant/rentals/:id/contract"
+          element={<MerchantRentalContract />}
+        />
+        <Route path="/merchant/rentals/:id/note" element={<MerchantRentalNote />} />
         <Route path="/merchant/approvals" element={<MerchantApprovals />} />
         <Route path="/merchant/damages" element={<MerchantDamages />} />
         <Route path="/merchant/history" element={<MerchantHistoryPage />} />

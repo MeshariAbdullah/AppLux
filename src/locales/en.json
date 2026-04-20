@@ -618,6 +618,116 @@
         "returned": "Returned"
       }
     },
+    "rental": {
+      "title": "Rental tracking",
+      "hero": {
+        "current": "Current rental",
+        "progress": "Progress"
+      },
+      "approval": {
+        "title": "Customer approval",
+        "approved": "Approved",
+        "awaiting": "Awaiting customer",
+        "approvedOn": "Approved on {at}"
+      },
+      "docs": {
+        "title": "Documents",
+        "hint": "Tap to open",
+        "contract": "Rental contract",
+        "note": "Promissory note",
+        "state": {
+          "draft": "Draft",
+          "ready": "Ready",
+          "sent": "Sent",
+          "signed": "Signed"
+        }
+      },
+      "nafith": {
+        "title": "Nafith attestation",
+        "hint": "Digital e-signature for the promissory note via the official Nafith platform.",
+        "submit": "Submit to Nafith",
+        "submitSub": "The promissory note is sent for customer e-signing.",
+        "approve": "Nafith approval",
+        "approveSub": "Binding digital attestation is recorded.",
+        "state": {
+          "done": "Done",
+          "current": "In progress",
+          "pending": "Pending",
+          "approved": "Approved",
+          "submitted": "Submitted"
+        }
+      },
+      "timeline": {
+        "title": "Status timeline",
+        "hint": "Lifecycle",
+        "inProgress": "In progress",
+        "pending": "Pending",
+        "stage": {
+          "created": "Invoice created",
+          "customer-approved": "Customer approved",
+          "documents-ready": "Documents ready",
+          "nafith-submitted": "Submitted to Nafith",
+          "nafith-approved": "Approved by Nafith",
+          "activated": "Rental active"
+        }
+      },
+      "activity": {
+        "title": "Activity log",
+        "count": "{count} events"
+      },
+      "events": {
+        "created": "Invoice created",
+        "customer-approved": "Customer approved",
+        "contract-ready": "Contract ready",
+        "note-ready": "Promissory note ready",
+        "nafith-submitted": "Submitted to Nafith",
+        "nafith-approved": "Approved by Nafith",
+        "activated": "Rental activated",
+        "payment-received": "Payment received",
+        "due-reminder": "Payment reminder sent",
+        "returned": "Item returned"
+      },
+      "actions": {
+        "openContract": "Open contract details",
+        "openNote": "Open promissory note",
+        "backToRental": "Back to rental"
+      },
+      "contract": {
+        "title": "Rental contract",
+        "refLabel": "Contract reference",
+        "parties": "Parties",
+        "lessor": "Lessor",
+        "lessee": "Lessee",
+        "keyTerms": "Key terms",
+        "monthly": "Monthly installment",
+        "duration": "Duration",
+        "months": "{count} months",
+        "startOn": "Start date",
+        "endOn": "End date",
+        "item": "Rented item",
+        "itemValue": "Item value",
+        "clauses": "Contract clauses",
+        "clausesCount": "{count} clauses",
+        "readiness": "Readiness",
+        "readyAt": "Ready at",
+        "signedAt": "Signed at"
+      },
+      "note": {
+        "title": "Promissory note",
+        "refLabel": "Note reference",
+        "summary": "Summary",
+        "beneficiary": "Beneficiary",
+        "principal": "Principal",
+        "principalFull": "Principal amount",
+        "principalHint": "Maximum liability covered by this note.",
+        "purpose": "Purpose",
+        "dueDate": "Due date",
+        "attestation": "Nafith attestation",
+        "issuedAt": "Issued at",
+        "attestedAt": "Attested at",
+        "attestedBanner": "This note is digitally binding and ready for enforcement if needed."
+      }
+    },
     "approvals": {
       "title": "Pending approvals",
       "subtitle": "Rental requests awaiting your or the customer's action.",

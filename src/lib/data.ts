@@ -537,11 +537,30 @@ export const SEED_SCANS: ScannedPackage[] = [
 
 export type MerchantRentalCategory = 'car' | 'property' | 'equipment';
 export type MerchantRentalStatus = 'active' | 'due-soon' | 'overdue' | 'returned';
+export type MerchantRentalDocState = 'draft' | 'ready' | 'sent' | 'signed';
+export type MerchantNafithState = 'pending' | 'submitted' | 'approved';
+export type MerchantRentalTimelineKey =
+  | 'created'
+  | 'customer-approved'
+  | 'contract-ready'
+  | 'note-ready'
+  | 'nafith-submitted'
+  | 'nafith-approved'
+  | 'activated'
+  | 'payment-received'
+  | 'due-reminder'
+  | 'returned';
+export type MerchantRentalTimelineEvent = {
+  key: MerchantRentalTimelineKey;
+  at: string;
+  note?: string;
+};
 export type MerchantRental = {
   id: string;
   customerName: string;
   customerInitials: string;
   customerCity: string;
+  customerMobile: string;
   item: string;
   category: MerchantRentalCategory;
   branchId: string;
@@ -549,9 +568,18 @@ export type MerchantRental = {
   endDate: string;
   nextDueDate: string;
   monthlyAmount: number;
+  itemValue: number;
+  liabilityTotal: number;
   paidInstallments: number;
   totalInstallments: number;
   status: MerchantRentalStatus;
+  contractRef: string;
+  noteRef: string;
+  customerApproved: boolean;
+  contractState: MerchantRentalDocState;
+  noteState: MerchantRentalDocState;
+  nafithState: MerchantNafithState;
+  timeline: MerchantRentalTimelineEvent[];
 };
 
 export type MerchantApprovalStage =
@@ -667,6 +695,7 @@ export const SEED_MERCHANT_RENTALS: MerchantRental[] = [
     customerName: 'فهد العتيبي',
     customerInitials: 'FA',
     customerCity: 'riyadh',
+    customerMobile: '555012345',
     item: 'تويوتا لاند كروزر 2024',
     category: 'car',
     branchId: 'rm-olaya',
@@ -674,15 +703,35 @@ export const SEED_MERCHANT_RENTALS: MerchantRental[] = [
     endDate: '2027-02-14',
     nextDueDate: '2026-04-25',
     monthlyAmount: 4800,
+    itemValue: 320000,
+    liabilityTotal: 285000,
     paidInstallments: 2,
     totalInstallments: 12,
     status: 'due-soon',
+    contractRef: 'CN-APX-2026-0231',
+    noteRef: 'PN-APX-2026-0231',
+    customerApproved: true,
+    contractState: 'signed',
+    noteState: 'signed',
+    nafithState: 'approved',
+    timeline: [
+      { key: 'created', at: '2026-02-12T09:15:00Z' },
+      { key: 'customer-approved', at: '2026-02-13T16:40:00Z' },
+      { key: 'contract-ready', at: '2026-02-14T08:10:00Z' },
+      { key: 'note-ready', at: '2026-02-14T08:12:00Z' },
+      { key: 'nafith-submitted', at: '2026-02-14T10:02:00Z' },
+      { key: 'nafith-approved', at: '2026-02-15T07:48:00Z' },
+      { key: 'activated', at: '2026-02-15T10:00:00Z' },
+      { key: 'payment-received', at: '2026-03-25T11:20:00Z' },
+      { key: 'due-reminder', at: '2026-04-20T07:00:00Z' },
+    ],
   },
   {
     id: 'MR-2026-028',
     customerName: 'سارة المطيري',
     customerInitials: 'SM',
     customerCity: 'riyadh',
+    customerMobile: '556789012',
     item: 'هوندا أكورد 2024',
     category: 'car',
     branchId: 'rm-olaya',
@@ -690,15 +739,35 @@ export const SEED_MERCHANT_RENTALS: MerchantRental[] = [
     endDate: '2027-01-04',
     nextDueDate: '2026-04-05',
     monthlyAmount: 2650,
+    itemValue: 145000,
+    liabilityTotal: 130000,
     paidInstallments: 2,
     totalInstallments: 12,
     status: 'overdue',
+    contractRef: 'CN-APX-2026-0128',
+    noteRef: 'PN-APX-2026-0128',
+    customerApproved: true,
+    contractState: 'signed',
+    noteState: 'signed',
+    nafithState: 'approved',
+    timeline: [
+      { key: 'created', at: '2026-01-02T08:00:00Z' },
+      { key: 'customer-approved', at: '2026-01-03T14:25:00Z' },
+      { key: 'contract-ready', at: '2026-01-04T09:00:00Z' },
+      { key: 'note-ready', at: '2026-01-04T09:02:00Z' },
+      { key: 'nafith-submitted', at: '2026-01-04T10:30:00Z' },
+      { key: 'nafith-approved', at: '2026-01-05T07:30:00Z' },
+      { key: 'activated', at: '2026-01-05T09:45:00Z' },
+      { key: 'payment-received', at: '2026-02-05T12:00:00Z' },
+      { key: 'due-reminder', at: '2026-04-03T07:00:00Z' },
+    ],
   },
   {
     id: 'MR-2026-026',
     customerName: 'عبدالرحمن الشهري',
     customerInitials: 'AS',
     customerCity: 'jeddah',
+    customerMobile: '554321098',
     item: 'نيسان باترول 2023',
     category: 'car',
     branchId: 'rm-malqa',
@@ -706,15 +775,34 @@ export const SEED_MERCHANT_RENTALS: MerchantRental[] = [
     endDate: '2026-12-19',
     nextDueDate: '2026-05-02',
     monthlyAmount: 3900,
+    itemValue: 215000,
+    liabilityTotal: 190000,
     paidInstallments: 4,
     totalInstallments: 12,
     status: 'active',
+    contractRef: 'CN-APX-2025-1226',
+    noteRef: 'PN-APX-2025-1226',
+    customerApproved: true,
+    contractState: 'signed',
+    noteState: 'signed',
+    nafithState: 'approved',
+    timeline: [
+      { key: 'created', at: '2025-12-18T10:00:00Z' },
+      { key: 'customer-approved', at: '2025-12-18T18:30:00Z' },
+      { key: 'contract-ready', at: '2025-12-19T08:00:00Z' },
+      { key: 'note-ready', at: '2025-12-19T08:05:00Z' },
+      { key: 'nafith-submitted', at: '2025-12-19T10:15:00Z' },
+      { key: 'nafith-approved', at: '2025-12-20T07:55:00Z' },
+      { key: 'activated', at: '2025-12-20T10:30:00Z' },
+      { key: 'payment-received', at: '2026-04-02T13:10:00Z' },
+    ],
   },
   {
     id: 'MR-2026-024',
     customerName: 'نوف القحطاني',
     customerInitials: 'NQ',
     customerCity: 'riyadh',
+    customerMobile: '553210987',
     item: 'لكزس ES 2024',
     category: 'car',
     branchId: 'rm-olaya',
@@ -722,15 +810,32 @@ export const SEED_MERCHANT_RENTALS: MerchantRental[] = [
     endDate: '2027-03-07',
     nextDueDate: '2026-05-08',
     monthlyAmount: 5200,
+    itemValue: 260000,
+    liabilityTotal: 240000,
     paidInstallments: 1,
     totalInstallments: 12,
     status: 'active',
+    contractRef: 'CN-APX-2026-0324',
+    noteRef: 'PN-APX-2026-0324',
+    customerApproved: true,
+    contractState: 'signed',
+    noteState: 'ready',
+    nafithState: 'submitted',
+    timeline: [
+      { key: 'created', at: '2026-03-05T09:00:00Z' },
+      { key: 'customer-approved', at: '2026-03-06T11:15:00Z' },
+      { key: 'contract-ready', at: '2026-03-07T08:00:00Z' },
+      { key: 'note-ready', at: '2026-03-07T08:02:00Z' },
+      { key: 'nafith-submitted', at: '2026-03-07T10:20:00Z' },
+      { key: 'activated', at: '2026-03-08T10:00:00Z' },
+    ],
   },
   {
     id: 'MR-2026-019',
     customerName: 'خالد الدوسري',
     customerInitials: 'KD',
     customerCity: 'riyadh',
+    customerMobile: '559870123',
     item: 'كيا سبورتاج 2023',
     category: 'car',
     branchId: 'rm-malqa',
@@ -738,15 +843,35 @@ export const SEED_MERCHANT_RENTALS: MerchantRental[] = [
     endDate: '2026-10-14',
     nextDueDate: '2026-04-15',
     monthlyAmount: 2100,
+    itemValue: 110000,
+    liabilityTotal: 95000,
     paidInstallments: 6,
     totalInstallments: 12,
     status: 'overdue',
+    contractRef: 'CN-APX-2025-1019',
+    noteRef: 'PN-APX-2025-1019',
+    customerApproved: true,
+    contractState: 'signed',
+    noteState: 'signed',
+    nafithState: 'approved',
+    timeline: [
+      { key: 'created', at: '2025-10-13T09:45:00Z' },
+      { key: 'customer-approved', at: '2025-10-13T17:00:00Z' },
+      { key: 'contract-ready', at: '2025-10-14T08:00:00Z' },
+      { key: 'note-ready', at: '2025-10-14T08:03:00Z' },
+      { key: 'nafith-submitted', at: '2025-10-14T09:30:00Z' },
+      { key: 'nafith-approved', at: '2025-10-15T07:40:00Z' },
+      { key: 'activated', at: '2025-10-15T10:15:00Z' },
+      { key: 'payment-received', at: '2026-03-15T11:00:00Z' },
+      { key: 'due-reminder', at: '2026-04-13T07:00:00Z' },
+    ],
   },
   {
     id: 'MR-2026-015',
     customerName: 'منى الزهراني',
     customerInitials: 'MZ',
     customerCity: 'riyadh',
+    customerMobile: '558765432',
     item: 'فورد إكسبلورر 2023',
     category: 'car',
     branchId: 'rm-olaya',
@@ -754,9 +879,27 @@ export const SEED_MERCHANT_RENTALS: MerchantRental[] = [
     endDate: '2026-08-31',
     nextDueDate: '2026-05-01',
     monthlyAmount: 3450,
+    itemValue: 180000,
+    liabilityTotal: 160000,
     paidInstallments: 7,
     totalInstallments: 12,
     status: 'active',
+    contractRef: 'CN-APX-2025-0915',
+    noteRef: 'PN-APX-2025-0915',
+    customerApproved: true,
+    contractState: 'signed',
+    noteState: 'signed',
+    nafithState: 'approved',
+    timeline: [
+      { key: 'created', at: '2025-08-30T10:00:00Z' },
+      { key: 'customer-approved', at: '2025-08-30T16:20:00Z' },
+      { key: 'contract-ready', at: '2025-08-31T08:30:00Z' },
+      { key: 'note-ready', at: '2025-08-31T08:32:00Z' },
+      { key: 'nafith-submitted', at: '2025-08-31T10:00:00Z' },
+      { key: 'nafith-approved', at: '2025-09-01T07:25:00Z' },
+      { key: 'activated', at: '2025-09-01T09:30:00Z' },
+      { key: 'payment-received', at: '2026-04-01T12:15:00Z' },
+    ],
   },
 ];
 
