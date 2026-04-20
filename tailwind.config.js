@@ -75,11 +75,18 @@ export default {
           '0%': { boxShadow: '0 0 0 0 rgba(46,110,240,0.5)' },
           '100%': { boxShadow: '0 0 0 16px rgba(46,110,240,0)' },
         },
+        shimmer: {
+          '100%': { transform: 'translateX(100%)' },
+        },
       },
       animation: {
         'slide-up': 'slideUp 260ms ease-out',
         'fade-in': 'fadeIn 200ms ease-out',
         'pulse-ring': 'pulseRing 1.6s ease-out infinite',
+        shimmer: 'shimmer 1.4s infinite',
+      },
+      spacing: {
+        13: '3.25rem',
       },
     },
   },

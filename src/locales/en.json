@@ -1,0 +1,67 @@
+{
+  "app": {
+    "name": "AppLux",
+    "tagline": "Rental contracts & promissory notes"
+  },
+  "nav": {
+    "home": "Home",
+    "contracts": "Contracts",
+    "notifications": "Alerts",
+    "profile": "Profile"
+  },
+  "common": {
+    "search": "Search",
+    "filter": "Filter",
+    "all": "All",
+    "active": "Active",
+    "pending": "Pending",
+    "signed": "Signed",
+    "overdue": "Overdue",
+    "draft": "Draft",
+    "cancel": "Cancel",
+    "save": "Save",
+    "continue": "Continue",
+    "next": "Next",
+    "back": "Back",
+    "loading": "Loading…",
+    "empty": "Nothing to show yet",
+    "sar": "SAR",
+    "viewAll": "View all"
+  },
+  "home": {
+    "greeting": "Welcome back",
+    "subtitle": "A snapshot of your portfolio",
+    "quickActions": "Quick actions",
+    "newContract": "New contract",
+    "newNote": "Promissory note",
+    "customers": "Customers",
+    "reports": "Reports",
+    "overview": "Monthly overview",
+    "activeContracts": "Active contracts",
+    "dueSoon": "Due soon",
+    "collected": "Collected"
+  },
+  "contracts": {
+    "title": "Contracts",
+    "searchPlaceholder": "Search by name or contract ID"
+  },
+  "notifications": {
+    "title": "Notifications",
+    "empty": "No notifications yet"
+  },
+  "profile": {
+    "title": "Profile",
+    "language": "Language",
+    "arabic": "العربية",
+    "english": "English",
+    "appearance": "Appearance",
+    "security": "Security & privacy",
+    "support": "Help & support",
+    "about": "About",
+    "version": "Version"
+  },
+  "form": {
+    "required": "Required",
+    "optional": "Optional"
+  }
+}

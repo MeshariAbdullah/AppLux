@@ -1,0 +1,67 @@
+{
+  "app": {
+    "name": "AppLux",
+    "tagline": "منصّة إدارة عقود التأجير والسند لأمر"
+  },
+  "nav": {
+    "home": "الرئيسية",
+    "contracts": "العقود",
+    "notifications": "الإشعارات",
+    "profile": "حسابي"
+  },
+  "common": {
+    "search": "بحث",
+    "filter": "تصفية",
+    "all": "الكل",
+    "active": "نشِط",
+    "pending": "قيد المراجعة",
+    "signed": "موقَّع",
+    "overdue": "متأخر",
+    "draft": "مسودّة",
+    "cancel": "إلغاء",
+    "save": "حفظ",
+    "continue": "متابعة",
+    "next": "التالي",
+    "back": "رجوع",
+    "loading": "جارٍ التحميل…",
+    "empty": "لا توجد بيانات لعرضها",
+    "sar": "ر.س",
+    "viewAll": "عرض الكل"
+  },
+  "home": {
+    "greeting": "أهلاً بك",
+    "subtitle": "نظرة سريعة على محفظتك",
+    "quickActions": "إجراءات سريعة",
+    "newContract": "عقد جديد",
+    "newNote": "سند لأمر",
+    "customers": "العملاء",
+    "reports": "التقارير",
+    "overview": "ملخّص الشهر",
+    "activeContracts": "عقود نشطة",
+    "dueSoon": "مستحقات قريبة",
+    "collected": "المُحصَّل"
+  },
+  "contracts": {
+    "title": "العقود",
+    "searchPlaceholder": "ابحث بالاسم أو رقم العقد"
+  },
+  "notifications": {
+    "title": "الإشعارات",
+    "empty": "لا توجد إشعارات حتى الآن"
+  },
+  "profile": {
+    "title": "حسابي",
+    "language": "اللغة",
+    "arabic": "العربية",
+    "english": "English",
+    "appearance": "المظهر",
+    "security": "الأمان والخصوصية",
+    "support": "الدعم الفني",
+    "about": "عن التطبيق",
+    "version": "الإصدار"
+  },
+  "form": {
+    "required": "حقل مطلوب",
+    "optional": "اختياري"
+  }
+}
