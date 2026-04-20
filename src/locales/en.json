@@ -690,7 +690,18 @@
       "actions": {
         "openContract": "Open contract details",
         "openNote": "Open promissory note",
-        "backToRental": "Back to rental"
+        "backToRental": "Back to rental",
+        "close": "Close rental · item received",
+        "reportDamage": "Report damage or non-return",
+        "openDamageCase": "Open damage case"
+      },
+      "outcome": {
+        "closedTitle": "Rental closed",
+        "closedHint": "Item received and contract closed.",
+        "closedOn": "Closed on {at}",
+        "damagedTitle": "Damage case opened",
+        "damagedHint": "This rental has an open damage case under review.",
+        "openCase": "Open case"
       },
       "contract": {
         "title": "Rental contract",
@@ -758,6 +769,140 @@
         "reported": "Reported",
         "investigating": "Investigating",
         "settled": "Settled"
+      }
+    },
+    "close": {
+      "title": "Close rental",
+      "hero": {
+        "eyebrow": "Closing flow",
+        "title": "Confirm item received",
+        "subtitle": "Confirm the item returned in good condition and close the rental."
+      },
+      "rental": "Rental summary",
+      "fields": {
+        "start": "Start",
+        "end": "End",
+        "paid": "Paid"
+      },
+      "linked": "Linked documents",
+      "notes": {
+        "title": "Inspection notes",
+        "label": "Condition on return",
+        "placeholder": "e.g. returned clean, no visible damage."
+      },
+      "confirm": {
+        "title": "I received the item",
+        "subtitle": "I confirm the item was returned in an acceptable condition and this rental can be closed."
+      },
+      "altTitle": "Found damage or non-return?",
+      "altHint": "If the item is damaged or was not returned, open a damage case instead.",
+      "altAction": "Open damage case →",
+      "outcome": {
+        "closedPreview": "Outcome · Closed"
+      },
+      "submit": "Close rental",
+      "summary": "Closure summary",
+      "closedAt": "Closed at",
+      "contractRef": "Contract",
+      "totalPaid": "Total collected",
+      "success": {
+        "title": "Rental closed",
+        "subtitle": "The contract is marked as closed and archived in your history.",
+        "backToRental": "Back to rental",
+        "backToList": "Back to rentals"
+      }
+    },
+    "damage": {
+      "new": {
+        "title": "Report damage",
+        "hero": {
+          "eyebrow": "Damage case",
+          "title": "Open a new damage case",
+          "subtitle": "Classify the damage, attach evidence and set a claim amount."
+        },
+        "rental": "Rental",
+        "severity": {
+          "title": "Case type",
+          "hint": "Pick one",
+          "desc": {
+            "partial": "Repairable damage — claim covers the repair cost.",
+            "total": "Irreparable damage — full value of the item is claimed.",
+            "non-return": "The item was not returned — the full liability is claimed."
+          }
+        },
+        "claim": {
+          "title": "Claim amount",
+          "label": "Amount requested",
+          "hint": "Sets the binding amount to be collected from the customer.",
+          "suggested": "Suggested: {amount}"
+        },
+        "evidence": {
+          "title": "Evidence photos",
+          "hint": "Attach photos showing the damage or the missing item. Up to 8.",
+          "add": "Add photo",
+          "remove": "Remove photo"
+        },
+        "notes": {
+          "title": "Case notes",
+          "label": "What happened",
+          "placeholder": "Describe the issue clearly for review."
+        },
+        "linked": "Linked documents",
+        "invoice": "Original invoice",
+        "warn": {
+          "title": "Binding action",
+          "hint": "Opening a case will lock the rental and may lead to escalation via the promissory note."
+        },
+        "submit": "Open damage case"
+      }
+    },
+    "damageCase": {
+      "eyebrow": "Case record",
+      "claim": "Claim amount",
+      "reportedAt": "Reported on",
+      "linkedRental": "Linked rental",
+      "documents": "Linked documents",
+      "invoice": "Original invoice",
+      "evidence": "Evidence",
+      "notes": "Case notes",
+      "nextStep": {
+        "title": "Next step toward escalation",
+        "settled": "Case settled",
+        "settledSub": "No further action required. Case is fully resolved.",
+        "steps": {
+          "review": "Internal review",
+          "settlement": "Amicable settlement",
+          "nafith": "Nafith enforcement",
+          "execution": "Execution court"
+        },
+        "stepsSub": {
+          "review": "Assess the case, verify evidence and confirm the claim amount.",
+          "settlement": "Contact the customer to agree on a payment or repair plan.",
+          "nafith": "Activate the promissory note through Nafith for binding enforcement.",
+          "execution": "File the case with the execution court if no payment is made."
+        },
+        "state": {
+          "done": "Done",
+          "current": "In progress",
+          "pending": "Pending"
+        }
+      },
+      "timeline": {
+        "title": "Case timeline",
+        "reported": "Case reported",
+        "investigating": "Under investigation",
+        "settled": "Case settled",
+        "inProgress": "In progress",
+        "pending": "Pending",
+        "done": "Completed"
+      },
+      "placeholder": {
+        "title": "Escalation to Nafith",
+        "hint": "Enforcement through Nafith and the execution court are placeholders for this demo."
+      },
+      "actions": {
+        "openRental": "Open rental",
+        "backToList": "Back to damage cases"
       }
     },
     "history": {

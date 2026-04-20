@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import { Header, Screen } from '@/components/layout';
 import {
   Card,
@@ -5,7 +6,8 @@ import {
   StatusChip,
   type StatusTone,
 } from '@/components/ui';
-import { AlertIcon, GavelIcon, InfoIcon } from '@/components/icons';
+import { AlertIcon, ChevronIcon, GavelIcon, InfoIcon } from '@/components/icons';
+import { cn } from '@/lib/cn';
 import { useI18n, useT } from '@/lib/i18n';
 import { useStore } from '@/lib/store';
 import type {
@@ -78,60 +80,68 @@ export default function MerchantDamages() {
 
 function DamageCard({ item }: { item: MerchantDamageCase }) {
   const t = useT();
-  const { formatCurrency, formatDate } = useI18n();
+  const { formatCurrency, formatDate, dir } = useI18n();
   const statusTone = toneForStatus(item.status);
   const sevTone = toneForSeverity(item.severity);
   const severe = item.severity !== 'partial';
   return (
-    <Card padded className="space-y-3">
-      <div className="flex items-center gap-3">
-        <span className="h-10 w-10 shrink-0 rounded-xl bg-danger-50 text-danger-600 grid place-items-center">
-          {severe ? <AlertIcon size={18} /> : <GavelIcon size={18} />}
-        </span>
-        <div className="flex-1 min-w-0">
-          <div className="text-[13.5px] font-semibold text-ink-900 truncate">
-            {item.customerName}
+    <Link to={`/merchant/damages/${item.id}`} className="block">
+      <Card padded className="space-y-3 hover:ring-ink-200 transition-colors">
+        <div className="flex items-center gap-3">
+          <span className="h-10 w-10 shrink-0 rounded-xl bg-danger-50 text-danger-600 grid place-items-center">
+            {severe ? <AlertIcon size={18} /> : <GavelIcon size={18} />}
+          </span>
+          <div className="flex-1 min-w-0">
+            <div className="text-[13.5px] font-semibold text-ink-900 truncate">
+              {item.customerName}
+            </div>
+            <div className="mt-0.5 text-[12px] text-ink-400 truncate">
+              {item.item}
+            </div>
           </div>
-          <div className="mt-0.5 text-[12px] text-ink-400 truncate">{item.item}</div>
+          <StatusChip
+            size="sm"
+            tone={statusTone}
+            dot
+            label={t(`merchant.damages.status.${item.status}`)}
+          />
+          <ChevronIcon
+            size={14}
+            className={cn('text-ink-300', dir === 'rtl' ? '' : 'rotate-180')}
+          />
         </div>
-        <StatusChip
-          size="sm"
-          tone={statusTone}
-          dot
-          label={t(`merchant.damages.status.${item.status}`)}
-        />
-      </div>
 
-      <div className="flex items-center gap-2">
-        <StatusChip
-          size="sm"
-          tone={sevTone}
-          dot={false}
-          label={t(`merchant.damages.severity.${item.severity}`)}
-        />
-        <span className="text-[11.5px] text-ink-400 num">
-          {t('merchant.damages.linkedRental')} · {item.rentalId}
-        </span>
-      </div>
+        <div className="flex items-center gap-2">
+          <StatusChip
+            size="sm"
+            tone={sevTone}
+            dot={false}
+            label={t(`merchant.damages.severity.${item.severity}`)}
+          />
+          <span className="text-[11.5px] text-ink-400 num">
+            {t('merchant.damages.linkedRental')} · {item.rentalId}
+          </span>
+        </div>
 
-      <div className="grid grid-cols-2 gap-3 text-[11.5px]">
-        <div>
-          <div className="text-ink-400 uppercase tracking-wide text-[10.5px]">
-            {t('merchant.damages.reportedOn')}
+        <div className="grid grid-cols-2 gap-3 text-[11.5px]">
+          <div>
+            <div className="text-ink-400 uppercase tracking-wide text-[10.5px]">
+              {t('merchant.damages.reportedOn')}
+            </div>
+            <div className="mt-0.5 font-semibold text-ink-900 num">
+              {formatDate(item.reportedAt)}
+            </div>
           </div>
-          <div className="mt-0.5 font-semibold text-ink-900 num">
-            {formatDate(item.reportedAt)}
+          <div className="text-end">
+            <div className="text-ink-400 uppercase tracking-wide text-[10.5px]">
+              {t('merchant.damages.claim')}
+            </div>
+            <div className="mt-0.5 font-semibold text-ink-900 num">
+              {formatCurrency(item.claimAmount)}
+            </div>
           </div>
         </div>
-        <div className="text-end">
-          <div className="text-ink-400 uppercase tracking-wide text-[10.5px]">
-            {t('merchant.damages.claim')}
-          </div>
-          <div className="mt-0.5 font-semibold text-ink-900 num">
-            {formatCurrency(item.claimAmount)}
-          </div>
-        </div>
-      </div>
-    </Card>
+      </Card>
+    </Link>
   );
 }

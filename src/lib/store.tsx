@@ -26,6 +26,7 @@ import {
   type MerchantApproval,
   type MerchantCustomer,
   type MerchantDamageCase,
+  type MerchantDamageSeverity,
   type MerchantHistoryRecord,
   type MerchantRental,
   type PartnerStore,
@@ -138,6 +139,18 @@ type StoreContextValue = {
   merchantDamages: MerchantDamageCase[];
   merchantHistory: MerchantHistoryRecord[];
   merchantCustomers: MerchantCustomer[];
+  closeRental: (rentalId: string, input?: { notes?: string }) => void;
+  reportDamage: (
+    rentalId: string,
+    input: ReportDamageInput,
+  ) => MerchantDamageCase | null;
+};
+
+export type ReportDamageInput = {
+  severity: MerchantDamageSeverity;
+  claimAmount: number;
+  notes?: string;
+  evidence?: string[];
 };
 
 export type ApprovalRecord = {
@@ -178,6 +191,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [approvals, setApprovals] = useState<Record<string, ApprovalRecord>>({});
   const [merchant, setMerchant] = useState<MerchantProfile | null>(readMerchant);
   const [merchantDraft, setMerchantDraft] = useState<MerchantDraft>(emptyMerchantDraft);
+  const [rentalOverrides, setRentalOverrides] = useState<
+    Record<string, Partial<MerchantRental>>
+  >({});
+  const [extraDamages, setExtraDamages] = useState<MerchantDamageCase[]>([]);
 
   useEffect(() => {
     try {
@@ -265,6 +282,59 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     return record;
   }, []);
 
+  const closeRental = useCallback(
+    (rentalId: string, input?: { notes?: string }) => {
+      setRentalOverrides((prev) => ({
+        ...prev,
+        [rentalId]: {
+          ...(prev[rentalId] ?? {}),
+          closureStatus: 'closed',
+          closedAt: new Date().toISOString(),
+          closureNotes: input?.notes?.trim() || undefined,
+          status: 'returned',
+          timeline: undefined,
+        },
+      }));
+    },
+    [],
+  );
+
+  const reportDamage = useCallback(
+    (rentalId: string, input: ReportDamageInput) => {
+      const rental = SEED_MERCHANT_RENTALS.find((r) => r.id === rentalId);
+      if (!rental) return null;
+      const year = new Date().getFullYear();
+      const id = `DM-${year}-${Math.floor(100 + Math.random() * 899)}`;
+      const created: MerchantDamageCase = {
+        id,
+        rentalId,
+        customerName: rental.customerName,
+        customerInitials: rental.customerInitials,
+        item: rental.item,
+        severity: input.severity,
+        claimAmount: input.claimAmount,
+        reportedAt: new Date().toISOString(),
+        status: 'reported',
+        notes: input.notes?.trim() || undefined,
+        evidence: input.evidence && input.evidence.length ? input.evidence : undefined,
+        contractRef: rental.contractRef,
+        noteRef: rental.noteRef,
+        invoiceRef: `INV-${rental.contractRef.replace('CN-', '')}-LATEST`,
+      };
+      setExtraDamages((prev) => [created, ...prev]);
+      setRentalOverrides((prev) => ({
+        ...prev,
+        [rentalId]: {
+          ...(prev[rentalId] ?? {}),
+          closureStatus: 'damaged',
+          damageCaseId: id,
+        },
+      }));
+      return created;
+    },
+    [],
+  );
+
   const eligibility = DEFAULT_ELIGIBILITY;
   const invoices = SEED_INVOICES;
   const contracts = SEED_CONTRACTS;
@@ -272,9 +342,20 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const history = SEED_HISTORY;
   const stores = SEED_STORES;
   const scans = SEED_SCANS;
-  const merchantRentals = SEED_MERCHANT_RENTALS;
+  const merchantRentals = useMemo<MerchantRental[]>(
+    () =>
+      SEED_MERCHANT_RENTALS.map((r) => {
+        const o = rentalOverrides[r.id];
+        if (!o) return r;
+        return { ...r, ...o };
+      }),
+    [rentalOverrides],
+  );
   const merchantApprovals = SEED_MERCHANT_APPROVALS;
-  const merchantDamages = SEED_MERCHANT_DAMAGES;
+  const merchantDamages = useMemo<MerchantDamageCase[]>(
+    () => [...extraDamages, ...SEED_MERCHANT_DAMAGES],
+    [extraDamages],
+  );
   const merchantHistory = SEED_MERCHANT_HISTORY;
   const merchantCustomers = SEED_MERCHANT_CUSTOMERS;
 
@@ -307,6 +388,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       merchantDamages,
       merchantHistory,
       merchantCustomers,
+      closeRental,
+      reportDamage,
     }),
     [
       session,
@@ -336,6 +419,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       merchantDamages,
       merchantHistory,
       merchantCustomers,
+      closeRental,
+      reportDamage,
     ],
   );
 

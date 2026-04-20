@@ -539,6 +539,7 @@ export type MerchantRentalCategory = 'car' | 'property' | 'equipment';
 export type MerchantRentalStatus = 'active' | 'due-soon' | 'overdue' | 'returned';
 export type MerchantRentalDocState = 'draft' | 'ready' | 'sent' | 'signed';
 export type MerchantNafithState = 'pending' | 'submitted' | 'approved';
+export type MerchantClosureStatus = 'active' | 'closed' | 'damaged';
 export type MerchantRentalTimelineKey =
   | 'created'
   | 'customer-approved'
@@ -580,6 +581,10 @@ export type MerchantRental = {
   noteState: MerchantRentalDocState;
   nafithState: MerchantNafithState;
   timeline: MerchantRentalTimelineEvent[];
+  closureStatus?: MerchantClosureStatus;
+  closedAt?: string;
+  closureNotes?: string;
+  damageCaseId?: string;
 };
 
 export type MerchantApprovalStage =
@@ -610,6 +615,11 @@ export type MerchantDamageCase = {
   claimAmount: number;
   reportedAt: string;
   status: MerchantDamageStatus;
+  notes?: string;
+  evidence?: string[];
+  contractRef?: string;
+  noteRef?: string;
+  invoiceRef?: string;
 };
 
 export type MerchantHistoryOutcome = 'completed' | 'cancelled' | 'defaulted';
@@ -950,6 +960,10 @@ export const SEED_MERCHANT_DAMAGES: MerchantDamageCase[] = [
     claimAmount: 8400,
     reportedAt: '2026-04-10',
     status: 'investigating',
+    notes: 'خدوش عميقة على الجانب الأيمن وكسر في المرآة الجانبية.',
+    contractRef: 'CN-APX-2026-0128',
+    noteRef: 'PN-APX-2026-0128',
+    invoiceRef: 'INV-APX-2026-0128-04',
   },
   {
     id: 'DM-2026-005',
@@ -961,6 +975,10 @@ export const SEED_MERCHANT_DAMAGES: MerchantDamageCase[] = [
     claimAmount: 145000,
     reportedAt: '2026-03-28',
     status: 'reported',
+    notes: 'المستأجر لم يُعِد المركبة رغم انتهاء مدة العقد وتعذّر التواصل معه.',
+    contractRef: 'CN-APX-2025-1112',
+    noteRef: 'PN-APX-2025-1112',
+    invoiceRef: 'INV-APX-2025-1112-03',
   },
   {
     id: 'DM-2026-002',
@@ -972,6 +990,10 @@ export const SEED_MERCHANT_DAMAGES: MerchantDamageCase[] = [
     claimAmount: 3100,
     reportedAt: '2026-02-14',
     status: 'settled',
+    notes: 'تم تسوية قيمة الأضرار بالتراضي عبر التأمين.',
+    contractRef: 'CN-APX-2025-0988',
+    noteRef: 'PN-APX-2025-0988',
+    invoiceRef: 'INV-APX-2025-0988-06',
   },
 ];
 

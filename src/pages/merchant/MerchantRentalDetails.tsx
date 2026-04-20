@@ -3,6 +3,7 @@ import { Link, Navigate, useNavigate, useParams } from 'react-router-dom';
 import { Header, Screen } from '@/components/layout';
 import { Button, Card, CardDivider, SectionHeader, StatusChip, type StatusTone } from '@/components/ui';
 import {
+  AlertIcon,
   BadgeCheckIcon,
   CarIcon,
   CheckIcon,
@@ -12,6 +13,7 @@ import {
   GavelIcon,
   HistoryIcon,
   InfoIcon,
+  PackageIcon,
   ReceiptIcon,
   ShieldIcon,
   SignatureIcon,
@@ -141,6 +143,12 @@ export default function MerchantRentalDetails() {
 
   const stages = stageStates(rental);
   const statusTone = toneForStatus(rental.status);
+  const closureState: 'active' | 'closed' | 'damaged' =
+    rental.closureStatus === 'closed'
+      ? 'closed'
+      : rental.closureStatus === 'damaged'
+        ? 'damaged'
+        : 'active';
   const progress =
     rental.totalInstallments > 0
       ? (rental.paidInstallments / rental.totalInstallments) * 100
@@ -166,6 +174,77 @@ export default function MerchantRentalDetails() {
       />
       <Screen padded={false} className="bg-ink-50">
         <div className="px-4 pt-4 pb-8 space-y-4">
+          {/* Outcome banner */}
+          {closureState !== 'active' && (
+            <div
+              className={cn(
+                'rounded-xl2 p-3.5 ring-1 flex items-start gap-3',
+                closureState === 'closed'
+                  ? 'bg-success-50 ring-success-500/20'
+                  : 'bg-danger-50/70 ring-danger-500/20',
+              )}
+            >
+              <span
+                className={cn(
+                  'h-10 w-10 shrink-0 rounded-xl grid place-items-center ring-1',
+                  closureState === 'closed'
+                    ? 'bg-white text-success-600 ring-success-500/20'
+                    : 'bg-white text-danger-600 ring-danger-500/20',
+                )}
+              >
+                {closureState === 'closed' ? (
+                  <BadgeCheckIcon size={18} />
+                ) : (
+                  <AlertIcon size={18} />
+                )}
+              </span>
+              <div className="min-w-0 flex-1">
+                <div
+                  className={cn(
+                    'text-[13.5px] font-semibold',
+                    closureState === 'closed'
+                      ? 'text-success-700'
+                      : 'text-danger-700',
+                  )}
+                >
+                  {t(
+                    closureState === 'closed'
+                      ? 'merchant.rental.outcome.closedTitle'
+                      : 'merchant.rental.outcome.damagedTitle',
+                  )}
+                </div>
+                <div
+                  className={cn(
+                    'mt-0.5 text-[12px] leading-relaxed',
+                    closureState === 'closed'
+                      ? 'text-success-700/80'
+                      : 'text-danger-700/80',
+                  )}
+                >
+                  {closureState === 'closed'
+                    ? rental.closedAt
+                      ? t('merchant.rental.outcome.closedOn', {
+                          at: formatDate(rental.closedAt, {
+                            dateStyle: 'medium',
+                            timeStyle: 'short',
+                          }),
+                        })
+                      : t('merchant.rental.outcome.closedHint')
+                    : t('merchant.rental.outcome.damagedHint')}
+                </div>
+                {closureState === 'damaged' && rental.damageCaseId && (
+                  <Link
+                    to={`/merchant/damages/${rental.damageCaseId}`}
+                    className="mt-1.5 inline-flex items-center gap-1.5 text-[12.5px] font-semibold text-danger-700 hover:underline"
+                  >
+                    {t('merchant.rental.outcome.openCase')} ·{' '}
+                    <span className="num">{rental.damageCaseId}</span>
+                  </Link>
+                )}
+              </div>
+            </div>
+          )}
+
           {/* Hero */}
           <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-ink-900 via-ink-800 to-ink-900 text-white p-5 shadow-float">
             <div
@@ -443,8 +522,42 @@ export default function MerchantRentalDetails() {
 
           {/* Actions */}
           <div className="space-y-2.5 pt-1">
+            {closureState === 'active' && (
+              <>
+                <Button
+                  size="lg"
+                  block
+                  leading={<CheckIcon size={16} />}
+                  onClick={() => navigate(`/merchant/rentals/${rental.id}/close`)}
+                >
+                  {t('merchant.rental.actions.close')}
+                </Button>
+                <Button
+                  variant="secondary"
+                  block
+                  leading={<AlertIcon size={16} />}
+                  onClick={() =>
+                    navigate(`/merchant/rentals/${rental.id}/damage/new`)
+                  }
+                >
+                  {t('merchant.rental.actions.reportDamage')}
+                </Button>
+              </>
+            )}
+            {closureState === 'damaged' && rental.damageCaseId && (
+              <Button
+                size="lg"
+                block
+                leading={<PackageIcon size={16} />}
+                onClick={() =>
+                  navigate(`/merchant/damages/${rental.damageCaseId}`)
+                }
+              >
+                {t('merchant.rental.actions.openDamageCase')}
+              </Button>
+            )}
             <Button
-              size="lg"
+              variant={closureState === 'active' ? 'ghost' : 'secondary'}
               block
               leading={<DocIcon size={16} />}
               onClick={() => navigate(`/merchant/rentals/${rental.id}/contract`)}
@@ -452,7 +565,7 @@ export default function MerchantRentalDetails() {
               {t('merchant.rental.actions.openContract')}
             </Button>
             <Button
-              variant="secondary"
+              variant="ghost"
               block
               leading={<SignatureIcon size={16} />}
               onClick={() => navigate(`/merchant/rentals/${rental.id}/note`)}

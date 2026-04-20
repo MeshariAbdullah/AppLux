@@ -31,8 +31,11 @@ import MerchantRentals from '@/pages/merchant/MerchantRentals';
 import MerchantRentalDetails from '@/pages/merchant/MerchantRentalDetails';
 import MerchantRentalContract from '@/pages/merchant/MerchantRentalContract';
 import MerchantRentalNote from '@/pages/merchant/MerchantRentalNote';
+import MerchantRentalClose from '@/pages/merchant/MerchantRentalClose';
 import MerchantApprovals from '@/pages/merchant/MerchantApprovals';
 import MerchantDamages from '@/pages/merchant/MerchantDamages';
+import MerchantDamageNew from '@/pages/merchant/MerchantDamageNew';
+import MerchantDamageDetails from '@/pages/merchant/MerchantDamageDetails';
 import MerchantHistoryPage from '@/pages/merchant/MerchantHistoryPage';
 import MerchantInvoiceNew from '@/pages/merchant/MerchantInvoiceNew';
 
@@ -70,8 +73,14 @@ export function AppRoutes() {
           element={<MerchantRentalContract />}
         />
         <Route path="/merchant/rentals/:id/note" element={<MerchantRentalNote />} />
+        <Route path="/merchant/rentals/:id/close" element={<MerchantRentalClose />} />
+        <Route
+          path="/merchant/rentals/:id/damage/new"
+          element={<MerchantDamageNew />}
+        />
         <Route path="/merchant/approvals" element={<MerchantApprovals />} />
         <Route path="/merchant/damages" element={<MerchantDamages />} />
+        <Route path="/merchant/damages/:id" element={<MerchantDamageDetails />} />
         <Route path="/merchant/history" element={<MerchantHistoryPage />} />
         <Route path="/merchant/invoice/new" element={<MerchantInvoiceNew />} />
       </Route>
