@@ -22,6 +22,11 @@ import Login from '@/pages/auth/Login';
 import Register from '@/pages/auth/Register';
 import Nafath from '@/pages/auth/Nafath';
 import RegisterSuccess from '@/pages/auth/RegisterSuccess';
+import MerchantWelcome from '@/pages/merchant/MerchantWelcome';
+import MerchantLogin from '@/pages/merchant/MerchantLogin';
+import MerchantRegister from '@/pages/merchant/MerchantRegister';
+import MerchantPending from '@/pages/merchant/MerchantPending';
+import MerchantHome from '@/pages/merchant/MerchantHome';
 
 function RequireAuth({ children }: { children: ReactElement }) {
   const { session } = useStore();
@@ -45,6 +50,11 @@ export function AppRoutes() {
         <Route path="/auth/register" element={<Register />} />
         <Route path="/auth/nafath" element={<Nafath />} />
         <Route path="/auth/success" element={<RegisterSuccess />} />
+        <Route path="/merchant/welcome" element={<MerchantWelcome />} />
+        <Route path="/merchant/login" element={<MerchantLogin />} />
+        <Route path="/merchant/register" element={<MerchantRegister />} />
+        <Route path="/merchant/pending" element={<MerchantPending />} />
+        <Route path="/merchant/home" element={<MerchantHome />} />
       </Route>
 
       <Route

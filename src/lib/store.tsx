@@ -37,6 +37,49 @@ export type RegistrationDraft = {
   income: string;
 };
 
+export type MerchantBranchDraft = {
+  id: string;
+  name: string;
+  city: string;
+  address: string;
+  phone: string;
+};
+
+export type MerchantDraft = {
+  companyName: string;
+  commercialReg: string;
+  authorizedName: string;
+  authorizedId: string;
+  iban: string;
+  city: string;
+  address: string;
+  contactEmail: string;
+  contactPhone: string;
+  branches: MerchantBranchDraft[];
+};
+
+export type MerchantStatus = 'pending' | 'approved' | 'rejected';
+
+export type MerchantProfile = MerchantDraft & {
+  id: string;
+  status: MerchantStatus;
+  submittedAt: string;
+  approvedAt: string | null;
+};
+
+export const emptyMerchantDraft: MerchantDraft = {
+  companyName: '',
+  commercialReg: '',
+  authorizedName: '',
+  authorizedId: '',
+  iban: '',
+  city: '',
+  address: '',
+  contactEmail: '',
+  contactPhone: '',
+  branches: [],
+};
+
 export type UserProfile = RegistrationDraft & {
   nafathVerified: boolean;
   createdAt: string;
@@ -73,6 +116,13 @@ type StoreContextValue = {
   scans: ScannedPackage[];
   approvals: Record<string, ApprovalRecord>;
   approvePackage: (token: string) => ApprovalRecord;
+  merchant: MerchantProfile | null;
+  merchantDraft: MerchantDraft;
+  updateMerchantDraft: (patch: Partial<MerchantDraft>) => void;
+  resetMerchantDraft: () => void;
+  submitMerchantApproval: () => MerchantProfile;
+  approveMerchant: () => void;
+  signOutMerchant: () => void;
 };
 
 export type ApprovalRecord = {
@@ -83,6 +133,7 @@ export type ApprovalRecord = {
 };
 
 const STORAGE_KEY = 'applux.session';
+const MERCHANT_KEY = 'applux.merchant';
 
 const StoreContext = createContext<StoreContextValue | null>(null);
 
@@ -96,10 +147,22 @@ function readSession(): Session {
   }
 }
 
+function readMerchant(): MerchantProfile | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    const raw = window.localStorage.getItem(MERCHANT_KEY);
+    return raw ? (JSON.parse(raw) as MerchantProfile) : null;
+  } catch {
+    return null;
+  }
+}
+
 export function StoreProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session>(readSession);
   const [draft, setDraft] = useState<RegistrationDraft>(emptyRegistration);
   const [approvals, setApprovals] = useState<Record<string, ApprovalRecord>>({});
+  const [merchant, setMerchant] = useState<MerchantProfile | null>(readMerchant);
+  const [merchantDraft, setMerchantDraft] = useState<MerchantDraft>(emptyMerchantDraft);
 
   useEffect(() => {
     try {
@@ -109,6 +172,15 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       /* storage unavailable */
     }
   }, [session]);
+
+  useEffect(() => {
+    try {
+      if (merchant) window.localStorage.setItem(MERCHANT_KEY, JSON.stringify(merchant));
+      else window.localStorage.removeItem(MERCHANT_KEY);
+    } catch {
+      /* storage unavailable */
+    }
+  }, [merchant]);
 
   const updateDraft = useCallback(
     (patch: Partial<RegistrationDraft>) => setDraft((d) => ({ ...d, ...patch })),
@@ -134,6 +206,36 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     setSession(null);
     setDraft(emptyRegistration);
     setApprovals({});
+  }, []);
+
+  const updateMerchantDraft = useCallback(
+    (patch: Partial<MerchantDraft>) => setMerchantDraft((d) => ({ ...d, ...patch })),
+    [],
+  );
+
+  const resetMerchantDraft = useCallback(() => setMerchantDraft(emptyMerchantDraft), []);
+
+  const submitMerchantApproval = useCallback((): MerchantProfile => {
+    const profile: MerchantProfile = {
+      ...merchantDraft,
+      id: `MRC-${Date.now().toString().slice(-6)}`,
+      status: 'pending',
+      submittedAt: new Date().toISOString(),
+      approvedAt: null,
+    };
+    setMerchant(profile);
+    return profile;
+  }, [merchantDraft]);
+
+  const approveMerchant = useCallback(() => {
+    setMerchant((m) =>
+      m ? { ...m, status: 'approved', approvedAt: new Date().toISOString() } : m,
+    );
+  }, []);
+
+  const signOutMerchant = useCallback(() => {
+    setMerchant(null);
+    setMerchantDraft(emptyMerchantDraft);
   }, []);
 
   const approvePackage = useCallback((token: string) => {
@@ -173,6 +275,13 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       scans,
       approvals,
       approvePackage,
+      merchant,
+      merchantDraft,
+      updateMerchantDraft,
+      resetMerchantDraft,
+      submitMerchantApproval,
+      approveMerchant,
+      signOutMerchant,
     }),
     [
       session,
@@ -190,6 +299,13 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       scans,
       approvals,
       approvePackage,
+      merchant,
+      merchantDraft,
+      updateMerchantDraft,
+      resetMerchantDraft,
+      submitMerchantApproval,
+      approveMerchant,
+      signOutMerchant,
     ],
   );
 
