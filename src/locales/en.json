@@ -259,5 +259,123 @@
   "form": {
     "required": "Required",
     "optional": "Optional"
+  },
+  "qr": {
+    "entry": "Scan code",
+    "title": "Scan rental QR",
+    "subtitle": "Point your camera at the partner's QR code to start reviewing the rental contract and promissory note.",
+    "frameHint": "Align the code inside the frame",
+    "scanning": "Scanning…",
+    "matched": "Code recognized",
+    "simulate": "Simulate demo scan",
+    "cancel": "Cancel",
+    "manual": "Enter code manually",
+    "permissionNote": "The camera is only used to read codes from verified partners.",
+    "invalidCode": "Invalid or expired code",
+    "tryAgain": "Try again"
+  },
+  "review": {
+    "title": "Rental review",
+    "issuedOn": "Issued on",
+    "partner": "Partner",
+    "branch": "Branch",
+    "steps": {
+      "invoice": "Invoice",
+      "contract": "Contract",
+      "note": "Note",
+      "confirm": "Confirm"
+    },
+    "nav": {
+      "next": "Continue",
+      "back": "Back",
+      "accept": "Agree & continue"
+    },
+    "invoice": {
+      "title": "Rental invoice",
+      "subtitle": "Review rental terms, items and values.",
+      "rentalDetails": "Rental details",
+      "purpose": "Purpose",
+      "duration": "Duration",
+      "durationValue": "{days} days",
+      "pickupOn": "Pickup date",
+      "returnOn": "Return date",
+      "pickupLocation": "Pickup location",
+      "items": "Rented items",
+      "itemsCount": "{count} items",
+      "qty": "Qty",
+      "unitValue": "Market value",
+      "serial": "Serial",
+      "fees": "Fee breakdown",
+      "rentalTotal": "Rental total",
+      "deposit": "Refundable deposit",
+      "insurance": "Insurance",
+      "vat": "VAT (15%)",
+      "grandTotal": "Grand total"
+    },
+    "contract": {
+      "title": "Rental contract",
+      "subtitle": "Read the key terms carefully before continuing.",
+      "reference": "Contract ref",
+      "parties": "Parties",
+      "lessor": "Lessor",
+      "lessee": "Lessee",
+      "clauses": "Clauses",
+      "damagesTitle": "Damage liabilities",
+      "damagesHint": "Binding amounts in case of non-return or damage:",
+      "nonReturn": "Non-return",
+      "partialDamage": "Partial damage",
+      "totalDamage": "Total damage",
+      "readAll": "Please read all clauses before continuing"
+    },
+    "note": {
+      "title": "Promissory note",
+      "subtitle": "Summary of the note to be digitally signed.",
+      "reference": "Note ref",
+      "beneficiary": "Beneficiary",
+      "principal": "Principal amount",
+      "dueDate": "Due date",
+      "place": "Place of issue",
+      "purpose": "Purpose",
+      "summary": "Note summary",
+      "disclaimer": "This note will be digitally attested via Nafith upon final approval."
+    },
+    "confirm": {
+      "title": "Confirm approval",
+      "subtitle": "Please confirm your approval of the contract and note to complete the digital signature.",
+      "consent1": "I confirm I have reviewed the invoice, contract and promissory note",
+      "consent2": "I accept the damage liabilities outlined above",
+      "consent3": "I agree to digitally sign the promissory note via Nafith",
+      "nafith": "Nafith — digital promissory note platform",
+      "nafithNote": "You will be redirected to Nafith to complete the electronic signature.",
+      "approve": "Approve & sign",
+      "processing": "Attesting…"
+    }
+  },
+  "approval": {
+    "title": "Approved",
+    "subtitle": "Your contract has been approved and the promissory note signed.",
+    "contractSigned": "Contract signed",
+    "noteSigned": "Note attested digitally",
+    "approvedAt": "Signed at",
+    "viewTracking": "Track contract",
+    "goHome": "Back to home"
+  },
+  "tracking": {
+    "title": "Contract tracking",
+    "subtitle": "Status of your contract after digital signing.",
+    "current": "Current status",
+    "active": "Active",
+    "timeline": "Timeline",
+    "steps": {
+      "scanned": "Code scanned",
+      "reviewed": "Reviewed",
+      "signed": "Signed",
+      "activated": "Activated"
+    },
+    "refContract": "Contract ref",
+    "refNote": "Note ref",
+    "downloadContract": "Download contract (PDF)",
+    "downloadNote": "Download note (PDF)",
+    "support": "Request support"
   }
 }

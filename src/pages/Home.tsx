@@ -14,6 +14,7 @@ import {
   BellIcon,
   DocIcon,
   HistoryIcon,
+  QrIcon,
   ReceiptIcon,
   WalletIcon,
 } from '@/components/icons';
@@ -50,9 +51,18 @@ export default function Home() {
         }
         subtitle={t('home.subtitle')}
         trailing={
-          <IconButton variant="glass" label={t('nav.notifications')}>
-            <BellIcon size={18} />
-          </IconButton>
+          <>
+            <IconButton
+              variant="glass"
+              label={t('qr.entry')}
+              onClick={() => navigate('/scan')}
+            >
+              <QrIcon size={18} />
+            </IconButton>
+            <IconButton variant="glass" label={t('nav.notifications')}>
+              <BellIcon size={18} />
+            </IconButton>
+          </>
         }
       />
       <Screen>
@@ -107,6 +117,25 @@ export default function Home() {
             </div>
           </div>
         </Card>
+
+        {/* Scan CTA */}
+        <button
+          type="button"
+          onClick={() => navigate('/scan')}
+          className="group relative overflow-hidden rounded-xl2 bg-gradient-to-br from-ink-900 via-ink-800 to-ink-900 text-white px-4 py-3.5 text-start flex items-center gap-3 shadow-card hover:shadow-float transition-shadow"
+        >
+          <span aria-hidden className="pointer-events-none absolute inset-0 pattern-dots opacity-20" />
+          <span className="relative h-11 w-11 rounded-xl bg-white/10 ring-1 ring-white/15 grid place-items-center shrink-0">
+            <QrIcon size={20} />
+          </span>
+          <span className="relative min-w-0 flex-1">
+            <span className="block text-[14px] font-semibold truncate">{t('qr.title')}</span>
+            <span className="block mt-0.5 text-[12px] text-white/70 truncate">
+              {t('qr.subtitle')}
+            </span>
+          </span>
+          <ArrowIcon size={18} className={cn('relative text-white/70', dir === 'rtl' ? 'rotate-180' : '')} />
+        </button>
 
         {/* Summary chips */}
         <div className="grid grid-cols-3 gap-2">

@@ -9,6 +9,10 @@ import StoreDetails from '@/pages/StoreDetails';
 import Contracts from '@/pages/Contracts';
 import Notifications from '@/pages/Notifications';
 import Profile from '@/pages/Profile';
+import Scan from '@/pages/Scan';
+import Review from '@/pages/Review';
+import Approval from '@/pages/Approval';
+import Tracking from '@/pages/Tracking';
 import Welcome from '@/pages/auth/Welcome';
 import AuthEntry from '@/pages/auth/AuthEntry';
 import Login from '@/pages/auth/Login';
@@ -54,6 +58,10 @@ export function AppRoutes() {
         <Route path="/contracts" element={<Contracts />} />
         <Route path="/notifications" element={<Notifications />} />
         <Route path="/profile" element={<Profile />} />
+        <Route path="/scan" element={<Scan />} />
+        <Route path="/review/:token" element={<Review />} />
+        <Route path="/approval/:token" element={<Approval />} />
+        <Route path="/tracking/:token" element={<Tracking />} />
       </Route>
 
       <Route path="*" element={<Navigate to="/" replace />} />

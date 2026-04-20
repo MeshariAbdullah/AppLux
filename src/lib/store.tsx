@@ -13,6 +13,7 @@ import {
   SEED_HISTORY,
   SEED_INVOICES,
   SEED_NOTES,
+  SEED_SCANS,
   SEED_STORES,
   type Contract,
   type HistoryItem,
@@ -20,6 +21,7 @@ import {
   type PartnerStore,
   type PromissoryNote,
   type RentalEligibility,
+  type ScannedPackage,
 } from './data';
 
 export type RegistrationDraft = {
@@ -68,6 +70,16 @@ type StoreContextValue = {
   notes: PromissoryNote[];
   history: HistoryItem[];
   stores: PartnerStore[];
+  scans: ScannedPackage[];
+  approvals: Record<string, ApprovalRecord>;
+  approvePackage: (token: string) => ApprovalRecord;
+};
+
+export type ApprovalRecord = {
+  token: string;
+  approvedAt: string;
+  contractRef: string;
+  noteRef: string;
 };
 
 const STORAGE_KEY = 'applux.session';
@@ -87,6 +99,7 @@ function readSession(): Session {
 export function StoreProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session>(readSession);
   const [draft, setDraft] = useState<RegistrationDraft>(emptyRegistration);
+  const [approvals, setApprovals] = useState<Record<string, ApprovalRecord>>({});
 
   useEffect(() => {
     try {
@@ -120,6 +133,19 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const signOut = useCallback(() => {
     setSession(null);
     setDraft(emptyRegistration);
+    setApprovals({});
+  }, []);
+
+  const approvePackage = useCallback((token: string) => {
+    const pkg = SEED_SCANS.find((s) => s.token === token);
+    const record: ApprovalRecord = {
+      token,
+      approvedAt: new Date().toISOString(),
+      contractRef: pkg?.contract.reference ?? 'CN-APX-—',
+      noteRef: pkg?.note.reference ?? 'PN-APX-—',
+    };
+    setApprovals((prev) => ({ ...prev, [token]: record }));
+    return record;
   }, []);
 
   const eligibility = DEFAULT_ELIGIBILITY;
@@ -128,6 +154,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const notes = SEED_NOTES;
   const history = SEED_HISTORY;
   const stores = SEED_STORES;
+  const scans = SEED_SCANS;
 
   const value = useMemo<StoreContextValue>(
     () => ({
@@ -143,6 +170,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       notes,
       history,
       stores,
+      scans,
+      approvals,
+      approvePackage,
     }),
     [
       session,
@@ -157,6 +187,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       notes,
       history,
       stores,
+      scans,
+      approvals,
+      approvePackage,
     ],
   );
 

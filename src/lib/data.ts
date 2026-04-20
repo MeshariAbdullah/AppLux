@@ -359,6 +359,182 @@ export const SEED_STORES: PartnerStore[] = [
   },
 ];
 
+export type ScannedItem = {
+  id: string;
+  name: Localized;
+  qty: number;
+  unitValue: number;
+  serial?: string;
+};
+
+export type ContractClause = {
+  id: string;
+  title: Localized;
+  body: Localized;
+};
+
+export type ScannedPackage = {
+  token: string;
+  storeId: string;
+  branchId: string;
+  issuedAt: string;
+  currency: 'SAR';
+  rental: {
+    title: Localized;
+    purpose: Localized;
+    pickupDate: string;
+    returnDate: string;
+    durationDays: number;
+    pickupLocation: Localized;
+  };
+  items: ScannedItem[];
+  fees: {
+    rentalTotal: number;
+    deposit: number;
+    insurance: number;
+    vat: number;
+    grandTotal: number;
+  };
+  damages: {
+    nonReturn: number;
+    partialDamage: number;
+    totalDamage: number;
+    note: Localized;
+  };
+  contract: {
+    reference: string;
+    clauses: ContractClause[];
+  };
+  note: {
+    reference: string;
+    beneficiary: Localized;
+    principal: number;
+    dueDate: string;
+    place: Localized;
+    purpose: Localized;
+  };
+};
+
+export const SEED_SCANS: ScannedPackage[] = [
+  {
+    token: 'RM-88231',
+    storeId: 'riyadh-motors',
+    branchId: 'rm-olaya',
+    issuedAt: '2026-04-20',
+    currency: 'SAR',
+    rental: {
+      title: {
+        ar: 'تأجير سيارة تويوتا لاند كروزر 2024',
+        en: 'Rental — Toyota Land Cruiser 2024',
+      },
+      purpose: {
+        ar: 'تأجير مركبة للاستخدام الشخصي داخل المملكة',
+        en: 'Personal vehicle rental within the Kingdom',
+      },
+      pickupDate: '2026-04-22',
+      returnDate: '2026-05-22',
+      durationDays: 30,
+      pickupLocation: {
+        ar: 'فرع العليا — طريق الملك فهد، الرياض',
+        en: 'Olaya Branch — King Fahd Rd, Riyadh',
+      },
+    },
+    items: [
+      {
+        id: 'itm-1',
+        name: { ar: 'تويوتا لاند كروزر VXR 2024', en: 'Toyota Land Cruiser VXR 2024' },
+        qty: 1,
+        unitValue: 320000,
+        serial: 'VIN-LC24-889231',
+      },
+      {
+        id: 'itm-2',
+        name: { ar: 'طقم إطارات احتياطية', en: 'Spare tire kit' },
+        qty: 1,
+        unitValue: 2400,
+      },
+      {
+        id: 'itm-3',
+        name: { ar: 'جهاز تتبع GPS', en: 'GPS tracker' },
+        qty: 1,
+        unitValue: 650,
+      },
+    ],
+    fees: {
+      rentalTotal: 9000,
+      deposit: 2000,
+      insurance: 450,
+      vat: 1417,
+      grandTotal: 12867,
+    },
+    damages: {
+      nonReturn: 320000,
+      partialDamage: 15000,
+      totalDamage: 285000,
+      note: {
+        ar: 'المبالغ أعلاه هي الحد الأقصى المغطى بالسند لأمر في حال عدم الإرجاع أو الضرر.',
+        en: 'The amounts above represent the maximum liabilities covered by the promissory note.',
+      },
+    },
+    contract: {
+      reference: 'CN-APX-2026-0412',
+      clauses: [
+        {
+          id: 'c1',
+          title: { ar: 'مدة العقد', en: 'Contract duration' },
+          body: {
+            ar: 'تسري هذه الاتفاقية لمدة 30 يوماً ميلادياً تبدأ من تاريخ التسليم ولا تُجدَّد تلقائياً.',
+            en: 'This agreement runs for 30 calendar days from handover and does not auto-renew.',
+          },
+        },
+        {
+          id: 'c2',
+          title: { ar: 'الاستخدام والمسؤولية', en: 'Use & liability' },
+          body: {
+            ar: 'يلتزم المستأجر باستخدام المركبة للغرض المصرّح به فقط ويتحمل كامل المسؤولية عن أي مخالفة أو استخدام غير مشروع.',
+            en: 'The lessee shall use the vehicle only for its stated purpose and bears full responsibility for any violation or unlawful use.',
+          },
+        },
+        {
+          id: 'c3',
+          title: { ar: 'التأمين والصيانة', en: 'Insurance & maintenance' },
+          body: {
+            ar: 'تشمل الباقة تأميناً شاملاً ضد الغير بحدّ أعلى محدد، ولا تشمل الأضرار الناتجة عن الإهمال.',
+            en: 'The package includes comprehensive third-party insurance up to a defined cap; damages caused by negligence are excluded.',
+          },
+        },
+        {
+          id: 'c4',
+          title: { ar: 'الإرجاع والتأخير', en: 'Return & late fees' },
+          body: {
+            ar: 'يجب إرجاع المركبة في الموعد المحدد وإلا تُحتسب غرامة يومية قدرها 5% من قيمة الإيجار الشهري.',
+            en: 'The vehicle must be returned on the due date; otherwise a daily penalty of 5% of the monthly rent applies.',
+          },
+        },
+        {
+          id: 'c5',
+          title: { ar: 'فسخ العقد', en: 'Termination' },
+          body: {
+            ar: 'يحق لأي طرف فسخ العقد بإشعار مكتوب مدته 7 أيام عمل، مع تسوية الالتزامات القائمة.',
+            en: 'Either party may terminate by written notice of 7 business days, subject to settling outstanding obligations.',
+          },
+        },
+      ],
+    },
+    note: {
+      reference: 'PN-APX-2026-0412',
+      beneficiary: { ar: 'معرض الرياض للسيارات', en: 'Riyadh Motors' },
+      principal: 320000,
+      dueDate: '2026-05-22',
+      place: { ar: 'الرياض، المملكة العربية السعودية', en: 'Riyadh, Saudi Arabia' },
+      purpose: {
+        ar: 'ضمان إرجاع المركبة المؤجَّرة بحالتها التشغيلية.',
+        en: 'Security for returning the rented vehicle in operating condition.',
+      },
+    },
+  },
+];
+
 export const SEED_HISTORY: HistoryItem[] = [
   {
     id: 'HS-2025-011',

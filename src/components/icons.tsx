@@ -216,3 +216,50 @@ export const PackageIcon = (p: IconProps) => (
     <path d="m3 8 9 5 9-5M12 13v8" />
   </svg>
 );
+
+export const QrIcon = (p: IconProps) => (
+  <svg {...base(p)}>
+    <rect x="3" y="3" width="7" height="7" rx="1.5" />
+    <rect x="14" y="3" width="7" height="7" rx="1.5" />
+    <rect x="3" y="14" width="7" height="7" rx="1.5" />
+    <path d="M14 14h3v3M20 14v3M14 20h3M17 17h.01M20 20h1" />
+  </svg>
+);
+
+export const ScanIcon = (p: IconProps) => (
+  <svg {...base(p)}>
+    <path d="M4 8V6a2 2 0 0 1 2-2h2M16 4h2a2 2 0 0 1 2 2v2M20 16v2a2 2 0 0 1-2 2h-2M8 20H6a2 2 0 0 1-2-2v-2" />
+    <path d="M4 12h16" />
+  </svg>
+);
+
+export const SignatureIcon = (p: IconProps) => (
+  <svg {...base(p)}>
+    <path d="M3 17c3-1 5-6 7-6s2 4 4 4 3-3 5-3" />
+    <path d="M3 21h18" />
+  </svg>
+);
+
+export const BadgeCheckIcon = (p: IconProps) => (
+  <svg {...base(p)}>
+    <path d="M12 3 14 5l3-.5L18 7l2.5 1-.5 3 2 2-2 2 .5 3L18 19l-1 2.5-3-.5L12 23l-2-2-3 .5L6 19l-2.5-1 .5-3-2-2 2-2-.5-3L6 7l1-2.5 3 .5L12 3Z" />
+    <path d="m9 12 2 2 4-4" />
+  </svg>
+);
+
+export const GavelIcon = (p: IconProps) => (
+  <svg {...base(p)}>
+    <path d="m14 4 6 6-3 3-6-6 3-3Z" />
+    <path d="m11 7-7 7 3 3 7-7" />
+    <path d="M3 21h12" />
+  </svg>
+);
+
+export const TimelineIcon = (p: IconProps) => (
+  <svg {...base(p)}>
+    <circle cx="6" cy="6" r="2" />
+    <circle cx="6" cy="18" r="2" />
+    <path d="M6 8v8" />
+    <path d="M12 6h9M12 12h6M12 18h9" />
+  </svg>
+);
