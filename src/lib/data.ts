@@ -594,6 +594,73 @@ export type MerchantHistoryRecord = {
   outcome: MerchantHistoryOutcome;
 };
 
+export type MerchantCustomer = {
+  id: string;
+  fullName: string;
+  initials: string;
+  nationalId: string;
+  mobile: string;
+  email: string;
+  city: string;
+};
+
+export const SEED_MERCHANT_CUSTOMERS: MerchantCustomer[] = [
+  {
+    id: 'cust-1',
+    fullName: 'فهد بن عبدالله العتيبي',
+    initials: 'FA',
+    nationalId: '1098234567',
+    mobile: '555012345',
+    email: 'fahad.otaibi@example.com',
+    city: 'riyadh',
+  },
+  {
+    id: 'cust-2',
+    fullName: 'سارة بنت محمد المطيري',
+    initials: 'SM',
+    nationalId: '1076543218',
+    mobile: '556789012',
+    email: 'sara.mutairi@example.com',
+    city: 'riyadh',
+  },
+  {
+    id: 'cust-3',
+    fullName: 'عبدالرحمن بن سعد الشهري',
+    initials: 'AS',
+    nationalId: '1065432198',
+    mobile: '554321098',
+    email: 'a.shahri@example.com',
+    city: 'jeddah',
+  },
+  {
+    id: 'cust-4',
+    fullName: 'نوف بنت فيصل القحطاني',
+    initials: 'NQ',
+    nationalId: '1054328761',
+    mobile: '553210987',
+    email: 'nouf.q@example.com',
+    city: 'riyadh',
+  },
+  {
+    id: 'cust-5',
+    fullName: 'خالد بن سلمان الدوسري',
+    initials: 'KD',
+    nationalId: '1043876529',
+    mobile: '559870123',
+    email: 'khalid.dosari@example.com',
+    city: 'dammam',
+  },
+  {
+    id: 'cust-6',
+    fullName: 'منى بنت عبدالعزيز الزهراني',
+    initials: 'MZ',
+    nationalId: '1032198745',
+    mobile: '558765432',
+    email: 'muna.z@example.com',
+    city: 'jeddah',
+  },
+];
+
 export const SEED_MERCHANT_RENTALS: MerchantRental[] = [
   {
     id: 'MR-2026-031',

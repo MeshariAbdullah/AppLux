@@ -13,6 +13,7 @@ import {
   SEED_HISTORY,
   SEED_INVOICES,
   SEED_MERCHANT_APPROVALS,
+  SEED_MERCHANT_CUSTOMERS,
   SEED_MERCHANT_DAMAGES,
   SEED_MERCHANT_HISTORY,
   SEED_MERCHANT_RENTALS,
@@ -23,6 +24,7 @@ import {
   type HistoryItem,
   type Invoice,
   type MerchantApproval,
+  type MerchantCustomer,
   type MerchantDamageCase,
   type MerchantHistoryRecord,
   type MerchantRental,
@@ -135,6 +137,7 @@ type StoreContextValue = {
   merchantApprovals: MerchantApproval[];
   merchantDamages: MerchantDamageCase[];
   merchantHistory: MerchantHistoryRecord[];
+  merchantCustomers: MerchantCustomer[];
 };
 
 export type ApprovalRecord = {
@@ -273,6 +276,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const merchantApprovals = SEED_MERCHANT_APPROVALS;
   const merchantDamages = SEED_MERCHANT_DAMAGES;
   const merchantHistory = SEED_MERCHANT_HISTORY;
+  const merchantCustomers = SEED_MERCHANT_CUSTOMERS;
 
   const value = useMemo<StoreContextValue>(
     () => ({
@@ -302,6 +306,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       merchantApprovals,
       merchantDamages,
       merchantHistory,
+      merchantCustomers,
     }),
     [
       session,
@@ -330,6 +335,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       merchantApprovals,
       merchantDamages,
       merchantHistory,
+      merchantCustomers,
     ],
   );
 
