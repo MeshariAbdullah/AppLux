@@ -736,7 +736,7 @@ function ApprovalRow({
 }) {
   return (
     <Link
-      to="/admin/merchants"
+      to={`/admin/merchants/${item.id}`}
       className="flex items-center gap-3 py-2.5 group"
     >
       <span className="h-10 w-10 shrink-0 rounded-xl bg-ink-100 text-ink-700 grid place-items-center font-semibold text-[11.5px]">

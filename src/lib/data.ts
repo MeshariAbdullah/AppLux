@@ -1061,14 +1061,41 @@ export const SEED_HISTORY: HistoryItem[] = [
 
 /* ========================= Admin ========================= */
 
+export type AdminMerchantBranch = {
+  id: string;
+  name: string;
+  city: string;
+  address: string;
+  phone: string;
+};
+
+export type AdminMerchantDocStatus = 'verified' | 'pending' | 'missing';
+export type AdminMerchantDocs = {
+  commercialReg: AdminMerchantDocStatus;
+  vat: AdminMerchantDocStatus;
+  bankLetter: AdminMerchantDocStatus;
+  authorizedId: AdminMerchantDocStatus;
+};
+
 export type AdminPendingMerchant = {
   id: string;
   companyName: string;
   authorizedName: string;
+  authorizedId: string;
   commercialReg: string;
+  vatNumber: string;
+  iban: string;
+  contactEmail: string;
+  contactPhone: string;
   city: string;
+  address: string;
+  category: 'cars' | 'real-estate' | 'electronics' | 'furniture' | 'tools';
+  expectedVolume: number;
   submittedAt: string;
   initials: string;
+  branches: AdminMerchantBranch[];
+  docs: AdminMerchantDocs;
+  notes?: string;
 };
 
 export const SEED_ADMIN_PENDING_MERCHANTS: AdminPendingMerchant[] = [
@@ -1076,39 +1103,160 @@ export const SEED_ADMIN_PENDING_MERCHANTS: AdminPendingMerchant[] = [
     id: 'MRC-PEND-104',
     companyName: 'شركة الرحال لتأجير السيارات',
     authorizedName: 'فيصل العتيبي',
+    authorizedId: '1099887766',
     commercialReg: '1010412388',
+    vatNumber: '300123456700003',
+    iban: 'SA03 8000 0000 6080 1016 7519',
+    contactEmail: 'finance@alrahhal.sa',
+    contactPhone: '0551234567',
     city: 'الرياض',
+    address: 'حي الملقا — طريق الأمير محمد بن سعد',
+    category: 'cars',
+    expectedVolume: 180000,
     submittedAt: '2026-04-19T09:12:00+03:00',
     initials: 'ش ر',
+    branches: [
+      {
+        id: 'BR-RUH-01',
+        name: 'فرع الرياض الرئيسي',
+        city: 'الرياض',
+        address: 'حي الملقا — طريق الأمير محمد بن سعد',
+        phone: '0114567890',
+      },
+      {
+        id: 'BR-JED-01',
+        name: 'فرع جدة',
+        city: 'جدة',
+        address: 'حي الروضة — طريق فلسطين',
+        phone: '0126789012',
+      },
+    ],
+    docs: {
+      commercialReg: 'verified',
+      vat: 'verified',
+      bankLetter: 'verified',
+      authorizedId: 'verified',
+    },
   },
   {
     id: 'MRC-PEND-103',
     companyName: 'مؤسسة البيت الحديث للأثاث',
     authorizedName: 'نوف الحربي',
+    authorizedId: '1077665544',
     commercialReg: '4030288120',
+    vatNumber: '300987654300003',
+    iban: 'SA44 4000 0000 1234 5678 9012',
+    contactEmail: 'admin@bayt-alhadeeth.com',
+    contactPhone: '0556677889',
     city: 'جدة',
+    address: 'حي الزهراء — شارع الأمير سلطان',
+    category: 'furniture',
+    expectedVolume: 95000,
     submittedAt: '2026-04-18T14:43:00+03:00',
     initials: 'م ب',
+    branches: [
+      {
+        id: 'BR-JED-FUR',
+        name: 'الفرع الرئيسي',
+        city: 'جدة',
+        address: 'حي الزهراء — شارع الأمير سلطان',
+        phone: '0126112233',
+      },
+    ],
+    docs: {
+      commercialReg: 'verified',
+      vat: 'verified',
+      bankLetter: 'pending',
+      authorizedId: 'verified',
+    },
   },
   {
     id: 'MRC-PEND-102',
     companyName: 'دار التقنية لتأجير المعدات',
     authorizedName: 'سلطان القحطاني',
+    authorizedId: '1066554433',
     commercialReg: '2055011733',
+    vatNumber: '300555444300003',
+    iban: 'SA12 1000 0000 9988 7766 5544',
+    contactEmail: 'ops@dar-tech.sa',
+    contactPhone: '0509988776',
     city: 'الدمام',
+    address: 'حي الشاطئ الغربي — طريق الكورنيش',
+    category: 'electronics',
+    expectedVolume: 62000,
     submittedAt: '2026-04-17T11:02:00+03:00',
     initials: 'د ت',
+    branches: [
+      {
+        id: 'BR-DMM-TECH',
+        name: 'فرع الدمام',
+        city: 'الدمام',
+        address: 'حي الشاطئ الغربي',
+        phone: '0138001234',
+      },
+    ],
+    docs: {
+      commercialReg: 'verified',
+      vat: 'pending',
+      bankLetter: 'verified',
+      authorizedId: 'verified',
+    },
   },
   {
     id: 'MRC-PEND-101',
     companyName: 'مجموعة صُهبة السكنية',
     authorizedName: 'منيرة الزهراني',
+    authorizedId: '1055443322',
     commercialReg: '1010509274',
+    vatNumber: '300333222100003',
+    iban: 'SA77 2000 0000 3344 5566 7788',
+    contactEmail: 'leasing@suhba-living.com',
+    contactPhone: '0533322211',
     city: 'الرياض',
+    address: 'حي الياسمين — طريق الإمام سعود',
+    category: 'real-estate',
+    expectedVolume: 240000,
     submittedAt: '2026-04-16T16:20:00+03:00',
     initials: 'م ص',
+    branches: [
+      {
+        id: 'BR-RUH-RE-01',
+        name: 'فرع الياسمين',
+        city: 'الرياض',
+        address: 'حي الياسمين',
+        phone: '0114002211',
+      },
+      {
+        id: 'BR-RUH-RE-02',
+        name: 'فرع النرجس',
+        city: 'الرياض',
+        address: 'حي النرجس',
+        phone: '0114003322',
+      },
+      {
+        id: 'BR-RUH-RE-03',
+        name: 'فرع قرطبة',
+        city: 'الرياض',
+        address: 'حي قرطبة',
+        phone: '0114004433',
+      },
+    ],
+    docs: {
+      commercialReg: 'verified',
+      vat: 'verified',
+      bankLetter: 'verified',
+      authorizedId: 'pending',
+    },
   },
 ];
+
+export type AdminMerchantDecisionStatus = 'pending' | 'approved' | 'rejected';
+export type AdminMerchantDecision = {
+  status: AdminMerchantDecisionStatus;
+  decidedAt: string;
+  notes?: string;
+  reviewer?: string;
+};
 
 export type AdminUsersSummary = {
   totalUsers: number;

@@ -1140,6 +1140,137 @@
         "backToHome": "Back to admin home",
         "exit": "Exit admin console"
       }
+    },
+    "merchants": {
+      "title": "Merchant approvals",
+      "eyebrow": "KYC review queue",
+      "heroTitle": "Review merchant requests",
+      "heroSubtitle": "Verify documents, contact details and branches before granting platform access.",
+      "tabs": {
+        "all": "All",
+        "pending": "Pending",
+        "approved": "Approved",
+        "rejected": "Rejected"
+      },
+      "status": {
+        "pending": "Pending review",
+        "approved": "Approved",
+        "rejected": "Rejected"
+      },
+      "category": {
+        "cars": "Cars",
+        "real-estate": "Real estate",
+        "electronics": "Electronics",
+        "furniture": "Furniture",
+        "tools": "Equipment"
+      },
+      "submittedOn": "Submitted {date}",
+      "decidedOn": {
+        "approved": "Approved {date}",
+        "rejected": "Rejected {date}",
+        "pending": "Submitted {date}"
+      },
+      "empty": {
+        "all": {
+          "title": "No requests yet",
+          "hint": "New merchant signups will appear here as they come in."
+        },
+        "pending": {
+          "title": "All caught up",
+          "hint": "There are no merchant requests waiting for your review."
+        },
+        "approved": {
+          "title": "No approved merchants yet",
+          "hint": "Approved merchants from this queue will be listed here."
+        },
+        "rejected": {
+          "title": "No rejected requests",
+          "hint": "Rejected requests will be tracked here for the audit trail."
+        }
+      }
+    },
+    "merchantRequest": {
+      "title": "Merchant request",
+      "submittedOn": "Submitted {date}",
+      "decidedOn": {
+        "approved": "Approved {date}",
+        "rejected": "Rejected {date}",
+        "pending": "Submitted {date}"
+      },
+      "category": {
+        "cars": "Cars",
+        "real-estate": "Real estate",
+        "electronics": "Electronics",
+        "furniture": "Furniture",
+        "tools": "Equipment"
+      },
+      "sections": {
+        "company": "Company information",
+        "contact": "Contact",
+        "branches": "Branches ({count})",
+        "docs": "Documents",
+        "decision": "Decision"
+      },
+      "fields": {
+        "commercialReg": "Commercial registration",
+        "vat": "VAT number",
+        "iban": "IBAN",
+        "authorizedName": "Authorized signatory",
+        "authorizedId": "Authorized ID",
+        "expectedVolume": "Expected monthly volume",
+        "phone": "Phone",
+        "email": "Email",
+        "headOffice": "Head office"
+      },
+      "docs": {
+        "verified": "Verified",
+        "pending": "Pending",
+        "missing": "Missing"
+      },
+      "docFields": {
+        "commercialReg": "Commercial registration",
+        "vat": "VAT certificate",
+        "bankLetter": "Bank letter (IBAN)",
+        "authorizedId": "Authorized signatory ID"
+      },
+      "docStatus": {
+        "verified": "Verified",
+        "pending": "Pending",
+        "missing": "Missing"
+      },
+      "notesLabel": "Reviewer notes",
+      "notesHint": "Saved with the decision and visible in the audit trail.",
+      "notesPlaceholder": "Add a short note explaining this decision…",
+      "optional": "Optional",
+      "actions": {
+        "approve": "Approve merchant",
+        "reject": "Reject request",
+        "reset": "Reopen for review"
+      },
+      "banner": {
+        "approved": {
+          "title": "Merchant approved",
+          "subtitle": "The merchant has been granted access to the AppLux network."
+        },
+        "rejected": {
+          "title": "Request rejected",
+          "subtitle": "The merchant has been notified and may resubmit with corrections."
+        },
+        "decidedAt": "Decided at",
+        "reviewer": "Reviewer",
+        "notes": "Reviewer notes",
+        "unknownReviewer": "AppLux operator"
+      },
+      "notFound": {
+        "title": "Request not found",
+        "hint": "This merchant request no longer exists or was removed.",
+        "cta": "Back to requests"
+      },
+      "backToList": "Back to requests",
+      "footerNote": {
+        "title": "Audit trail",
+        "hint": "Approve and reject actions are logged with the reviewer, timestamp and notes."
+      }
     }
   }
 }

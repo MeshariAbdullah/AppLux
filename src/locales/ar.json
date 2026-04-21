@@ -1140,6 +1140,137 @@
         "backToHome": "العودة لرئيسية الإدارة",
         "exit": "الخروج من مركز الإدارة"
       }
+    },
+    "merchants": {
+      "title": "موافقات المنشآت",
+      "eyebrow": "قائمة مراجعة الالتزام",
+      "heroTitle": "مراجعة طلبات المنشآت",
+      "heroSubtitle": "تحقّق من الوثائق وبيانات التواصل والفروع قبل منح صلاحية الانضمام للمنصّة.",
+      "tabs": {
+        "all": "الكل",
+        "pending": "قيد المراجعة",
+        "approved": "معتمدة",
+        "rejected": "مرفوضة"
+      },
+      "status": {
+        "pending": "قيد المراجعة",
+        "approved": "معتمدة",
+        "rejected": "مرفوضة"
+      },
+      "category": {
+        "cars": "سيارات",
+        "real-estate": "عقارات",
+        "electronics": "إلكترونيات",
+        "furniture": "أثاث",
+        "tools": "معدّات"
+      },
+      "submittedOn": "أُرسل في {date}",
+      "decidedOn": {
+        "approved": "اعتُمد في {date}",
+        "rejected": "رُفض في {date}",
+        "pending": "أُرسل في {date}"
+      },
+      "empty": {
+        "all": {
+          "title": "لا توجد طلبات بعد",
+          "hint": "ستظهر هنا طلبات المنشآت الجديدة حال تسجيلها."
+        },
+        "pending": {
+          "title": "لا طلبات معلّقة",
+          "hint": "لا توجد طلبات منشآت بانتظار مراجعتك."
+        },
+        "approved": {
+          "title": "لا توجد منشآت معتمدة بعد",
+          "hint": "ستُدرج هنا المنشآت التي تعتمدها من هذه القائمة."
+        },
+        "rejected": {
+          "title": "لا توجد طلبات مرفوضة",
+          "hint": "تُسجّل الطلبات المرفوضة هنا لأغراض التدقيق."
+        }
+      }
+    },
+    "merchantRequest": {
+      "title": "طلب منشأة",
+      "submittedOn": "أُرسل في {date}",
+      "decidedOn": {
+        "approved": "اعتُمد في {date}",
+        "rejected": "رُفض في {date}",
+        "pending": "أُرسل في {date}"
+      },
+      "category": {
+        "cars": "سيارات",
+        "real-estate": "عقارات",
+        "electronics": "إلكترونيات",
+        "furniture": "أثاث",
+        "tools": "معدّات"
+      },
+      "sections": {
+        "company": "بيانات المنشأة",
+        "contact": "معلومات التواصل",
+        "branches": "الفروع ({count})",
+        "docs": "الوثائق",
+        "decision": "القرار"
+      },
+      "fields": {
+        "commercialReg": "السجل التجاري",
+        "vat": "الرقم الضريبي",
+        "iban": "الآيبان",
+        "authorizedName": "المفوّض بالتوقيع",
+        "authorizedId": "هوية المفوّض",
+        "expectedVolume": "الحجم الشهري المتوقّع",
+        "phone": "الهاتف",
+        "email": "البريد",
+        "headOffice": "المقر الرئيسي"
+      },
+      "docs": {
+        "verified": "موثّقة",
+        "pending": "قيد التحقّق",
+        "missing": "ناقصة"
+      },
+      "docFields": {
+        "commercialReg": "السجل التجاري",
+        "vat": "شهادة ضريبة القيمة المضافة",
+        "bankLetter": "خطاب الآيبان البنكي",
+        "authorizedId": "هوية المفوّض بالتوقيع"
+      },
+      "docStatus": {
+        "verified": "موثّقة",
+        "pending": "قيد التحقّق",
+        "missing": "ناقصة"
+      },
+      "notesLabel": "ملاحظات المراجع",
+      "notesHint": "تُحفظ مع القرار وتظهر في سجل التدقيق.",
+      "notesPlaceholder": "أضف ملاحظة قصيرة تشرح هذا القرار…",
+      "optional": "اختياري",
+      "actions": {
+        "approve": "اعتماد المنشأة",
+        "reject": "رفض الطلب",
+        "reset": "إعادة فتح للمراجعة"
+      },
+      "banner": {
+        "approved": {
+          "title": "تم اعتماد المنشأة",
+          "subtitle": "تم منح المنشأة صلاحية الوصول إلى شبكة AppLux."
+        },
+        "rejected": {
+          "title": "تم رفض الطلب",
+          "subtitle": "أُبلغت المنشأة، ويمكنها إعادة التقديم بعد المعالجة."
+        },
+        "decidedAt": "تاريخ القرار",
+        "reviewer": "المراجع",
+        "notes": "ملاحظات المراجع",
+        "unknownReviewer": "مشغّل AppLux"
+      },
+      "notFound": {
+        "title": "الطلب غير موجود",
+        "hint": "لم يعد هذا الطلب موجوداً أو تمت إزالته.",
+        "cta": "العودة إلى الطلبات"
+      },
+      "backToList": "العودة إلى الطلبات",
+      "footerNote": {
+        "title": "سجل التدقيق",
+        "hint": "تُسجَّل قرارات الاعتماد والرفض مع اسم المراجع والوقت والملاحظات."
+      }
     }
   }
 }

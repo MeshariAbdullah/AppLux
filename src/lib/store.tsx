@@ -9,6 +9,7 @@ import {
 } from 'react';
 import {
   DEFAULT_ELIGIBILITY,
+  SEED_ADMIN_PENDING_MERCHANTS,
   SEED_CONTRACTS,
   SEED_HISTORY,
   SEED_INVOICES,
@@ -20,6 +21,8 @@ import {
   SEED_NOTES,
   SEED_SCANS,
   SEED_STORES,
+  type AdminMerchantDecision,
+  type AdminPendingMerchant,
   type Contract,
   type HistoryItem,
   type Invoice,
@@ -144,6 +147,14 @@ type StoreContextValue = {
     rentalId: string,
     input: ReportDamageInput,
   ) => MerchantDamageCase | null;
+  adminMerchantRequests: AdminMerchantRequest[];
+  approveMerchantRequest: (id: string, notes?: string) => AdminMerchantDecision | null;
+  rejectMerchantRequest: (id: string, notes?: string) => AdminMerchantDecision | null;
+  resetMerchantRequest: (id: string) => void;
+};
+
+export type AdminMerchantRequest = AdminPendingMerchant & {
+  decision: AdminMerchantDecision;
 };
 
 export type ReportDamageInput = {
@@ -195,6 +206,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     Record<string, Partial<MerchantRental>>
   >({});
   const [extraDamages, setExtraDamages] = useState<MerchantDamageCase[]>([]);
+  const [merchantDecisions, setMerchantDecisions] = useState<
+    Record<string, AdminMerchantDecision>
+  >({});
 
   useEffect(() => {
     try {
@@ -335,6 +349,59 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     [],
   );
 
+  const approveMerchantRequest = useCallback(
+    (id: string, notes?: string) => {
+      const exists = SEED_ADMIN_PENDING_MERCHANTS.some((m) => m.id === id);
+      if (!exists) return null;
+      const decision: AdminMerchantDecision = {
+        status: 'approved',
+        decidedAt: new Date().toISOString(),
+        notes: notes?.trim() || undefined,
+        reviewer: 'AppLux Operator',
+      };
+      setMerchantDecisions((prev) => ({ ...prev, [id]: decision }));
+      return decision;
+    },
+    [],
+  );
+
+  const rejectMerchantRequest = useCallback(
+    (id: string, notes?: string) => {
+      const exists = SEED_ADMIN_PENDING_MERCHANTS.some((m) => m.id === id);
+      if (!exists) return null;
+      const decision: AdminMerchantDecision = {
+        status: 'rejected',
+        decidedAt: new Date().toISOString(),
+        notes: notes?.trim() || undefined,
+        reviewer: 'AppLux Operator',
+      };
+      setMerchantDecisions((prev) => ({ ...prev, [id]: decision }));
+      return decision;
+    },
+    [],
+  );
+
+  const resetMerchantRequest = useCallback((id: string) => {
+    setMerchantDecisions((prev) => {
+      if (!(id in prev)) return prev;
+      const next = { ...prev };
+      delete next[id];
+      return next;
+    });
+  }, []);
+
+  const adminMerchantRequests = useMemo<AdminMerchantRequest[]>(
+    () =>
+      SEED_ADMIN_PENDING_MERCHANTS.map((m) => ({
+        ...m,
+        decision: merchantDecisions[m.id] ?? {
+          status: 'pending',
+          decidedAt: m.submittedAt,
+        },
+      })),
+    [merchantDecisions],
+  );
+
   const eligibility = DEFAULT_ELIGIBILITY;
   const invoices = SEED_INVOICES;
   const contracts = SEED_CONTRACTS;
@@ -390,6 +457,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       merchantCustomers,
       closeRental,
       reportDamage,
+      adminMerchantRequests,
+      approveMerchantRequest,
+      rejectMerchantRequest,
+      resetMerchantRequest,
     }),
     [
       session,
@@ -421,6 +492,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       merchantCustomers,
       closeRental,
       reportDamage,
+      adminMerchantRequests,
+      approveMerchantRequest,
+      rejectMerchantRequest,
+      resetMerchantRequest,
     ],
   );
 
