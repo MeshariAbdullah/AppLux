@@ -568,16 +568,6 @@ export default function AdminCaseDetails() {
                   {formatCurrency(linked.invoiceAmount)}
                 </span>
               </div>
-              <Link
-                to={`/track/invoice/${linked.invoiceRef}`}
-                className="flex items-center gap-1.5 justify-center text-[12.5px] font-semibold text-brand-700 pt-1"
-              >
-                {t('admin.case.openInvoice')}
-                <ChevronIcon
-                  size={12}
-                  className={cn(dir === 'rtl' ? 'rotate-180' : '')}
-                />
-              </Link>
             </Card>
           </Section>
 
@@ -620,16 +610,6 @@ export default function AdminCaseDetails() {
                   {header.merchantName} · {header.customerName}
                 </span>
               </div>
-              <Link
-                to={`/track/contract/${linked.contractRef}`}
-                className="flex items-center gap-1.5 justify-center text-[12.5px] font-semibold text-brand-700 pt-1"
-              >
-                {t('admin.case.openContract')}
-                <ChevronIcon
-                  size={12}
-                  className={cn(dir === 'rtl' ? 'rotate-180' : '')}
-                />
-              </Link>
             </Card>
           </Section>
 
@@ -674,16 +654,6 @@ export default function AdminCaseDetails() {
                   <span>{t('admin.case.note.forwardedHint')}</span>
                 </div>
               )}
-              <Link
-                to={`/track/note/${linked.noteRef}`}
-                className="flex items-center gap-1.5 justify-center text-[12.5px] font-semibold text-brand-700 pt-1"
-              >
-                {t('admin.case.openNote')}
-                <ChevronIcon
-                  size={12}
-                  className={cn(dir === 'rtl' ? 'rotate-180' : '')}
-                />
-              </Link>
             </Card>
           </Section>
 
