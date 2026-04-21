@@ -1350,6 +1350,70 @@
         }
       }
     },
+    "case": {
+      "title": "تفاصيل الحالة",
+      "kind": {
+        "damage": "حالة ضرر",
+        "overdue": "حالة تأخّر"
+      },
+      "hero": {
+        "customer": "العميل",
+        "claim": "قيمة المطالبة",
+        "outstanding": "المبلغ المستحق"
+      },
+      "sections": {
+        "overview": "ملخّص الحالة",
+        "invoice": "الفاتورة المرتبطة",
+        "contract": "العقد المرتبط",
+        "note": "السند لأمر"
+      },
+      "fields": {
+        "merchant": "المنشأة",
+        "customer": "العميل",
+        "item": "الصنف",
+        "reportedAt": "تاريخ البلاغ",
+        "daysOverdue": "عدد أيام التأخّر"
+      },
+      "invoice": {
+        "due": "مستحقّة {date}",
+        "amount": "قيمة الفاتورة",
+        "status": {
+          "paid": "مدفوعة",
+          "pending": "قيد السداد",
+          "overdue": "متأخّرة"
+        }
+      },
+      "contract": {
+        "startedAt": "بدأ في {date}",
+        "parties": "الأطراف",
+        "status": {
+          "active": "نشط",
+          "signed": "موقّع",
+          "closed": "مغلق",
+          "breached": "مُخالَف"
+        }
+      },
+      "note": {
+        "principalLabel": "سند لأمر محفوظ",
+        "principal": "قيمة السند",
+        "status": {
+          "issued": "صادر",
+          "collected": "محصّل",
+          "pending": "قيد التنفيذ",
+          "forwarded-nafith": "محوّل إلى نافذ"
+        },
+        "forwardedHint": "تمّت إحالة السند إلى منصّة نافذ للتنفيذ."
+      },
+      "openInvoice": "فتح مسار الفاتورة",
+      "openContract": "فتح مسار العقد",
+      "openNote": "فتح مسار السند",
+      "backToList": "العودة إلى الحالات",
+      "notFound": {
+        "title": "لم نعثر على الحالة",
+        "hint": "قد تكون هذه الحالة مغلقة أو أن المرجع غير صحيح.",
+        "cta": "العودة إلى الحالات"
+      }
+    },
     "user": {
       "title": "تفاصيل المستخدم",
       "nafathVerified": "موثّق بنفاذ",

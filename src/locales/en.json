@@ -1350,6 +1350,70 @@
         }
       }
     },
+    "case": {
+      "title": "Case details",
+      "kind": {
+        "damage": "Damage case",
+        "overdue": "Overdue case"
+      },
+      "hero": {
+        "customer": "Customer",
+        "claim": "Claim amount",
+        "outstanding": "Outstanding"
+      },
+      "sections": {
+        "overview": "Case overview",
+        "invoice": "Linked invoice",
+        "contract": "Linked contract",
+        "note": "Promissory note"
+      },
+      "fields": {
+        "merchant": "Merchant",
+        "customer": "Customer",
+        "item": "Item",
+        "reportedAt": "Reported",
+        "daysOverdue": "Days overdue"
+      },
+      "invoice": {
+        "due": "Due {date}",
+        "amount": "Invoice amount",
+        "status": {
+          "paid": "Paid",
+          "pending": "Pending",
+          "overdue": "Overdue"
+        }
+      },
+      "contract": {
+        "startedAt": "Started {date}",
+        "parties": "Parties",
+        "status": {
+          "active": "Active",
+          "signed": "Signed",
+          "closed": "Closed",
+          "breached": "Breached"
+        }
+      },
+      "note": {
+        "principalLabel": "Promissory note on file",
+        "principal": "Principal amount",
+        "status": {
+          "issued": "Issued",
+          "collected": "Collected",
+          "pending": "Pending",
+          "forwarded-nafith": "Forwarded to Nafith"
+        },
+        "forwardedHint": "This note has been forwarded to Nafith for enforcement."
+      },
+      "openInvoice": "Open invoice timeline",
+      "openContract": "Open contract timeline",
+      "openNote": "Open note timeline",
+      "backToList": "Back to all cases",
+      "notFound": {
+        "title": "Case not found",
+        "hint": "This case may have been closed or the reference is incorrect.",
+        "cta": "Back to cases"
+      }
+    },
     "user": {
       "title": "User details",
       "nafathVerified": "Nafath verified",
