@@ -43,6 +43,7 @@ import AdminMerchants from '@/pages/admin/AdminMerchants';
 import AdminMerchantDetails from '@/pages/admin/AdminMerchantDetails';
 import AdminUsers from '@/pages/admin/AdminUsers';
 import AdminUserDetails from '@/pages/admin/AdminUserDetails';
+import AdminCases from '@/pages/admin/AdminCases';
 import AdminModulePlaceholder from '@/pages/admin/AdminModulePlaceholder';
 
 function RequireAuth({ children }: { children: ReactElement }) {
@@ -95,7 +96,7 @@ export function AppRoutes() {
         <Route path="/admin/users" element={<AdminUsers />} />
         <Route path="/admin/users/:id" element={<AdminUserDetails />} />
         <Route path="/admin/limits" element={<AdminModulePlaceholder />} />
-        <Route path="/admin/cases" element={<AdminModulePlaceholder />} />
+        <Route path="/admin/cases" element={<AdminCases />} />
         <Route path="/admin/overdue" element={<AdminModulePlaceholder />} />
         <Route path="/admin/reports" element={<AdminModulePlaceholder />} />
         <Route path="/admin/audit" element={<AdminModulePlaceholder />} />

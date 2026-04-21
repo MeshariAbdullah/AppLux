@@ -1786,3 +1786,639 @@ export const SEED_ADMIN_USERS_LIST: AdminUserRecord[] = [
     ],
   },
 ];
+
+/* ================ Admin case review ================ */
+
+export type AdminCaseKind = 'damage' | 'overdue';
+
+export type AdminCaseEvidenceKind =
+  | 'damage-exterior'
+  | 'damage-interior'
+  | 'dashboard'
+  | 'odometer'
+  | 'signature'
+  | 'receipt'
+  | 'missing'
+  | 'location';
+
+export type AdminCaseEvidenceSource = 'merchant' | 'customer' | 'operator';
+
+export type AdminCaseEvidence = {
+  id: string;
+  kind: AdminCaseEvidenceKind;
+  caption: string;
+  uploadedAt: string;
+  source: AdminCaseEvidenceSource;
+};
+
+export type AdminCaseNoteRole = 'merchant' | 'operator' | 'system';
+export type AdminCaseNote = {
+  id: string;
+  author: string;
+  role: AdminCaseNoteRole;
+  text: string;
+  at: string;
+};
+
+export type AdminCaseAuditAction =
+  | 'reported'
+  | 'evidence-added'
+  | 'reviewed'
+  | 'note-added'
+  | 'escalated-settlement'
+  | 'escalated-nafith'
+  | 'escalated-execution'
+  | 'settled';
+
+export type AdminCaseAuditEntry = {
+  id: string;
+  action: AdminCaseAuditAction;
+  actor: string;
+  at: string;
+  detail?: string;
+};
+
+export type AdminCaseInvoiceStatus = 'paid' | 'pending' | 'overdue';
+export type AdminCaseContractStatus = 'active' | 'signed' | 'closed' | 'breached';
+export type AdminCaseNoteDocStatus = 'issued' | 'collected' | 'pending' | 'forwarded-nafith';
+
+export type AdminCaseLinked = {
+  invoiceRef: string;
+  invoiceAmount: number;
+  invoiceStatus: AdminCaseInvoiceStatus;
+  invoiceDueAt: string;
+  contractRef: string;
+  contractStatus: AdminCaseContractStatus;
+  contractStartedAt: string;
+  noteRef: string;
+  noteAmount: number;
+  noteStatus: AdminCaseNoteDocStatus;
+};
+
+export type AdminCaseDetail = {
+  id: string;
+  kind: AdminCaseKind;
+  summary: string;
+  evidence: AdminCaseEvidence[];
+  notes: AdminCaseNote[];
+  audit: AdminCaseAuditEntry[];
+  linked: AdminCaseLinked;
+  escalation: {
+    currentStage: AdminCaseStage;
+    nextStage: AdminCaseStage | null;
+    nextActionKey: string;
+  };
+};
+
+export const SEED_ADMIN_CASE_DETAILS: Record<string, AdminCaseDetail> = {
+  'DM-2026-118': {
+    id: 'DM-2026-118',
+    kind: 'damage',
+    summary: 'مركبة لم تُعَد بعد انتهاء فترة السماح — تم فتح إجراء نافذ.',
+    evidence: [
+      {
+        id: 'EV-118-01',
+        kind: 'location',
+        caption: 'آخر موقع معروف للمركبة — طريق الرياض',
+        uploadedAt: '2026-04-11T10:20:00+03:00',
+        source: 'operator',
+      },
+      {
+        id: 'EV-118-02',
+        kind: 'missing',
+        caption: 'صورة لوحة المركبة عند الخروج',
+        uploadedAt: '2026-04-11T10:12:00+03:00',
+        source: 'merchant',
+      },
+      {
+        id: 'EV-118-03',
+        kind: 'signature',
+        caption: 'توقيع العقد الأصلي',
+        uploadedAt: '2026-03-01T09:00:00+03:00',
+        source: 'merchant',
+      },
+    ],
+    notes: [
+      {
+        id: 'NT-118-01',
+        author: 'تأجير الشرق',
+        role: 'merchant',
+        text: 'تواصلنا مع العميل ثلاث مرات دون ردّ. نطلب التصعيد فوراً.',
+        at: '2026-04-11T10:14:00+03:00',
+      },
+      {
+        id: 'NT-118-02',
+        author: 'فريق العمليات',
+        role: 'operator',
+        text: 'تمّت مراجعة الأدلة — العقد مرتبط بسند لأمر صالح للتحويل لنافذ.',
+        at: '2026-04-12T09:30:00+03:00',
+      },
+    ],
+    audit: [
+      {
+        id: 'AD-118-01',
+        action: 'reported',
+        actor: 'تأجير الشرق',
+        at: '2026-04-11T10:15:00+03:00',
+      },
+      {
+        id: 'AD-118-02',
+        action: 'evidence-added',
+        actor: 'فريق العمليات',
+        at: '2026-04-11T10:45:00+03:00',
+        detail: '3 ملفات',
+      },
+      {
+        id: 'AD-118-03',
+        action: 'reviewed',
+        actor: 'فريق العمليات',
+        at: '2026-04-12T09:30:00+03:00',
+      },
+      {
+        id: 'AD-118-04',
+        action: 'escalated-nafith',
+        actor: 'فريق العمليات',
+        at: '2026-04-12T10:05:00+03:00',
+        detail: 'تحويل السند للتنفيذ عبر نافذ',
+      },
+    ],
+    linked: {
+      invoiceRef: 'INV-APX-11802',
+      invoiceAmount: 78000,
+      invoiceStatus: 'overdue',
+      invoiceDueAt: '2026-04-05T00:00:00+03:00',
+      contractRef: 'CN-APX-9821',
+      contractStatus: 'breached',
+      contractStartedAt: '2026-03-01T09:00:00+03:00',
+      noteRef: 'PN-APX-9821',
+      noteAmount: 78000,
+      noteStatus: 'forwarded-nafith',
+    },
+    escalation: {
+      currentStage: 'nafith',
+      nextStage: 'execution',
+      nextActionKey: 'escalateExecution',
+    },
+  },
+  'DM-2026-117': {
+    id: 'DM-2026-117',
+    kind: 'damage',
+    summary: 'ضرر جزئي في طقم جلوس — تسوية قيد التفاوض مع العميل.',
+    evidence: [
+      {
+        id: 'EV-117-01',
+        kind: 'damage-interior',
+        caption: 'تلف في قاعدة الكنبة الطويلة',
+        uploadedAt: '2026-04-14T13:30:00+03:00',
+        source: 'merchant',
+      },
+      {
+        id: 'EV-117-02',
+        kind: 'damage-interior',
+        caption: 'بقع واضحة على وسادة الظهر',
+        uploadedAt: '2026-04-14T13:32:00+03:00',
+        source: 'merchant',
+      },
+      {
+        id: 'EV-117-03',
+        kind: 'receipt',
+        caption: 'عرض سعر الإصلاح من الورشة المعتمدة',
+        uploadedAt: '2026-04-15T10:00:00+03:00',
+        source: 'merchant',
+      },
+    ],
+    notes: [
+      {
+        id: 'NT-117-01',
+        author: 'مفروشات الديوان',
+        role: 'merchant',
+        text: 'قيمة الإصلاح التقديرية 6,200 ر.س حسب الورشة.',
+        at: '2026-04-14T13:45:00+03:00',
+      },
+      {
+        id: 'NT-117-02',
+        author: 'فريق العمليات',
+        role: 'operator',
+        text: 'تم التواصل مع العميل — يقترح دفع 4,800 ر.س.',
+        at: '2026-04-16T12:00:00+03:00',
+      },
+    ],
+    audit: [
+      {
+        id: 'AD-117-01',
+        action: 'reported',
+        actor: 'مفروشات الديوان',
+        at: '2026-04-14T13:40:00+03:00',
+      },
+      {
+        id: 'AD-117-02',
+        action: 'evidence-added',
+        actor: 'مفروشات الديوان',
+        at: '2026-04-14T13:50:00+03:00',
+        detail: '3 ملفات',
+      },
+      {
+        id: 'AD-117-03',
+        action: 'escalated-settlement',
+        actor: 'فريق العمليات',
+        at: '2026-04-16T12:05:00+03:00',
+      },
+    ],
+    linked: {
+      invoiceRef: 'INV-APX-11740',
+      invoiceAmount: 6200,
+      invoiceStatus: 'pending',
+      invoiceDueAt: '2026-04-28T00:00:00+03:00',
+      contractRef: 'CN-APX-9733',
+      contractStatus: 'closed',
+      contractStartedAt: '2026-02-10T10:00:00+03:00',
+      noteRef: 'PN-APX-9733',
+      noteAmount: 6200,
+      noteStatus: 'pending',
+    },
+    escalation: {
+      currentStage: 'settlement',
+      nextStage: 'nafith',
+      nextActionKey: 'escalateNafith',
+    },
+  },
+  'DM-2026-116': {
+    id: 'DM-2026-116',
+    kind: 'damage',
+    summary: 'حادث كلي على مركبة مؤجّرة — تنفيذ عبر نافذ.',
+    evidence: [
+      {
+        id: 'EV-116-01',
+        kind: 'damage-exterior',
+        caption: 'الواجهة الأمامية بعد الحادث',
+        uploadedAt: '2026-04-02T08:45:00+03:00',
+        source: 'merchant',
+      },
+      {
+        id: 'EV-116-02',
+        kind: 'damage-exterior',
+        caption: 'الجانب الأيسر — ضرر هيكلي',
+        uploadedAt: '2026-04-02T08:46:00+03:00',
+        source: 'merchant',
+      },
+      {
+        id: 'EV-116-03',
+        kind: 'odometer',
+        caption: 'قراءة العداد قبل الحادث',
+        uploadedAt: '2026-03-20T09:00:00+03:00',
+        source: 'merchant',
+      },
+      {
+        id: 'EV-116-04',
+        kind: 'receipt',
+        caption: 'تقرير المرور',
+        uploadedAt: '2026-04-02T15:00:00+03:00',
+        source: 'operator',
+      },
+    ],
+    notes: [
+      {
+        id: 'NT-116-01',
+        author: 'تأجير النخبة',
+        role: 'merchant',
+        text: 'المركبة خارج الخدمة — مطالبة بالقيمة الدفترية 245,000 ر.س.',
+        at: '2026-04-02T08:50:00+03:00',
+      },
+      {
+        id: 'NT-116-02',
+        author: 'النظام',
+        role: 'system',
+        text: 'تم تمرير السند تلقائياً لنافذ للتنفيذ.',
+        at: '2026-04-10T08:00:00+03:00',
+      },
+    ],
+    audit: [
+      {
+        id: 'AD-116-01',
+        action: 'reported',
+        actor: 'تأجير النخبة',
+        at: '2026-04-02T08:30:00+03:00',
+      },
+      {
+        id: 'AD-116-02',
+        action: 'evidence-added',
+        actor: 'تأجير النخبة',
+        at: '2026-04-02T09:00:00+03:00',
+        detail: '4 ملفات',
+      },
+      {
+        id: 'AD-116-03',
+        action: 'escalated-nafith',
+        actor: 'فريق العمليات',
+        at: '2026-04-05T10:00:00+03:00',
+      },
+      {
+        id: 'AD-116-04',
+        action: 'escalated-execution',
+        actor: 'نافذ',
+        at: '2026-04-10T08:00:00+03:00',
+        detail: 'بدأت إجراءات التنفيذ',
+      },
+    ],
+    linked: {
+      invoiceRef: 'INV-APX-11655',
+      invoiceAmount: 245000,
+      invoiceStatus: 'overdue',
+      invoiceDueAt: '2026-04-12T00:00:00+03:00',
+      contractRef: 'CN-APX-9688',
+      contractStatus: 'breached',
+      contractStartedAt: '2026-03-20T09:00:00+03:00',
+      noteRef: 'PN-APX-9688',
+      noteAmount: 245000,
+      noteStatus: 'forwarded-nafith',
+    },
+    escalation: {
+      currentStage: 'execution',
+      nextStage: null,
+      nextActionKey: 'awaitOutcome',
+    },
+  },
+  'DM-2026-115': {
+    id: 'DM-2026-115',
+    kind: 'damage',
+    summary: 'لابتوب مع علامات تلف — قيد مراجعة الأدلة من العمليات.',
+    evidence: [
+      {
+        id: 'EV-115-01',
+        kind: 'damage-exterior',
+        caption: 'خدوش على الغطاء الخلفي',
+        uploadedAt: '2026-04-18T08:45:00+03:00',
+        source: 'merchant',
+      },
+      {
+        id: 'EV-115-02',
+        kind: 'damage-interior',
+        caption: 'بكسل معطّل في الشاشة',
+        uploadedAt: '2026-04-18T08:47:00+03:00',
+        source: 'merchant',
+      },
+    ],
+    notes: [
+      {
+        id: 'NT-115-01',
+        author: 'تأجير السلام',
+        role: 'merchant',
+        text: 'العميل يُنكر مسؤوليته — نطلب مراجعة عاجلة.',
+        at: '2026-04-18T09:05:00+03:00',
+      },
+    ],
+    audit: [
+      {
+        id: 'AD-115-01',
+        action: 'reported',
+        actor: 'تأجير السلام',
+        at: '2026-04-18T09:00:00+03:00',
+      },
+      {
+        id: 'AD-115-02',
+        action: 'evidence-added',
+        actor: 'تأجير السلام',
+        at: '2026-04-18T09:02:00+03:00',
+        detail: '2 ملفات',
+      },
+    ],
+    linked: {
+      invoiceRef: 'INV-APX-11812',
+      invoiceAmount: 4800,
+      invoiceStatus: 'pending',
+      invoiceDueAt: '2026-05-02T00:00:00+03:00',
+      contractRef: 'CN-APX-9812',
+      contractStatus: 'active',
+      contractStartedAt: '2026-04-01T14:00:00+03:00',
+      noteRef: 'PN-APX-9812',
+      noteAmount: 4800,
+      noteStatus: 'issued',
+    },
+    escalation: {
+      currentStage: 'review',
+      nextStage: 'settlement',
+      nextActionKey: 'escalateSettlement',
+    },
+  },
+  'CN-APX-9821-OD': {
+    id: 'CN-APX-9821-OD',
+    kind: 'overdue',
+    summary: 'قسط متأخّر 4 أيام على هايلوكس — العميل لم يستجب لإشعارَين.',
+    evidence: [
+      {
+        id: 'EV-OD-9821-01',
+        kind: 'receipt',
+        caption: 'آخر محاولة سداد — فشلت بسبب الرصيد',
+        uploadedAt: '2026-04-15T14:00:00+03:00',
+        source: 'operator',
+      },
+    ],
+    notes: [
+      {
+        id: 'NT-OD-9821-01',
+        author: 'النظام',
+        role: 'system',
+        text: 'تم إرسال إشعارين — لم يتم استلام ردّ.',
+        at: '2026-04-17T09:00:00+03:00',
+      },
+    ],
+    audit: [
+      {
+        id: 'AD-OD-9821-01',
+        action: 'reported',
+        actor: 'النظام',
+        at: '2026-04-15T00:10:00+03:00',
+      },
+      {
+        id: 'AD-OD-9821-02',
+        action: 'reviewed',
+        actor: 'فريق التحصيل',
+        at: '2026-04-17T09:00:00+03:00',
+      },
+    ],
+    linked: {
+      invoiceRef: 'INV-APX-98210',
+      invoiceAmount: 3100,
+      invoiceStatus: 'overdue',
+      invoiceDueAt: '2026-04-15T00:00:00+03:00',
+      contractRef: 'CN-APX-9821',
+      contractStatus: 'active',
+      contractStartedAt: '2026-01-15T10:00:00+03:00',
+      noteRef: 'PN-APX-9821',
+      noteAmount: 18600,
+      noteStatus: 'issued',
+    },
+    escalation: {
+      currentStage: 'review',
+      nextStage: 'settlement',
+      nextActionKey: 'escalateSettlement',
+    },
+  },
+  'CN-APX-9733-OD': {
+    id: 'CN-APX-9733-OD',
+    kind: 'overdue',
+    summary: 'متأخّر ١٢ يوماً على عقد مفروشات — العميل يعد بالسداد هذا الأسبوع.',
+    evidence: [],
+    notes: [
+      {
+        id: 'NT-OD-9733-01',
+        author: 'مفروشات الديوان',
+        role: 'merchant',
+        text: 'تواصلنا مع العميل — وعد بالسداد خلال يومين.',
+        at: '2026-04-18T11:00:00+03:00',
+      },
+    ],
+    audit: [
+      {
+        id: 'AD-OD-9733-01',
+        action: 'reported',
+        actor: 'النظام',
+        at: '2026-04-09T00:10:00+03:00',
+      },
+      {
+        id: 'AD-OD-9733-02',
+        action: 'note-added',
+        actor: 'مفروشات الديوان',
+        at: '2026-04-18T11:00:00+03:00',
+      },
+    ],
+    linked: {
+      invoiceRef: 'INV-APX-97330',
+      invoiceAmount: 1850,
+      invoiceStatus: 'overdue',
+      invoiceDueAt: '2026-04-09T00:00:00+03:00',
+      contractRef: 'CN-APX-9733',
+      contractStatus: 'active',
+      contractStartedAt: '2025-12-01T11:00:00+03:00',
+      noteRef: 'PN-APX-9733',
+      noteAmount: 14800,
+      noteStatus: 'issued',
+    },
+    escalation: {
+      currentStage: 'review',
+      nextStage: 'settlement',
+      nextActionKey: 'escalateSettlement',
+    },
+  },
+  'CN-APX-9688-OD': {
+    id: 'CN-APX-9688-OD',
+    kind: 'overdue',
+    summary: 'متأخّر ٣٨ يوماً على عقد لكزس — تم بدء محادثة تسوية.',
+    evidence: [
+      {
+        id: 'EV-OD-9688-01',
+        kind: 'receipt',
+        caption: 'كشف سجل المحاولات',
+        uploadedAt: '2026-04-10T10:00:00+03:00',
+        source: 'operator',
+      },
+    ],
+    notes: [
+      {
+        id: 'NT-OD-9688-01',
+        author: 'تأجير النخبة',
+        role: 'merchant',
+        text: 'العميل عرض جدولة السداد على 3 دفعات.',
+        at: '2026-04-12T16:30:00+03:00',
+      },
+      {
+        id: 'NT-OD-9688-02',
+        author: 'فريق التحصيل',
+        role: 'operator',
+        text: 'تمت الموافقة على جدولة الدفعات — نتابع الأسبوع المقبل.',
+        at: '2026-04-14T09:45:00+03:00',
+      },
+    ],
+    audit: [
+      {
+        id: 'AD-OD-9688-01',
+        action: 'reported',
+        actor: 'النظام',
+        at: '2026-03-14T00:10:00+03:00',
+      },
+      {
+        id: 'AD-OD-9688-02',
+        action: 'escalated-settlement',
+        actor: 'فريق التحصيل',
+        at: '2026-04-10T10:00:00+03:00',
+      },
+    ],
+    linked: {
+      invoiceRef: 'INV-APX-96880',
+      invoiceAmount: 4700,
+      invoiceStatus: 'overdue',
+      invoiceDueAt: '2026-03-14T00:00:00+03:00',
+      contractRef: 'CN-APX-9688',
+      contractStatus: 'active',
+      contractStartedAt: '2025-09-20T10:00:00+03:00',
+      noteRef: 'PN-APX-9688',
+      noteAmount: 42300,
+      noteStatus: 'pending',
+    },
+    escalation: {
+      currentStage: 'settlement',
+      nextStage: 'nafith',
+      nextActionKey: 'escalateNafith',
+    },
+  },
+  'CN-APX-9571-OD': {
+    id: 'CN-APX-9571-OD',
+    kind: 'overdue',
+    summary: 'متأخّر ٧٤ يوماً — تم تحويل السند لنافذ لبدء الإجراءات.',
+    evidence: [
+      {
+        id: 'EV-OD-9571-01',
+        kind: 'signature',
+        caption: 'سند لأمر موقّع',
+        uploadedAt: '2025-08-12T10:00:00+03:00',
+        source: 'merchant',
+      },
+    ],
+    notes: [
+      {
+        id: 'NT-OD-9571-01',
+        author: 'النظام',
+        role: 'system',
+        text: 'تم تحويل السند تلقائياً لنافذ — بانتظار النتيجة.',
+        at: '2026-03-20T00:10:00+03:00',
+      },
+    ],
+    audit: [
+      {
+        id: 'AD-OD-9571-01',
+        action: 'reported',
+        actor: 'النظام',
+        at: '2026-02-06T00:10:00+03:00',
+      },
+      {
+        id: 'AD-OD-9571-02',
+        action: 'escalated-settlement',
+        actor: 'فريق التحصيل',
+        at: '2026-03-01T12:00:00+03:00',
+      },
+      {
+        id: 'AD-OD-9571-03',
+        action: 'escalated-nafith',
+        actor: 'فريق العمليات',
+        at: '2026-03-20T09:00:00+03:00',
+      },
+    ],
+    linked: {
+      invoiceRef: 'INV-APX-95710',
+      invoiceAmount: 6050,
+      invoiceStatus: 'overdue',
+      invoiceDueAt: '2026-02-06T00:00:00+03:00',
+      contractRef: 'CN-APX-9571',
+      contractStatus: 'breached',
+      contractStartedAt: '2025-08-12T10:00:00+03:00',
+      noteRef: 'PN-APX-9571',
+      noteAmount: 36300,
+      noteStatus: 'forwarded-nafith',
+    },
+    escalation: {
+      currentStage: 'nafith',
+      nextStage: 'execution',
+      nextActionKey: 'escalateExecution',
+    },
+  },
+};

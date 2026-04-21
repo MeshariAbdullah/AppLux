@@ -9,6 +9,7 @@ import {
 } from 'react';
 import {
   DEFAULT_ELIGIBILITY,
+  SEED_ADMIN_CASE_DETAILS,
   SEED_ADMIN_PENDING_MERCHANTS,
   SEED_ADMIN_USERS_LIST,
   SEED_CONTRACTS,
@@ -22,6 +23,11 @@ import {
   SEED_NOTES,
   SEED_SCANS,
   SEED_STORES,
+  type AdminCaseAuditAction,
+  type AdminCaseAuditEntry,
+  type AdminCaseDetail,
+  type AdminCaseNote,
+  type AdminCaseStage,
   type AdminMerchantDecision,
   type AdminPendingMerchant,
   type AdminUserRecord,
@@ -158,7 +164,39 @@ type StoreContextValue = {
   setAdminUserStatus: (id: string, status: AdminUserStatus) => AdminUserRecord | null;
   setAdminUserLimit: (id: string, limit: number) => AdminUserRecord | null;
   resetAdminUser: (id: string) => void;
+  adminCases: AdminCaseDetail[];
+  addCaseNote: (caseId: string, text: string) => AdminCaseDetail | null;
+  escalateCase: (caseId: string) => AdminCaseDetail | null;
+  resetCase: (caseId: string) => void;
 };
+
+type AdminCaseOverride = {
+  notes?: AdminCaseNote[];
+  audit?: AdminCaseAuditEntry[];
+  stage?: AdminCaseStage;
+};
+
+const STAGE_ORDER: AdminCaseStage[] = ['review', 'settlement', 'nafith', 'execution'];
+
+function stageAfter(s: AdminCaseStage): AdminCaseStage | null {
+  const idx = STAGE_ORDER.indexOf(s);
+  if (idx < 0 || idx >= STAGE_ORDER.length - 1) return null;
+  return STAGE_ORDER[idx + 1];
+}
+
+function nextActionKeyFor(s: AdminCaseStage | null): string {
+  if (s === 'settlement') return 'escalateSettlement';
+  if (s === 'nafith') return 'escalateNafith';
+  if (s === 'execution') return 'escalateExecution';
+  return 'awaitOutcome';
+}
+
+function auditActionForStage(s: AdminCaseStage): AdminCaseAuditAction {
+  if (s === 'settlement') return 'escalated-settlement';
+  if (s === 'nafith') return 'escalated-nafith';
+  if (s === 'execution') return 'escalated-execution';
+  return 'reviewed';
+}
 
 export type AdminMerchantRequest = AdminPendingMerchant & {
   decision: AdminMerchantDecision;
@@ -218,6 +256,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   >({});
   const [userOverrides, setUserOverrides] = useState<
     Record<string, Partial<AdminUserRecord>>
+  >({});
+  const [caseOverrides, setCaseOverrides] = useState<
+    Record<string, AdminCaseOverride>
   >({});
 
   useEffect(() => {
@@ -457,6 +498,136 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
+  const adminCases = useMemo<AdminCaseDetail[]>(() => {
+    return Object.values(SEED_ADMIN_CASE_DETAILS).map((c) => {
+      const o = caseOverrides[c.id];
+      if (!o) return c;
+      const stage = o.stage ?? c.escalation.currentStage;
+      const nextStage = stageAfter(stage);
+      return {
+        ...c,
+        notes: o.notes ? [...c.notes, ...o.notes] : c.notes,
+        audit: o.audit ? [...c.audit, ...o.audit] : c.audit,
+        escalation: {
+          currentStage: stage,
+          nextStage,
+          nextActionKey: nextActionKeyFor(nextStage),
+        },
+      };
+    });
+  }, [caseOverrides]);
+
+  const addCaseNote = useCallback(
+    (caseId: string, text: string) => {
+      const trimmed = text.trim();
+      if (!trimmed) return null;
+      const base = SEED_ADMIN_CASE_DETAILS[caseId];
+      if (!base) return null;
+      const at = new Date().toISOString();
+      const noteId = `NT-${caseId}-EX-${Date.now().toString().slice(-6)}`;
+      const auditId = `AD-${caseId}-EX-${Date.now().toString().slice(-6)}`;
+      const note: AdminCaseNote = {
+        id: noteId,
+        author: 'AppLux Operator',
+        role: 'operator',
+        text: trimmed,
+        at,
+      };
+      const audit: AdminCaseAuditEntry = {
+        id: auditId,
+        action: 'note-added',
+        actor: 'AppLux Operator',
+        at,
+      };
+      setCaseOverrides((prev) => {
+        const cur = prev[caseId] ?? {};
+        return {
+          ...prev,
+          [caseId]: {
+            ...cur,
+            notes: [...(cur.notes ?? []), note],
+            audit: [...(cur.audit ?? []), audit],
+          },
+        };
+      });
+      const stage = (caseOverrides[caseId]?.stage ?? base.escalation.currentStage);
+      const nextStage = stageAfter(stage);
+      return {
+        ...base,
+        notes: [
+          ...base.notes,
+          ...(caseOverrides[caseId]?.notes ?? []),
+          note,
+        ],
+        audit: [
+          ...base.audit,
+          ...(caseOverrides[caseId]?.audit ?? []),
+          audit,
+        ],
+        escalation: {
+          currentStage: stage,
+          nextStage,
+          nextActionKey: nextActionKeyFor(nextStage),
+        },
+      };
+    },
+    [caseOverrides],
+  );
+
+  const escalateCase = useCallback(
+    (caseId: string) => {
+      const base = SEED_ADMIN_CASE_DETAILS[caseId];
+      if (!base) return null;
+      const curStage = caseOverrides[caseId]?.stage ?? base.escalation.currentStage;
+      const next = stageAfter(curStage);
+      if (!next) return null;
+      const at = new Date().toISOString();
+      const auditId = `AD-${caseId}-ESC-${Date.now().toString().slice(-6)}`;
+      const audit: AdminCaseAuditEntry = {
+        id: auditId,
+        action: auditActionForStage(next),
+        actor: 'AppLux Operator',
+        at,
+      };
+      setCaseOverrides((prev) => {
+        const cur = prev[caseId] ?? {};
+        return {
+          ...prev,
+          [caseId]: {
+            ...cur,
+            stage: next,
+            audit: [...(cur.audit ?? []), audit],
+          },
+        };
+      });
+      const afterNext = stageAfter(next);
+      return {
+        ...base,
+        notes: [...base.notes, ...(caseOverrides[caseId]?.notes ?? [])],
+        audit: [
+          ...base.audit,
+          ...(caseOverrides[caseId]?.audit ?? []),
+          audit,
+        ],
+        escalation: {
+          currentStage: next,
+          nextStage: afterNext,
+          nextActionKey: nextActionKeyFor(afterNext),
+        },
+      };
+    },
+    [caseOverrides],
+  );
+
+  const resetCase = useCallback((caseId: string) => {
+    setCaseOverrides((prev) => {
+      if (!(caseId in prev)) return prev;
+      const next = { ...prev };
+      delete next[caseId];
+      return next;
+    });
+  }, []);
+
   const eligibility = DEFAULT_ELIGIBILITY;
   const invoices = SEED_INVOICES;
   const contracts = SEED_CONTRACTS;
@@ -520,6 +691,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       setAdminUserStatus,
       setAdminUserLimit,
       resetAdminUser,
+      adminCases,
+      addCaseNote,
+      escalateCase,
+      resetCase,
     }),
     [
       session,
@@ -559,6 +734,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       setAdminUserStatus,
       setAdminUserLimit,
       resetAdminUser,
+      adminCases,
+      addCaseNote,
+      escalateCase,
+      resetCase,
     ],
   );
 

@@ -1324,6 +1324,32 @@
         }
       }
     },
+    "cases": {
+      "title": "Cases & evidence",
+      "eyebrow": "Operations desk",
+      "heroTitle": "Damage & overdue review",
+      "heroSubtitle": "Review claims, verify evidence and track escalations across merchants.",
+      "hero": {
+        "damage": "Damage cases",
+        "overdue": "Overdue",
+        "claim": "Exposure"
+      },
+      "tabs": {
+        "damage": "Damage",
+        "overdue": "Overdue"
+      },
+      "overdueAging": "Aging buckets",
+      "empty": {
+        "damage": {
+          "title": "No damage cases",
+          "hint": "New damage reports from merchants will show up here."
+        },
+        "overdue": {
+          "title": "No overdue cases",
+          "hint": "Overdue invoices queued for collection will appear here."
+        }
+      }
+    },
     "user": {
       "title": "User details",
       "nafathVerified": "Nafath verified",
