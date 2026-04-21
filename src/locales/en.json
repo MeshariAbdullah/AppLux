@@ -29,7 +29,8 @@
     "sar": "SAR",
     "viewAll": "View all",
     "optional": "Optional",
-    "skip": "Skip"
+    "skip": "Skip",
+    "clear": "Clear"
   },
   "welcome": {
     "eyebrow": "AppLux",
@@ -1270,6 +1271,156 @@
       "footerNote": {
         "title": "Audit trail",
         "hint": "Approve and reject actions are logged with the reviewer, timestamp and notes."
+      }
+    },
+    "users": {
+      "title": "User management",
+      "eyebrow": "Customer accounts",
+      "heroTitle": "Manage users and limits",
+      "heroSubtitle": "Review accounts, adjust rental eligibility and keep the platform compliant.",
+      "hero": {
+        "total": "Users",
+        "limit": "Active limit",
+        "used": "In use"
+      },
+      "tabs": {
+        "all": "All",
+        "active": "Active",
+        "pending": "Pending",
+        "suspended": "Suspended"
+      },
+      "status": {
+        "active": "Active",
+        "pending": "Pending",
+        "suspended": "Suspended"
+      },
+      "searchPlaceholder": "Search by name, ID, mobile or email",
+      "nafathVerified": "Nafath verified",
+      "eligibility": {
+        "label": "Rental eligibility",
+        "remaining": "Remaining",
+        "activeRentals": "{count} active"
+      },
+      "empty": {
+        "all": {
+          "title": "No users yet",
+          "hint": "New customer accounts will appear here once they register."
+        },
+        "active": {
+          "title": "No active users",
+          "hint": "Activate pending accounts to see them here."
+        },
+        "pending": {
+          "title": "No pending users",
+          "hint": "Pending verifications will be listed here for review."
+        },
+        "suspended": {
+          "title": "No suspended users",
+          "hint": "Suspended accounts will be tracked here for reference."
+        },
+        "search": {
+          "title": "No matches",
+          "hint": "Try a different name, ID, mobile or email."
+        }
+      }
+    },
+    "user": {
+      "title": "User details",
+      "nafathVerified": "Nafath verified",
+      "lastActive": "Last active {date}",
+      "risk": {
+        "standard": "Standard",
+        "gold": "Premium",
+        "watch": "Watchlist"
+      },
+      "sections": {
+        "contact": "Contact details",
+        "eligibility": "Rental eligibility",
+        "status": "Account status",
+        "activity": "Recent activity"
+      },
+      "fields": {
+        "mobile": "Mobile",
+        "email": "Email",
+        "city": "City",
+        "nationalId": "National ID",
+        "createdAt": "Member since"
+      },
+      "eligibility": {
+        "limit": "Limit",
+        "used": "In use",
+        "remaining": "Remaining",
+        "utilization": "Utilization",
+        "activeRentals": "Active rentals",
+        "completed": "Completed",
+        "assignLabel": "Assign new limit",
+        "assignHint": "Currently in use: {amount}. New limit must cover the active usage.",
+        "belowUsed": "Limit cannot be lower than the amount currently in use ({amount}).",
+        "save": "Save limit"
+      },
+      "statusBanner": {
+        "active": {
+          "title": "Account is active",
+          "hint": "The user can rent within their assigned limit."
+        },
+        "pending": {
+          "title": "Account is pending verification",
+          "hint": "Activate the account once KYC checks are complete."
+        },
+        "suspended": {
+          "title": "Account is suspended",
+          "hint": "Rentals and new contracts are blocked until reactivation."
+        }
+      },
+      "actions": {
+        "activate": "Activate account",
+        "reactivate": "Reactivate account",
+        "suspend": "Suspend account",
+        "reset": "Reset to original state"
+      },
+      "activity": {
+        "empty": "No activity yet",
+        "emptyHint": "Rentals, payments and returns will appear here.",
+        "type": {
+          "rental": "Rental",
+          "payment": "Payment",
+          "contract": "Contract",
+          "return": "Return",
+          "verification": "Verification",
+          "support": "Support"
+        }
+      },
+      "toast": {
+        "limitSaved": {
+          "title": "Limit updated",
+          "hint": "New rental limit {amount} saved."
+        },
+        "activated": {
+          "title": "Account activated",
+          "hint": "The user can now rent within their assigned limit."
+        },
+        "reactivated": {
+          "title": "Account reactivated",
+          "hint": "Suspension lifted — the user can rent again."
+        },
+        "suspended": {
+          "title": "Account suspended",
+          "hint": "Rentals and new contracts are blocked for this user."
+        },
+        "reset": {
+          "title": "Reset applied",
+          "hint": "Account returned to its original seeded state."
+        }
+      },
+      "notFound": {
+        "title": "User not found",
+        "hint": "This account no longer exists or was removed.",
+        "cta": "Back to users"
+      },
+      "backToList": "Back to users",
+      "footerNote": {
+        "title": "Audit trail",
+        "hint": "Status changes and limit updates are logged with the operator and timestamp."
       }
     }
   }

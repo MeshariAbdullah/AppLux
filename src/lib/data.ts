@@ -1432,3 +1432,357 @@ export const SEED_ADMIN_OVERDUE_BUCKETS: AdminOverdueBucketCount[] = [
   { bucket: '31-60', count: 12, amount: 58700 },
   { bucket: '60+', count: 5, amount: 37200 },
 ];
+
+/* ================ Admin user management ================ */
+
+export type AdminUserStatus = 'active' | 'suspended' | 'pending';
+export type AdminUserRiskTier = 'standard' | 'gold' | 'watch';
+
+export type AdminUserActivityType =
+  | 'rental'
+  | 'payment'
+  | 'verification'
+  | 'contract'
+  | 'return'
+  | 'support';
+
+export type AdminUserActivity = {
+  id: string;
+  type: AdminUserActivityType;
+  title: string;
+  merchantName?: string;
+  amount?: number;
+  at: string;
+};
+
+export type AdminUserRecord = {
+  id: string;
+  fullName: string;
+  initials: string;
+  nationalId: string;
+  mobile: string;
+  email: string;
+  city: string;
+  status: AdminUserStatus;
+  nafathVerified: boolean;
+  createdAt: string;
+  lastActiveAt: string;
+  eligibilityLimit: number;
+  usedAmount: number;
+  activeRentals: number;
+  completedRentals: number;
+  riskTier: AdminUserRiskTier;
+  activity: AdminUserActivity[];
+};
+
+export const SEED_ADMIN_USERS_LIST: AdminUserRecord[] = [
+  {
+    id: 'USR-204118',
+    fullName: 'سارة الحمود',
+    initials: 'س ح',
+    nationalId: '1098234567',
+    mobile: '0551122334',
+    email: 'sara.hamoud@gmail.com',
+    city: 'الرياض',
+    status: 'active',
+    nafathVerified: true,
+    createdAt: '2025-08-12T09:20:00+03:00',
+    lastActiveAt: '2026-04-20T18:42:00+03:00',
+    eligibilityLimit: 35000,
+    usedAmount: 22500,
+    activeRentals: 2,
+    completedRentals: 7,
+    riskTier: 'gold',
+    activity: [
+      {
+        id: 'ACT-S-01',
+        type: 'rental',
+        title: 'تويوتا كامري 2025',
+        merchantName: 'وكالة الشرق',
+        amount: 14500,
+        at: '2026-04-14T10:12:00+03:00',
+      },
+      {
+        id: 'ACT-S-02',
+        type: 'payment',
+        title: 'سداد قسط شهري',
+        amount: 2100,
+        at: '2026-04-10T12:00:00+03:00',
+      },
+      {
+        id: 'ACT-S-03',
+        type: 'contract',
+        title: 'توقيع عقد CN-APX-9912',
+        merchantName: 'وكالة الشرق',
+        at: '2026-04-14T10:15:00+03:00',
+      },
+      {
+        id: 'ACT-S-04',
+        type: 'return',
+        title: 'إرجاع طقم جلوس',
+        merchantName: 'مفروشات الديوان',
+        at: '2026-03-29T16:44:00+03:00',
+      },
+    ],
+  },
+  {
+    id: 'USR-204077',
+    fullName: 'خالد السبيعي',
+    initials: 'خ س',
+    nationalId: '1076554321',
+    mobile: '0538877665',
+    email: 'k.subaie@outlook.com',
+    city: 'جدة',
+    status: 'active',
+    nafathVerified: true,
+    createdAt: '2024-11-03T14:10:00+03:00',
+    lastActiveAt: '2026-04-19T22:14:00+03:00',
+    eligibilityLimit: 18000,
+    usedAmount: 5200,
+    activeRentals: 1,
+    completedRentals: 12,
+    riskTier: 'standard',
+    activity: [
+      {
+        id: 'ACT-K-01',
+        type: 'rental',
+        title: 'غسّالة LG 14 كجم',
+        merchantName: 'إلكترونيات المستقبل',
+        amount: 5200,
+        at: '2026-04-05T09:45:00+03:00',
+      },
+      {
+        id: 'ACT-K-02',
+        type: 'payment',
+        title: 'سداد مبكّر',
+        amount: 1400,
+        at: '2026-03-28T14:30:00+03:00',
+      },
+      {
+        id: 'ACT-K-03',
+        type: 'verification',
+        title: 'تحديث بيانات نفاذ',
+        at: '2026-02-18T11:00:00+03:00',
+      },
+    ],
+  },
+  {
+    id: 'USR-204022',
+    fullName: 'نورة العنزي',
+    initials: 'ن ع',
+    nationalId: '1088776655',
+    mobile: '0544455667',
+    email: 'noura.anizi@proton.me',
+    city: 'الدمام',
+    status: 'active',
+    nafathVerified: true,
+    createdAt: '2024-06-20T08:05:00+03:00',
+    lastActiveAt: '2026-04-18T07:56:00+03:00',
+    eligibilityLimit: 60000,
+    usedAmount: 47300,
+    activeRentals: 3,
+    completedRentals: 21,
+    riskTier: 'gold',
+    activity: [
+      {
+        id: 'ACT-N-01',
+        type: 'rental',
+        title: 'جيب لاندكروزر 2024',
+        merchantName: 'تأجير النخبة',
+        amount: 28000,
+        at: '2026-04-09T17:22:00+03:00',
+      },
+      {
+        id: 'ACT-N-02',
+        type: 'rental',
+        title: 'شقة مفروشة — الخبر',
+        merchantName: 'مجموعة صُهبة',
+        amount: 13500,
+        at: '2026-03-21T12:00:00+03:00',
+      },
+      {
+        id: 'ACT-N-03',
+        type: 'payment',
+        title: 'سداد قسط',
+        amount: 3800,
+        at: '2026-04-12T18:10:00+03:00',
+      },
+      {
+        id: 'ACT-N-04',
+        type: 'contract',
+        title: 'توقيع عقد CN-APX-9834',
+        merchantName: 'تأجير النخبة',
+        at: '2026-04-09T17:25:00+03:00',
+      },
+    ],
+  },
+  {
+    id: 'USR-203988',
+    fullName: 'فهد الدوسري',
+    initials: 'ف د',
+    nationalId: '1066998877',
+    mobile: '0501234987',
+    email: 'fahad.d@gmail.com',
+    city: 'الرياض',
+    status: 'suspended',
+    nafathVerified: true,
+    createdAt: '2025-01-18T13:35:00+03:00',
+    lastActiveAt: '2026-03-11T09:18:00+03:00',
+    eligibilityLimit: 12000,
+    usedAmount: 9600,
+    activeRentals: 1,
+    completedRentals: 3,
+    riskTier: 'watch',
+    activity: [
+      {
+        id: 'ACT-F-01',
+        type: 'support',
+        title: 'تذكرة دعم: تأخر سداد',
+        at: '2026-03-10T15:20:00+03:00',
+      },
+      {
+        id: 'ACT-F-02',
+        type: 'rental',
+        title: 'تلفزيون سامسونج 65"',
+        merchantName: 'إلكترونيات المستقبل',
+        amount: 4800,
+        at: '2026-02-05T11:05:00+03:00',
+      },
+      {
+        id: 'ACT-F-03',
+        type: 'payment',
+        title: 'سداد قسط',
+        amount: 1200,
+        at: '2026-01-28T10:10:00+03:00',
+      },
+    ],
+  },
+  {
+    id: 'USR-203901',
+    fullName: 'ريما الغامدي',
+    initials: 'ر غ',
+    nationalId: '1077887799',
+    mobile: '0569988771',
+    email: 'reema.g@applux.sa',
+    city: 'مكة',
+    status: 'active',
+    nafathVerified: true,
+    createdAt: '2025-10-02T16:45:00+03:00',
+    lastActiveAt: '2026-04-21T06:12:00+03:00',
+    eligibilityLimit: 22000,
+    usedAmount: 0,
+    activeRentals: 0,
+    completedRentals: 4,
+    riskTier: 'standard',
+    activity: [
+      {
+        id: 'ACT-R-01',
+        type: 'return',
+        title: 'إرجاع ثلاجة LG 600L',
+        merchantName: 'إلكترونيات المستقبل',
+        at: '2026-03-02T19:00:00+03:00',
+      },
+      {
+        id: 'ACT-R-02',
+        type: 'verification',
+        title: 'توثيق نفاذ',
+        at: '2025-10-02T16:55:00+03:00',
+      },
+    ],
+  },
+  {
+    id: 'USR-203820',
+    fullName: 'سلطان القرني',
+    initials: 'س ق',
+    nationalId: '1099112233',
+    mobile: '0511224455',
+    email: 'sultan.qarni@outlook.com',
+    city: 'تبوك',
+    status: 'pending',
+    nafathVerified: false,
+    createdAt: '2026-04-17T08:30:00+03:00',
+    lastActiveAt: '2026-04-17T08:35:00+03:00',
+    eligibilityLimit: 0,
+    usedAmount: 0,
+    activeRentals: 0,
+    completedRentals: 0,
+    riskTier: 'standard',
+    activity: [
+      {
+        id: 'ACT-SQ-01',
+        type: 'verification',
+        title: 'بدء تسجيل الحساب',
+        at: '2026-04-17T08:30:00+03:00',
+      },
+    ],
+  },
+  {
+    id: 'USR-203714',
+    fullName: 'هند الزهراني',
+    initials: 'ه ز',
+    nationalId: '1055223344',
+    mobile: '0578899112',
+    email: 'hind.z@gmail.com',
+    city: 'الطائف',
+    status: 'active',
+    nafathVerified: true,
+    createdAt: '2024-04-11T09:00:00+03:00',
+    lastActiveAt: '2026-04-17T21:03:00+03:00',
+    eligibilityLimit: 28000,
+    usedAmount: 11200,
+    activeRentals: 1,
+    completedRentals: 15,
+    riskTier: 'standard',
+    activity: [
+      {
+        id: 'ACT-H-01',
+        type: 'rental',
+        title: 'هيونداي توسان 2024',
+        merchantName: 'تأجير السلام',
+        amount: 11200,
+        at: '2026-04-01T10:30:00+03:00',
+      },
+      {
+        id: 'ACT-H-02',
+        type: 'payment',
+        title: 'سداد قسط',
+        amount: 2400,
+        at: '2026-04-15T12:45:00+03:00',
+      },
+    ],
+  },
+  {
+    id: 'USR-203566',
+    fullName: 'ماجد العتيبي',
+    initials: 'م ع',
+    nationalId: '1044556677',
+    mobile: '0599884422',
+    email: 'majed.o@icloud.com',
+    city: 'الرياض',
+    status: 'suspended',
+    nafathVerified: true,
+    createdAt: '2024-02-05T14:20:00+03:00',
+    lastActiveAt: '2025-12-14T16:40:00+03:00',
+    eligibilityLimit: 0,
+    usedAmount: 3400,
+    activeRentals: 0,
+    completedRentals: 2,
+    riskTier: 'watch',
+    activity: [
+      {
+        id: 'ACT-M-01',
+        type: 'support',
+        title: 'إيقاف الحساب لمخالفة الشروط',
+        at: '2025-12-15T09:00:00+03:00',
+      },
+      {
+        id: 'ACT-M-02',
+        type: 'rental',
+        title: 'طقم ضيافة',
+        merchantName: 'مفروشات الديوان',
+        amount: 3400,
+        at: '2025-11-02T11:00:00+03:00',
+      },
+    ],
+  },
+];

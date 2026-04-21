@@ -10,6 +10,7 @@ import {
 import {
   DEFAULT_ELIGIBILITY,
   SEED_ADMIN_PENDING_MERCHANTS,
+  SEED_ADMIN_USERS_LIST,
   SEED_CONTRACTS,
   SEED_HISTORY,
   SEED_INVOICES,
@@ -23,6 +24,8 @@ import {
   SEED_STORES,
   type AdminMerchantDecision,
   type AdminPendingMerchant,
+  type AdminUserRecord,
+  type AdminUserStatus,
   type Contract,
   type HistoryItem,
   type Invoice,
@@ -151,6 +154,10 @@ type StoreContextValue = {
   approveMerchantRequest: (id: string, notes?: string) => AdminMerchantDecision | null;
   rejectMerchantRequest: (id: string, notes?: string) => AdminMerchantDecision | null;
   resetMerchantRequest: (id: string) => void;
+  adminUsers: AdminUserRecord[];
+  setAdminUserStatus: (id: string, status: AdminUserStatus) => AdminUserRecord | null;
+  setAdminUserLimit: (id: string, limit: number) => AdminUserRecord | null;
+  resetAdminUser: (id: string) => void;
 };
 
 export type AdminMerchantRequest = AdminPendingMerchant & {
@@ -208,6 +215,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [extraDamages, setExtraDamages] = useState<MerchantDamageCase[]>([]);
   const [merchantDecisions, setMerchantDecisions] = useState<
     Record<string, AdminMerchantDecision>
+  >({});
+  const [userOverrides, setUserOverrides] = useState<
+    Record<string, Partial<AdminUserRecord>>
   >({});
 
   useEffect(() => {
@@ -402,6 +412,51 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     [merchantDecisions],
   );
 
+  const adminUsers = useMemo<AdminUserRecord[]>(
+    () =>
+      SEED_ADMIN_USERS_LIST.map((u) => {
+        const o = userOverrides[u.id];
+        return o ? { ...u, ...o } : u;
+      }),
+    [userOverrides],
+  );
+
+  const setAdminUserStatus = useCallback(
+    (id: string, status: AdminUserStatus) => {
+      const base = SEED_ADMIN_USERS_LIST.find((u) => u.id === id);
+      if (!base) return null;
+      setUserOverrides((prev) => ({
+        ...prev,
+        [id]: { ...(prev[id] ?? {}), status },
+      }));
+      return { ...base, ...(userOverrides[id] ?? {}), status };
+    },
+    [userOverrides],
+  );
+
+  const setAdminUserLimit = useCallback(
+    (id: string, limit: number) => {
+      const base = SEED_ADMIN_USERS_LIST.find((u) => u.id === id);
+      if (!base) return null;
+      const safe = Number.isFinite(limit) && limit >= 0 ? Math.round(limit) : 0;
+      setUserOverrides((prev) => ({
+        ...prev,
+        [id]: { ...(prev[id] ?? {}), eligibilityLimit: safe },
+      }));
+      return { ...base, ...(userOverrides[id] ?? {}), eligibilityLimit: safe };
+    },
+    [userOverrides],
+  );
+
+  const resetAdminUser = useCallback((id: string) => {
+    setUserOverrides((prev) => {
+      if (!(id in prev)) return prev;
+      const next = { ...prev };
+      delete next[id];
+      return next;
+    });
+  }, []);
+
   const eligibility = DEFAULT_ELIGIBILITY;
   const invoices = SEED_INVOICES;
   const contracts = SEED_CONTRACTS;
@@ -461,6 +516,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       approveMerchantRequest,
       rejectMerchantRequest,
       resetMerchantRequest,
+      adminUsers,
+      setAdminUserStatus,
+      setAdminUserLimit,
+      resetAdminUser,
     }),
     [
       session,
@@ -496,6 +555,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       approveMerchantRequest,
       rejectMerchantRequest,
       resetMerchantRequest,
+      adminUsers,
+      setAdminUserStatus,
+      setAdminUserLimit,
+      resetAdminUser,
     ],
   );
 
