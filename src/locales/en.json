@@ -1365,7 +1365,11 @@
         "overview": "Case overview",
         "invoice": "Linked invoice",
         "contract": "Linked contract",
-        "note": "Promissory note"
+        "note": "Promissory note",
+        "evidence": "Evidence review",
+        "notes": "Case notes",
+        "escalation": "Escalation",
+        "audit": "Audit trail"
       },
       "fields": {
         "merchant": "Merchant",
@@ -1407,6 +1411,71 @@
       "openInvoice": "Open invoice timeline",
       "openContract": "Open contract timeline",
       "openNote": "Open note timeline",
+      "evidence": {
+        "kind": {
+          "damage-exterior": "Exterior damage",
+          "damage-interior": "Interior damage",
+          "dashboard": "Dashboard",
+          "odometer": "Odometer",
+          "signature": "Signature",
+          "receipt": "Receipt",
+          "missing": "Missing item",
+          "location": "Location"
+        },
+        "source": {
+          "merchant": "Merchant",
+          "customer": "Customer",
+          "operator": "AppLux"
+        },
+        "empty": {
+          "title": "No evidence uploaded",
+          "hint": "Photos, receipts and signatures will appear here once added."
+        }
+      },
+      "notes": {
+        "empty": {
+          "title": "No notes yet",
+          "hint": "Use notes to capture calls, agreements or internal updates."
+        },
+        "role": {
+          "merchant": "Merchant",
+          "operator": "Operator",
+          "system": "System"
+        },
+        "addLabel": "Add an operator note",
+        "addHint": "Visible to the operations team only.",
+        "addPlaceholder": "Capture context, next steps or agreements…",
+        "submit": "Save note",
+        "flash": "Note added to the case."
+      },
+      "escalation": {
+        "current": "Current stage",
+        "hint": "Escalation is simulated for this demo. Advancing the stage records an audit entry.",
+        "awaitingHint": "This case is at the final stage. Awaiting the enforcement outcome.",
+        "flash": "Stage advanced and audit entry recorded.",
+        "action": {
+          "escalateSettlement": "Move to settlement",
+          "escalateNafith": "Forward to Nafith",
+          "escalateExecution": "Escalate to execution",
+          "awaitOutcome": "Awaiting outcome"
+        }
+      },
+      "audit": {
+        "empty": {
+          "title": "No activity yet",
+          "hint": "Audit entries will appear here as the case progresses."
+        },
+        "action": {
+          "reported": "Case reported",
+          "evidence-added": "Evidence uploaded",
+          "reviewed": "Evidence reviewed",
+          "note-added": "Note added",
+          "escalated-settlement": "Escalated to settlement",
+          "escalated-nafith": "Forwarded to Nafith",
+          "escalated-execution": "Escalated to execution",
+          "settled": "Case settled"
+        }
+      },
       "backToList": "Back to all cases",
       "notFound": {
         "title": "Case not found",

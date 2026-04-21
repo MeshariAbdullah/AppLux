@@ -1,4 +1,4 @@
-import { useMemo, type ReactNode } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { Header, Screen } from '@/components/layout';
 import {
@@ -6,22 +6,31 @@ import {
   Card,
   CardDivider,
   EmptyState,
+  FormField,
   StatusChip,
+  Textarea,
   type StatusTone,
 } from '@/components/ui';
 import {
   AlertIcon,
+  ArrowIcon,
+  BadgeCheckIcon,
   BuildingIcon,
+  CarIcon,
+  CheckIcon,
   ChevronIcon,
   ClockIcon,
   DocIcon,
   GavelIcon,
+  HistoryIcon,
   InfoIcon,
   MapPinIcon,
   PackageIcon,
   ReceiptIcon,
   ShieldIcon,
   SignatureIcon,
+  SparkleIcon,
+  TimelineIcon,
   UserIcon,
   WalletIcon,
 } from '@/components/icons';
@@ -32,10 +41,15 @@ import {
   SEED_ADMIN_ACTIVE_CASES,
   SEED_ADMIN_OVERDUE,
   type AdminActiveCase,
+  type AdminCaseAuditAction,
   type AdminCaseContractStatus,
+  type AdminCaseEvidence,
+  type AdminCaseEvidenceKind,
+  type AdminCaseEvidenceSource,
   type AdminCaseInvoiceStatus,
   type AdminCaseKind,
   type AdminCaseNoteDocStatus,
+  type AdminCaseNoteRole,
   type AdminCaseSeverity,
   type AdminCaseStage,
   type AdminOverdueCase,
@@ -69,6 +83,171 @@ function noteTone(s: AdminCaseNoteDocStatus): StatusTone {
   if (s === 'collected') return 'success';
   if (s === 'issued') return 'brand';
   if (s === 'pending') return 'warn';
+  return 'danger';
+}
+
+type EvidenceVisual = {
+  gradient: string;
+  ring: string;
+  icon: ReactNode;
+  chipClass: string;
+};
+
+function evidenceVisual(kind: AdminCaseEvidenceKind): EvidenceVisual {
+  switch (kind) {
+    case 'damage-exterior':
+      return {
+        gradient: 'from-danger-500/85 via-danger-600/90 to-danger-700',
+        ring: 'ring-danger-500/30',
+        icon: <GavelIcon size={22} />,
+        chipClass: 'bg-danger-50 text-danger-700',
+      };
+    case 'damage-interior':
+      return {
+        gradient: 'from-danger-400/80 via-danger-500/85 to-danger-600',
+        ring: 'ring-danger-500/25',
+        icon: <PackageIcon size={22} />,
+        chipClass: 'bg-danger-50 text-danger-700',
+      };
+    case 'dashboard':
+      return {
+        gradient: 'from-brand-500/80 via-brand-600/85 to-brand-700',
+        ring: 'ring-brand-500/25',
+        icon: <CarIcon size={22} />,
+        chipClass: 'bg-brand-50 text-brand-700',
+      };
+    case 'odometer':
+      return {
+        gradient: 'from-gold-400 via-gold-500 to-gold-600',
+        ring: 'ring-gold-500/30',
+        icon: <ClockIcon size={22} />,
+        chipClass: 'bg-[#FBF2DD] text-gold-700',
+      };
+    case 'signature':
+      return {
+        gradient: 'from-ink-700 via-ink-800 to-ink-900',
+        ring: 'ring-ink-900/40',
+        icon: <SignatureIcon size={22} />,
+        chipClass: 'bg-ink-100 text-ink-700',
+      };
+    case 'receipt':
+      return {
+        gradient: 'from-brand-400/80 via-brand-500/85 to-brand-600',
+        ring: 'ring-brand-500/25',
+        icon: <ReceiptIcon size={22} />,
+        chipClass: 'bg-brand-50 text-brand-700',
+      };
+    case 'missing':
+      return {
+        gradient: 'from-warn-400 via-warn-500 to-warn-600',
+        ring: 'ring-warn-500/30',
+        icon: <AlertIcon size={22} />,
+        chipClass: 'bg-warn-50 text-warn-700',
+      };
+    case 'location':
+    default:
+      return {
+        gradient: 'from-brand-500/80 via-brand-600/90 to-ink-800',
+        ring: 'ring-brand-500/25',
+        icon: <MapPinIcon size={22} />,
+        chipClass: 'bg-brand-50 text-brand-700',
+      };
+  }
+}
+
+function evidenceSourceTone(s: AdminCaseEvidenceSource): StatusTone {
+  if (s === 'operator') return 'brand';
+  if (s === 'merchant') return 'gold';
+  return 'neutral';
+}
+
+type NoteVisual = {
+  bubble: string;
+  badge: string;
+  icon: ReactNode;
+};
+
+function noteVisual(role: AdminCaseNoteRole): NoteVisual {
+  if (role === 'merchant') {
+    return {
+      bubble: 'bg-brand-50/80 ring-brand-500/15 text-ink-800',
+      badge: 'bg-brand-100 text-brand-700',
+      icon: <BuildingIcon size={11} />,
+    };
+  }
+  if (role === 'operator') {
+    return {
+      bubble: 'bg-[#FBF4DE]/90 ring-gold-500/20 text-ink-800',
+      badge: 'bg-[#FBF2DD] text-gold-700',
+      icon: <ShieldIcon size={11} />,
+    };
+  }
+  return {
+    bubble: 'bg-ink-50 ring-ink-200 text-ink-800',
+    badge: 'bg-ink-100 text-ink-600',
+    icon: <SparkleIcon size={11} />,
+  };
+}
+
+type AuditVisual = {
+  dotClass: string;
+  icon: ReactNode;
+};
+
+function auditVisual(action: AdminCaseAuditAction): AuditVisual {
+  switch (action) {
+    case 'reported':
+      return {
+        dotClass: 'bg-brand-50 text-brand-700 ring-brand-500/20',
+        icon: <InfoIcon size={12} />,
+      };
+    case 'evidence-added':
+      return {
+        dotClass: 'bg-brand-50 text-brand-700 ring-brand-500/20',
+        icon: <PackageIcon size={12} />,
+      };
+    case 'reviewed':
+      return {
+        dotClass: 'bg-success-50 text-success-700 ring-success-500/20',
+        icon: <BadgeCheckIcon size={12} />,
+      };
+    case 'note-added':
+      return {
+        dotClass: 'bg-ink-100 text-ink-700 ring-ink-300/30',
+        icon: <DocIcon size={12} />,
+      };
+    case 'escalated-settlement':
+      return {
+        dotClass: 'bg-[#FBF2DD] text-gold-700 ring-gold-500/25',
+        icon: <ArrowIcon size={12} />,
+      };
+    case 'escalated-nafith':
+      return {
+        dotClass: 'bg-warn-50 text-warn-700 ring-warn-500/25',
+        icon: <GavelIcon size={12} />,
+      };
+    case 'escalated-execution':
+      return {
+        dotClass: 'bg-danger-50 text-danger-700 ring-danger-500/25',
+        icon: <AlertIcon size={12} />,
+      };
+    case 'settled':
+      return {
+        dotClass: 'bg-success-50 text-success-700 ring-success-500/20',
+        icon: <CheckIcon size={12} />,
+      };
+    default:
+      return {
+        dotClass: 'bg-ink-100 text-ink-700 ring-ink-300/30',
+        icon: <InfoIcon size={12} />,
+      };
+  }
+}
+
+function escalationStageTone(s: AdminCaseStage): StatusTone {
+  if (s === 'review') return 'brand';
+  if (s === 'settlement') return 'gold';
+  if (s === 'nafith') return 'warn';
   return 'danger';
 }
 
@@ -132,13 +311,36 @@ export default function AdminCaseDetails() {
   const kind: AdminCaseKind = rawKind === 'overdue' ? 'overdue' : 'damage';
   const detailKey = kind === 'overdue' ? `${id}-OD` : id;
 
-  const { adminCases } = useStore();
+  const { adminCases, addCaseNote, escalateCase } = useStore();
 
   const detail = useMemo(
     () => adminCases.find((c) => c.id === detailKey) ?? null,
     [adminCases, detailKey],
   );
   const header = useMemo(() => findHeader(kind, id), [kind, id]);
+
+  const [noteDraft, setNoteDraft] = useState('');
+  const [noteFlash, setNoteFlash] = useState(false);
+  const [escalateFlash, setEscalateFlash] = useState(false);
+
+  const handleAddNote = () => {
+    const trimmed = noteDraft.trim();
+    if (!trimmed) return;
+    const next = addCaseNote(detailKey, trimmed);
+    if (next) {
+      setNoteDraft('');
+      setNoteFlash(true);
+      window.setTimeout(() => setNoteFlash(false), 1800);
+    }
+  };
+
+  const handleEscalate = () => {
+    const next = escalateCase(detailKey);
+    if (next) {
+      setEscalateFlash(true);
+      window.setTimeout(() => setEscalateFlash(false), 1800);
+    }
+  };
 
   if (!detail || !header) {
     return (
@@ -485,6 +687,217 @@ export default function AdminCaseDetails() {
             </Card>
           </Section>
 
+          {/* Evidence */}
+          <Section
+            title={t('admin.case.sections.evidence')}
+            icon={<PackageIcon size={14} />}
+            count={detail.evidence.length}
+          >
+            {detail.evidence.length === 0 ? (
+              <Card padded>
+                <EmptyState
+                  icon={<InfoIcon size={20} />}
+                  title={t('admin.case.evidence.empty.title')}
+                  description={t('admin.case.evidence.empty.hint')}
+                />
+              </Card>
+            ) : (
+              <div className="grid grid-cols-2 gap-2">
+                {detail.evidence.map((ev) => (
+                  <EvidenceTile key={ev.id} evidence={ev} />
+                ))}
+              </div>
+            )}
+          </Section>
+
+          {/* Escalation */}
+          <Section
+            title={t('admin.case.sections.escalation')}
+            icon={<GavelIcon size={14} />}
+          >
+            <Card padded className="space-y-3">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-[11px] font-semibold uppercase tracking-wide text-ink-400">
+                  {t('admin.case.escalation.current')}
+                </span>
+                <StatusChip
+                  size="sm"
+                  tone={escalationStageTone(escalation.currentStage)}
+                  dot
+                  label={t(
+                    `admin.home.activeCases.stage.${escalation.currentStage}`,
+                  )}
+                />
+                {escalation.nextStage && (
+                  <>
+                    <ChevronIcon
+                      size={12}
+                      className={cn(
+                        'text-ink-300',
+                        dir === 'rtl' ? 'rotate-180' : '',
+                      )}
+                    />
+                    <StatusChip
+                      size="sm"
+                      tone={escalationStageTone(escalation.nextStage)}
+                      dot={false}
+                      label={t(
+                        `admin.home.activeCases.stage.${escalation.nextStage}`,
+                      )}
+                    />
+                  </>
+                )}
+              </div>
+
+              <p className="text-[12px] text-ink-500 leading-relaxed">
+                {escalation.nextStage
+                  ? t('admin.case.escalation.hint')
+                  : t('admin.case.escalation.awaitingHint')}
+              </p>
+
+              {escalateFlash && (
+                <div className="rounded-xl bg-success-50 ring-1 ring-inset ring-success-500/25 px-3 py-2 flex items-center gap-2 text-[12px] font-semibold text-success-700">
+                  <CheckIcon size={14} />
+                  {t('admin.case.escalation.flash')}
+                </div>
+              )}
+
+              <Button
+                onClick={handleEscalate}
+                disabled={!escalation.nextStage}
+                variant={escalation.nextStage ? 'primary' : 'ghost'}
+                className="w-full"
+              >
+                {t(`admin.case.escalation.action.${escalation.nextActionKey}`)}
+              </Button>
+            </Card>
+          </Section>
+
+          {/* Notes */}
+          <Section
+            title={t('admin.case.sections.notes')}
+            icon={<DocIcon size={14} />}
+            count={detail.notes.length}
+          >
+            <Card padded className="space-y-3">
+              {detail.notes.length === 0 ? (
+                <EmptyState
+                  icon={<InfoIcon size={20} />}
+                  title={t('admin.case.notes.empty.title')}
+                  description={t('admin.case.notes.empty.hint')}
+                />
+              ) : (
+                <ul className="space-y-2">
+                  {detail.notes.map((n) => (
+                    <li key={n.id}>
+                      <NoteBubble
+                        role={n.role}
+                        author={n.author}
+                        at={formatDate(n.at, {
+                          dateStyle: 'medium',
+                          timeStyle: 'short',
+                        })}
+                        roleLabel={t(`admin.case.notes.role.${n.role}`)}
+                        text={n.text}
+                      />
+                    </li>
+                  ))}
+                </ul>
+              )}
+
+              <CardDivider />
+
+              <FormField
+                label={t('admin.case.notes.addLabel')}
+                hint={t('admin.case.notes.addHint')}
+              >
+                <Textarea
+                  value={noteDraft}
+                  onChange={(e) => setNoteDraft(e.target.value)}
+                  placeholder={t('admin.case.notes.addPlaceholder')}
+                  rows={3}
+                />
+              </FormField>
+
+              {noteFlash && (
+                <div className="rounded-xl bg-success-50 ring-1 ring-inset ring-success-500/25 px-3 py-2 flex items-center gap-2 text-[12px] font-semibold text-success-700">
+                  <CheckIcon size={14} />
+                  {t('admin.case.notes.flash')}
+                </div>
+              )}
+
+              <Button
+                onClick={handleAddNote}
+                disabled={noteDraft.trim().length === 0}
+                className="w-full"
+              >
+                {t('admin.case.notes.submit')}
+              </Button>
+            </Card>
+          </Section>
+
+          {/* Audit trail */}
+          <Section
+            title={t('admin.case.sections.audit')}
+            icon={<TimelineIcon size={14} />}
+            count={detail.audit.length}
+          >
+            <Card padded>
+              {detail.audit.length === 0 ? (
+                <EmptyState
+                  icon={<HistoryIcon size={20} />}
+                  title={t('admin.case.audit.empty.title')}
+                  description={t('admin.case.audit.empty.hint')}
+                />
+              ) : (
+                <ol className="relative">
+                  <span
+                    aria-hidden
+                    className="absolute top-1 bottom-1 w-px bg-ink-100 start-[13px]"
+                  />
+                  {detail.audit.map((a, i) => {
+                    const av = auditVisual(a.action);
+                    return (
+                      <li
+                        key={a.id}
+                        className={cn(
+                          'relative flex items-start gap-3',
+                          i < detail.audit.length - 1 ? 'pb-3' : '',
+                        )}
+                      >
+                        <span
+                          className={cn(
+                            'relative z-10 h-6 w-6 shrink-0 rounded-full ring-1 grid place-items-center',
+                            av.dotClass,
+                          )}
+                        >
+                          {av.icon}
+                        </span>
+                        <div className="min-w-0 flex-1 pt-0.5">
+                          <div className="text-[12.5px] font-semibold text-ink-900">
+                            {t(`admin.case.audit.action.${a.action}`)}
+                          </div>
+                          <div className="mt-0.5 text-[11px] text-ink-500 num">
+                            {a.actor} ·{' '}
+                            {formatDate(a.at, {
+                              dateStyle: 'medium',
+                              timeStyle: 'short',
+                            })}
+                          </div>
+                          {a.detail && (
+                            <div className="mt-1 text-[11.5px] text-ink-600">
+                              {a.detail}
+                            </div>
+                          )}
+                        </div>
+                      </li>
+                    );
+                  })}
+                </ol>
+              )}
+            </Card>
+          </Section>
+
           <Link
             to="/admin/cases"
             className="block text-center text-[12.5px] font-semibold text-brand-700 py-2"
@@ -500,10 +913,12 @@ export default function AdminCaseDetails() {
 function Section({
   title,
   icon,
+  count,
   children,
 }: {
   title: ReactNode;
   icon: ReactNode;
+  count?: number;
   children: ReactNode;
 }) {
   return (
@@ -513,9 +928,102 @@ function Section({
         <h2 className="text-[12.5px] font-semibold uppercase tracking-wide text-ink-500">
           {title}
         </h2>
+        {typeof count === 'number' && (
+          <span className="ms-auto text-[11px] font-semibold text-ink-500 num bg-ink-100 rounded-full px-2 py-0.5">
+            {count}
+          </span>
+        )}
       </div>
       {children}
     </section>
+  );
+}
+
+function EvidenceTile({ evidence }: { evidence: AdminCaseEvidence }) {
+  const t = useT();
+  const { formatDate } = useI18n();
+  const v = evidenceVisual(evidence.kind);
+  return (
+    <div className="rounded-2xl bg-white ring-1 ring-ink-100 overflow-hidden flex flex-col">
+      <div
+        className={cn(
+          'relative aspect-[4/3] bg-gradient-to-br text-white grid place-items-center ring-1 ring-inset',
+          v.gradient,
+          v.ring,
+        )}
+      >
+        <div
+          aria-hidden
+          className="absolute inset-0 pattern-dots opacity-25 pointer-events-none"
+        />
+        <div className="relative flex flex-col items-center gap-1">
+          <span className="h-10 w-10 rounded-xl bg-white/15 ring-1 ring-white/20 grid place-items-center backdrop-blur">
+            {v.icon}
+          </span>
+          <span className="text-[10px] font-semibold uppercase tracking-wide text-white/80">
+            {t(`admin.case.evidence.kind.${evidence.kind}`)}
+          </span>
+        </div>
+        <span
+          className={cn(
+            'absolute top-1.5 end-1.5 text-[9.5px] font-semibold uppercase tracking-wide rounded-full px-1.5 py-0.5',
+            v.chipClass,
+          )}
+        >
+          {t(`admin.case.evidence.source.${evidence.source}`)}
+        </span>
+      </div>
+      <div className="p-2.5 space-y-1">
+        <p className="text-[12px] text-ink-800 leading-snug line-clamp-2">
+          {evidence.caption}
+        </p>
+        <div className="flex items-center gap-1 text-[10.5px] text-ink-400 num">
+          <ClockIcon size={10} />
+          <span>{formatDate(evidence.uploadedAt)}</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function NoteBubble({
+  role,
+  author,
+  at,
+  roleLabel,
+  text,
+}: {
+  role: AdminCaseNoteRole;
+  author: string;
+  at: string;
+  roleLabel: string;
+  text: string;
+}) {
+  const v = noteVisual(role);
+  return (
+    <div
+      className={cn(
+        'rounded-2xl ring-1 ring-inset px-3 py-2.5',
+        v.bubble,
+      )}
+    >
+      <div className="flex items-center gap-1.5 flex-wrap">
+        <span
+          className={cn(
+            'inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide',
+            v.badge,
+          )}
+        >
+          {v.icon}
+          {roleLabel}
+        </span>
+        <span className="text-[11.5px] font-semibold text-ink-700 truncate max-w-[55%]">
+          {author}
+        </span>
+        <span className="ms-auto text-[10.5px] text-ink-400 num">{at}</span>
+      </div>
+      <p className="mt-1.5 text-[12.5px] leading-relaxed">{text}</p>
+    </div>
   );
 }
 
