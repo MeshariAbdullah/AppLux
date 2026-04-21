@@ -38,6 +38,8 @@ import MerchantDamageNew from '@/pages/merchant/MerchantDamageNew';
 import MerchantDamageDetails from '@/pages/merchant/MerchantDamageDetails';
 import MerchantHistoryPage from '@/pages/merchant/MerchantHistoryPage';
 import MerchantInvoiceNew from '@/pages/merchant/MerchantInvoiceNew';
+import AdminHome from '@/pages/admin/AdminHome';
+import AdminModulePlaceholder from '@/pages/admin/AdminModulePlaceholder';
 
 function RequireAuth({ children }: { children: ReactElement }) {
   const { session } = useStore();
@@ -83,6 +85,15 @@ export function AppRoutes() {
         <Route path="/merchant/damages/:id" element={<MerchantDamageDetails />} />
         <Route path="/merchant/history" element={<MerchantHistoryPage />} />
         <Route path="/merchant/invoice/new" element={<MerchantInvoiceNew />} />
+        <Route path="/admin/home" element={<AdminHome />} />
+        <Route path="/admin/merchants" element={<AdminModulePlaceholder />} />
+        <Route path="/admin/users" element={<AdminModulePlaceholder />} />
+        <Route path="/admin/limits" element={<AdminModulePlaceholder />} />
+        <Route path="/admin/cases" element={<AdminModulePlaceholder />} />
+        <Route path="/admin/overdue" element={<AdminModulePlaceholder />} />
+        <Route path="/admin/reports" element={<AdminModulePlaceholder />} />
+        <Route path="/admin/audit" element={<AdminModulePlaceholder />} />
+        <Route path="/admin/support" element={<AdminModulePlaceholder />} />
       </Route>
 
       <Route

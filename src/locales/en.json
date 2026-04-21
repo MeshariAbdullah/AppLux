@@ -1035,5 +1035,111 @@
       "backToHome": "Back to dashboard",
       "previewTitle": "Invoice preview"
     }
+  },
+  "admin": {
+    "home": {
+      "title": "Admin console",
+      "eyebrow": "AppLux control center",
+      "welcome": "Platform overview",
+      "subtitle": "Operational status across merchants, users, limits and risk.",
+      "hero": {
+        "merchants": "Merchants",
+        "users": "Users",
+        "cases": "Open cases"
+      },
+      "alerts": {
+        "title": "Needs your attention",
+        "merchants": "{count} merchants awaiting approval",
+        "merchantsHint": "Review KYC, CR and branches before granting access.",
+        "overdue": "{count} overdue cases",
+        "overdueHint": "Total outstanding: {amount}",
+        "review": "Review"
+      },
+      "summary": {
+        "title": "Platform summary",
+        "merchants": "Active merchants",
+        "users": "Total users",
+        "activeCases": "Active cases",
+        "overdue": "Overdue cases",
+        "pendingCount": "{count} pending",
+        "verifiedCount": "{count} verified"
+      },
+      "approvals": {
+        "title": "Pending merchant approvals",
+        "pending": "Pending",
+        "empty": "All caught up",
+        "emptyHint": "No merchants are waiting for approval."
+      },
+      "users": {
+        "title": "Users overview",
+        "totalLabel": "Registered users",
+        "verified": "Nafath verified",
+        "newMonth": "New this month",
+        "suspended": "Suspended"
+      },
+      "limits": {
+        "title": "Rental limits overview",
+        "allocated": "Allocated capacity",
+        "remaining": "Remaining",
+        "atCap": "At cap",
+        "pending": "Pending requests",
+        "manage": "Manage limits"
+      },
+      "activeCases": {
+        "title": "Active cases",
+        "stage": {
+          "review": "Review",
+          "settlement": "Settlement",
+          "nafith": "Nafith",
+          "execution": "Execution"
+        }
+      },
+      "overdue": {
+        "title": "Overdue cases",
+        "buckets": {
+          "1-7": "1–7 d",
+          "8-30": "8–30 d",
+          "31-60": "31–60 d",
+          "60+": "60+ d"
+        },
+        "daysOverdue": "{count}d overdue"
+      },
+      "modules": {
+        "title": "Admin modules",
+        "merchants": "Merchants",
+        "merchantsDesc": "KYC, approvals and compliance for merchants.",
+        "users": "Users",
+        "usersDesc": "End customers, verification and suspensions.",
+        "limits": "Rental limits",
+        "limitsDesc": "Platform caps and per-user allocations.",
+        "cases": "Damage cases",
+        "casesDesc": "Active claims and escalation workflow.",
+        "overdue": "Overdue",
+        "overdueDesc": "Aging buckets and collection queue.",
+        "reports": "Reports",
+        "reportsDesc": "Operational KPIs and exports.",
+        "audit": "Audit log",
+        "auditDesc": "System-wide activity and trails.",
+        "support": "Support",
+        "supportDesc": "Customer and merchant tickets."
+      },
+      "footerNote": {
+        "title": "Operations only",
+        "hint": "This console is restricted to AppLux operators and auditors."
+      }
+    },
+    "modules": {
+      "generic": {
+        "title": "Admin module",
+        "soonTitle": "Module coming soon",
+        "soonSubtitle": "This admin module is part of the roadmap and will land in a later pass.",
+        "scopeTitle": "Where this fits",
+        "scopeHint": "The admin home dashboard surfaces the key metrics — detailed management tools land in dedicated modules.",
+        "roadmapTitle": "Roadmap",
+        "roadmapHint": "Planned alongside reporting, auditing and support flows.",
+        "backToHome": "Back to admin home",
+        "exit": "Exit admin console"
+      }
+    }
   }
 }

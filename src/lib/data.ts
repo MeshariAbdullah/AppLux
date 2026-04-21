@@ -1058,3 +1058,229 @@ export const SEED_HISTORY: HistoryItem[] = [
     status: 'closed',
   },
 ];
+
+/* ========================= Admin ========================= */
+
+export type AdminPendingMerchant = {
+  id: string;
+  companyName: string;
+  authorizedName: string;
+  commercialReg: string;
+  city: string;
+  submittedAt: string;
+  initials: string;
+};
+
+export const SEED_ADMIN_PENDING_MERCHANTS: AdminPendingMerchant[] = [
+  {
+    id: 'MRC-PEND-104',
+    companyName: 'شركة الرحال لتأجير السيارات',
+    authorizedName: 'فيصل العتيبي',
+    commercialReg: '1010412388',
+    city: 'الرياض',
+    submittedAt: '2026-04-19T09:12:00+03:00',
+    initials: 'ش ر',
+  },
+  {
+    id: 'MRC-PEND-103',
+    companyName: 'مؤسسة البيت الحديث للأثاث',
+    authorizedName: 'نوف الحربي',
+    commercialReg: '4030288120',
+    city: 'جدة',
+    submittedAt: '2026-04-18T14:43:00+03:00',
+    initials: 'م ب',
+  },
+  {
+    id: 'MRC-PEND-102',
+    companyName: 'دار التقنية لتأجير المعدات',
+    authorizedName: 'سلطان القحطاني',
+    commercialReg: '2055011733',
+    city: 'الدمام',
+    submittedAt: '2026-04-17T11:02:00+03:00',
+    initials: 'د ت',
+  },
+  {
+    id: 'MRC-PEND-101',
+    companyName: 'مجموعة صُهبة السكنية',
+    authorizedName: 'منيرة الزهراني',
+    commercialReg: '1010509274',
+    city: 'الرياض',
+    submittedAt: '2026-04-16T16:20:00+03:00',
+    initials: 'م ص',
+  },
+];
+
+export type AdminUsersSummary = {
+  totalUsers: number;
+  verifiedUsers: number;
+  newThisMonth: number;
+  suspended: number;
+  monthlyTrend: number; // %
+};
+
+export const SEED_ADMIN_USERS: AdminUsersSummary = {
+  totalUsers: 18420,
+  verifiedUsers: 17255,
+  newThisMonth: 642,
+  suspended: 38,
+  monthlyTrend: 4.2,
+};
+
+export type AdminMerchantsSummary = {
+  totalActive: number;
+  pending: number;
+  suspended: number;
+};
+
+export const SEED_ADMIN_MERCHANTS: AdminMerchantsSummary = {
+  totalActive: 312,
+  pending: 4,
+  suspended: 7,
+};
+
+export type AdminLimitsSummary = {
+  totalCap: number;
+  allocated: number;
+  utilization: number; // 0..1
+  merchantsAtCap: number;
+  pendingRequests: number;
+  avgLimitPerUser: number;
+};
+
+export const SEED_ADMIN_LIMITS: AdminLimitsSummary = {
+  totalCap: 42_500_000,
+  allocated: 31_180_000,
+  utilization: 0.7336,
+  merchantsAtCap: 6,
+  pendingRequests: 11,
+  avgLimitPerUser: 24_000,
+};
+
+export type AdminCaseSeverity = 'partial' | 'total' | 'non-return';
+export type AdminCaseStage = 'review' | 'settlement' | 'nafith' | 'execution';
+export type AdminActiveCase = {
+  id: string;
+  merchantName: string;
+  customerName: string;
+  customerInitials: string;
+  item: string;
+  severity: AdminCaseSeverity;
+  stage: AdminCaseStage;
+  claimAmount: number;
+  reportedAt: string;
+};
+
+export const SEED_ADMIN_ACTIVE_CASES: AdminActiveCase[] = [
+  {
+    id: 'DM-2026-118',
+    merchantName: 'تأجير الشرق',
+    customerName: 'عبدالله الشمري',
+    customerInitials: 'ع ش',
+    item: 'تويوتا كامري 2024',
+    severity: 'non-return',
+    stage: 'nafith',
+    claimAmount: 78000,
+    reportedAt: '2026-04-11T10:15:00+03:00',
+  },
+  {
+    id: 'DM-2026-117',
+    merchantName: 'مفروشات الديوان',
+    customerName: 'هناء الدوسري',
+    customerInitials: 'ه د',
+    item: 'طقم جلوس — مودرن ٨ قطع',
+    severity: 'partial',
+    stage: 'settlement',
+    claimAmount: 6200,
+    reportedAt: '2026-04-14T13:40:00+03:00',
+  },
+  {
+    id: 'DM-2026-116',
+    merchantName: 'تأجير النخبة',
+    customerName: 'بدر العنزي',
+    customerInitials: 'ب ع',
+    item: 'جيب لاندكروزر 2023',
+    severity: 'total',
+    stage: 'execution',
+    claimAmount: 245000,
+    reportedAt: '2026-04-02T08:30:00+03:00',
+  },
+  {
+    id: 'DM-2026-115',
+    merchantName: 'تأجير السلام',
+    customerName: 'ريم القحطاني',
+    customerInitials: 'ر ق',
+    item: 'لابتوب ماك برو 16',
+    severity: 'partial',
+    stage: 'review',
+    claimAmount: 4800,
+    reportedAt: '2026-04-18T09:00:00+03:00',
+  },
+];
+
+export type AdminOverdueBucket = '1-7' | '8-30' | '31-60' | '60+';
+export type AdminOverdueCase = {
+  id: string;
+  merchantName: string;
+  customerName: string;
+  customerInitials: string;
+  item: string;
+  daysOverdue: number;
+  amount: number;
+  bucket: AdminOverdueBucket;
+};
+
+export const SEED_ADMIN_OVERDUE: AdminOverdueCase[] = [
+  {
+    id: 'CN-APX-9821',
+    merchantName: 'تأجير الشرق',
+    customerName: 'ماجد الحربي',
+    customerInitials: 'م ح',
+    item: 'تويوتا هايلوكس 2023',
+    daysOverdue: 4,
+    amount: 3100,
+    bucket: '1-7',
+  },
+  {
+    id: 'CN-APX-9733',
+    merchantName: 'مفروشات الديوان',
+    customerName: 'أمل السبيعي',
+    customerInitials: 'أ س',
+    item: 'غرفة نوم كلاسيك',
+    daysOverdue: 12,
+    amount: 1850,
+    bucket: '8-30',
+  },
+  {
+    id: 'CN-APX-9688',
+    merchantName: 'تأجير النخبة',
+    customerName: 'خالد المطيري',
+    customerInitials: 'خ م',
+    item: 'لكزس ES 2022',
+    daysOverdue: 38,
+    amount: 4700,
+    bucket: '31-60',
+  },
+  {
+    id: 'CN-APX-9571',
+    merchantName: 'تأجير السلام',
+    customerName: 'وضحى الرشيدي',
+    customerInitials: 'و ر',
+    item: 'كيا سورينتو 2022',
+    daysOverdue: 74,
+    amount: 6050,
+    bucket: '60+',
+  },
+];
+
+export type AdminOverdueBucketCount = {
+  bucket: AdminOverdueBucket;
+  count: number;
+  amount: number;
+};
+
+export const SEED_ADMIN_OVERDUE_BUCKETS: AdminOverdueBucketCount[] = [
+  { bucket: '1-7', count: 41, amount: 128400 },
+  { bucket: '8-30', count: 27, amount: 89200 },
+  { bucket: '31-60', count: 12, amount: 58700 },
+  { bucket: '60+', count: 5, amount: 37200 },
+];
