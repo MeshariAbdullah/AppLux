@@ -15,16 +15,18 @@ export type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
 
 const variantClass: Record<Variant, string> = {
   primary:
-    'bg-ink-900 text-white hover:bg-ink-800 active:bg-ink-950 shadow-soft disabled:bg-ink-300',
+    'bg-ink-900 text-white hover:bg-ink-800 active:bg-ink-950 shadow-soft disabled:bg-ink-300 disabled:shadow-none',
   secondary:
-    'bg-white text-ink-900 ring-1 ring-inset ring-ink-100 hover:bg-ink-50 active:bg-ink-100',
-  ghost: 'bg-transparent text-ink-700 hover:bg-ink-50 active:bg-ink-100',
-  danger: 'bg-danger-500 text-white hover:bg-danger-600 active:bg-danger-600 shadow-soft',
+    'bg-white text-ink-900 ring-1 ring-inset ring-ink-200/80 hover:bg-ink-50 active:bg-ink-100 shadow-soft disabled:text-ink-400 disabled:ring-ink-100',
+  ghost:
+    'bg-transparent text-ink-700 hover:bg-ink-50 active:bg-ink-100 disabled:text-ink-400',
+  danger:
+    'bg-danger-500 text-white hover:bg-danger-600 active:bg-danger-600 shadow-soft disabled:bg-danger-500/60 disabled:shadow-none',
 };
 
 const sizeClass: Record<Size, string> = {
   sm: 'h-9 text-[13px] px-3.5 rounded-xl gap-1.5',
-  md: 'h-11 text-sm px-4 rounded-xl2 gap-2',
+  md: 'h-11 text-[14px] px-4 rounded-xl2 gap-2',
   lg: 'h-13 text-[15px] px-5 rounded-xl2 gap-2.5',
 };
 
@@ -50,9 +52,11 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
       type={type}
       disabled={disabled || loading}
       className={cn(
-        'inline-flex items-center justify-center font-semibold select-none transition-colors',
-        'focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white',
-        'disabled:opacity-60 disabled:cursor-not-allowed',
+        'inline-flex items-center justify-center font-semibold select-none',
+        'transition-[background-color,transform,box-shadow] duration-150',
+        'active:scale-[0.98] disabled:active:scale-100',
+        'focus:outline-none',
+        'disabled:opacity-70 disabled:cursor-not-allowed',
         variantClass[variant],
         sizeClass[size],
         block && 'w-full',

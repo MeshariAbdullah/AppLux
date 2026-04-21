@@ -33,29 +33,33 @@ export function FormField({
     <label htmlFor={htmlFor} className={cn('block', className)}>
       {label && (
         <div className="mb-1.5 flex items-center justify-between gap-2">
-          <span className="text-[13px] font-medium text-ink-700">
+          <span className="text-[13px] font-semibold text-ink-700 leading-none">
             {label}
             {required && <span className="ms-1 text-danger-500">*</span>}
           </span>
           {!required && optionalLabel && (
-            <span className="text-[11.5px] text-ink-400">{optionalLabel}</span>
+            <span className="text-[11px] font-medium text-ink-400 leading-none">
+              {optionalLabel}
+            </span>
           )}
         </div>
       )}
       {children}
       {error ? (
-        <div className="mt-1.5 text-[12px] text-danger-600">{error}</div>
+        <div className="mt-1.5 text-[12px] font-medium text-danger-600 leading-snug">
+          {error}
+        </div>
       ) : hint ? (
-        <div className="mt-1.5 text-[12px] text-ink-400">{hint}</div>
+        <div className="mt-1.5 text-[12px] text-ink-400 leading-snug">{hint}</div>
       ) : null}
     </label>
   );
 }
 
 const controlBase =
-  'block w-full rounded-xl bg-white ring-1 ring-inset ring-ink-200 text-ink-900 placeholder:text-ink-300 ' +
+  'block w-full rounded-xl bg-white ring-1 ring-inset ring-ink-200/80 text-ink-900 placeholder:text-ink-300 ' +
   'focus:outline-none focus:ring-2 focus:ring-brand-400 transition-shadow ' +
-  'disabled:bg-ink-50 disabled:text-ink-400 disabled:cursor-not-allowed';
+  'disabled:bg-ink-50 disabled:text-ink-400 disabled:cursor-not-allowed disabled:ring-ink-100';
 
 type InputProps = InputHTMLAttributes<HTMLInputElement> & {
   leading?: ReactNode;
@@ -150,7 +154,16 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(function Select
         aria-hidden
         className="pointer-events-none absolute top-1/2 end-3 -translate-y-1/2 text-ink-400"
       >
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <svg
+          width="14"
+          height="14"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
           <path d="m6 9 6 6 6-6" />
         </svg>
       </span>

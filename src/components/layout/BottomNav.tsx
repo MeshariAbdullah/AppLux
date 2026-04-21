@@ -4,7 +4,11 @@ import { useT } from '@/lib/i18n';
 import { DocIcon, HomeIcon, PackageIcon, UserIcon } from '@/components/icons';
 import type { ReactNode } from 'react';
 
-type Tab = { to: string; label: string; icon: (props: { size?: number }) => ReactNode };
+type Tab = {
+  to: string;
+  label: string;
+  icon: (props: { size?: number }) => ReactNode;
+};
 
 export function BottomNav() {
   const t = useT();
@@ -17,7 +21,7 @@ export function BottomNav() {
 
   return (
     <nav
-      className="sticky bottom-0 z-30 border-t border-ink-100 bg-white/95 backdrop-blur pb-[env(safe-area-inset-bottom)]"
+      className="sticky bottom-0 z-30 border-t border-ink-100 bg-white/90 backdrop-blur-md pb-[env(safe-area-inset-bottom)]"
       aria-label="primary"
     >
       <ul className="grid grid-cols-4">
@@ -27,7 +31,8 @@ export function BottomNav() {
               to={tab.to}
               className={({ isActive }) =>
                 cn(
-                  'flex flex-col items-center justify-center gap-1 py-2.5 text-[11px] font-medium transition-colors',
+                  'flex flex-col items-center justify-center gap-1 py-2 text-[11px] font-semibold',
+                  'transition-colors',
                   isActive ? 'text-ink-900' : 'text-ink-400 hover:text-ink-600',
                 )
               }
@@ -36,13 +41,16 @@ export function BottomNav() {
                 <>
                   <span
                     className={cn(
-                      'h-9 w-12 grid place-items-center rounded-full transition-all',
-                      isActive ? 'bg-ink-900 text-white' : 'bg-transparent',
+                      'h-9 w-12 grid place-items-center rounded-full',
+                      'transition-[background-color,transform,box-shadow] duration-200',
+                      isActive
+                        ? 'bg-ink-900 text-white shadow-soft scale-100'
+                        : 'bg-transparent scale-95',
                     )}
                   >
                     <tab.icon size={20} />
                   </span>
-                  <span>{tab.label}</span>
+                  <span className="leading-none">{tab.label}</span>
                 </>
               )}
             </NavLink>

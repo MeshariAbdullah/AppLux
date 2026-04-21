@@ -4,12 +4,12 @@ import { cn } from '@/lib/cn';
 export type StatusTone = 'neutral' | 'brand' | 'success' | 'warn' | 'danger' | 'gold';
 
 const toneClass: Record<StatusTone, string> = {
-  neutral: 'bg-ink-50 text-ink-600 ring-ink-100',
-  brand: 'bg-brand-50 text-brand-700 ring-brand-100',
-  success: 'bg-success-50 text-success-600 ring-success-500/20',
-  warn: 'bg-warn-50 text-warn-600 ring-warn-500/25',
-  danger: 'bg-danger-50 text-danger-600 ring-danger-500/20',
-  gold: 'bg-[#FBF2DD] text-gold-600 ring-gold-400/30',
+  neutral: 'bg-ink-50 text-ink-700 ring-ink-200/70',
+  brand: 'bg-brand-50 text-brand-700 ring-brand-500/15',
+  success: 'bg-success-50 text-success-700 ring-success-500/20',
+  warn: 'bg-warn-50 text-warn-700 ring-warn-500/25',
+  danger: 'bg-danger-50 text-danger-700 ring-danger-500/20',
+  gold: 'bg-[#FBF2DD] text-gold-700 ring-gold-500/25',
 };
 
 const dotClass: Record<StatusTone, string> = {
@@ -41,18 +41,24 @@ export function StatusChip({
   return (
     <span
       className={cn(
-        'inline-flex items-center gap-1.5 rounded-full ring-1 ring-inset font-medium whitespace-nowrap',
-        size === 'sm' ? 'h-6 px-2 text-[11.5px]' : 'h-7 px-2.5 text-[12.5px]',
+        'inline-flex items-center gap-1.5 rounded-full ring-1 ring-inset font-semibold whitespace-nowrap leading-none',
+        size === 'sm' ? 'h-6 px-2 text-[11px]' : 'h-7 px-2.5 text-[12px]',
         toneClass[tone],
         className,
       )}
     >
       {icon ? (
-        <span className="-mx-0.5 grid place-items-center">{icon}</span>
+        <span className="-mx-0.5 grid place-items-center shrink-0">{icon}</span>
       ) : dot ? (
-        <span className={cn('h-1.5 w-1.5 rounded-full', dotClass[tone])} />
+        <span
+          className={cn(
+            'rounded-full shrink-0',
+            size === 'sm' ? 'h-1.5 w-1.5' : 'h-[7px] w-[7px]',
+            dotClass[tone],
+          )}
+        />
       ) : null}
-      {label}
+      <span className="truncate">{label}</span>
     </span>
   );
 }
