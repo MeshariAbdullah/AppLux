@@ -1,7 +1,12 @@
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui';
 import { LangToggle } from '@/components/auth/LangToggle';
-import { CheckIcon, ShieldIcon, WalletIcon, ChartIcon } from '@/components/icons';
+import {
+  ChartIcon,
+  CheckIcon,
+  ShieldIcon,
+  WalletIcon,
+} from '@/components/icons';
 import { useT } from '@/lib/i18n';
 
 export default function Welcome() {
@@ -83,6 +88,16 @@ export default function Welcome() {
             className="block text-center text-[12px] text-gold-300 hover:text-gold-200 pt-1"
           >
             {t('merchant.switchToMerchant')} — {t('merchant.openMerchantPortal')}
+          </Link>
+          <Link
+            to="/admin/home"
+            className="mt-0.5 flex items-center justify-center gap-1.5 text-[11.5px] text-white/55 hover:text-white/80"
+          >
+            <ShieldIcon size={11} />
+            {t('welcome.adminDemo.label')}
+            <span className="text-[9.5px] font-bold tracking-wide uppercase bg-white/10 ring-1 ring-white/15 rounded-full px-1.5 py-0.5">
+              {t('welcome.adminDemo.pill')}
+            </span>
           </Link>
           <p className="text-center text-[11.5px] text-white/50 leading-relaxed px-6">
             {t('welcome.terms')}

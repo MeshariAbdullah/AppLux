@@ -41,7 +41,11 @@
     "feature3": "Compliant with Saudi regulations",
     "signIn": "Sign in",
     "createAccount": "Create account",
-    "terms": "By continuing you agree to the Terms and Privacy Policy"
+    "terms": "By continuing you agree to the Terms and Privacy Policy",
+    "adminDemo": {
+      "label": "Open operations console",
+      "pill": "Demo"
+    }
   },
   "auth": {
     "loginTitle": "Welcome back",
@@ -74,6 +78,11 @@
         "merchant": {
           "title": "Business account",
           "desc": "For companies issuing rental contracts and promissory notes to customers."
+        },
+        "admin": {
+          "title": "AppLux operations console",
+          "desc": "For the review team to manage merchants, users and cases.",
+          "demoPill": "Demo"
         }
       }
     },

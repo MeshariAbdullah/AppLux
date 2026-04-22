@@ -50,6 +50,16 @@ export default function AuthEntry() {
               description={t('auth.entry.role.merchant.desc')}
               dir={dir}
             />
+            <RoleCard
+              to="/admin/home"
+              tone="ink"
+              icon={<ShieldIcon size={20} />}
+              title={t('auth.entry.role.admin.title')}
+              description={t('auth.entry.role.admin.desc')}
+              demo
+              demoLabel={t('auth.entry.role.admin.demoPill')}
+              dir={dir}
+            />
           </div>
 
           <div className="flex items-center gap-2 text-[11.5px] text-ink-400">
@@ -92,19 +102,25 @@ function RoleCard({
   icon,
   title,
   description,
+  demo,
+  demoLabel,
   dir,
 }: {
   to: string;
-  tone: 'brand' | 'gold';
+  tone: 'brand' | 'gold' | 'ink';
   icon: React.ReactNode;
   title: React.ReactNode;
   description: React.ReactNode;
+  demo?: boolean;
+  demoLabel?: React.ReactNode;
   dir: 'rtl' | 'ltr';
 }) {
   const iconClass =
     tone === 'brand'
       ? 'bg-brand-50 text-brand-600 ring-brand-500/15'
-      : 'bg-[#FBF2DD] text-gold-600 ring-gold-400/30';
+      : tone === 'gold'
+        ? 'bg-[#FBF2DD] text-gold-600 ring-gold-400/30'
+        : 'bg-ink-900 text-white ring-ink-900/15';
   return (
     <Link to={to} className="block">
       <Card
@@ -121,8 +137,15 @@ function RoleCard({
           {icon}
         </span>
         <div className="min-w-0 flex-1">
-          <div className="text-[14.5px] font-semibold text-ink-900 truncate">
-            {title}
+          <div className="flex items-center gap-1.5">
+            <div className="text-[14.5px] font-semibold text-ink-900 truncate">
+              {title}
+            </div>
+            {demo && (
+              <span className="text-[9.5px] font-bold tracking-wide uppercase bg-ink-100 text-ink-600 rounded-full px-1.5 py-0.5">
+                {demoLabel}
+              </span>
+            )}
           </div>
           <div className="mt-0.5 text-[12px] text-ink-500 leading-relaxed">
             {description}
