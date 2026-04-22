@@ -1,8 +1,9 @@
 import { useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Header, Screen } from '@/components/layout';
-import { Button, Card, CardDivider, StatusChip } from '@/components/ui';
+import { Button, Card, CardDivider, EmptyState, StatusChip } from '@/components/ui';
 import {
+  AlertIcon,
   BadgeCheckIcon,
   CheckIcon,
   DocIcon,
@@ -38,7 +39,20 @@ export default function Tracking() {
       <>
         <Header title={t('tracking.title')} showBack />
         <Screen>
-          <div />
+          <EmptyState
+            tone="warn"
+            icon={<AlertIcon size={22} />}
+            title={t('tracking.invalid.title')}
+            description={t('tracking.invalid.hint')}
+            action={
+              <Button
+                size="sm"
+                onClick={() => navigate('/home', { replace: true })}
+              >
+                {t('tracking.invalid.backHome')}
+              </Button>
+            }
+          />
         </Screen>
       </>
     );

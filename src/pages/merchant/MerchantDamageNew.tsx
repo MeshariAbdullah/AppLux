@@ -5,6 +5,7 @@ import {
   Button,
   Card,
   CardDivider,
+  ConfirmSheet,
   FormField,
   Input,
   SectionHeader,
@@ -98,6 +99,7 @@ export default function MerchantDamageNew() {
   const [notes, setNotes] = useState('');
   const [evidence, setEvidence] = useState<string[]>([]);
   const [submitting, setSubmitting] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
 
   if (!rental) {
     return <Navigate to="/merchant/rentals" replace />;
@@ -147,6 +149,11 @@ export default function MerchantDamageNew() {
   const onSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!canSubmit || submitting || !severity) return;
+    setConfirmOpen(true);
+  };
+
+  const handleConfirmedReport = () => {
+    if (!canSubmit || submitting || !severity) return;
     setSubmitting(true);
     const created = reportDamage(rental.id, {
       severity,
@@ -158,6 +165,7 @@ export default function MerchantDamageNew() {
       navigate(`/merchant/damages/${created.id}`, { replace: true });
     } else {
       setSubmitting(false);
+      setConfirmOpen(false);
     }
   };
 
@@ -452,6 +460,23 @@ export default function MerchantDamageNew() {
           </form>
         </div>
       </Screen>
+
+      <ConfirmSheet
+        open={confirmOpen}
+        onClose={() => (submitting ? undefined : setConfirmOpen(false))}
+        onConfirm={handleConfirmedReport}
+        title={t('merchant.damage.new.confirmSheet.title')}
+        description={t('merchant.damage.new.confirmSheet.description', {
+          item: rental.item,
+          customer: rental.customerName,
+          amount: formatCurrency(claimValue),
+        })}
+        confirmLabel={t('merchant.damage.new.confirmSheet.confirm')}
+        cancelLabel={t('common.cancel')}
+        icon={<AlertIcon size={18} />}
+        tone="danger"
+        loading={submitting}
+      />
     </>
   );
 }

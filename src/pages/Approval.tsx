@@ -1,8 +1,16 @@
 import { useEffect, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Header, Screen } from '@/components/layout';
-import { Button, Card, CardDivider } from '@/components/ui';
-import { BadgeCheckIcon, CheckIcon, DocIcon, GavelIcon, SparkleIcon } from '@/components/icons';
+import { Button, Card, CardDivider, EmptyState } from '@/components/ui';
+import {
+  AlertIcon,
+  BadgeCheckIcon,
+  CheckIcon,
+  DocIcon,
+  GavelIcon,
+  QrIcon,
+  SparkleIcon,
+} from '@/components/icons';
 import { useI18n, useT } from '@/lib/i18n';
 import { useStore } from '@/lib/store';
 
@@ -23,9 +31,32 @@ export default function Approval() {
   if (!token || !pkg) {
     return (
       <>
-        <Header title={t('approval.title')} />
+        <Header title={t('approval.title')} showBack />
         <Screen>
-          <div />
+          <EmptyState
+            tone="warn"
+            icon={<AlertIcon size={22} />}
+            title={t('approval.invalid.title')}
+            description={t('approval.invalid.hint')}
+            action={
+              <div className="flex flex-col items-stretch gap-2 w-full max-w-[260px]">
+                <Button
+                  size="sm"
+                  leading={<QrIcon size={14} />}
+                  onClick={() => navigate('/scan', { replace: true })}
+                >
+                  {t('approval.invalid.rescan')}
+                </Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => navigate('/home', { replace: true })}
+                >
+                  {t('approval.goHome')}
+                </Button>
+              </div>
+            }
+          />
         </Screen>
       </>
     );

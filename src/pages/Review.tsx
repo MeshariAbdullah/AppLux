@@ -46,8 +46,10 @@ export default function Review() {
         <Header title={t('review.title')} showBack />
         <Screen>
           <EmptyState
+            tone="warn"
             icon={<AlertIcon size={22} />}
             title={t('qr.invalidCode')}
+            description={t('review.invalid.hint')}
             action={
               <Button size="sm" onClick={() => navigate('/scan', { replace: true })}>
                 {t('qr.tryAgain')}

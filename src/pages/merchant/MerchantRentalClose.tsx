@@ -5,6 +5,7 @@ import {
   Button,
   Card,
   CardDivider,
+  ConfirmSheet,
   FormField,
   SectionHeader,
   StatusChip,
@@ -32,6 +33,7 @@ export default function MerchantRentalClose() {
   const [notes, setNotes] = useState('');
   const [confirm, setConfirm] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
 
   const rental = useMemo(
     () => merchantRentals.find((r) => r.id === id),
@@ -52,7 +54,13 @@ export default function MerchantRentalClose() {
   const onSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!confirm || submitted) return;
+    setConfirmOpen(true);
+  };
+
+  const handleConfirmedClose = () => {
+    if (submitted) return;
     closeRental(rental.id, { notes });
+    setConfirmOpen(false);
     setSubmitted(true);
   };
 
@@ -337,6 +345,21 @@ export default function MerchantRentalClose() {
           </form>
         </div>
       </Screen>
+
+      <ConfirmSheet
+        open={confirmOpen}
+        onClose={() => setConfirmOpen(false)}
+        onConfirm={handleConfirmedClose}
+        title={t('merchant.close.confirmSheet.title')}
+        description={t('merchant.close.confirmSheet.description', {
+          item: rental.item,
+          customer: rental.customerName,
+        })}
+        confirmLabel={t('merchant.close.confirmSheet.confirm')}
+        cancelLabel={t('common.cancel')}
+        icon={<CheckIcon size={18} />}
+        tone="success"
+      />
     </>
   );
 }

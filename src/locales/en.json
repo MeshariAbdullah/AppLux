@@ -280,6 +280,9 @@
     "issuedOn": "Issued on",
     "partner": "Partner",
     "branch": "Branch",
+    "invalid": {
+      "hint": "The link may have expired or wasn't issued for you. Ask the merchant for a fresh code and scan it again."
+    },
     "steps": {
       "invoice": "Invoice",
       "contract": "Contract",
@@ -359,7 +362,12 @@
     "noteSigned": "Note attested digitally",
     "approvedAt": "Signed at",
     "viewTracking": "Track contract",
-    "goHome": "Back to home"
+    "goHome": "Back to home",
+    "invalid": {
+      "title": "This approval link is invalid or expired",
+      "hint": "We couldn't find a signing request for this link. Ask the merchant for a fresh QR code and scan it again.",
+      "rescan": "Scan a new code"
+    }
   },
   "tracking": {
     "title": "Contract tracking",
@@ -377,7 +385,12 @@
     "refNote": "Note ref",
     "downloadContract": "Download contract (PDF)",
     "downloadNote": "Download note (PDF)",
-    "support": "Request support"
+    "support": "Request support",
+    "invalid": {
+      "title": "This tracking link is invalid",
+      "hint": "We couldn't find a contract for this link, or it may have expired. Open the contract from your home screen instead.",
+      "backHome": "Back to home"
+    }
   },
   "track": {
     "invoiceTitle": "Invoice tracking",
@@ -838,6 +851,11 @@
         "closedPreview": "Outcome · Closed"
       },
       "submit": "Close rental",
+      "confirmSheet": {
+        "title": "Confirm closing the rental",
+        "description": "Close the rental for {item} ({customer})? This action cannot be undone.",
+        "confirm": "Confirm closure"
+      },
       "summary": "Closure summary",
       "closedAt": "Closed at",
       "contractRef": "Contract",
@@ -890,7 +908,12 @@
           "title": "Binding action",
           "hint": "Opening a case will lock the rental and may lead to escalation via the promissory note."
         },
-        "submit": "Open damage case"
+        "submit": "Open damage case",
+        "confirmSheet": {
+          "title": "Open this damage case?",
+          "description": "Open a damage case worth {amount} on the rental for {item} ({customer})? The rental will be locked and this cannot be undone.",
+          "confirm": "Open case"
+        }
       }
     },
     "damageCase": {
@@ -1498,6 +1521,10 @@
           "escalateNafith": "Forward to Nafith",
           "escalateExecution": "Escalate to execution",
           "awaitOutcome": "Awaiting outcome"
+        },
+        "confirmSheet": {
+          "title": "Confirm case escalation",
+          "description": "The case will move to the {stage} stage and a new audit entry will be recorded. Continue?"
         }
       },
       "audit": {

@@ -9,5 +9,6 @@ export { Avatar } from './Avatar';
 export { EmptyState } from './EmptyState';
 export { Skeleton } from './Skeleton';
 export { Sheet } from './Sheet';
+export { ConfirmSheet } from './ConfirmSheet';
 export { SectionHeader } from './SectionHeader';
 export { ProgressBar } from './ProgressBar';

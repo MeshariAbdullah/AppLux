@@ -5,6 +5,7 @@ import {
   Button,
   Card,
   CardDivider,
+  ConfirmSheet,
   EmptyState,
   FormField,
   StatusChip,
@@ -322,6 +323,7 @@ export default function AdminCaseDetails() {
   const [noteDraft, setNoteDraft] = useState('');
   const [noteFlash, setNoteFlash] = useState(false);
   const [escalateFlash, setEscalateFlash] = useState(false);
+  const [escalateConfirmOpen, setEscalateConfirmOpen] = useState(false);
 
   const handleAddNote = () => {
     const trimmed = noteDraft.trim();
@@ -336,6 +338,7 @@ export default function AdminCaseDetails() {
 
   const handleEscalate = () => {
     const next = escalateCase(detailKey);
+    setEscalateConfirmOpen(false);
     if (next) {
       setEscalateFlash(true);
       window.setTimeout(() => setEscalateFlash(false), 1800);
@@ -733,7 +736,9 @@ export default function AdminCaseDetails() {
               )}
 
               <Button
-                onClick={handleEscalate}
+                onClick={() =>
+                  escalation.nextStage && setEscalateConfirmOpen(true)
+                }
                 disabled={!escalation.nextStage}
                 variant={escalation.nextStage ? 'primary' : 'ghost'}
                 className="w-full"
@@ -876,6 +881,28 @@ export default function AdminCaseDetails() {
           </Link>
         </div>
       </Screen>
+
+      <ConfirmSheet
+        open={escalateConfirmOpen}
+        onClose={() => setEscalateConfirmOpen(false)}
+        onConfirm={handleEscalate}
+        title={t('admin.case.escalation.confirmSheet.title')}
+        description={
+          escalation.nextStage
+            ? t('admin.case.escalation.confirmSheet.description', {
+                stage: t(
+                  `admin.home.activeCases.stage.${escalation.nextStage}`,
+                ),
+              })
+            : ''
+        }
+        confirmLabel={t(
+          `admin.case.escalation.action.${escalation.nextActionKey}`,
+        )}
+        cancelLabel={t('common.cancel')}
+        icon={<AlertIcon size={18} />}
+        tone="warn"
+      />
     </>
   );
 }
