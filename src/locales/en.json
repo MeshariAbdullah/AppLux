@@ -55,7 +55,50 @@
     "haveAccount": "Already have an account?",
     "register": "Register",
     "login": "Sign in",
-    "orContinueWith": "Or continue with"
+    "orContinueWith": "Or continue with",
+    "entry": {
+      "eyebrow": "Get started",
+      "title": "Choose how you'd like to use AppLux",
+      "subtitle": "AppLux supports both customers and businesses — pick the experience that fits you.",
+      "haveAccount": "Or sign in instead",
+      "encrypted": "Secure connection — all data is encrypted in transit.",
+      "trust": {
+        "title": "Trusted experience",
+        "hint": "Verified through Nafath and connected to official registries to keep your data safe."
+      },
+      "role": {
+        "customer": {
+          "title": "Customer account",
+          "desc": "For individuals renting cars, equipment or properties."
+        },
+        "merchant": {
+          "title": "Business account",
+          "desc": "For companies issuing rental contracts and promissory notes to customers."
+        }
+      }
+    },
+    "login": {
+      "trust": "Secure sign-in",
+      "mobileHint": "9 digits, must start with 5",
+      "demoTitle": "Demo mode",
+      "demoHint": "This is a demo build — any well-formed mobile + password will let you try the flow.",
+      "demoFill": "Fill demo credentials →",
+      "submitting": "Verifying...",
+      "showPassword": "Show password",
+      "hidePassword": "Hide password",
+      "or": "OR",
+      "continueNafath": "Continue with Nafath",
+      "security": {
+        "title": "Protected by encryption",
+        "hint": "Credentials aren't stored in this demo and are cleared as soon as you sign out."
+      }
+    },
+    "errors": {
+      "mobileRequired": "Enter your mobile number to continue.",
+      "mobileFormat": "Mobile must start with 5 and contain 9 digits.",
+      "passwordRequired": "Enter your password to continue.",
+      "passwordShort": "Password is too short (use at least 4 characters)."
+    }
   },
   "register": {
     "title": "Create account",
@@ -214,7 +257,29 @@
     "callBranch": "Call branch",
     "openMap": "Open in maps",
     "notFound": "Store not found",
-    "goBack": "Back to list"
+    "goBack": "Back to list",
+    "verifiedOnly": "Verified only",
+    "clearFilters": "Clear filters",
+    "clearSearch": "Clear search",
+    "sortLabel": "Sort",
+    "sort": {
+      "recommended": "Recommended",
+      "rating": "Top rated",
+      "branches": "Most branches",
+      "name": "A → Z"
+    },
+    "stats": {
+      "rating": "Rating",
+      "ratingHint": "Average customer score",
+      "branches": "Branches",
+      "branchesHint": "Pickup & drop-off points",
+      "status": "Status",
+      "statusHint": "Verification status",
+      "notVerified": "Under review"
+    },
+    "quickCall": {
+      "label": "Quick call — main branch"
+    }
   },
   "eligibility": {
     "title": "Rental eligibility",
@@ -504,7 +569,21 @@
       "password": "Password",
       "submit": "Sign in",
       "noAccount": "Haven't registered yet?",
-      "register": "Create merchant account"
+      "register": "Create merchant account",
+      "trust": "Business portal",
+      "demoTitle": "Demo mode",
+      "demoHint": "Any valid email and a password of 4+ characters is enough to try the flow.",
+      "demoFill": "Fill demo credentials →",
+      "security": {
+        "title": "Business data protection",
+        "hint": "We treat business data as confidential and never share it with third parties."
+      },
+      "errors": {
+        "emailRequired": "Enter your account email.",
+        "emailFormat": "Email format looks invalid.",
+        "passwordRequired": "Enter your password to continue.",
+        "passwordShort": "Password is too short (use at least 4 characters)."
+      }
     },
     "register": {
       "title": "Merchant registration",
@@ -895,7 +974,16 @@
           "title": "Evidence photos",
           "hint": "Attach photos showing the damage or the missing item. Up to 8.",
           "add": "Add photo",
-          "remove": "Remove photo"
+          "remove": "Remove photo",
+          "takePhoto": "Take photo",
+          "fromGallery": "From gallery",
+          "preview": "View photo",
+          "tipsTitle": "Tips for review-ready photos",
+          "tips": {
+            "lit": "Shoot in clear light without shadows that hide the damage.",
+            "angles": "Capture multiple angles so size and location are clear.",
+            "reference": "Place a size reference next to the damage (a key, hand, ruler)."
+          }
         },
         "notes": {
           "title": "Case notes",
@@ -925,6 +1013,12 @@
       "invoice": "Original invoice",
       "evidence": "Evidence",
       "notes": "Case notes",
+      "caseFile": "Case file",
+      "noEvidence": {
+        "title": "No evidence attached",
+        "hint": "Add photos from the open-case screen to strengthen the claim."
+      },
+      "noNotes": "No notes were recorded for this case.",
       "nextStep": {
         "title": "Next step toward escalation",
         "settled": "Case settled",

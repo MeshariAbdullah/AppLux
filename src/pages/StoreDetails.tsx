@@ -2,7 +2,15 @@ import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Header, Screen } from '@/components/layout';
 import { Button, Card, EmptyState, SectionHeader, Skeleton, StatusChip } from '@/components/ui';
-import { ClockIcon, InfoIcon, MapPinIcon, PhoneIcon, StarIcon } from '@/components/icons';
+import {
+  BadgeCheckIcon,
+  ClockIcon,
+  InfoIcon,
+  MapPinIcon,
+  PackageIcon,
+  PhoneIcon,
+  StarIcon,
+} from '@/components/icons';
 import { useI18n, useT } from '@/lib/i18n';
 import { useStore } from '@/lib/store';
 import type { PartnerStore, StoreBranch } from '@/lib/data';
@@ -94,6 +102,74 @@ export default function StoreDetails() {
             </div>
           </div>
 
+          {/* At-a-glance stats */}
+          <div className="grid grid-cols-3 gap-2">
+            <StatTile
+              icon={<StarIcon size={14} className="text-gold-500" />}
+              label={t('stores.stats.rating')}
+              value={
+                <span className="num">{store.rating.toFixed(1)}</span>
+              }
+              hint={t('stores.stats.ratingHint')}
+            />
+            <StatTile
+              icon={<PackageIcon size={14} className="text-brand-600" />}
+              label={t('stores.stats.branches')}
+              value={
+                <span className="num">{store.branches.length}</span>
+              }
+              hint={t('stores.stats.branchesHint')}
+            />
+            <StatTile
+              icon={
+                <BadgeCheckIcon
+                  size={14}
+                  className={
+                    store.verified ? 'text-success-600' : 'text-ink-400'
+                  }
+                />
+              }
+              label={t('stores.stats.status')}
+              value={
+                <span
+                  className={
+                    store.verified ? 'text-success-700' : 'text-ink-500'
+                  }
+                >
+                  {store.verified
+                    ? t('stores.verified')
+                    : t('stores.stats.notVerified')}
+                </span>
+              }
+              hint={t('stores.stats.statusHint')}
+            />
+          </div>
+
+          {/* Quick contact (first branch) */}
+          {store.branches[0] && (
+            <a
+              href={`tel:${store.branches[0].phone}`}
+              className="block rounded-xl2 bg-ink-900 text-white px-4 py-3 ring-1 ring-ink-900 active:scale-[0.995] transition-transform"
+            >
+              <div className="flex items-center gap-3">
+                <span className="h-10 w-10 shrink-0 rounded-xl bg-white/10 ring-1 ring-white/15 grid place-items-center">
+                  <PhoneIcon size={16} />
+                </span>
+                <div className="min-w-0 flex-1">
+                  <div className="text-[11.5px] uppercase tracking-wide text-white/55">
+                    {t('stores.quickCall.label')}
+                  </div>
+                  <div className="mt-0.5 text-[14px] font-bold num truncate">
+                    {store.branches[0].phone}
+                  </div>
+                </div>
+                <span className="text-[11.5px] text-white/60 truncate">
+                  {store.branches[0].name[locale]}
+                </span>
+              </div>
+            </a>
+          )}
+
           {/* Informational notice */}
           <div className="rounded-xl2 bg-brand-50/70 ring-1 ring-brand-100 px-4 py-3 flex items-start gap-2.5 text-[12.5px] text-brand-900">
             <InfoIcon size={16} className="mt-0.5 shrink-0 text-brand-600" />
@@ -155,6 +231,33 @@ export default function StoreDetails() {
         </div>
       </Screen>
     </>
+  );
+}
+
+function StatTile({
+  icon,
+  label,
+  value,
+  hint,
+}: {
+  icon: React.ReactNode;
+  label: React.ReactNode;
+  value: React.ReactNode;
+  hint?: React.ReactNode;
+}) {
+  return (
+    <div className="rounded-xl2 bg-white ring-1 ring-ink-100 p-3">
+      <div className="flex items-center gap-1.5 text-[10.5px] font-medium uppercase tracking-wide text-ink-400">
+        {icon}
+        {label}
+      </div>
+      <div className="mt-1 text-[15px] font-bold text-ink-900 leading-none truncate">
+        {value}
+      </div>
+      {hint && (
+        <div className="mt-1 text-[10.5px] text-ink-400 truncate">{hint}</div>
+      )}
+    </div>
   );
 }
 

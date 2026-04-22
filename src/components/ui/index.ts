@@ -10,5 +10,6 @@ export { EmptyState } from './EmptyState';
 export { Skeleton } from './Skeleton';
 export { Sheet } from './Sheet';
 export { ConfirmSheet } from './ConfirmSheet';
+export { ImageLightbox } from './ImageLightbox';
 export { SectionHeader } from './SectionHeader';
 export { ProgressBar } from './ProgressBar';

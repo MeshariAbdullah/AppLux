@@ -263,3 +263,40 @@ export const TimelineIcon = (p: IconProps) => (
     <path d="M12 6h9M12 12h6M12 18h9" />
   </svg>
 );
+
+export const EyeIcon = (p: IconProps) => (
+  <svg {...base(p)}>
+    <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z" />
+    <circle cx="12" cy="12" r="3" />
+  </svg>
+);
+
+export const EyeOffIcon = (p: IconProps) => (
+  <svg {...base(p)}>
+    <path d="M3 3l18 18" />
+    <path d="M10.6 6.1A11 11 0 0 1 12 6c6.5 0 10 6 10 6a17.4 17.4 0 0 1-3.1 4M6.6 6.6A17.5 17.5 0 0 0 2 12s3.5 6 10 6c1.6 0 3-.3 4.2-.8" />
+    <path d="M9.9 9.9a3 3 0 0 0 4.2 4.2" />
+  </svg>
+);
+
+export const CameraIcon = (p: IconProps) => (
+  <svg {...base(p)}>
+    <path d="M3 8h3l1.5-2.5h9L18 8h3v12H3z" />
+    <circle cx="12" cy="13.5" r="3.5" />
+  </svg>
+);
+
+export const ImageIcon = (p: IconProps) => (
+  <svg {...base(p)}>
+    <rect x="3" y="3" width="18" height="18" rx="2.5" />
+    <circle cx="9" cy="9.5" r="1.5" />
+    <path d="m3.5 17 5-5 4 4 3-3 5 5" />
+  </svg>
+);
+
+export const LockIcon = (p: IconProps) => (
+  <svg {...base(p)}>
+    <rect x="4" y="11" width="16" height="10" rx="2" />
+    <path d="M8 11V8a4 4 0 0 1 8 0v3" />
+  </svg>
+);

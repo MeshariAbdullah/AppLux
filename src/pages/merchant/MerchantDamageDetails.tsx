@@ -1,10 +1,11 @@
-import { useMemo, type ReactNode } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom';
 import { Header, Screen } from '@/components/layout';
 import {
   Button,
   Card,
   CardDivider,
+  ImageLightbox,
   SectionHeader,
   StatusChip,
   type StatusTone,
@@ -12,11 +13,13 @@ import {
 import {
   AlertIcon,
   BadgeCheckIcon,
+  CameraIcon,
   CarIcon,
   ChevronIcon,
   ClockIcon,
   DocIcon,
   GavelIcon,
+  ImageIcon,
   InfoIcon,
   PackageIcon,
   ReceiptIcon,
@@ -103,6 +106,8 @@ export default function MerchantDamageDetails() {
     () => merchantDamages.find((d) => d.id === id),
     [id, merchantDamages],
   );
+
+  const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
 
   if (!kase) {
     return <Navigate to="/merchant/damages" replace />;
@@ -262,43 +267,84 @@ export default function MerchantDamageDetails() {
             )}
           </Card>
 
-          {/* Evidence */}
-          {kase.evidence && kase.evidence.length > 0 && (
-            <Card padded className="space-y-3">
+          {/* Case file: evidence + notes grouped */}
+          <Card padded className="space-y-4">
               <SectionHeader
-                title={t('merchant.damageCase.evidence')}
+                title={t('merchant.damageCase.caseFile')}
                 className="mb-0"
-                action={
-                  <span className="text-[11.5px] text-ink-400 num">
-                    {kase.evidence.length}
-                  </span>
-                }
               />
-              <div className="grid grid-cols-3 gap-2">
-                {kase.evidence.map((src, i) => (
-                  <div
-                    key={`${i}-${src.length}`}
-                    className="aspect-square overflow-hidden rounded-xl bg-ink-100 ring-1 ring-ink-100"
-                  >
-                    <img src={src} alt="" className="h-full w-full object-cover" />
+
+              {/* Evidence */}
+              <div>
+                <div className="mb-2 flex items-center justify-between">
+                  <div className="inline-flex items-center gap-1.5 text-[12.5px] font-semibold text-ink-700">
+                    <CameraIcon size={14} />
+                    {t('merchant.damageCase.evidence')}
                   </div>
-                ))}
+                  <span
+                    className={cn(
+                      'text-[11px] font-semibold num rounded-full px-2 py-0.5',
+                      kase.evidence && kase.evidence.length > 0
+                        ? 'bg-success-50 text-success-700'
+                        : 'bg-ink-100 text-ink-500',
+                    )}
+                  >
+                    {kase.evidence?.length ?? 0}
+                  </span>
+                </div>
+
+                {kase.evidence && kase.evidence.length > 0 ? (
+                  <div className="grid grid-cols-3 gap-2">
+                    {kase.evidence.map((src, i) => (
+                      <button
+                        key={`${i}-${src.length}`}
+                        type="button"
+                        onClick={() => setLightboxIndex(i)}
+                        className="relative aspect-square overflow-hidden rounded-xl bg-ink-100 ring-1 ring-ink-100 active:scale-[0.98] transition-transform"
+                      >
+                        <img
+                          src={src}
+                          alt=""
+                          className="h-full w-full object-cover"
+                        />
+                        <span className="absolute top-1 start-1 num text-[10px] font-bold bg-black/65 text-white rounded-md px-1.5 py-0.5">
+                          {i + 1}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="rounded-xl2 bg-ink-50 ring-1 ring-ink-100 p-4 flex items-center gap-3 text-[12px] text-ink-500">
+                    <span className="h-9 w-9 shrink-0 rounded-xl bg-white text-ink-400 grid place-items-center ring-1 ring-ink-100">
+                      <ImageIcon size={16} />
+                    </span>
+                    <div className="leading-relaxed">
+                      <div className="text-[12.5px] font-semibold text-ink-700">
+                        {t('merchant.damageCase.noEvidence.title')}
+                      </div>
+                      <div>{t('merchant.damageCase.noEvidence.hint')}</div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Notes */}
+              <div>
+                <div className="mb-2 inline-flex items-center gap-1.5 text-[12.5px] font-semibold text-ink-700">
+                  <DocIcon size={14} />
+                  {t('merchant.damageCase.notes')}
+                </div>
+                {kase.notes ? (
+                  <div className="rounded-xl2 bg-ink-50 ring-1 ring-ink-100 px-4 py-3 text-[13px] text-ink-700 leading-relaxed whitespace-pre-line">
+                    {kase.notes}
+                  </div>
+                ) : (
+                  <div className="rounded-xl2 bg-ink-50 ring-1 ring-ink-100 p-3 text-[12px] text-ink-500 leading-relaxed">
+                    {t('merchant.damageCase.noNotes')}
+                  </div>
+                )}
               </div>
             </Card>
-          )}
-
-          {/* Notes */}
-          {kase.notes && (
-            <Card padded className="space-y-2">
-              <SectionHeader
-                title={t('merchant.damageCase.notes')}
-                className="mb-0"
-              />
-              <p className="text-[13px] text-ink-700 leading-relaxed whitespace-pre-line">
-                {kase.notes}
-              </p>
-            </Card>
-          )}
 
           {/* Escalation next step */}
           <Card padded className="space-y-3">
@@ -499,6 +545,16 @@ export default function MerchantDamageDetails() {
           </div>
         </div>
       </Screen>
+
+      <ImageLightbox
+        open={lightboxIndex !== null}
+        images={kase.evidence ?? []}
+        startIndex={lightboxIndex ?? 0}
+        onClose={() => setLightboxIndex(null)}
+        caption={(i, total) =>
+          `${t('merchant.damageCase.evidence')} · ${i + 1} / ${total}`
+        }
+      />
     </>
   );
 }

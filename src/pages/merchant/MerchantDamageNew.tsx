@@ -7,18 +7,21 @@ import {
   CardDivider,
   ConfirmSheet,
   FormField,
+  ImageLightbox,
   Input,
   SectionHeader,
   Textarea,
 } from '@/components/ui';
 import {
   AlertIcon,
+  CameraIcon,
   CarIcon,
+  CheckIcon,
   DocIcon,
   GavelIcon,
+  ImageIcon,
   InfoIcon,
   PackageIcon,
-  PlusIcon,
   ReceiptIcon,
   SignatureIcon,
   UsersIcon,
@@ -86,7 +89,8 @@ export default function MerchantDamageNew() {
   const navigate = useNavigate();
   const { id } = useParams();
   const { merchantRentals, reportDamage } = useStore();
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const galleryInputRef = useRef<HTMLInputElement>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
 
   const rental = useMemo(
     () => merchantRentals.find((r) => r.id === id),
@@ -100,6 +104,7 @@ export default function MerchantDamageNew() {
   const [evidence, setEvidence] = useState<string[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
 
   if (!rental) {
     return <Navigate to="/merchant/rentals" replace />;
@@ -116,9 +121,13 @@ export default function MerchantDamageNew() {
     }
   };
 
-  const onPickFiles = () => fileInputRef.current?.click();
+  const openGallery = () => galleryInputRef.current?.click();
+  const openCamera = () => cameraInputRef.current?.click();
 
-  const onFiles = (files: FileList | null) => {
+  const onFiles = (
+    files: FileList | null,
+    sourceRef: React.RefObject<HTMLInputElement | null>,
+  ) => {
     if (!files) return;
     const pending: Promise<string>[] = [];
     Array.from(files).forEach((f) => {
@@ -137,7 +146,7 @@ export default function MerchantDamageNew() {
       .catch(() => {
         /* ignore */
       });
-    if (fileInputRef.current) fileInputRef.current.value = '';
+    if (sourceRef.current) sourceRef.current.value = '';
   };
 
   const removeEvidence = (idx: number) =>
@@ -333,58 +342,124 @@ export default function MerchantDamageNew() {
                 title={t('merchant.damage.new.evidence.title')}
                 className="mb-0"
                 action={
-                  <span className="text-[11.5px] text-ink-400 num">
+                  <span
+                    className={cn(
+                      'text-[11.5px] font-semibold num rounded-full px-2 py-0.5',
+                      evidence.length === 0
+                        ? 'bg-ink-100 text-ink-500'
+                        : evidence.length >= 8
+                          ? 'bg-warn-50 text-warn-700'
+                          : 'bg-success-50 text-success-700',
+                    )}
+                  >
                     {evidence.length}/8
                   </span>
                 }
               />
-              <p className="text-[12px] text-ink-500 leading-relaxed">
-                {t('merchant.damage.new.evidence.hint')}
-              </p>
+
               <input
-                ref={fileInputRef}
+                ref={galleryInputRef}
                 type="file"
                 accept="image/*"
                 multiple
                 className="sr-only"
-                onChange={(e) => onFiles(e.target.files)}
+                onChange={(e) => onFiles(e.target.files, galleryInputRef)}
               />
-              <div className="grid grid-cols-3 gap-2">
-                {evidence.map((src, i) => (
-                  <div
-                    key={`${i}-${src.length}`}
-                    className="relative aspect-square overflow-hidden rounded-xl bg-ink-100 ring-1 ring-ink-100"
-                  >
-                    <img
-                      src={src}
-                      alt=""
-                      className="h-full w-full object-cover"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => removeEvidence(i)}
-                      aria-label={t('merchant.damage.new.evidence.remove')}
-                      className="absolute top-1.5 end-1.5 h-6 w-6 rounded-full bg-black/70 text-white grid place-items-center text-[12px] font-bold"
-                    >
-                      ×
-                    </button>
+              <input
+                ref={cameraInputRef}
+                type="file"
+                accept="image/*"
+                capture="environment"
+                className="sr-only"
+                onChange={(e) => onFiles(e.target.files, cameraInputRef)}
+              />
+
+              {/* Photography tips — shown only when no evidence yet */}
+              {evidence.length === 0 && (
+                <div className="rounded-xl2 bg-ink-50 ring-1 ring-ink-100 p-3 space-y-2">
+                  <div className="text-[12px] font-semibold text-ink-900">
+                    {t('merchant.damage.new.evidence.tipsTitle')}
                   </div>
-                ))}
-                {evidence.length < 8 && (
+                  <ul className="space-y-1.5">
+                    {(['lit', 'angles', 'reference'] as const).map((k) => (
+                      <li
+                        key={k}
+                        className="flex items-start gap-2 text-[11.5px] text-ink-600 leading-relaxed"
+                      >
+                        <span className="h-4 w-4 shrink-0 mt-0.5 rounded-full bg-success-50 text-success-600 grid place-items-center ring-1 ring-success-500/15">
+                          <CheckIcon size={10} />
+                        </span>
+                        <span>
+                          {t(`merchant.damage.new.evidence.tips.${k}`)}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {/* Capture buttons */}
+              {evidence.length < 8 && (
+                <div className="grid grid-cols-2 gap-2">
                   <button
                     type="button"
-                    onClick={onPickFiles}
-                    className="aspect-square rounded-xl bg-white ring-1 ring-dashed ring-ink-200 text-ink-500 grid place-items-center hover:ring-ink-400 hover:text-ink-700 transition-colors"
+                    onClick={openCamera}
+                    className="h-11 rounded-xl bg-ink-900 text-white text-[12.5px] font-semibold inline-flex items-center justify-center gap-1.5 active:scale-[0.98] transition-transform shadow-soft"
                   >
-                    <span className="flex flex-col items-center gap-1">
-                      <PlusIcon size={18} />
-                      <span className="text-[11px] font-medium">
-                        {t('merchant.damage.new.evidence.add')}
-                      </span>
-                    </span>
+                    <CameraIcon size={15} />
+                    {t('merchant.damage.new.evidence.takePhoto')}
                   </button>
-                )}
-              </div>
+                  <button
+                    type="button"
+                    onClick={openGallery}
+                    className="h-11 rounded-xl bg-white ring-1 ring-ink-200/80 text-ink-800 text-[12.5px] font-semibold inline-flex items-center justify-center gap-1.5 hover:bg-ink-50"
+                  >
+                    <ImageIcon size={15} />
+                    {t('merchant.damage.new.evidence.fromGallery')}
+                  </button>
+                </div>
+              )}
+
+              {/* Previews */}
+              {evidence.length > 0 && (
+                <>
+                  <div className="grid grid-cols-3 gap-2">
+                    {evidence.map((src, i) => (
+                      <div
+                        key={`${i}-${src.length}`}
+                        className="relative group aspect-square overflow-hidden rounded-xl bg-ink-100 ring-1 ring-ink-100"
+                      >
+                        <button
+                          type="button"
+                          onClick={() => setLightboxIndex(i)}
+                          className="absolute inset-0"
+                          aria-label={t('merchant.damage.new.evidence.preview')}
+                        >
+                          <img
+                            src={src}
+                            alt=""
+                            className="h-full w-full object-cover"
+                          />
+                        </button>
+                        <span className="absolute top-1 start-1 num text-[10px] font-bold bg-black/65 text-white rounded-md px-1.5 py-0.5">
+                          {i + 1}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => removeEvidence(i)}
+                          aria-label={t('merchant.damage.new.evidence.remove')}
+                          className="absolute top-1 end-1 h-6 w-6 rounded-full bg-black/70 text-white grid place-items-center text-[12px] font-bold hover:bg-black"
+                        >
+                          ×
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                  <p className="text-[11px] text-ink-400 leading-relaxed">
+                    {t('merchant.damage.new.evidence.hint')}
+                  </p>
+                </>
+              )}
             </Card>
 
             {/* Notes */}
@@ -460,6 +535,16 @@ export default function MerchantDamageNew() {
           </form>
         </div>
       </Screen>
+
+      <ImageLightbox
+        open={lightboxIndex !== null}
+        images={evidence}
+        startIndex={lightboxIndex ?? 0}
+        onClose={() => setLightboxIndex(null)}
+        caption={(i, total) =>
+          t('merchant.damage.new.evidence.preview') + ` · ${i + 1} / ${total}`
+        }
+      />
 
       <ConfirmSheet
         open={confirmOpen}
