@@ -1120,7 +1120,8 @@
         "remaining": "Remaining",
         "atCap": "At cap",
         "pending": "Pending requests",
-        "manage": "Manage limits"
+        "manage": "Manage limits",
+        "comingSoon": "Limit management coming soon"
       },
       "activeCases": {
         "title": "Active cases",
@@ -1158,7 +1159,8 @@
         "audit": "Audit log",
         "auditDesc": "System-wide activity and trails.",
         "support": "Support",
-        "supportDesc": "Customer and merchant tickets."
+        "supportDesc": "Customer and merchant tickets.",
+        "comingSoon": "Coming soon"
       },
       "footerNote": {
         "title": "Operations only",

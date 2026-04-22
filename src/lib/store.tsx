@@ -222,17 +222,36 @@ export type ApprovalRecord = {
 
 const STORAGE_KEY = 'applux.session';
 const MERCHANT_KEY = 'applux.merchant';
+const APPROVALS_KEY = 'applux.approvals';
+const RENTAL_OVERRIDES_KEY = 'applux.rentalOverrides';
+const EXTRA_DAMAGES_KEY = 'applux.extraDamages';
+const MERCHANT_DECISIONS_KEY = 'applux.merchantDecisions';
+const USER_OVERRIDES_KEY = 'applux.userOverrides';
+const CASE_OVERRIDES_KEY = 'applux.caseOverrides';
 
 const StoreContext = createContext<StoreContextValue | null>(null);
 
-function readSession(): Session {
-  if (typeof window === 'undefined') return null;
+function readJSON<T>(key: string, fallback: T): T {
+  if (typeof window === 'undefined') return fallback;
   try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
-    return raw ? (JSON.parse(raw) as UserProfile) : null;
+    const raw = window.localStorage.getItem(key);
+    return raw ? (JSON.parse(raw) as T) : fallback;
   } catch {
-    return null;
+    return fallback;
   }
+}
+
+function writeJSON(key: string, value: unknown) {
+  if (typeof window === 'undefined') return;
+  try {
+    window.localStorage.setItem(key, JSON.stringify(value));
+  } catch {
+    /* storage unavailable or quota exceeded */
+  }
+}
+
+function readSession(): Session {
+  return readJSON<Session>(STORAGE_KEY, null);
 }
 
 function readMerchant(): MerchantProfile | null {
@@ -254,22 +273,32 @@ function readMerchant(): MerchantProfile | null {
 export function StoreProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session>(readSession);
   const [draft, setDraft] = useState<RegistrationDraft>(emptyRegistration);
-  const [approvals, setApprovals] = useState<Record<string, ApprovalRecord>>({});
+  const [approvals, setApprovals] = useState<Record<string, ApprovalRecord>>(
+    () => readJSON<Record<string, ApprovalRecord>>(APPROVALS_KEY, {}),
+  );
   const [merchant, setMerchant] = useState<MerchantProfile | null>(readMerchant);
   const [merchantDraft, setMerchantDraft] = useState<MerchantDraft>(emptyMerchantDraft);
   const [rentalOverrides, setRentalOverrides] = useState<
     Record<string, Partial<MerchantRental>>
-  >({});
-  const [extraDamages, setExtraDamages] = useState<MerchantDamageCase[]>([]);
+  >(() =>
+    readJSON<Record<string, Partial<MerchantRental>>>(RENTAL_OVERRIDES_KEY, {}),
+  );
+  const [extraDamages, setExtraDamages] = useState<MerchantDamageCase[]>(() =>
+    readJSON<MerchantDamageCase[]>(EXTRA_DAMAGES_KEY, []),
+  );
   const [merchantDecisions, setMerchantDecisions] = useState<
     Record<string, AdminMerchantDecision>
-  >({});
+  >(() =>
+    readJSON<Record<string, AdminMerchantDecision>>(MERCHANT_DECISIONS_KEY, {}),
+  );
   const [userOverrides, setUserOverrides] = useState<
     Record<string, Partial<AdminUserRecord>>
-  >({});
+  >(() =>
+    readJSON<Record<string, Partial<AdminUserRecord>>>(USER_OVERRIDES_KEY, {}),
+  );
   const [caseOverrides, setCaseOverrides] = useState<
     Record<string, AdminCaseOverride>
-  >({});
+  >(() => readJSON<Record<string, AdminCaseOverride>>(CASE_OVERRIDES_KEY, {}));
 
   useEffect(() => {
     try {
@@ -288,6 +317,24 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       /* storage unavailable */
     }
   }, [merchant]);
+
+  // Persist operational state so admin/merchant changes survive page refresh.
+  useEffect(() => writeJSON(APPROVALS_KEY, approvals), [approvals]);
+  useEffect(() => writeJSON(RENTAL_OVERRIDES_KEY, rentalOverrides), [rentalOverrides]);
+  useEffect(() => {
+    // Strip evidence (potentially large base64) before persisting; keep the
+    // case record itself so the damage stays visible after refresh.
+    const lite = extraDamages.map((d) =>
+      d.evidence && d.evidence.length ? { ...d, evidence: undefined } : d,
+    );
+    writeJSON(EXTRA_DAMAGES_KEY, lite);
+  }, [extraDamages]);
+  useEffect(
+    () => writeJSON(MERCHANT_DECISIONS_KEY, merchantDecisions),
+    [merchantDecisions],
+  );
+  useEffect(() => writeJSON(USER_OVERRIDES_KEY, userOverrides), [userOverrides]);
+  useEffect(() => writeJSON(CASE_OVERRIDES_KEY, caseOverrides), [caseOverrides]);
 
   const updateDraft = useCallback(
     (patch: Partial<RegistrationDraft>) => setDraft((d) => ({ ...d, ...patch })),

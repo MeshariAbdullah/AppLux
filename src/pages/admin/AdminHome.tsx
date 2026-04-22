@@ -108,14 +108,6 @@ export default function AdminHome() {
       tone: 'bg-[#FBF2DD] text-gold-600 ring-gold-400/30',
     },
     {
-      title: t('admin.home.modules.limits'),
-      desc: t('admin.home.modules.limitsDesc'),
-      icon: <WalletIcon size={18} />,
-      to: '/admin/limits',
-      tone: 'bg-success-50 text-success-600 ring-success-500/20',
-      count: limits.pendingRequests,
-    },
-    {
       title: t('admin.home.modules.cases'),
       desc: t('admin.home.modules.casesDesc'),
       icon: <GavelIcon size={18} />,
@@ -124,33 +116,44 @@ export default function AdminHome() {
       count: activeCases.length,
     },
     {
+      title: t('admin.home.modules.limits'),
+      desc: t('admin.home.modules.limitsDesc'),
+      icon: <WalletIcon size={18} />,
+      to: '/admin/limits',
+      tone: 'bg-ink-50 text-ink-400 ring-ink-100',
+      comingSoon: true,
+    },
+    {
       title: t('admin.home.modules.overdue'),
       desc: t('admin.home.modules.overdueDesc'),
       icon: <ClockIcon size={18} />,
       to: '/admin/overdue',
-      tone: 'bg-warn-50 text-warn-600 ring-warn-500/25',
-      count: overdueTotal,
+      tone: 'bg-ink-50 text-ink-400 ring-ink-100',
+      comingSoon: true,
     },
     {
       title: t('admin.home.modules.reports'),
       desc: t('admin.home.modules.reportsDesc'),
       icon: <ChartIcon size={18} />,
       to: '/admin/reports',
-      tone: 'bg-ink-100 text-ink-700 ring-ink-100',
+      tone: 'bg-ink-50 text-ink-400 ring-ink-100',
+      comingSoon: true,
     },
     {
       title: t('admin.home.modules.audit'),
       desc: t('admin.home.modules.auditDesc'),
       icon: <HistoryIcon size={18} />,
       to: '/admin/audit',
-      tone: 'bg-ink-50 text-ink-500 ring-ink-100',
+      tone: 'bg-ink-50 text-ink-400 ring-ink-100',
+      comingSoon: true,
     },
     {
       title: t('admin.home.modules.support'),
       desc: t('admin.home.modules.supportDesc'),
       icon: <SupportIcon size={18} />,
       to: '/admin/support',
-      tone: 'bg-ink-50 text-ink-500 ring-ink-100',
+      tone: 'bg-ink-50 text-ink-400 ring-ink-100',
+      comingSoon: true,
     },
   ];
 
@@ -232,7 +235,7 @@ export default function AdminHome() {
                     hint={t('admin.home.alerts.overdueHint', {
                       amount: formatCurrency(overdueAmount),
                     })}
-                    to="/admin/overdue"
+                    to="/admin/cases"
                     cta={t('admin.home.alerts.review')}
                     dir={dir}
                   />
@@ -434,16 +437,10 @@ export default function AdminHome() {
                   tone="text-brand-700"
                 />
               </div>
-              <Link
-                to="/admin/limits"
-                className="flex items-center gap-1.5 justify-center text-[12.5px] font-semibold text-brand-700 pt-1"
-              >
-                {t('admin.home.limits.manage')}
-                <ChevronIcon
-                  size={12}
-                  className={cn(dir === 'rtl' ? 'rotate-180' : '')}
-                />
-              </Link>
+              <div className="pt-1 flex items-center justify-center gap-1.5 text-[11.5px] text-ink-400">
+                <ClockIcon size={12} />
+                {t('admin.home.limits.comingSoon')}
+              </div>
             </Card>
           </section>
 
@@ -483,7 +480,7 @@ export default function AdminHome() {
               title={t('admin.home.overdue.title')}
               action={
                 <Link
-                  to="/admin/overdue"
+                  to="/admin/cases"
                   className="text-[12.5px] font-semibold text-brand-700"
                 >
                   {t('common.viewAll')}
@@ -529,7 +526,10 @@ export default function AdminHome() {
                   <Card
                     padded
                     interactive
-                    className="h-full space-y-2.5"
+                    className={cn(
+                      'h-full space-y-2.5',
+                      m.comingSoon && 'opacity-75',
+                    )}
                   >
                     <div className="flex items-center justify-between">
                       <span
@@ -540,14 +540,26 @@ export default function AdminHome() {
                       >
                         {m.icon}
                       </span>
-                      {typeof m.count === 'number' && m.count > 0 && (
-                        <span className="num text-[11px] font-bold bg-ink-900 text-white rounded-full h-5 min-w-5 px-1.5 grid place-items-center">
-                          {m.count}
+                      {m.comingSoon ? (
+                        <span className="text-[10px] font-bold uppercase tracking-wide bg-ink-100 text-ink-500 rounded-full px-2 py-0.5">
+                          {t('admin.home.modules.comingSoon')}
                         </span>
+                      ) : (
+                        typeof m.count === 'number' &&
+                        m.count > 0 && (
+                          <span className="num text-[11px] font-bold bg-ink-900 text-white rounded-full h-5 min-w-5 px-1.5 grid place-items-center">
+                            {m.count}
+                          </span>
+                        )
                       )}
                     </div>
                     <div>
-                      <div className="text-[13px] font-semibold text-ink-900 truncate">
+                      <div
+                        className={cn(
+                          'text-[13px] font-semibold truncate',
+                          m.comingSoon ? 'text-ink-600' : 'text-ink-900',
+                        )}
+                      >
                         {m.title}
                       </div>
                       <div className="mt-0.5 text-[11px] text-ink-400 leading-relaxed line-clamp-2">
@@ -584,6 +596,7 @@ type QuickModule = {
   to: string;
   tone: string;
   count?: number;
+  comingSoon?: boolean;
 };
 
 function HeroStat({ label, value }: { label: ReactNode; value: ReactNode }) {
@@ -877,7 +890,7 @@ function OverdueRow({
   dir: 'rtl' | 'ltr';
 }) {
   return (
-    <Link to="/admin/overdue" className="flex items-center gap-3 py-2.5 group">
+    <Link to="/admin/cases" className="flex items-center gap-3 py-2.5 group">
       <span className="h-10 w-10 shrink-0 rounded-xl bg-ink-100 text-ink-700 grid place-items-center font-semibold text-[11.5px]">
         {item.customerInitials}
       </span>
