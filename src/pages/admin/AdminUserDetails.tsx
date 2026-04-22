@@ -5,6 +5,7 @@ import {
   Button,
   Card,
   CardDivider,
+  ConfirmSheet,
   EmptyState,
   FormField,
   Input,
@@ -117,6 +118,7 @@ export default function AdminUserDetails() {
     title: string;
     hint?: string;
   } | null>(null);
+  const [suspendConfirmOpen, setSuspendConfirmOpen] = useState(false);
 
   useEffect(() => {
     if (user) setLimitDraft(String(user.eligibilityLimit));
@@ -191,7 +193,13 @@ export default function AdminUserDetails() {
       });
       return;
     }
+    // Suspending an active user is destructive — confirm first.
+    setSuspendConfirmOpen(true);
+  };
+
+  const handleConfirmedSuspend = () => {
     setAdminUserStatus(user.id, 'suspended');
+    setSuspendConfirmOpen(false);
     setToast({
       tone: 'danger',
       title: t('admin.user.toast.suspended.title'),
@@ -616,6 +624,20 @@ export default function AdminUserDetails() {
           </div>
         )}
       </Screen>
+
+      <ConfirmSheet
+        open={suspendConfirmOpen}
+        onClose={() => setSuspendConfirmOpen(false)}
+        onConfirm={handleConfirmedSuspend}
+        title={t('admin.user.confirmSheet.suspend.title')}
+        description={t('admin.user.confirmSheet.suspend.description', {
+          name: user.fullName,
+        })}
+        confirmLabel={t('admin.user.actions.suspend')}
+        cancelLabel={t('common.cancel')}
+        icon={<AlertIcon size={18} />}
+        tone="danger"
+      />
     </>
   );
 }

@@ -67,6 +67,7 @@ export default function MerchantPending() {
   const navigate = useNavigate();
   const {
     merchant,
+    merchantDecisions,
     approveMerchant,
     rejectMerchant,
     resubmitMerchantRequest,
@@ -79,24 +80,33 @@ export default function MerchantPending() {
     }
   }, [merchant, navigate]);
 
+  // Source of truth: the admin's decision in the store (same map the admin
+  // writes to via approveMerchantRequest / rejectMerchantRequest). Falls back
+  // to the local profile for any session created before this mapping existed.
+  const decision = merchant ? merchantDecisions[merchant.id] : undefined;
+  const effectiveStatus: MerchantStatus =
+    decision?.status ?? merchant?.status ?? 'pending';
+
   const visual = useMemo(
-    () => (merchant ? STATE_VISUALS[merchant.status] : null),
-    [merchant],
+    () => STATE_VISUALS[effectiveStatus],
+    [effectiveStatus],
   );
 
-  if (!merchant || !visual) return null;
+  if (!merchant) return null;
 
   const HeroIcon = visual.icon;
+  const rejectionReason =
+    decision?.notes ?? merchant.rejectionReason ?? null;
   const decisionAt =
-    merchant.status === 'approved'
-      ? merchant.approvedAt
-      : merchant.status === 'rejected'
-      ? merchant.rejectedAt
-      : null;
+    effectiveStatus === 'approved'
+      ? decision?.decidedAt ?? merchant.approvedAt
+      : effectiveStatus === 'rejected'
+        ? decision?.decidedAt ?? merchant.rejectedAt
+        : null;
 
   return (
     <>
-      <Header title={t(`merchant.pending.headers.${merchant.status}`)} />
+      <Header title={t(`merchant.pending.headers.${effectiveStatus}`)} />
       <Screen padded={false} className="bg-ink-50">
         <div className="px-4 pt-4 pb-8 space-y-4">
           {/* Hero */}
@@ -138,7 +148,7 @@ export default function MerchantPending() {
               </div>
               <div>
                 <div className="text-white/55 uppercase tracking-wide text-[11px]">
-                  {t(`merchant.pending.timestampLabel.${merchant.status}`)}
+                  {t(`merchant.pending.timestampLabel.${effectiveStatus}`)}
                 </div>
                 <div className="mt-0.5 font-semibold num">
                   {formatDate(decisionAt ?? merchant.submittedAt)}
@@ -147,7 +157,7 @@ export default function MerchantPending() {
             </div>
           </div>
 
-          {merchant.status === 'rejected' && (
+          {effectiveStatus === 'rejected' && (
             <section>
               <SectionHeader title={t('merchant.pending.rejection.title')} />
               <Card padded className="space-y-2">
@@ -156,20 +166,20 @@ export default function MerchantPending() {
                     <AlertIcon size={16} />
                   </span>
                   <p className="text-[13px] text-ink-800 leading-relaxed">
-                    {merchant.rejectionReason ||
+                    {rejectionReason ||
                       t('merchant.pending.rejection.fallback')}
                   </p>
                 </div>
                 <div className="text-[11.5px] text-ink-400 num pt-1">
                   {t('merchant.pending.rejection.decidedAt', {
-                    date: formatDate(merchant.rejectedAt ?? merchant.submittedAt),
+                    date: formatDate(decisionAt ?? merchant.submittedAt),
                   })}
                 </div>
               </Card>
             </section>
           )}
 
-          {merchant.status === 'pending' && (
+          {effectiveStatus === 'pending' && (
             <section>
               <SectionHeader title={t('merchant.pending.whatNextTitle')} />
               <Card padded>
@@ -248,7 +258,7 @@ export default function MerchantPending() {
           </section>
 
           <div className="space-y-2.5">
-            {merchant.status === 'pending' && (
+            {effectiveStatus === 'pending' && (
               <>
                 <Button
                   variant="primary"
@@ -282,7 +292,7 @@ export default function MerchantPending() {
               </>
             )}
 
-            {merchant.status === 'approved' && (
+            {effectiveStatus === 'approved' && (
               <>
                 <Button
                   variant="primary"
@@ -306,7 +316,7 @@ export default function MerchantPending() {
               </>
             )}
 
-            {merchant.status === 'rejected' && (
+            {effectiveStatus === 'rejected' && (
               <>
                 <Button
                   variant="primary"

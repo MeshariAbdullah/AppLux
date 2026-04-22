@@ -5,6 +5,7 @@ import {
   Button,
   Card,
   CardDivider,
+  ConfirmSheet,
   EmptyState,
   FormField,
   StatusChip,
@@ -65,6 +66,7 @@ export default function AdminMerchantDetails() {
 
   const [notes, setNotes] = useState('');
   const [busy, setBusy] = useState<'approve' | 'reject' | null>(null);
+  const [rejectConfirmOpen, setRejectConfirmOpen] = useState(false);
 
   useEffect(() => {
     setNotes(request?.decision.notes ?? '');
@@ -103,10 +105,11 @@ export default function AdminMerchantDetails() {
     approveMerchantRequest(request.id, notes);
     setBusy(null);
   };
-  const handleReject = () => {
+  const handleConfirmedReject = () => {
     setBusy('reject');
     rejectMerchantRequest(request.id, notes);
     setBusy(null);
+    setRejectConfirmOpen(false);
   };
   const handleReset = () => {
     resetMerchantRequest(request.id);
@@ -366,7 +369,7 @@ export default function AdminMerchantDetails() {
                     block
                     variant="danger"
                     leading={<AlertIcon size={16} />}
-                    onClick={handleReject}
+                    onClick={() => setRejectConfirmOpen(true)}
                     loading={busy === 'reject'}
                     disabled={busy !== null}
                   >
@@ -399,6 +402,21 @@ export default function AdminMerchantDetails() {
           </div>
         </div>
       </Screen>
+
+      <ConfirmSheet
+        open={rejectConfirmOpen}
+        onClose={() => (busy === 'reject' ? undefined : setRejectConfirmOpen(false))}
+        onConfirm={handleConfirmedReject}
+        title={t('admin.merchantRequest.confirmSheet.reject.title')}
+        description={t('admin.merchantRequest.confirmSheet.reject.description', {
+          company: request.companyName,
+        })}
+        confirmLabel={t('admin.merchantRequest.actions.reject')}
+        cancelLabel={t('common.cancel')}
+        icon={<AlertIcon size={18} />}
+        tone="danger"
+        loading={busy === 'reject'}
+      />
     </>
   );
 }

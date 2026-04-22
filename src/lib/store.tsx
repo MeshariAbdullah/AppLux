@@ -161,6 +161,7 @@ type StoreContextValue = {
     input: ReportDamageInput,
   ) => MerchantDamageCase | null;
   adminMerchantRequests: AdminMerchantRequest[];
+  merchantDecisions: Record<string, AdminMerchantDecision>;
   approveMerchantRequest: (id: string, notes?: string) => AdminMerchantDecision | null;
   rejectMerchantRequest: (id: string, notes?: string) => AdminMerchantDecision | null;
   resetMerchantRequest: (id: string) => void;
@@ -226,8 +227,44 @@ const APPROVALS_KEY = 'applux.approvals';
 const RENTAL_OVERRIDES_KEY = 'applux.rentalOverrides';
 const EXTRA_DAMAGES_KEY = 'applux.extraDamages';
 const MERCHANT_DECISIONS_KEY = 'applux.merchantDecisions';
+const EXTRA_MERCHANT_REQUESTS_KEY = 'applux.extraMerchantRequests';
 const USER_OVERRIDES_KEY = 'applux.userOverrides';
 const CASE_OVERRIDES_KEY = 'applux.caseOverrides';
+
+function buildAdminRecord(p: MerchantProfile): AdminPendingMerchant {
+  const initials = (p.companyName || 'M').trim().slice(0, 2).toUpperCase();
+  return {
+    id: p.id,
+    companyName: p.companyName || '—',
+    authorizedName: p.authorizedName || '—',
+    authorizedId: p.authorizedId || '—',
+    commercialReg: p.commercialReg || '—',
+    vatNumber: '—',
+    iban: p.iban || '—',
+    contactEmail: p.contactEmail || '—',
+    contactPhone: p.contactPhone || '—',
+    city: p.city || '—',
+    address: p.address || '—',
+    // Registration form doesn't capture category/expectedVolume; default safely.
+    category: 'cars',
+    expectedVolume: 0,
+    submittedAt: p.submittedAt,
+    initials,
+    branches: p.branches.map((b) => ({
+      id: b.id,
+      name: b.name,
+      city: b.city,
+      address: b.address,
+      phone: b.phone,
+    })),
+    docs: {
+      commercialReg: 'pending',
+      vat: 'pending',
+      bankLetter: 'pending',
+      authorizedId: 'pending',
+    },
+  };
+}
 
 const StoreContext = createContext<StoreContextValue | null>(null);
 
@@ -291,6 +328,14 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   >(() =>
     readJSON<Record<string, AdminMerchantDecision>>(MERCHANT_DECISIONS_KEY, {}),
   );
+  const [extraMerchantRequests, setExtraMerchantRequests] = useState<
+    Record<string, AdminPendingMerchant>
+  >(() =>
+    readJSON<Record<string, AdminPendingMerchant>>(
+      EXTRA_MERCHANT_REQUESTS_KEY,
+      {},
+    ),
+  );
   const [userOverrides, setUserOverrides] = useState<
     Record<string, Partial<AdminUserRecord>>
   >(() =>
@@ -333,6 +378,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     () => writeJSON(MERCHANT_DECISIONS_KEY, merchantDecisions),
     [merchantDecisions],
   );
+  useEffect(
+    () => writeJSON(EXTRA_MERCHANT_REQUESTS_KEY, extraMerchantRequests),
+    [extraMerchantRequests],
+  );
   useEffect(() => writeJSON(USER_OVERRIDES_KEY, userOverrides), [userOverrides]);
   useEffect(() => writeJSON(CASE_OVERRIDES_KEY, caseOverrides), [caseOverrides]);
 
@@ -370,64 +419,117 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const resetMerchantDraft = useCallback(() => setMerchantDraft(emptyMerchantDraft), []);
 
   const submitMerchantApproval = useCallback((): MerchantProfile => {
+    const id = `MRC-${Date.now().toString().slice(-6)}`;
+    const submittedAt = new Date().toISOString();
     const profile: MerchantProfile = {
       ...merchantDraft,
-      id: `MRC-${Date.now().toString().slice(-6)}`,
+      id,
       status: 'pending',
-      submittedAt: new Date().toISOString(),
+      submittedAt,
       approvedAt: null,
       rejectedAt: null,
       rejectionReason: null,
     };
     setMerchant(profile);
+    // Surface this request in the admin queue and seed a pending decision so
+    // both the merchant pending page and the admin list read the same source.
+    setExtraMerchantRequests((prev) => ({
+      ...prev,
+      [id]: buildAdminRecord(profile),
+    }));
+    setMerchantDecisions((prev) => ({
+      ...prev,
+      [id]: { status: 'pending', decidedAt: submittedAt },
+    }));
     return profile;
   }, [merchantDraft]);
 
   const approveMerchant = useCallback(() => {
-    setMerchant((m) =>
-      m
-        ? {
-            ...m,
-            status: 'approved',
-            approvedAt: new Date().toISOString(),
-            rejectedAt: null,
-            rejectionReason: null,
-          }
-        : m,
-    );
+    setMerchant((m) => {
+      if (!m) return m;
+      const at = new Date().toISOString();
+      setMerchantDecisions((prev) => ({
+        ...prev,
+        [m.id]: {
+          status: 'approved',
+          decidedAt: at,
+          notes: prev[m.id]?.notes,
+          reviewer: prev[m.id]?.reviewer ?? 'AppLux Operator',
+        },
+      }));
+      return {
+        ...m,
+        status: 'approved',
+        approvedAt: at,
+        rejectedAt: null,
+        rejectionReason: null,
+      };
+    });
   }, []);
 
   const rejectMerchant = useCallback((reason?: string) => {
-    setMerchant((m) =>
-      m
-        ? {
-            ...m,
-            status: 'rejected',
-            rejectedAt: new Date().toISOString(),
-            rejectionReason: reason?.trim() || null,
-            approvedAt: null,
-          }
-        : m,
-    );
+    setMerchant((m) => {
+      if (!m) return m;
+      const at = new Date().toISOString();
+      const trimmed = reason?.trim() || null;
+      setMerchantDecisions((prev) => ({
+        ...prev,
+        [m.id]: {
+          status: 'rejected',
+          decidedAt: at,
+          notes: trimmed ?? undefined,
+          reviewer: prev[m.id]?.reviewer ?? 'AppLux Operator',
+        },
+      }));
+      return {
+        ...m,
+        status: 'rejected',
+        rejectedAt: at,
+        rejectionReason: trimmed,
+        approvedAt: null,
+      };
+    });
   }, []);
 
   const resubmitMerchantRequest = useCallback(() => {
-    setMerchant((m) =>
-      m
-        ? {
-            ...m,
-            status: 'pending',
-            submittedAt: new Date().toISOString(),
-            approvedAt: null,
-            rejectedAt: null,
-            rejectionReason: null,
-          }
-        : m,
-    );
+    setMerchant((m) => {
+      if (!m) return m;
+      const at = new Date().toISOString();
+      setMerchantDecisions((prev) => ({
+        ...prev,
+        [m.id]: { status: 'pending', decidedAt: at },
+      }));
+      return {
+        ...m,
+        status: 'pending',
+        submittedAt: at,
+        approvedAt: null,
+        rejectedAt: null,
+        rejectionReason: null,
+      };
+    });
   }, []);
 
   const signOutMerchant = useCallback(() => {
-    setMerchant(null);
+    setMerchant((m) => {
+      if (m) {
+        // Drop the locally-registered merchant from the admin queue and any
+        // pending decision tied to it so the demo doesn't accumulate ghosts.
+        setExtraMerchantRequests((prev) => {
+          if (!(m.id in prev)) return prev;
+          const next = { ...prev };
+          delete next[m.id];
+          return next;
+        });
+        setMerchantDecisions((prev) => {
+          if (!(m.id in prev)) return prev;
+          const next = { ...prev };
+          delete next[m.id];
+          return next;
+        });
+      }
+      return null;
+    });
     setMerchantDraft(emptyMerchantDraft);
   }, []);
 
@@ -537,17 +639,24 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
-  const adminMerchantRequests = useMemo<AdminMerchantRequest[]>(
-    () =>
-      SEED_ADMIN_PENDING_MERCHANTS.map((m) => ({
-        ...m,
-        decision: merchantDecisions[m.id] ?? {
-          status: 'pending',
-          decidedAt: m.submittedAt,
-        },
-      })),
-    [merchantDecisions],
-  );
+  const adminMerchantRequests = useMemo<AdminMerchantRequest[]>(() => {
+    const seeded = SEED_ADMIN_PENDING_MERCHANTS.map((m) => ({
+      ...m,
+      decision: merchantDecisions[m.id] ?? {
+        status: 'pending' as const,
+        decidedAt: m.submittedAt,
+      },
+    }));
+    const extras = Object.values(extraMerchantRequests).map((m) => ({
+      ...m,
+      decision: merchantDecisions[m.id] ?? {
+        status: 'pending' as const,
+        decidedAt: m.submittedAt,
+      },
+    }));
+    // Locally-registered merchants are most relevant — surface them first.
+    return [...extras, ...seeded];
+  }, [merchantDecisions, extraMerchantRequests]);
 
   const adminUsers = useMemo<AdminUserRecord[]>(
     () =>
@@ -782,6 +891,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       closeRental,
       reportDamage,
       adminMerchantRequests,
+      merchantDecisions,
       approveMerchantRequest,
       rejectMerchantRequest,
       resetMerchantRequest,
@@ -827,6 +937,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       closeRental,
       reportDamage,
       adminMerchantRequests,
+      merchantDecisions,
       approveMerchantRequest,
       rejectMerchantRequest,
       resetMerchantRequest,

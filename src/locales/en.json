@@ -1403,6 +1403,12 @@
         "reject": "Reject request",
         "reset": "Reopen for review"
       },
+      "confirmSheet": {
+        "reject": {
+          "title": "Reject this merchant request?",
+          "description": "{company} will be rejected and notified. This decision can be reset later. Continue?"
+        }
+      },
       "banner": {
         "approved": {
           "title": "Merchant approved",
@@ -1697,6 +1703,12 @@
         "reactivate": "Reactivate account",
         "suspend": "Suspend account",
         "reset": "Reset to original state"
+      },
+      "confirmSheet": {
+        "suspend": {
+          "title": "Suspend this account?",
+          "description": "{name} will be suspended and blocked from new rentals and contracts. Continue?"
+        }
       },
       "activity": {
         "empty": "No activity yet",
