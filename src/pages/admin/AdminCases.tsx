@@ -23,6 +23,7 @@ import { useI18n, useT } from '@/lib/i18n';
 import { useStore } from '@/lib/store';
 import {
   SEED_ADMIN_ACTIVE_CASES,
+  SEED_ADMIN_CASE_DETAILS,
   SEED_ADMIN_OVERDUE,
   SEED_ADMIN_OVERDUE_BUCKETS,
   type AdminActiveCase,
@@ -33,6 +34,20 @@ import {
 } from '@/lib/data';
 
 type TabKey = 'damage' | 'overdue';
+
+type CaseMeta = {
+  stage: AdminCaseStage;
+  addedNotes: number;
+  lastActivityAt: string | null;
+  hasUpdates: boolean;
+};
+
+const EMPTY_META: CaseMeta = {
+  stage: 'review',
+  addedNotes: 0,
+  lastActivityAt: null,
+  hasUpdates: false,
+};
 
 function severityTone(s: AdminCaseSeverity): StatusTone {
   if (s === 'partial') return 'warn';
@@ -87,10 +102,25 @@ export default function AdminCases() {
     [overdueCases],
   );
 
-  // Map ID -> current stage (damage). For overdue the detail key is `${id}-OD`.
-  const stageById = useMemo(() => {
-    const map: Record<string, AdminCaseStage> = {};
-    for (const c of adminCases) map[c.id] = c.escalation.currentStage;
+  // Per-case meta merged from the reactive store: stage + admin activity
+  // (added notes, last activity timestamp). Damage detail key === id;
+  // overdue detail key === `${id}-OD`.
+  const metaById = useMemo(() => {
+    const map: Record<string, CaseMeta> = {};
+    for (const c of adminCases) {
+      const seed = SEED_ADMIN_CASE_DETAILS[c.id];
+      const seedNotes = seed?.notes.length ?? 0;
+      const seedAudit = seed?.audit.length ?? 0;
+      const addedNotes = Math.max(0, c.notes.length - seedNotes);
+      const addedAudit = Math.max(0, c.audit.length - seedAudit);
+      const lastEntry = c.audit[c.audit.length - 1];
+      map[c.id] = {
+        stage: c.escalation.currentStage,
+        addedNotes,
+        lastActivityAt: addedAudit > 0 ? lastEntry?.at ?? null : null,
+        hasUpdates: addedNotes > 0 || addedAudit > 0,
+      };
+    }
     return map;
   }, [adminCases]);
 
@@ -221,7 +251,7 @@ export default function AdminCases() {
                   <DamageCard
                     key={c.id}
                     item={c}
-                    stage={stageById[c.id] ?? c.stage}
+                    meta={metaById[c.id] ?? { ...EMPTY_META, stage: c.stage }}
                     dir={dir}
                     formatCurrency={formatCurrency}
                     formatDate={formatDate}
@@ -242,9 +272,10 @@ export default function AdminCases() {
                 <OverdueCard
                   key={c.id}
                   item={c}
-                  stage={stageById[`${c.id}-OD`] ?? 'review'}
+                  meta={metaById[`${c.id}-OD`] ?? EMPTY_META}
                   dir={dir}
                   formatCurrency={formatCurrency}
+                  formatDate={formatDate}
                   t={t}
                 />
               ))}
@@ -310,20 +341,21 @@ function BucketTile({
 
 function DamageCard({
   item,
-  stage,
+  meta,
   dir,
   formatCurrency,
   formatDate,
   t,
 }: {
   item: AdminActiveCase;
-  stage: AdminCaseStage;
+  meta: CaseMeta;
   dir: 'rtl' | 'ltr';
   formatCurrency: (n: number) => string;
   formatDate: (d: string | Date | number, opts?: Intl.DateTimeFormatOptions) => string;
   t: (key: string, vars?: Record<string, string | number>) => string;
 }) {
   const severe = item.severity !== 'partial';
+  const dateToShow = meta.lastActivityAt ?? item.reportedAt;
   return (
     <Link to={`/admin/cases/damage/${item.id}`} className="block">
       <Card padded interactive className="space-y-3">
@@ -343,8 +375,11 @@ function DamageCard({
             )}
           </span>
           <div className="flex-1 min-w-0">
-            <div className="text-[13.5px] font-semibold text-ink-900 truncate">
-              {item.customerName}
+            <div className="flex items-center gap-1.5">
+              <div className="text-[13.5px] font-semibold text-ink-900 truncate">
+                {item.customerName}
+              </div>
+              {meta.hasUpdates && <UpdatedDot />}
             </div>
             <div className="mt-0.5 flex items-center gap-1.5 text-[11.5px] text-ink-400 truncate">
               <span className="truncate">{item.merchantName}</span>
@@ -370,13 +405,25 @@ function DamageCard({
           />
           <StatusChip
             size="sm"
-            tone={stageTone(stage)}
+            tone={stageTone(meta.stage)}
             dot
-            label={t(`admin.home.activeCases.stage.${stage}`)}
+            label={t(`admin.home.activeCases.stage.${meta.stage}`)}
           />
+          {meta.hasUpdates && (
+            <StatusChip
+              size="sm"
+              tone="brand"
+              dot={false}
+              label={
+                meta.addedNotes > 0
+                  ? t('admin.cases.adminNotes', { count: meta.addedNotes })
+                  : t('admin.cases.updated')
+              }
+            />
+          )}
           <span className="inline-flex items-center gap-1 text-[11px] text-ink-400 num ms-auto">
             <ClockIcon size={11} />
-            {formatDate(item.reportedAt)}
+            {formatDate(dateToShow)}
           </span>
         </div>
 
@@ -394,17 +441,28 @@ function DamageCard({
   );
 }
 
+function UpdatedDot() {
+  return (
+    <span
+      className="h-1.5 w-1.5 shrink-0 rounded-full bg-brand-500 ring-2 ring-brand-100"
+      aria-hidden
+    />
+  );
+}
+
 function OverdueCard({
   item,
-  stage,
+  meta,
   dir,
   formatCurrency,
+  formatDate,
   t,
 }: {
   item: AdminOverdueCase;
-  stage: AdminCaseStage;
+  meta: CaseMeta;
   dir: 'rtl' | 'ltr';
   formatCurrency: (n: number) => string;
+  formatDate: (d: string | Date | number, opts?: Intl.DateTimeFormatOptions) => string;
   t: (key: string, vars?: Record<string, string | number>) => string;
 }) {
   return (
@@ -415,8 +473,11 @@ function OverdueCard({
             {item.customerInitials}
           </span>
           <div className="flex-1 min-w-0">
-            <div className="text-[13.5px] font-semibold text-ink-900 truncate">
-              {item.customerName}
+            <div className="flex items-center gap-1.5">
+              <div className="text-[13.5px] font-semibold text-ink-900 truncate">
+                {item.customerName}
+              </div>
+              {meta.hasUpdates && <UpdatedDot />}
             </div>
             <div className="mt-0.5 flex items-center gap-1.5 text-[11.5px] text-ink-400 truncate">
               <span className="truncate">{item.merchantName}</span>
@@ -444,10 +505,28 @@ function OverdueCard({
           />
           <StatusChip
             size="sm"
-            tone={stageTone(stage)}
+            tone={stageTone(meta.stage)}
             dot={false}
-            label={t(`admin.home.activeCases.stage.${stage}`)}
+            label={t(`admin.home.activeCases.stage.${meta.stage}`)}
           />
+          {meta.hasUpdates && (
+            <StatusChip
+              size="sm"
+              tone="brand"
+              dot={false}
+              label={
+                meta.addedNotes > 0
+                  ? t('admin.cases.adminNotes', { count: meta.addedNotes })
+                  : t('admin.cases.updated')
+              }
+            />
+          )}
+          {meta.lastActivityAt && (
+            <span className="inline-flex items-center gap-1 text-[11px] text-ink-400 num ms-auto">
+              <ClockIcon size={11} />
+              {formatDate(meta.lastActivityAt)}
+            </span>
+          )}
         </div>
 
         <div className="flex items-center justify-between gap-2 rounded-xl bg-ink-50 px-3 py-2">

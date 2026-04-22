@@ -88,6 +88,8 @@ export type MerchantProfile = MerchantDraft & {
   status: MerchantStatus;
   submittedAt: string;
   approvedAt: string | null;
+  rejectedAt: string | null;
+  rejectionReason: string | null;
 };
 
 export const emptyMerchantDraft: MerchantDraft = {
@@ -145,6 +147,8 @@ type StoreContextValue = {
   resetMerchantDraft: () => void;
   submitMerchantApproval: () => MerchantProfile;
   approveMerchant: () => void;
+  rejectMerchant: (reason?: string) => void;
+  resubmitMerchantRequest: () => void;
   signOutMerchant: () => void;
   merchantRentals: MerchantRental[];
   merchantApprovals: MerchantApproval[];
@@ -235,7 +239,13 @@ function readMerchant(): MerchantProfile | null {
   if (typeof window === 'undefined') return null;
   try {
     const raw = window.localStorage.getItem(MERCHANT_KEY);
-    return raw ? (JSON.parse(raw) as MerchantProfile) : null;
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as Partial<MerchantProfile>;
+    return {
+      rejectedAt: null,
+      rejectionReason: null,
+      ...parsed,
+    } as MerchantProfile;
   } catch {
     return null;
   }
@@ -319,6 +329,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       status: 'pending',
       submittedAt: new Date().toISOString(),
       approvedAt: null,
+      rejectedAt: null,
+      rejectionReason: null,
     };
     setMerchant(profile);
     return profile;
@@ -326,7 +338,44 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
   const approveMerchant = useCallback(() => {
     setMerchant((m) =>
-      m ? { ...m, status: 'approved', approvedAt: new Date().toISOString() } : m,
+      m
+        ? {
+            ...m,
+            status: 'approved',
+            approvedAt: new Date().toISOString(),
+            rejectedAt: null,
+            rejectionReason: null,
+          }
+        : m,
+    );
+  }, []);
+
+  const rejectMerchant = useCallback((reason?: string) => {
+    setMerchant((m) =>
+      m
+        ? {
+            ...m,
+            status: 'rejected',
+            rejectedAt: new Date().toISOString(),
+            rejectionReason: reason?.trim() || null,
+            approvedAt: null,
+          }
+        : m,
+    );
+  }, []);
+
+  const resubmitMerchantRequest = useCallback(() => {
+    setMerchant((m) =>
+      m
+        ? {
+            ...m,
+            status: 'pending',
+            submittedAt: new Date().toISOString(),
+            approvedAt: null,
+            rejectedAt: null,
+            rejectionReason: null,
+          }
+        : m,
     );
   }, []);
 
@@ -675,6 +724,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       resetMerchantDraft,
       submitMerchantApproval,
       approveMerchant,
+      rejectMerchant,
+      resubmitMerchantRequest,
       signOutMerchant,
       merchantRentals,
       merchantApprovals,
@@ -718,6 +769,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       resetMerchantDraft,
       submitMerchantApproval,
       approveMerchant,
+      rejectMerchant,
+      resubmitMerchantRequest,
       signOutMerchant,
       merchantRentals,
       merchantApprovals,
