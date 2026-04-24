@@ -10,10 +10,10 @@ import { cn } from '@/lib/cn';
 
 const FILTERS: (StoreCategory | 'all')[] = [
   'all',
-  'cars',
-  'properties',
-  'equipment',
-  'other',
+  'dresses',
+  'bags',
+  'watches',
+  'bishts',
 ];
 
 type SortKey = 'recommended' | 'rating' | 'branches' | 'name';

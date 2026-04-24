@@ -241,6 +241,20 @@ function InvoiceStep({ pkg }: { pkg: ScannedPackage }) {
                   </div>
                 </div>
               </div>
+              {it.attributes && it.attributes.length > 0 && (
+                <dl className="mt-3 grid grid-cols-2 gap-x-3 gap-y-1.5 rounded-xl bg-ink-50/60 px-3 py-2.5">
+                  {it.attributes.map((a, i) => (
+                    <div key={i} className="min-w-0">
+                      <dt className="text-[10.5px] uppercase tracking-wide text-ink-400 truncate">
+                        {a.label[locale]}
+                      </dt>
+                      <dd className="mt-0.5 text-[12px] font-semibold text-ink-900 truncate">
+                        {a.value[locale]}
+                      </dd>
+                    </div>
+                  ))}
+                </dl>
+              )}
             </div>
           ))}
           <div className="p-4 flex items-center justify-between bg-ink-50/50">

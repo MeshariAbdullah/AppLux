@@ -34,11 +34,11 @@
   },
   "welcome": {
     "eyebrow": "AppLux",
-    "title": "Rental contracts & promissory notes, done right",
-    "subtitle": "A trusted Saudi platform that simplifies signing and collections.",
-    "feature1": "Certified digital signatures",
-    "feature2": "Live collections tracking",
-    "feature3": "Compliant with Saudi regulations",
+    "title": "Occasion-wear rental, done right — dresses, bags, watches, bishts",
+    "subtitle": "The Saudi platform for boutiques and ateliers renting premium occasion pieces with authenticated contracts and promissory notes.",
+    "feature1": "Verified occasion-wear boutiques",
+    "feature2": "Contract & promissory note per piece",
+    "feature3": "Piece-value protection via Nafith",
     "signIn": "Sign in",
     "createAccount": "Create account",
     "terms": "By continuing you agree to the Terms and Privacy Policy",
@@ -73,7 +73,7 @@
       "role": {
         "customer": {
           "title": "Customer account",
-          "desc": "For individuals renting cars, equipment or properties."
+          "desc": "For individuals renting premium occasion pieces — dresses, bags, watches, and bishts."
         },
         "merchant": {
           "title": "Business account",
@@ -247,10 +247,10 @@
     "searchPlaceholder": "Search by store name or city",
     "filters": {
       "all": "All",
-      "cars": "Cars",
-      "properties": "Properties",
-      "equipment": "Equipment",
-      "other": "Other"
+      "dresses": "Dresses",
+      "bags": "Bags",
+      "watches": "Watches",
+      "bishts": "Bishts"
     },
     "count": "{count} partners",
     "verified": "Verified partner",
@@ -1323,11 +1323,10 @@
         "rejected": "Rejected"
       },
       "category": {
-        "cars": "Cars",
-        "real-estate": "Real estate",
-        "electronics": "Electronics",
-        "furniture": "Furniture",
-        "tools": "Equipment"
+        "dresses": "Dresses",
+        "bags": "Bags",
+        "watches": "Watches",
+        "bishts": "Bishts"
       },
       "submittedOn": "Submitted {date}",
       "decidedOn": {
@@ -1363,11 +1362,10 @@
         "pending": "Submitted {date}"
       },
       "category": {
-        "cars": "Cars",
-        "real-estate": "Real estate",
-        "electronics": "Electronics",
-        "furniture": "Furniture",
-        "tools": "Equipment"
+        "dresses": "Dresses",
+        "bags": "Bags",
+        "watches": "Watches",
+        "bishts": "Bishts"
       },
       "sections": {
         "company": "Company information",

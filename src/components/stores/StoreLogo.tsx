@@ -2,10 +2,11 @@ import type { ReactNode } from 'react';
 import { cn } from '@/lib/cn';
 import type { PartnerStore } from '@/lib/data';
 import {
-  BuildingIcon,
-  CarIcon,
+  BagIcon,
+  BishtIcon,
+  DressIcon,
   PackageIcon,
-  ToolsIcon,
+  WatchIcon,
 } from '@/components/icons';
 
 type StoreLogoProps = {
@@ -29,12 +30,14 @@ const toneMap: Record<PartnerStore['logoTone'], { bg: string; fg: string; ring: 
 
 export function categoryIcon(category: PartnerStore['category'], size = 16): ReactNode {
   switch (category) {
-    case 'cars':
-      return <CarIcon size={size} />;
-    case 'properties':
-      return <BuildingIcon size={size} />;
-    case 'equipment':
-      return <ToolsIcon size={size} />;
+    case 'dresses':
+      return <DressIcon size={size} />;
+    case 'bags':
+      return <BagIcon size={size} />;
+    case 'watches':
+      return <WatchIcon size={size} />;
+    case 'bishts':
+      return <BishtIcon size={size} />;
     default:
       return <PackageIcon size={size} />;
   }

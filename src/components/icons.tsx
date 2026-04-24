@@ -300,3 +300,32 @@ export const LockIcon = (p: IconProps) => (
     <path d="M8 11V8a4 4 0 0 1 8 0v3" />
   </svg>
 );
+
+export const DressIcon = (p: IconProps) => (
+  <svg {...base(p)}>
+    <path d="M10 3h4l-.5 3 4 5-1 3H7.5l-1-3 4-5L10 3Z" />
+    <path d="M6.5 14h11L20 21H4l2.5-7Z" />
+  </svg>
+);
+
+export const BagIcon = (p: IconProps) => (
+  <svg {...base(p)}>
+    <path d="M5 8h14l-1.2 12.2a1 1 0 0 1-1 .8H7.2a1 1 0 0 1-1-.8L5 8Z" />
+    <path d="M9 8V6a3 3 0 0 1 6 0v2" />
+  </svg>
+);
+
+export const WatchIcon = (p: IconProps) => (
+  <svg {...base(p)}>
+    <circle cx="12" cy="12" r="5" />
+    <path d="M12 9.5v2.5l1.5 1.5" />
+    <path d="M9 3h6l-1 4H10L9 3Zm0 18h6l-1-4H10l-1 4Z" />
+  </svg>
+);
+
+export const BishtIcon = (p: IconProps) => (
+  <svg {...base(p)}>
+    <path d="M6 5l3-2h6l3 2-2 3h-1v12a1 1 0 0 1-1 1H10a1 1 0 0 1-1-1V8H8L6 5Z" />
+    <path d="M12 8v12" />
+  </svg>
+);

@@ -246,7 +246,7 @@ function buildAdminRecord(p: MerchantProfile): AdminPendingMerchant {
     city: p.city || '—',
     address: p.address || '—',
     // Registration form doesn't capture category/expectedVolume; default safely.
-    category: 'cars',
+    category: 'dresses',
     expectedVolume: 0,
     submittedAt: p.submittedAt,
     initials,
