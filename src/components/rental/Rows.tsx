@@ -36,26 +36,26 @@ function RowShell({
   const content = (
     <div
       className={cn(
-        'flex items-center gap-3 py-3 -mx-1 px-1 rounded-lg transition-colors',
-        to && 'hover:bg-ink-50/60 active:bg-ink-50',
+        'flex items-center gap-3.5 py-3.5 -mx-1 px-1 rounded-2xl transition-colors',
+        to && 'hover:bg-canvas-100/60 active:bg-canvas-100',
         className,
       )}
     >
       <span
         className={cn(
-          'h-10 w-10 shrink-0 rounded-xl grid place-items-center',
+          'h-11 w-11 shrink-0 rounded-2xl grid place-items-center',
           iconTone,
         )}
       >
         {icon}
       </span>
       <div className="flex-1 min-w-0">
-        <div className="text-[13.5px] font-semibold text-ink-900 truncate">{title}</div>
+        <div className="text-[14px] font-semibold text-ink-900 truncate tracking-tight">{title}</div>
         <div className="mt-0.5 text-[12px] text-ink-400 truncate">{subtitle}</div>
       </div>
       <div className="flex flex-col items-end gap-1 shrink-0">
-        {amount && <div className="text-[13.5px] font-semibold text-ink-900 num">{amount}</div>}
-        {amountHint && <div className="text-[11.5px] text-ink-400">{amountHint}</div>}
+        {amount && <div className="text-[14px] font-semibold text-ink-900 num">{amount}</div>}
+        {amountHint && <div className="text-[11px] text-ink-400">{amountHint}</div>}
         {right}
       </div>
     </div>
@@ -76,7 +76,7 @@ export function InvoiceRow({ invoice }: { invoice: Invoice }) {
     <RowShell
       to={`/track/invoice/${invoice.id}`}
       icon={<ReceiptIcon size={18} />}
-      iconTone="bg-brand-50 text-brand-600"
+      iconTone="bg-canvas-100 text-ink-700"
       title={invoice.title}
       subtitle={`${t('sections.due')} · ${formatDate(invoice.dueDate)}`}
       amount={formatCurrency(invoice.amount)}
@@ -92,7 +92,7 @@ export function ContractRow({ contract }: { contract: Contract }) {
     <RowShell
       to={`/track/contract/${contract.id}`}
       icon={<DocIcon size={18} />}
-      iconTone="bg-ink-100 text-ink-700"
+      iconTone="bg-canvas-100 text-ink-700"
       title={contract.title}
       subtitle={contract.counterparty}
       amount={formatCurrency(contract.monthlyAmount)}
@@ -108,7 +108,7 @@ export function NoteRow({ note }: { note: PromissoryNote }) {
     <RowShell
       to={`/track/note/${note.id}`}
       icon={<WalletIcon size={18} />}
-      iconTone="bg-[#FBF2DD] text-gold-600"
+      iconTone="bg-gold-50 text-gold-700"
       title={note.reference}
       subtitle={note.counterparty}
       amount={formatCurrency(note.amount)}
@@ -123,7 +123,7 @@ export function HistoryRow({ item }: { item: HistoryItem }) {
   return (
     <RowShell
       icon={<HistoryIcon size={18} />}
-      iconTone="bg-ink-50 text-ink-500"
+      iconTone="bg-canvas-100 text-ink-500"
       title={item.title}
       subtitle={`${t('sections.closedOn')} · ${formatDate(item.closedAt)}`}
       amount={formatCurrency(item.amount)}

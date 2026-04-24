@@ -64,20 +64,24 @@ export default function StoreDetails() {
   return (
     <>
       <Header title={t('stores.title')} showBack />
-      <Screen padded={false} className="bg-ink-50">
-        <div className="px-4 pt-4 pb-8 space-y-5">
+      <Screen className="bg-canvas">
+        <div className="space-y-6">
           {/* Hero card */}
-          <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-ink-900 via-ink-800 to-ink-900 text-white p-6 shadow-float">
+          <div className="relative overflow-hidden rounded-xl3 bg-gradient-to-br from-ink-900 via-ink-800 to-ink-900 text-white p-7 shadow-plush">
             <div aria-hidden className="pointer-events-none absolute inset-0 pattern-dots opacity-25" />
             <div
               aria-hidden
-              className="pointer-events-none absolute -top-10 end-[-15%] h-48 w-48 rounded-full bg-brand-500/25 blur-3xl"
+              className="pointer-events-none absolute -top-14 end-[-18%] h-56 w-56 rounded-full bg-gold-400/22 blur-[100px]"
             />
-            <div className="relative flex items-start gap-4">
+            <div
+              aria-hidden
+              className="pointer-events-none absolute -bottom-16 start-[-15%] h-48 w-48 rounded-full bg-gold-500/12 blur-[100px]"
+            />
+            <div className="relative flex items-start gap-5">
               <StoreLogo store={store} size="lg" />
               <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-1.5 mb-1.5">
-                  <span className="inline-flex items-center gap-1.5 rounded-full bg-white/10 ring-1 ring-white/15 px-2 py-0.5 text-[11px] font-semibold">
+                <div className="flex items-center gap-1.5 mb-2">
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-white/10 ring-1 ring-white/15 px-2.5 py-1 text-[11px] font-semibold">
                     {categoryIcon(store.category, 12)}
                     {t(`stores.filters.${store.category}`)}
                   </span>
@@ -89,10 +93,10 @@ export default function StoreDetails() {
                     />
                   )}
                 </div>
-                <h1 className="text-[20px] font-bold leading-snug">{name}</h1>
-                <div className="mt-1.5 flex items-center gap-3 text-[12.5px] text-white/80">
+                <h1 className="editorial-title text-[24px] leading-tight text-white">{name}</h1>
+                <div className="mt-2.5 flex items-center gap-3 text-[12.5px] text-white/75">
                   <span className="inline-flex items-center gap-1">
-                    <StarIcon size={12} className="text-gold-400" />
+                    <StarIcon size={12} className="text-gold-300" />
                     <span className="num font-semibold">{store.rating.toFixed(1)}</span>
                   </span>
                   <span className="h-1 w-1 rounded-full bg-white/30" />
@@ -103,9 +107,9 @@ export default function StoreDetails() {
           </div>
 
           {/* At-a-glance stats */}
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-3 gap-2.5">
             <StatTile
-              icon={<StarIcon size={14} className="text-gold-500" />}
+              icon={<StarIcon size={14} className="text-gold-400" />}
               label={t('stores.stats.rating')}
               value={
                 <span className="num">{store.rating.toFixed(1)}</span>
@@ -113,7 +117,7 @@ export default function StoreDetails() {
               hint={t('stores.stats.ratingHint')}
             />
             <StatTile
-              icon={<PackageIcon size={14} className="text-brand-600" />}
+              icon={<PackageIcon size={14} className="text-ink-700" />}
               label={t('stores.stats.branches')}
               value={
                 <span className="num">{store.branches.length}</span>
@@ -125,7 +129,7 @@ export default function StoreDetails() {
                 <BadgeCheckIcon
                   size={14}
                   className={
-                    store.verified ? 'text-success-600' : 'text-ink-400'
+                    store.verified ? 'text-gold-700' : 'text-ink-400'
                   }
                 />
               }
@@ -133,7 +137,7 @@ export default function StoreDetails() {
               value={
                 <span
                   className={
-                    store.verified ? 'text-success-700' : 'text-ink-500'
+                    store.verified ? 'text-gold-700' : 'text-ink-500'
                   }
                 >
                   {store.verified
@@ -149,21 +153,21 @@ export default function StoreDetails() {
           {store.branches[0] && (
             <a
               href={`tel:${store.branches[0].phone}`}
-              className="block rounded-xl2 bg-ink-900 text-white px-4 py-3 ring-1 ring-ink-900 active:scale-[0.995] transition-transform"
+              className="block rounded-xl3 bg-ink-900 text-white px-5 py-4 active:scale-[0.995] transition-transform shadow-card"
             >
-              <div className="flex items-center gap-3">
-                <span className="h-10 w-10 shrink-0 rounded-xl bg-white/10 ring-1 ring-white/15 grid place-items-center">
+              <div className="flex items-center gap-3.5">
+                <span className="h-11 w-11 shrink-0 rounded-2xl bg-white/8 ring-1 ring-white/12 grid place-items-center text-gold-300">
                   <PhoneIcon size={16} />
                 </span>
                 <div className="min-w-0 flex-1">
-                  <div className="text-[11.5px] uppercase tracking-wide text-white/55">
+                  <div className="text-[10.5px] uppercase tracking-[0.08em] text-white/55">
                     {t('stores.quickCall.label')}
                   </div>
-                  <div className="mt-0.5 text-[14px] font-bold num truncate">
+                  <div className="mt-1 text-[15px] font-semibold num truncate tracking-tight">
                     {store.branches[0].phone}
                   </div>
                 </div>
-                <span className="text-[11.5px] text-white/60 truncate">
+                <span className="text-[11.5px] text-white/55 truncate">
                   {store.branches[0].name[locale]}
                 </span>
               </div>
@@ -171,8 +175,8 @@ export default function StoreDetails() {
           )}
 
           {/* Informational notice */}
-          <div className="rounded-xl2 bg-brand-50/70 ring-1 ring-brand-100 px-4 py-3 flex items-start gap-2.5 text-[12.5px] text-brand-900">
-            <InfoIcon size={16} className="mt-0.5 shrink-0 text-brand-600" />
+          <div className="rounded-xl2 bg-gold-50 px-4 py-3 flex items-start gap-2.5 text-[12.5px] text-gold-700">
+            <InfoIcon size={16} className="mt-0.5 shrink-0" />
             <span className="leading-relaxed">{t('stores.notice')}</span>
           </div>
 
@@ -180,7 +184,7 @@ export default function StoreDetails() {
           <section>
             <SectionHeader title={t('stores.about')} />
             <Card padded>
-              <p className="text-[13.5px] text-ink-700 leading-relaxed">{description}</p>
+              <p className="text-[14px] text-ink-700 leading-[1.7]">{description}</p>
             </Card>
           </section>
 
@@ -190,14 +194,14 @@ export default function StoreDetails() {
             <Card padded>
               <InfoRow
                 icon={<MapPinIcon size={18} />}
-                tone="bg-brand-50 text-brand-600"
+                tone="bg-canvas-100 text-ink-700"
                 label={cityLabel}
                 value={location}
               />
-              <div className="my-3 h-px bg-ink-100" />
+              <div className="my-4 h-px bg-canvas-200/80" />
               <InfoRow
                 icon={<ClockIcon size={18} />}
-                tone="bg-ink-100 text-ink-700"
+                tone="bg-canvas-100 text-ink-700"
                 label={t('stores.hours')}
                 value={hours}
               />
@@ -246,16 +250,16 @@ function StatTile({
   hint?: React.ReactNode;
 }) {
   return (
-    <div className="rounded-xl2 bg-white ring-1 ring-ink-100 p-3">
-      <div className="flex items-center gap-1.5 text-[10.5px] font-medium uppercase tracking-wide text-ink-400">
+    <div className="rounded-xl2 bg-white hairline p-3.5">
+      <div className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-ink-400">
         {icon}
         {label}
       </div>
-      <div className="mt-1 text-[15px] font-bold text-ink-900 leading-none truncate">
+      <div className="mt-2 text-[15.5px] font-semibold text-ink-900 leading-none truncate tracking-tight">
         {value}
       </div>
       {hint && (
-        <div className="mt-1 text-[10.5px] text-ink-400 truncate">{hint}</div>
+        <div className="mt-1.5 text-[10.5px] text-ink-400 truncate">{hint}</div>
       )}
     </div>
   );
@@ -273,15 +277,15 @@ function InfoRow({
   value: React.ReactNode;
 }) {
   return (
-    <div className="flex items-start gap-3">
-      <span className={`h-9 w-9 rounded-xl grid place-items-center shrink-0 ${tone}`}>
+    <div className="flex items-start gap-3.5">
+      <span className={`h-10 w-10 rounded-2xl grid place-items-center shrink-0 ${tone}`}>
         {icon}
       </span>
       <div className="min-w-0">
-        <div className="text-[11.5px] font-medium text-ink-400 uppercase tracking-wide">
+        <div className="text-[10.5px] font-semibold text-ink-400 uppercase tracking-[0.08em]">
           {label}
         </div>
-        <div className="mt-0.5 text-[13.5px] font-semibold text-ink-900 leading-relaxed">
+        <div className="mt-1 text-[14px] font-semibold text-ink-900 leading-relaxed tracking-tight">
           {value}
         </div>
       </div>
@@ -300,8 +304,8 @@ function BranchCard({ branch }: { branch: StoreBranch }) {
     <Card padded>
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <div className="text-[14px] font-semibold text-ink-900 truncate">{name}</div>
-          <div className="mt-1 flex items-start gap-1.5 text-[12.5px] text-ink-500 leading-relaxed">
+          <div className="editorial-title text-[15px] text-ink-900 truncate">{name}</div>
+          <div className="mt-1.5 flex items-start gap-1.5 text-[12.5px] text-ink-500 leading-relaxed">
             <MapPinIcon size={14} className="mt-0.5 shrink-0" />
             <span>{address}</span>
           </div>
@@ -311,17 +315,17 @@ function BranchCard({ branch }: { branch: StoreBranch }) {
           </div>
         </div>
       </div>
-      <div className="mt-3 flex items-center gap-2">
+      <div className="mt-4 flex items-center gap-2">
         <a
           href={`tel:${branch.phone}`}
-          className="flex-1 inline-flex items-center justify-center gap-1.5 h-9 rounded-xl bg-ink-50 text-ink-800 text-[12.5px] font-semibold hover:bg-ink-100"
+          className="flex-1 inline-flex items-center justify-center gap-1.5 h-10 rounded-xl2 bg-canvas-100 text-ink-800 text-[12.5px] font-semibold hover:bg-canvas-200 transition-colors"
         >
           <PhoneIcon size={14} />
           <span className="num">{branch.phone}</span>
         </a>
         <button
           type="button"
-          className="inline-flex items-center justify-center gap-1.5 h-9 px-3 rounded-xl bg-white ring-1 ring-ink-100 text-ink-700 text-[12.5px] font-semibold hover:bg-ink-50"
+          className="inline-flex items-center justify-center gap-1.5 h-10 px-3.5 rounded-xl2 bg-white hairline text-ink-700 text-[12.5px] font-semibold hover:bg-canvas-100 transition-colors"
         >
           <MapPinIcon size={14} />
           {t('stores.openMap')}
@@ -336,11 +340,11 @@ function DetailsSkeleton() {
   return (
     <>
       <Header title={t('stores.title')} showBack />
-      <Screen padded={false} className="bg-ink-50">
-        <div className="px-4 pt-4 pb-8 space-y-5">
-          <div className="rounded-3xl bg-ink-900/90 p-6 space-y-4">
-            <div className="flex items-start gap-4">
-              <Skeleton className="h-20 w-20 rounded-2xl bg-white/10" />
+      <Screen className="bg-canvas">
+        <div className="space-y-6">
+          <div className="rounded-xl3 bg-ink-900/95 p-7 space-y-4 shadow-plush">
+            <div className="flex items-start gap-5">
+              <Skeleton className="h-20 w-20 rounded-3xl bg-white/10" />
               <div className="flex-1 space-y-2">
                 <Skeleton className="h-4 w-24 bg-white/10" />
                 <Skeleton className="h-5 w-3/4 bg-white/10" />
@@ -357,7 +361,7 @@ function DetailsSkeleton() {
             <div className="space-y-3">
               <Skeleton className="h-3 w-1/3" />
               <Skeleton className="h-3 w-2/3" />
-              <div className="h-px bg-ink-100 my-2" />
+              <div className="h-px bg-canvas-200/80 my-2" />
               <Skeleton className="h-3 w-1/3" />
               <Skeleton className="h-3 w-2/3" />
             </div>

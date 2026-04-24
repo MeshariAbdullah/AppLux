@@ -20,7 +20,7 @@ export default function Contracts() {
           </>
         }
       />
-      <Screen>
+      <Screen className="bg-canvas">
         <Input
           placeholder={t('contracts.searchPlaceholder')}
           leading={<SearchIcon size={18} />}

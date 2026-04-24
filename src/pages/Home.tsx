@@ -65,15 +65,15 @@ export default function Home() {
           </>
         }
       />
-      <Screen>
+      <Screen className="bg-canvas">
         {/* Eligibility summary card */}
-        <Card padded className="-mt-10 relative space-y-4">
+        <Card padded className="-mt-12 relative space-y-5">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
-              <div className="text-[12px] font-medium text-ink-400 uppercase tracking-wide">
+              <div className="text-[11px] font-semibold text-ink-400 uppercase tracking-[0.08em]">
                 {t('home.eligibilityTitle')}
               </div>
-              <div className="text-[12.5px] text-ink-500 mt-0.5">
+              <div className="text-[12.5px] text-ink-500 mt-1">
                 {t('home.eligibilitySub')}
               </div>
             </div>
@@ -86,19 +86,19 @@ export default function Home() {
 
           <div>
             <div className="flex items-baseline gap-2">
-              <span className="text-[28px] font-bold text-ink-900 num leading-none">
+              <span className="editorial-title text-[34px] text-ink-900 num leading-none">
                 {formatCurrency(eligibility.remaining)}
               </span>
               <span className="text-[12px] text-ink-400">{t('home.remaining')}</span>
             </div>
-            <div className="mt-1 text-[12px] text-ink-400">
+            <div className="mt-1.5 text-[12px] text-ink-400">
               {t('home.of')} {formatCurrency(eligibility.limit)}
             </div>
           </div>
 
           <div>
-            <ProgressBar value={eligibility.used} max={eligibility.limit} tone="brand" />
-            <div className="mt-2 flex items-center justify-between text-[11.5px]">
+            <ProgressBar value={eligibility.used} max={eligibility.limit} tone="gold" />
+            <div className="mt-3 flex items-center justify-between text-[11.5px]">
               <span className="text-ink-500">
                 {t('home.used')}{' '}
                 <span className="text-ink-900 font-semibold num">
@@ -109,7 +109,7 @@ export default function Home() {
               <button
                 type="button"
                 onClick={() => navigate('/eligibility')}
-                className="inline-flex items-center gap-1 text-brand-600 font-semibold"
+                className="inline-flex items-center gap-1 text-gold-700 font-semibold hover:text-gold-600"
               >
                 {t('home.viewDetails')}
                 <ArrowIcon size={14} className={cn(dir === 'rtl' ? 'rotate-180' : '')} />
@@ -118,44 +118,45 @@ export default function Home() {
           </div>
         </Card>
 
-        {/* Scan CTA */}
+        {/* Scan CTA — editorial dark band */}
         <button
           type="button"
           onClick={() => navigate('/scan')}
-          className="group relative overflow-hidden rounded-xl2 bg-gradient-to-br from-ink-900 via-ink-800 to-ink-900 text-white px-4 py-3.5 text-start flex items-center gap-3 shadow-card hover:shadow-float transition-shadow"
+          className="group relative overflow-hidden rounded-xl3 bg-gradient-to-br from-ink-900 via-ink-800 to-ink-900 text-white px-5 py-4 text-start flex items-center gap-4 shadow-card hover:shadow-plush transition-shadow"
         >
           <span aria-hidden className="pointer-events-none absolute inset-0 pattern-dots opacity-20" />
-          <span className="relative h-11 w-11 rounded-xl bg-white/10 ring-1 ring-white/15 grid place-items-center shrink-0">
+          <span aria-hidden className="pointer-events-none absolute -top-8 end-[-10%] h-32 w-32 rounded-full bg-gold-400/15 blur-3xl" />
+          <span className="relative h-12 w-12 rounded-2xl bg-white/8 ring-1 ring-white/12 grid place-items-center shrink-0 text-gold-300">
             <QrIcon size={20} />
           </span>
           <span className="relative min-w-0 flex-1">
-            <span className="block text-[14px] font-semibold truncate">{t('qr.title')}</span>
-            <span className="block mt-0.5 text-[12px] text-white/70 truncate">
+            <span className="block text-[15px] font-semibold truncate tracking-tight">{t('qr.title')}</span>
+            <span className="block mt-1 text-[12.5px] text-white/65 truncate">
               {t('qr.subtitle')}
             </span>
           </span>
-          <ArrowIcon size={18} className={cn('relative text-white/70', dir === 'rtl' ? 'rotate-180' : '')} />
+          <ArrowIcon size={18} className={cn('relative text-white/60', dir === 'rtl' ? 'rotate-180' : '')} />
         </button>
 
         {/* Summary chips */}
-        <div className="grid grid-cols-3 gap-2">
+        <div className="grid grid-cols-3 gap-2.5">
           <SummaryChip
             label={t('home.summaryInvoices')}
             value={invoices.length}
             icon={<ReceiptIcon size={16} />}
-            tone="bg-brand-50 text-brand-600"
+            tone="bg-canvas-100 text-ink-700"
           />
           <SummaryChip
             label={t('home.summaryContracts')}
             value={contracts.length}
             icon={<DocIcon size={16} />}
-            tone="bg-ink-100 text-ink-700"
+            tone="bg-canvas-100 text-ink-700"
           />
           <SummaryChip
             label={t('home.summaryNotes')}
             value={notes.length}
             icon={<WalletIcon size={16} />}
-            tone="bg-[#FBF2DD] text-gold-600"
+            tone="bg-gold-50 text-gold-700"
           />
         </div>
 
@@ -177,7 +178,7 @@ export default function Home() {
           {invoices.slice(0, 3).map((inv, i, arr) => (
             <div key={inv.id}>
               <InvoiceRow invoice={inv} />
-              {i < arr.length - 1 && <div className="h-px bg-ink-100" />}
+              {i < arr.length - 1 && <div className="h-px bg-canvas-200/80" />}
             </div>
           ))}
         </Section>
@@ -200,7 +201,7 @@ export default function Home() {
           {contracts.slice(0, 3).map((c, i, arr) => (
             <div key={c.id}>
               <ContractRow contract={c} />
-              {i < arr.length - 1 && <div className="h-px bg-ink-100" />}
+              {i < arr.length - 1 && <div className="h-px bg-canvas-200/80" />}
             </div>
           ))}
         </Section>
@@ -223,7 +224,7 @@ export default function Home() {
           {notes.slice(0, 3).map((n, i, arr) => (
             <div key={n.id}>
               <NoteRow note={n} />
-              {i < arr.length - 1 && <div className="h-px bg-ink-100" />}
+              {i < arr.length - 1 && <div className="h-px bg-canvas-200/80" />}
             </div>
           ))}
         </Section>
@@ -246,7 +247,7 @@ export default function Home() {
           {history.slice(0, 3).map((h, i, arr) => (
             <div key={h.id}>
               <HistoryRow item={h} />
-              {i < arr.length - 1 && <div className="h-px bg-ink-100" />}
+              {i < arr.length - 1 && <div className="h-px bg-canvas-200/80" />}
             </div>
           ))}
         </Section>
@@ -267,10 +268,10 @@ function SummaryChip({
   tone: string;
 }) {
   return (
-    <div className="rounded-xl2 bg-white ring-1 ring-ink-100 p-3 flex flex-col gap-2">
-      <span className={cn('h-8 w-8 rounded-lg grid place-items-center', tone)}>{icon}</span>
+    <div className="rounded-xl2 bg-white hairline p-3.5 flex flex-col gap-2.5">
+      <span className={cn('h-9 w-9 rounded-2xl grid place-items-center', tone)}>{icon}</span>
       <div>
-        <div className="text-[18px] font-bold text-ink-900 num leading-none">{value}</div>
+        <div className="editorial-title text-[20px] text-ink-900 num leading-none">{value}</div>
         <div className="mt-1 text-[11.5px] text-ink-400">{label}</div>
       </div>
     </div>
@@ -296,16 +297,14 @@ function Section({
         title={title}
         action={
           empty ? null : (
-            <Link to={viewAllHref} className="font-medium text-brand-600">
-              {t('home.viewAll')}
-            </Link>
+            <Link to={viewAllHref}>{t('home.viewAll')}</Link>
           )
         }
       />
       {empty ? (
         empty
       ) : (
-        <Card padded={false} className="px-4">
+        <Card padded={false} className="px-5">
           {children}
         </Card>
       )}

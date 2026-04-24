@@ -83,58 +83,53 @@ export default function Login() {
   return (
     <>
       <Header title={t('auth.loginTitle')} showBack />
-      <Screen padded={false} className="bg-ink-50">
-        <div className="px-4 pt-4 pb-8 space-y-5">
+      <Screen className="bg-canvas">
+        <div className="space-y-6">
           {/* Hero */}
-          <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-ink-900 via-ink-800 to-ink-900 text-white p-5 shadow-float">
+          <div className="relative overflow-hidden rounded-xl3 bg-gradient-to-br from-ink-900 via-ink-800 to-ink-900 text-white p-6 shadow-plush">
             <div
               aria-hidden
               className="pointer-events-none absolute inset-0 pattern-dots opacity-25"
             />
             <div
               aria-hidden
-              className="pointer-events-none absolute -top-12 end-[-15%] h-48 w-48 rounded-full bg-brand-500/25 blur-3xl"
+              className="pointer-events-none absolute -top-14 end-[-18%] h-52 w-52 rounded-full bg-gold-400/22 blur-[80px]"
             />
-            <div className="relative flex items-start gap-3">
-              <span className="h-11 w-11 shrink-0 rounded-2xl bg-white/10 ring-1 ring-white/15 grid place-items-center">
-                <ShieldIcon size={20} />
+            <div className="relative">
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-white/10 ring-1 ring-white/15 px-2.5 py-1 text-[11px] font-semibold">
+                <BadgeCheckIcon size={12} />
+                {t('auth.login.trust')}
               </span>
-              <div className="min-w-0 flex-1">
-                <span className="inline-flex items-center gap-1.5 rounded-full bg-white/10 ring-1 ring-white/15 px-2 py-0.5 text-[11px] font-semibold">
-                  <BadgeCheckIcon size={12} />
-                  {t('auth.login.trust')}
-                </span>
-                <h1 className="mt-2 text-[20px] font-bold leading-tight">
-                  {t('auth.loginTitle')}
-                </h1>
-                <p className="mt-1.5 text-[12.5px] text-white/70 leading-relaxed">
-                  {t('auth.loginSubtitle')}
-                </p>
-              </div>
+              <h1 className="mt-4 editorial-title text-[24px] leading-tight text-white">
+                {t('auth.loginTitle')}
+              </h1>
+              <p className="mt-2 text-[13px] text-white/65 leading-relaxed max-w-[34ch]">
+                {t('auth.loginSubtitle')}
+              </p>
             </div>
           </div>
 
           {/* Demo hint */}
-          <div className="rounded-xl2 bg-brand-50/70 ring-1 ring-brand-100 p-3.5 flex items-start gap-3">
-            <span className="h-9 w-9 shrink-0 rounded-xl bg-white text-brand-600 grid place-items-center ring-1 ring-brand-100">
+          <div className="rounded-xl3 bg-gold-50 p-4 flex items-start gap-3.5">
+            <span className="h-10 w-10 shrink-0 rounded-2xl bg-white text-gold-700 grid place-items-center hairline">
               <InfoIcon size={16} />
             </span>
-            <div className="min-w-0 flex-1 text-[12px] text-brand-900/90 leading-relaxed">
-              <div className="font-semibold mb-0.5 text-brand-900 text-[12.5px]">
+            <div className="min-w-0 flex-1 text-[12.5px] text-ink-700 leading-relaxed">
+              <div className="font-semibold mb-0.5 text-ink-900 text-[13px] tracking-tight">
                 {t('auth.login.demoTitle')}
               </div>
               <div>{t('auth.login.demoHint')}</div>
               <button
                 type="button"
                 onClick={fillDemoCredentials}
-                className="mt-1.5 inline-flex items-center gap-1 text-[12.5px] font-semibold text-brand-700 hover:underline"
+                className="mt-2 inline-flex items-center gap-1 text-[12.5px] font-semibold text-gold-700 hover:text-gold-600"
               >
                 {t('auth.login.demoFill')}
               </button>
             </div>
           </div>
 
-          <form className="space-y-4" onSubmit={onSubmit} noValidate>
+          <form className="space-y-5" onSubmit={onSubmit} noValidate>
             <FormField
               label={t('auth.mobile')}
               required
@@ -191,7 +186,7 @@ export default function Login() {
             <div className="flex justify-end">
               <button
                 type="button"
-                className="text-[12.5px] font-medium text-brand-600 hover:text-brand-700"
+                className="text-[12.5px] font-medium text-gold-700 hover:text-gold-600"
               >
                 {t('auth.forgot')}
               </button>
@@ -201,10 +196,10 @@ export default function Login() {
               {submitting ? t('auth.login.submitting') : t('auth.login')}
             </Button>
 
-            <div className="flex items-center gap-2 text-[11.5px] text-ink-400">
-              <span className="h-px flex-1 bg-ink-100" />
-              {t('auth.login.or')}
-              <span className="h-px flex-1 bg-ink-100" />
+            <div className="flex items-center gap-3 text-[11px] text-ink-400">
+              <span className="h-px flex-1 bg-canvas-200" />
+              <span className="tracking-tight">{t('auth.login.or')}</span>
+              <span className="h-px flex-1 bg-canvas-200" />
             </div>
 
             <Link to="/auth/nafath" className="block">
@@ -219,21 +214,21 @@ export default function Login() {
               </Button>
             </Link>
 
-            <Card padded className="flex items-start gap-3 bg-white">
-              <span className="h-9 w-9 shrink-0 rounded-xl bg-success-50 text-success-600 grid place-items-center ring-1 ring-success-500/15">
+            <Card padded className="flex items-start gap-3.5">
+              <span className="h-10 w-10 shrink-0 rounded-2xl bg-gold-50 text-gold-700 grid place-items-center">
                 <LockIcon size={16} />
               </span>
-              <div className="min-w-0 text-[12px] text-ink-600 leading-relaxed">
-                <div className="text-ink-900 font-semibold mb-0.5 text-[12.5px]">
+              <div className="min-w-0 text-[12.5px] text-ink-500 leading-relaxed">
+                <div className="text-ink-900 font-semibold mb-0.5 text-[13px] tracking-tight">
                   {t('auth.login.security.title')}
                 </div>
                 <div>{t('auth.login.security.hint')}</div>
               </div>
             </Card>
 
-            <div className="text-center text-[13px] text-ink-500">
+            <div className="text-center text-[13px] text-ink-500 pt-1">
               {t('auth.noAccount')}{' '}
-              <Link to="/auth/register" className="text-brand-600 font-semibold">
+              <Link to="/auth/register" className="text-gold-700 font-semibold hover:text-gold-600">
                 {t('auth.register')}
               </Link>
             </div>

@@ -21,19 +21,19 @@ export default function Profile() {
   return (
     <>
       <Header title={t('profile.title')} />
-      <Screen>
+      <Screen className="bg-canvas">
         <Card padded>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-4">
             <Avatar name={session?.fullName ?? 'A'} size="lg" tone="gold" />
             <div className="min-w-0">
-              <div className="text-[15px] font-semibold text-ink-900 truncate">
+              <div className="editorial-title text-[17px] text-ink-900 truncate">
                 {session?.fullName ?? '—'}
               </div>
-              <div className="text-[12.5px] text-ink-400 truncate">{session?.email ?? '—'}</div>
-              <div className="mt-1.5 flex items-center gap-1.5">
+              <div className="text-[12.5px] text-ink-400 truncate mt-0.5">{session?.email ?? '—'}</div>
+              <div className="mt-2 flex items-center gap-1.5">
                 <StatusChip tone="gold" label={t('app.name')} />
                 {session?.nafathVerified && (
-                  <StatusChip tone="success" label={t('nafath.verified')} />
+                  <StatusChip tone="gold" label={t('nafath.verified')} />
                 )}
               </div>
             </div>
@@ -48,8 +48,8 @@ export default function Profile() {
                 type="button"
                 onClick={() => setLocale('ar')}
                 className={cn(
-                  'py-3.5 text-[13.5px] font-medium transition-colors',
-                  locale === 'ar' ? 'bg-ink-900 text-white' : 'text-ink-700 hover:bg-ink-50',
+                  'py-4 text-[13.5px] font-medium transition-colors tracking-tight',
+                  locale === 'ar' ? 'bg-ink-900 text-white' : 'text-ink-700 hover:bg-canvas-100',
                 )}
               >
                 {t('profile.arabic')}
@@ -58,8 +58,8 @@ export default function Profile() {
                 type="button"
                 onClick={() => setLocale('en')}
                 className={cn(
-                  'py-3.5 text-[13.5px] font-medium transition-colors',
-                  locale === 'en' ? 'bg-ink-900 text-white' : 'text-ink-700 hover:bg-ink-50',
+                  'py-4 text-[13.5px] font-medium transition-colors tracking-tight',
+                  locale === 'en' ? 'bg-ink-900 text-white' : 'text-ink-700 hover:bg-canvas-100',
                 )}
               >
                 {t('profile.english')}
@@ -92,7 +92,7 @@ export default function Profile() {
 }
 
 function Divider() {
-  return <div className="mx-4 h-px bg-ink-100" />;
+  return <div className="mx-5 h-px bg-canvas-200/80" />;
 }
 
 function Row({
@@ -109,12 +109,12 @@ function Row({
   return (
     <button
       type="button"
-      className="flex w-full items-center gap-3 px-4 py-3.5 text-start hover:bg-ink-50 transition-colors"
+      className="flex w-full items-center gap-3.5 px-5 py-4 text-start hover:bg-canvas-100 transition-colors"
     >
-      <span className="h-9 w-9 rounded-xl bg-ink-50 text-ink-700 grid place-items-center">
+      <span className="h-10 w-10 rounded-2xl bg-canvas-100 text-ink-700 grid place-items-center">
         {icon}
       </span>
-      <span className="flex-1 text-[13.5px] font-medium text-ink-800">{label}</span>
+      <span className="flex-1 text-[14px] font-medium text-ink-800 tracking-tight">{label}</span>
       {trailing}
       <ChevronIcon size={16} className={cn('text-ink-300', dir === 'rtl' && 'rotate-180')} />
     </button>

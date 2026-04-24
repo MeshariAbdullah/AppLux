@@ -8,8 +8,9 @@ export default function Notifications() {
   return (
     <>
       <Header title={t('notifications.title')} />
-      <Screen>
+      <Screen className="bg-canvas">
         <EmptyState
+          tone="gold"
           icon={<BellIcon size={22} />}
           title={t('notifications.empty')}
           description={t('app.tagline')}

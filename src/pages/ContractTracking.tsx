@@ -80,7 +80,7 @@ export default function ContractTracking() {
   return (
     <>
       <Header title={t('track.contractTitle')} showBack />
-      <Screen padded={false} className="bg-ink-50">
+      <Screen padded={false} className="bg-canvas">
         <div className="px-4 pt-4 pb-8 space-y-4">
           {/* Hero */}
           <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-ink-900 via-ink-800 to-ink-900 text-white p-5 shadow-float">
@@ -199,7 +199,7 @@ export default function ContractTracking() {
                   className="w-full text-start"
                 >
                   <Card padded interactive className="flex items-center gap-3">
-                    <span className="h-10 w-10 shrink-0 rounded-xl bg-[#FBF2DD] text-gold-600 grid place-items-center">
+                    <span className="h-10 w-10 shrink-0 rounded-xl bg-gold-50 text-gold-700 grid place-items-center">
                       <WalletIcon size={18} />
                     </span>
                     <div className="min-w-0 flex-1">
@@ -231,7 +231,7 @@ export default function ContractTracking() {
                     className="w-full text-start"
                   >
                     <Card padded interactive className="flex items-center gap-3">
-                      <span className="h-10 w-10 shrink-0 rounded-xl bg-brand-50 text-brand-600 grid place-items-center">
+                      <span className="h-10 w-10 shrink-0 rounded-xl bg-canvas-100 text-ink-700 grid place-items-center">
                         <ReceiptIcon size={18} />
                       </span>
                       <div className="min-w-0 flex-1">

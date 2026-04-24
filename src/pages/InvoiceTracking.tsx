@@ -72,12 +72,12 @@ export default function InvoiceTracking() {
   return (
     <>
       <Header title={t('track.invoiceTitle')} showBack />
-      <Screen padded={false} className="bg-ink-50">
+      <Screen padded={false} className="bg-canvas">
         <div className="px-4 pt-4 pb-8 space-y-4">
           {/* Hero status */}
           <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-ink-900 via-ink-800 to-ink-900 text-white p-5 shadow-float">
             <div aria-hidden className="pointer-events-none absolute inset-0 pattern-dots opacity-25" />
-            <div aria-hidden className="pointer-events-none absolute -top-10 end-[-15%] h-48 w-48 rounded-full bg-brand-500/25 blur-3xl" />
+            <div aria-hidden className="pointer-events-none absolute -top-10 end-[-15%] h-48 w-48 rounded-full bg-gold-400/22 blur-3xl" />
             <div className="relative flex items-start gap-3">
               <span className="h-11 w-11 rounded-xl bg-white/10 ring-1 ring-white/15 grid place-items-center shrink-0">
                 <ReceiptIcon size={20} />

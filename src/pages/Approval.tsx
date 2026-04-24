@@ -68,59 +68,61 @@ export default function Approval() {
   return (
     <>
       <Header title={t('approval.title')} />
-      <Screen padded={false}>
-        <div className="relative px-5 pt-10 pb-8 text-center bg-gradient-to-b from-success-50 to-white">
+      <Screen padded={false} className="bg-canvas">
+        <div className="relative px-6 pt-12 pb-10 text-center bg-gradient-to-b from-gold-50 to-canvas-50">
           <div className="relative mx-auto h-24 w-24">
             <span
               aria-hidden
-              className="absolute inset-0 rounded-full bg-success-500/20 animate-pulse-ring"
+              className="absolute inset-0 rounded-full bg-gold-300/30 animate-pulse-ring"
             />
             <span
               aria-hidden
-              className="absolute inset-2 rounded-full bg-success-500/30"
+              className="absolute inset-2 rounded-full bg-gold-300/40"
             />
-            <span className="absolute inset-4 rounded-full bg-success-500 grid place-items-center text-white">
+            <span className="absolute inset-4 rounded-full bg-gold-400 grid place-items-center text-ink-950 shadow-plush">
               <CheckIcon size={36} strokeWidth={3} />
             </span>
           </div>
-          <h1 className="mt-6 text-[22px] font-bold text-ink-900">{t('approval.title')}</h1>
-          <p className="mt-2 text-[13.5px] text-ink-500 leading-relaxed max-w-xs mx-auto">
+          <h1 className="mt-7 editorial-title text-[26px] text-ink-900 leading-tight">
+            {t('approval.title')}
+          </h1>
+          <p className="mt-2.5 text-[13.5px] text-ink-500 leading-relaxed max-w-xs mx-auto">
             {t('approval.subtitle')}
           </p>
         </div>
 
-        <div className="px-4 pb-8 space-y-4">
+        <div className="px-5 pb-10 space-y-5">
           <Card padded className="space-y-3">
             <Row
               icon={<DocIcon size={18} />}
-              tone="bg-brand-50 text-brand-600"
+              tone="bg-canvas-100 text-ink-700"
               label={t('approval.contractSigned')}
               value={<span className="num">{pkg.contract.reference}</span>}
             />
             <CardDivider />
             <Row
               icon={<GavelIcon size={18} />}
-              tone="bg-[#FBF2DD] text-gold-600"
+              tone="bg-gold-50 text-gold-700"
               label={t('approval.noteSigned')}
               value={<span className="num">{pkg.note.reference}</span>}
             />
             <CardDivider />
             <Row
               icon={<BadgeCheckIcon size={18} />}
-              tone="bg-success-50 text-success-600"
+              tone="bg-canvas-100 text-ink-700"
               label={t('approval.approvedAt')}
               value={<span className="num">{approvedTime}</span>}
             />
           </Card>
 
-          <div className="rounded-xl2 bg-ink-900 text-white p-4 flex items-start gap-3">
-            <span className="h-9 w-9 shrink-0 rounded-lg bg-white/10 ring-1 ring-white/15 grid place-items-center">
+          <div className="rounded-xl3 bg-ink-900 text-white p-4 flex items-start gap-3.5 shadow-card">
+            <span className="h-10 w-10 shrink-0 rounded-2xl bg-white/8 ring-1 ring-white/12 grid place-items-center text-gold-300">
               <SparkleIcon size={16} />
             </span>
-            <div className="min-w-0 flex-1 text-[12.5px] leading-relaxed text-white/80">
+            <div className="min-w-0 flex-1 text-[12.5px] leading-relaxed text-white/75">
               {t('review.note.disclaimer')}
             </div>
-            <span className="num text-[11.5px] text-white/50 self-start">
+            <span className="num text-[11.5px] text-white/45 self-start">
               #{formatNumber(Date.parse(approvedAt) % 1_000_000)}
             </span>
           </div>
@@ -158,11 +160,11 @@ function Row({
   value: React.ReactNode;
 }) {
   return (
-    <div className="flex items-center gap-3">
-      <span className={`h-9 w-9 rounded-xl grid place-items-center shrink-0 ${tone}`}>{icon}</span>
+    <div className="flex items-center gap-3.5">
+      <span className={`h-10 w-10 rounded-2xl grid place-items-center shrink-0 ${tone}`}>{icon}</span>
       <div className="min-w-0 flex-1">
-        <div className="text-[11.5px] font-medium text-ink-400 uppercase tracking-wide">{label}</div>
-        <div className="mt-0.5 text-[13.5px] font-semibold text-ink-900 truncate">{value}</div>
+        <div className="text-[10.5px] font-semibold text-ink-400 uppercase tracking-[0.08em]">{label}</div>
+        <div className="mt-1 text-[14px] font-semibold text-ink-900 truncate tracking-tight">{value}</div>
       </div>
     </div>
   );

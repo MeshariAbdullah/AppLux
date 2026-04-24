@@ -16,36 +16,39 @@ export type TimelineEvent = {
   badge?: ReactNode;
 };
 
+// Calmer dot palette — one shared champagne gold for "complete" so the
+// whole journey reads as a single elegant progression rather than a
+// rainbow. Only `current` keeps a soft halo to draw the eye.
 const toneClass: Record<TimelineEventTone, { done: string; current: string; pending: string }> = {
   success: {
-    done: 'bg-success-500 text-white ring-success-500/20',
-    current: 'bg-success-500 text-white ring-success-500/30 shadow-[0_0_0_4px_rgba(26,175,114,0.15)]',
-    pending: 'bg-success-50 text-success-600 ring-success-500/10',
+    done: 'bg-gold-400 text-ink-950 ring-gold-100',
+    current: 'bg-ink-900 text-white ring-gold-100 shadow-[0_0_0_4px_rgba(212,168,85,0.18)]',
+    pending: 'bg-canvas-100 text-ink-400 ring-canvas-200',
   },
   brand: {
-    done: 'bg-brand-500 text-white ring-brand-500/20',
-    current: 'bg-brand-500 text-white ring-brand-500/30 shadow-[0_0_0_4px_rgba(46,110,240,0.15)]',
-    pending: 'bg-brand-50 text-brand-600 ring-brand-500/10',
+    done: 'bg-gold-400 text-ink-950 ring-gold-100',
+    current: 'bg-ink-900 text-white ring-gold-100 shadow-[0_0_0_4px_rgba(212,168,85,0.18)]',
+    pending: 'bg-canvas-100 text-ink-400 ring-canvas-200',
   },
   warn: {
-    done: 'bg-warn-500 text-white ring-warn-500/25',
-    current: 'bg-warn-500 text-white ring-warn-500/30 shadow-[0_0_0_4px_rgba(234,161,51,0.18)]',
-    pending: 'bg-warn-50 text-warn-600 ring-warn-500/15',
+    done: 'bg-warn-500 text-white ring-warn-50',
+    current: 'bg-warn-500 text-white ring-warn-50 shadow-[0_0_0_4px_rgba(245,158,11,0.18)]',
+    pending: 'bg-warn-50 text-warn-700 ring-warn-50',
   },
   danger: {
-    done: 'bg-danger-500 text-white ring-danger-500/20',
-    current: 'bg-danger-500 text-white ring-danger-500/30 shadow-[0_0_0_4px_rgba(229,72,77,0.15)]',
-    pending: 'bg-danger-50 text-danger-600 ring-danger-500/10',
+    done: 'bg-danger-500 text-white ring-danger-50',
+    current: 'bg-danger-500 text-white ring-danger-50 shadow-[0_0_0_4px_rgba(220,38,38,0.18)]',
+    pending: 'bg-danger-50 text-danger-700 ring-danger-50',
   },
   gold: {
-    done: 'bg-gold-500 text-white ring-gold-500/25',
-    current: 'bg-gold-500 text-white ring-gold-500/30 shadow-[0_0_0_4px_rgba(206,157,62,0.18)]',
-    pending: 'bg-[#FBF2DD] text-gold-600 ring-gold-400/20',
+    done: 'bg-gold-400 text-ink-950 ring-gold-100',
+    current: 'bg-ink-900 text-white ring-gold-100 shadow-[0_0_0_4px_rgba(212,168,85,0.18)]',
+    pending: 'bg-gold-50 text-gold-700 ring-gold-50',
   },
   neutral: {
-    done: 'bg-ink-700 text-white ring-ink-200',
-    current: 'bg-ink-900 text-white ring-ink-200',
-    pending: 'bg-ink-100 text-ink-500 ring-ink-100',
+    done: 'bg-ink-700 text-white ring-canvas-200',
+    current: 'bg-ink-900 text-white ring-canvas-200',
+    pending: 'bg-canvas-100 text-ink-400 ring-canvas-200',
   },
 };
 
@@ -70,8 +73,8 @@ export function DocTimeline({ events }: { events: TimelineEvent[] }) {
               {!isLast && (
                 <span
                   className={cn(
-                    'w-px flex-1 my-1 min-h-8 transition-colors',
-                    e.state === 'done' ? 'bg-ink-200' : 'bg-ink-100',
+                    'w-px flex-1 my-1 min-h-9 transition-colors',
+                    e.state === 'done' ? 'bg-gold-200' : 'bg-canvas-200',
                   )}
                 />
               )}

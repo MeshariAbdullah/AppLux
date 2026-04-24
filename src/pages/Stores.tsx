@@ -64,7 +64,7 @@ export default function Stores() {
   return (
     <>
       <Header title={t('stores.title')} subtitle={t('stores.subtitle')} />
-      <Screen>
+      <Screen className="bg-canvas">
         <Input
           placeholder={t('stores.searchPlaceholder')}
           value={query}
@@ -84,7 +84,7 @@ export default function Stores() {
           }
         />
 
-        <div className="-mx-4 px-4 overflow-x-auto no-scrollbar">
+        <div className="-mx-5 px-5 overflow-x-auto no-scrollbar">
           <div className="flex items-center gap-2 w-max">
             {FILTERS.map((f) => {
               const active = category === f;
@@ -94,10 +94,10 @@ export default function Stores() {
                   type="button"
                   onClick={() => setCategory(f)}
                   className={cn(
-                    'h-8 px-3 rounded-full text-[12.5px] font-semibold ring-1 ring-inset transition-colors whitespace-nowrap',
+                    'h-9 px-3.5 rounded-full text-[12.5px] font-medium tracking-tight transition-colors whitespace-nowrap',
                     active
-                      ? 'bg-ink-900 text-white ring-ink-900'
-                      : 'bg-white text-ink-600 ring-ink-100 hover:bg-ink-50',
+                      ? 'bg-ink-900 text-white shadow-soft'
+                      : 'bg-white hairline text-ink-600 hover:bg-canvas-100',
                   )}
                 >
                   {t(`stores.filters.${f}`)}
@@ -108,10 +108,10 @@ export default function Stores() {
               type="button"
               onClick={() => setVerifiedOnly((v) => !v)}
               className={cn(
-                'h-8 px-3 rounded-full text-[12.5px] font-semibold ring-1 ring-inset inline-flex items-center gap-1 whitespace-nowrap transition-colors',
+                'h-9 px-3.5 rounded-full text-[12.5px] font-medium tracking-tight inline-flex items-center gap-1.5 whitespace-nowrap transition-colors',
                 verifiedOnly
-                  ? 'bg-success-500 text-white ring-success-500'
-                  : 'bg-white text-success-700 ring-success-500/30 hover:bg-success-50',
+                  ? 'bg-gold-400 text-ink-950 shadow-soft'
+                  : 'bg-white hairline text-gold-700 hover:bg-gold-50',
               )}
               aria-pressed={verifiedOnly}
             >
@@ -121,8 +121,8 @@ export default function Stores() {
                 className={cn(
                   'num text-[10.5px] font-bold rounded-full h-4 min-w-4 px-1 grid place-items-center',
                   verifiedOnly
-                    ? 'bg-white/20 text-white'
-                    : 'bg-success-50 text-success-700',
+                    ? 'bg-ink-950/15 text-ink-950'
+                    : 'bg-gold-50 text-gold-700',
                 )}
               >
                 {verifiedCount}
@@ -177,7 +177,7 @@ export default function Stores() {
                         setCategory('all');
                         setVerifiedOnly(false);
                       }}
-                      className="text-[12.5px] font-semibold text-brand-700 hover:underline"
+                      className="text-[12.5px] font-semibold text-gold-700 hover:text-gold-600"
                     >
                       {t('stores.clearFilters')}
                     </button>
@@ -225,7 +225,7 @@ function sortStores(
 
 function StoreCardSkeleton() {
   return (
-    <div className="rounded-xl2 bg-white ring-1 ring-ink-100 p-4 space-y-3">
+    <div className="rounded-xl3 bg-white hairline shadow-card p-5 space-y-4">
       <div className="flex items-center gap-3">
         <Skeleton className="h-14 w-14 rounded-2xl" />
         <div className="flex-1 space-y-2">

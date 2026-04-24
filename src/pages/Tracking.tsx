@@ -69,7 +69,7 @@ export default function Tracking() {
   return (
     <>
       <Header title={t('tracking.title')} subtitle={t('tracking.subtitle')} showBack />
-      <Screen padded={false} className="bg-ink-50">
+      <Screen padded={false} className="bg-canvas">
         <div className="px-4 pt-4 pb-8 space-y-4">
           {/* Hero status card */}
           <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-ink-900 via-ink-800 to-ink-900 text-white p-5 shadow-float">
@@ -151,14 +151,14 @@ export default function Tracking() {
           <Card padded className="space-y-3">
             <DocRow
               icon={<DocIcon size={18} />}
-              tone="bg-brand-50 text-brand-600"
+              tone="bg-canvas-100 text-ink-700"
               label={t('tracking.downloadContract')}
               ref={pkg.contract.reference}
             />
             <CardDivider />
             <DocRow
               icon={<GavelIcon size={18} />}
-              tone="bg-[#FBF2DD] text-gold-600"
+              tone="bg-gold-50 text-gold-700"
               label={t('tracking.downloadNote')}
               ref={pkg.note.reference}
             />

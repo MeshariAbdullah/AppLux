@@ -106,7 +106,7 @@ export default function Register() {
             <button
               type="button"
               onClick={goBack}
-              className="h-9 w-9 grid place-items-center rounded-full bg-ink-50 text-ink-700 hover:bg-ink-100"
+              className="h-10 w-10 grid place-items-center rounded-full bg-white text-ink-800 hairline hover:bg-canvas-100 transition-colors"
               aria-label={t('common.back')}
             >
               <ArrowIcon size={18} className={cn(dir === 'rtl' ? '' : 'rotate-180')} />
@@ -115,14 +115,14 @@ export default function Register() {
         }
       />
 
-      <div className="px-4 pt-3">
+      <div className="px-5 pt-3">
         <div className="flex gap-1.5">
           {STEPS.map((_, i) => (
             <span
               key={i}
               className={cn(
                 'h-1 flex-1 rounded-full transition-colors',
-                i <= step ? 'bg-ink-900' : 'bg-ink-100',
+                i <= step ? 'bg-gold-400' : 'bg-canvas-200',
               )}
             />
           ))}
@@ -130,10 +130,10 @@ export default function Register() {
         <div className="sr-only">{Math.round(progress)}%</div>
       </div>
 
-      <Screen>
+      <Screen className="bg-canvas">
         <div>
-          <h1 className="text-[20px] font-bold text-ink-900">{t(current.titleKey)}</h1>
-          <p className="mt-1.5 text-[13px] text-ink-500 leading-relaxed">{t(current.subKey)}</p>
+          <h1 className="editorial-title text-[24px] text-ink-900 leading-tight">{t(current.titleKey)}</h1>
+          <p className="mt-2 text-[13.5px] text-ink-500 leading-relaxed">{t(current.subKey)}</p>
         </div>
 
         <form
@@ -270,8 +270,8 @@ export default function Register() {
                 />
               </FormField>
 
-              <div className="rounded-xl2 bg-brand-50/70 ring-1 ring-brand-100 p-3.5 flex items-start gap-3">
-                <span className="h-9 w-9 shrink-0 rounded-xl bg-white text-brand-600 grid place-items-center ring-1 ring-brand-100">
+              <div className="rounded-xl3 bg-gold-50 p-4 flex items-start gap-3.5">
+                <span className="h-10 w-10 shrink-0 rounded-2xl bg-white text-gold-700 grid place-items-center hairline">
                   <ShieldIcon size={18} />
                 </span>
                 <div className="min-w-0">

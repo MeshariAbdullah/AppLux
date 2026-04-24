@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Header, Screen } from '@/components/layout';
-import { Button } from '@/components/ui';
+import { Button, Card } from '@/components/ui';
 import { CheckIcon, ShieldIcon } from '@/components/icons';
 import { useT } from '@/lib/i18n';
 import { useStore } from '@/lib/store';
@@ -45,38 +45,40 @@ export default function Nafath() {
   return (
     <>
       <Header title={t('nafath.title')} showBack />
-      <Screen padded={false} className="bg-gradient-to-b from-ink-50 to-white">
-        <div className="px-4 pt-4 pb-8 space-y-5">
-          <div className="relative overflow-hidden rounded-3xl bg-ink-900 text-white p-6 shadow-float">
+      <Screen className="bg-canvas">
+        <div className="space-y-6">
+          <div className="relative overflow-hidden rounded-xl3 bg-gradient-to-br from-ink-900 via-ink-800 to-ink-900 text-white p-6 shadow-plush">
             <div
               aria-hidden
-              className="pointer-events-none absolute inset-0 pattern-dots opacity-30"
+              className="pointer-events-none absolute inset-0 pattern-dots opacity-25"
             />
             <div
               aria-hidden
-              className="pointer-events-none absolute -top-12 end-[-10%] h-48 w-48 rounded-full bg-brand-500/30 blur-3xl"
+              className="pointer-events-none absolute -top-14 end-[-15%] h-52 w-52 rounded-full bg-gold-400/22 blur-[80px]"
             />
             <div className="relative flex items-center gap-2">
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-white/10 ring-1 ring-white/15 px-2.5 py-1 text-[11px] font-semibold text-white/80">
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-white/10 ring-1 ring-white/15 px-2.5 py-1 text-[11px] font-semibold">
                 <ShieldIcon size={12} />
                 {t('nafath.pill')}
               </span>
-              <span className="text-[11px] text-white/50">{t('nafath.optional')}</span>
+              <span className="text-[11px] text-white/55">{t('nafath.optional')}</span>
             </div>
-            <div className="relative mt-5">
-              <div className="text-[12px] text-white/60">{t('nafath.codeLabel')}</div>
-              <div className="mt-2 text-[56px] leading-none font-bold tracking-tight num">
+            <div className="relative mt-6">
+              <div className="text-[11.5px] text-white/55 uppercase tracking-[0.08em]">
+                {t('nafath.codeLabel')}
+              </div>
+              <div className="mt-3 editorial-title text-[64px] leading-none num text-white">
                 {String(code).padStart(2, '0')}
               </div>
-              <div className="mt-4 flex gap-2">
+              <div className="mt-5 flex gap-2.5">
                 {options.map((n) => (
                   <span
                     key={n}
                     className={cn(
-                      'h-10 w-10 grid place-items-center rounded-xl font-semibold num text-[15px]',
+                      'h-11 w-11 grid place-items-center rounded-2xl font-semibold num text-[15px]',
                       n === code
-                        ? 'bg-white text-ink-900 ring-2 ring-gold-400'
-                        : 'bg-white/10 text-white/70 ring-1 ring-white/10',
+                        ? 'bg-gold-400 text-ink-950 shadow-soft'
+                        : 'bg-white/8 text-white/70 ring-1 ring-white/10',
                     )}
                   >
                     {n}
@@ -86,29 +88,27 @@ export default function Nafath() {
             </div>
           </div>
 
-          <div className="rounded-xl2 bg-white ring-1 ring-ink-100 p-4">
-            <div className="flex items-start gap-3">
-              <span className="h-9 w-9 rounded-xl bg-ink-50 text-ink-700 grid place-items-center shrink-0">
-                <ShieldIcon size={18} />
-              </span>
-              <div>
-                <div className="text-[13.5px] font-semibold text-ink-900">
-                  {t('nafath.title')}
-                </div>
-                <p className="mt-1 text-[12.5px] text-ink-500 leading-relaxed">
-                  {t('nafath.instructions')}
-                </p>
+          <Card padded className="flex items-start gap-3.5">
+            <span className="h-10 w-10 rounded-2xl bg-canvas-100 text-ink-700 grid place-items-center shrink-0">
+              <ShieldIcon size={18} />
+            </span>
+            <div>
+              <div className="text-[14px] font-semibold text-ink-900 tracking-tight">
+                {t('nafath.title')}
               </div>
+              <p className="mt-1 text-[12.5px] text-ink-500 leading-relaxed">
+                {t('nafath.instructions')}
+              </p>
             </div>
-          </div>
+          </Card>
 
           {phase === 'verified' ? (
-            <div className="flex items-center justify-center gap-2 rounded-xl2 bg-success-50 ring-1 ring-success-500/20 text-success-600 py-3 text-[13px] font-semibold">
+            <div className="flex items-center justify-center gap-2 rounded-xl2 bg-gold-50 text-gold-700 py-3.5 text-[13.5px] font-semibold tracking-tight">
               <CheckIcon size={16} />
               {t('nafath.verified')}
             </div>
           ) : (
-            <div className="space-y-2">
+            <div className="space-y-2.5">
               <Button
                 size="lg"
                 block
@@ -117,7 +117,13 @@ export default function Nafath() {
               >
                 {phase === 'verifying' ? t('nafath.verifying') : t('nafath.openApp')}
               </Button>
-              <Button size="lg" variant="ghost" block onClick={onSkip} disabled={phase === 'verifying'}>
+              <Button
+                size="lg"
+                variant="ghost"
+                block
+                onClick={onSkip}
+                disabled={phase === 'verifying'}
+              >
                 {t('nafath.skipForNow')}
               </Button>
             </div>

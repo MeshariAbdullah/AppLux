@@ -18,25 +18,25 @@ export default function AuthEntry() {
   return (
     <>
       <Header title={t('welcome.eyebrow')} showBack />
-      <Screen padded={false} className="bg-ink-50">
-        <div className="px-4 pt-4 pb-8 space-y-5">
+      <Screen className="bg-canvas">
+        <div className="space-y-6">
           <div className="pt-1">
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-brand-50 ring-1 ring-brand-100 px-2.5 py-1 text-[11.5px] font-semibold text-brand-700">
-              <ShieldIcon size={13} />
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-gold-50 px-3 py-1 text-[11px] font-semibold text-gold-700">
+              <ShieldIcon size={12} />
               {t('auth.entry.eyebrow')}
             </span>
-            <h1 className="mt-3 text-[22px] font-bold text-ink-900 leading-tight">
+            <h1 className="mt-4 editorial-title text-[26px] text-ink-900 leading-tight">
               {t('auth.entry.title')}
             </h1>
-            <p className="mt-2 text-[13.5px] text-ink-500 leading-relaxed">
+            <p className="mt-2.5 text-[14px] text-ink-500 leading-relaxed">
               {t('auth.entry.subtitle')}
             </p>
           </div>
 
-          <div className="space-y-2.5">
+          <div className="space-y-3">
             <RoleCard
               to="/auth/register"
-              tone="brand"
+              tone="gold"
               icon={<UserIcon size={20} />}
               title={t('auth.entry.role.customer.title')}
               description={t('auth.entry.role.customer.desc')}
@@ -44,7 +44,7 @@ export default function AuthEntry() {
             />
             <RoleCard
               to="/merchant/welcome"
-              tone="gold"
+              tone="ink"
               icon={<BuildingIcon size={20} />}
               title={t('auth.entry.role.merchant.title')}
               description={t('auth.entry.role.merchant.desc')}
@@ -52,7 +52,7 @@ export default function AuthEntry() {
             />
             <RoleCard
               to="/admin/home"
-              tone="ink"
+              tone="muted"
               icon={<ShieldIcon size={20} />}
               title={t('auth.entry.role.admin.title')}
               description={t('auth.entry.role.admin.desc')}
@@ -62,10 +62,10 @@ export default function AuthEntry() {
             />
           </div>
 
-          <div className="flex items-center gap-2 text-[11.5px] text-ink-400">
-            <span className="h-px flex-1 bg-ink-100" />
-            {t('auth.entry.haveAccount')}
-            <span className="h-px flex-1 bg-ink-100" />
+          <div className="flex items-center gap-3 text-[11px] text-ink-400">
+            <span className="h-px flex-1 bg-canvas-200" />
+            <span className="tracking-tight">{t('auth.entry.haveAccount')}</span>
+            <span className="h-px flex-1 bg-canvas-200" />
           </div>
 
           <Link to="/auth/login" className="block">
@@ -74,19 +74,19 @@ export default function AuthEntry() {
             </Button>
           </Link>
 
-          <Card padded className="flex items-start gap-3 bg-white">
-            <span className="h-9 w-9 shrink-0 rounded-xl bg-success-50 text-success-600 grid place-items-center ring-1 ring-success-500/15">
-              <BadgeCheckIcon size={16} />
+          <Card padded className="flex items-start gap-3.5">
+            <span className="h-10 w-10 shrink-0 rounded-2xl bg-gold-50 text-gold-700 grid place-items-center">
+              <BadgeCheckIcon size={17} />
             </span>
-            <div className="min-w-0 text-[12px] text-ink-600 leading-relaxed">
-              <div className="text-ink-900 font-semibold mb-0.5 text-[12.5px]">
+            <div className="min-w-0 text-[12.5px] text-ink-500 leading-relaxed">
+              <div className="text-ink-900 font-semibold mb-1 text-[13px] tracking-tight">
                 {t('auth.entry.trust.title')}
               </div>
               <div>{t('auth.entry.trust.hint')}</div>
             </div>
           </Card>
 
-          <p className="text-center text-[11px] text-ink-400 leading-relaxed inline-flex items-center gap-1 justify-center w-full">
+          <p className="text-center text-[11px] text-ink-400 leading-relaxed inline-flex items-center gap-1.5 justify-center w-full">
             <LockIcon size={11} />
             {t('auth.entry.encrypted')}
           </p>
@@ -107,7 +107,7 @@ function RoleCard({
   dir,
 }: {
   to: string;
-  tone: 'brand' | 'gold' | 'ink';
+  tone: 'gold' | 'ink' | 'muted';
   icon: React.ReactNode;
   title: React.ReactNode;
   description: React.ReactNode;
@@ -116,38 +116,38 @@ function RoleCard({
   dir: 'rtl' | 'ltr';
 }) {
   const iconClass =
-    tone === 'brand'
-      ? 'bg-brand-50 text-brand-600 ring-brand-500/15'
-      : tone === 'gold'
-        ? 'bg-[#FBF2DD] text-gold-600 ring-gold-400/30'
-        : 'bg-ink-900 text-white ring-ink-900/15';
+    tone === 'gold'
+      ? 'bg-gold-50 text-gold-700'
+      : tone === 'ink'
+        ? 'bg-ink-900 text-white'
+        : 'bg-canvas-100 text-ink-700';
   return (
     <Link to={to} className="block">
       <Card
         padded
         interactive
-        className="flex items-center gap-3 active:scale-[0.995]"
+        className="flex items-center gap-4"
       >
         <span
           className={cn(
-            'h-12 w-12 shrink-0 rounded-2xl grid place-items-center ring-1 ring-inset',
+            'h-13 w-13 shrink-0 rounded-2xl grid place-items-center',
             iconClass,
           )}
         >
           {icon}
         </span>
         <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-1.5">
-            <div className="text-[14.5px] font-semibold text-ink-900 truncate">
+          <div className="flex items-center gap-2">
+            <div className="editorial-title text-[16px] text-ink-900 truncate">
               {title}
             </div>
             {demo && (
-              <span className="text-[9.5px] font-bold tracking-wide uppercase bg-ink-100 text-ink-600 rounded-full px-1.5 py-0.5">
+              <span className="text-[9.5px] font-bold tracking-wide uppercase bg-canvas-100 text-ink-500 rounded-full px-1.5 py-0.5">
                 {demoLabel}
               </span>
             )}
           </div>
-          <div className="mt-0.5 text-[12px] text-ink-500 leading-relaxed">
+          <div className="mt-1 text-[12.5px] text-ink-500 leading-relaxed">
             {description}
           </div>
         </div>

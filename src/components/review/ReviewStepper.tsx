@@ -1,6 +1,6 @@
 import { cn } from '@/lib/cn';
 import { CheckIcon } from '@/components/icons';
-import { useI18n, useT } from '@/lib/i18n';
+import { useT } from '@/lib/i18n';
 
 export type ReviewStepKey = 'invoice' | 'contract' | 'note' | 'confirm';
 
@@ -12,32 +12,40 @@ type Props = {
 
 export function ReviewStepper({ active }: Props) {
   const t = useT();
-  const { dir } = useI18n();
   const activeIdx = ORDER.indexOf(active);
 
   return (
-    <div className="px-4 pt-3 pb-4 bg-white border-b border-ink-100">
-      <ol className="flex items-center gap-2">
+    <div className="px-5 pt-3 pb-4 bg-canvas-50/85 backdrop-blur-md">
+      <ol className="flex items-center gap-1.5">
         {ORDER.map((s, i) => {
           const done = i < activeIdx;
           const isActive = i === activeIdx;
           return (
-            <li key={s} className="flex items-center gap-2 flex-1 min-w-0">
+            <li key={s} className="flex items-center gap-1.5 flex-1 min-w-0">
               <div className="flex items-center gap-2 min-w-0">
                 <span
                   className={cn(
-                    'h-6 w-6 rounded-full grid place-items-center text-[11px] font-bold shrink-0 transition-colors',
-                    done && 'bg-success-500 text-white',
-                    isActive && 'bg-ink-900 text-white',
-                    !done && !isActive && 'bg-ink-100 text-ink-500',
+                    'h-7 w-7 rounded-full grid place-items-center text-[11px] font-semibold shrink-0',
+                    'transition-[background-color,color,box-shadow] duration-200 ease-plush',
+                    done && 'bg-gold-400 text-ink-950',
+                    isActive && 'bg-ink-900 text-white shadow-soft',
+                    !done && !isActive && 'bg-canvas-200 text-ink-400',
                   )}
                 >
-                  {done ? <CheckIcon size={13} strokeWidth={2.5} /> : <span className="num">{i + 1}</span>}
+                  {done ? (
+                    <CheckIcon size={13} strokeWidth={2.5} />
+                  ) : (
+                    <span className="num">{i + 1}</span>
+                  )}
                 </span>
                 <span
                   className={cn(
-                    'text-[11.5px] font-semibold truncate',
-                    isActive ? 'text-ink-900' : done ? 'text-success-600' : 'text-ink-400',
+                    'text-[11.5px] font-medium truncate tracking-tight',
+                    isActive
+                      ? 'text-ink-900'
+                      : done
+                        ? 'text-gold-700'
+                        : 'text-ink-400',
                   )}
                 >
                   {t(`review.steps.${s}`)}
@@ -46,9 +54,8 @@ export function ReviewStepper({ active }: Props) {
               {i < ORDER.length - 1 && (
                 <div
                   className={cn(
-                    'flex-1 h-0.5 rounded-full transition-colors',
-                    done ? 'bg-success-500' : 'bg-ink-100',
-                    dir === 'rtl' && 'scale-x-[-1]',
+                    'flex-1 h-px rounded-full',
+                    done ? 'bg-gold-300' : 'bg-canvas-300',
                   )}
                 />
               )}

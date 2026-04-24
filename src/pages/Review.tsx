@@ -70,7 +70,7 @@ export default function Review() {
     <>
       <Header title={t('review.title')} showBack />
       <ReviewStepper active={step} />
-      <Screen padded={false} className="bg-ink-50">
+      <Screen padded={false} className="bg-canvas">
         <div className="px-4 pt-4 pb-28 space-y-4">
           {step === 'invoice' && <InvoiceStep pkg={pkg} />}
           {step === 'contract' && <ContractStep pkg={pkg} />}
@@ -132,7 +132,7 @@ function ReviewHero({ pkg }: { pkg: ScannedPackage }) {
             {t('review.partner')}
           </span>
           {store.verified && (
-            <StatusChip tone="success" dot label={t('stores.verified')} />
+            <StatusChip tone="gold" dot label={t('stores.verified')} />
           )}
         </div>
         <div className="text-[14.5px] font-semibold text-ink-900 truncate">
@@ -164,7 +164,7 @@ function InvoiceStep({ pkg }: { pkg: ScannedPackage }) {
 
       <Card padded>
         <div className="flex items-start gap-2.5">
-          <span className="h-9 w-9 shrink-0 rounded-xl bg-brand-50 text-brand-600 grid place-items-center">
+          <span className="h-9 w-9 shrink-0 rounded-xl bg-canvas-100 text-ink-700 grid place-items-center">
             <ReceiptIcon size={18} />
           </span>
           <div className="min-w-0">
@@ -242,7 +242,7 @@ function InvoiceStep({ pkg }: { pkg: ScannedPackage }) {
                 </div>
               </div>
               {it.attributes && it.attributes.length > 0 && (
-                <dl className="mt-3 grid grid-cols-2 gap-x-3 gap-y-1.5 rounded-xl bg-ink-50/60 px-3 py-2.5">
+                <dl className="mt-3.5 grid grid-cols-2 gap-x-3 gap-y-2 rounded-xl2 bg-canvas-100/70 px-3.5 py-3">
                   {it.attributes.map((a, i) => (
                     <div key={i} className="min-w-0">
                       <dt className="text-[10.5px] uppercase tracking-wide text-ink-400 truncate">
@@ -257,7 +257,7 @@ function InvoiceStep({ pkg }: { pkg: ScannedPackage }) {
               )}
             </div>
           ))}
-          <div className="p-4 flex items-center justify-between bg-ink-50/50">
+          <div className="p-4 flex items-center justify-between bg-canvas-100/60">
             <span className="text-[12.5px] text-ink-500 font-medium">
               {t('review.invoice.unitValue')}
             </span>
@@ -354,15 +354,15 @@ function ContractStep({ pkg }: { pkg: ScannedPackage }) {
                   onClick={() => setOpen(isOpen ? '' : c.id)}
                   className="w-full flex items-center gap-3 p-4 text-start"
                 >
-                  <span className="h-8 w-8 rounded-lg bg-brand-50 text-brand-600 grid place-items-center text-[12.5px] font-bold num shrink-0">
+                  <span className="h-9 w-9 rounded-2xl bg-canvas-100 text-ink-700 grid place-items-center text-[12.5px] font-semibold num shrink-0">
                     {idx + 1}
                   </span>
-                  <span className="flex-1 min-w-0 text-[14px] font-semibold text-ink-900">
+                  <span className="flex-1 min-w-0 text-[14.5px] font-semibold text-ink-900 tracking-tight">
                     {c.title[locale]}
                   </span>
                   <span
                     className={cn(
-                      'h-6 w-6 rounded-full bg-ink-50 text-ink-500 grid place-items-center transition-transform',
+                      'h-6 w-6 rounded-full bg-canvas-100 text-ink-500 grid place-items-center transition-transform',
                       isOpen && 'rotate-180',
                     )}
                     aria-hidden
@@ -409,14 +409,14 @@ function ContractStep({ pkg }: { pkg: ScannedPackage }) {
               amount={formatCurrency(pkg.damages.totalDamage)}
             />
           </div>
-          <div className="mt-3 rounded-lg bg-ink-50 p-3 text-[12px] text-ink-500 leading-relaxed">
+          <div className="mt-3.5 rounded-xl2 bg-canvas-100 p-3.5 text-[12px] text-ink-500 leading-relaxed">
             {pkg.damages.note[locale]}
           </div>
         </Card>
       </section>
 
-      <div className="rounded-xl2 bg-brand-50/70 ring-1 ring-brand-100 px-4 py-3 flex items-start gap-2.5 text-[12.5px] text-brand-900">
-        <InfoIcon size={16} className="mt-0.5 shrink-0 text-brand-600" />
+      <div className="rounded-xl2 bg-gold-50 px-4 py-3 flex items-start gap-2.5 text-[12.5px] text-gold-700">
+        <InfoIcon size={16} className="mt-0.5 shrink-0" />
         <span className="leading-relaxed">{t('review.contract.readAll')}</span>
       </div>
     </>
@@ -467,7 +467,7 @@ function NoteStep({ pkg }: { pkg: ScannedPackage }) {
 
       <Card padded>
         <div className="flex items-start gap-2.5">
-          <span className="h-9 w-9 shrink-0 rounded-xl bg-[#FBF2DD] text-gold-600 grid place-items-center">
+          <span className="h-9 w-9 shrink-0 rounded-xl bg-gold-50 text-gold-700 grid place-items-center">
             <GavelIcon size={18} />
           </span>
           <div className="min-w-0 flex-1">
@@ -582,7 +582,7 @@ function ConfirmStep({
     <>
       <Card padded>
         <div className="flex items-start gap-2.5">
-          <span className="h-9 w-9 shrink-0 rounded-xl bg-success-50 text-success-600 grid place-items-center">
+          <span className="h-10 w-10 shrink-0 rounded-2xl bg-gold-50 text-gold-700 grid place-items-center">
             <SignatureIcon size={18} />
           </span>
           <div className="min-w-0">
@@ -671,13 +671,13 @@ function ConsentRow({
       onClick={onChange}
       className={cn(
         'w-full flex items-start gap-3 text-start rounded-xl p-3 transition-colors ring-1',
-        checked ? 'bg-success-50 ring-success-500/30' : 'bg-white ring-ink-100 hover:bg-ink-50',
+        checked ? 'bg-gold-50 ring-gold-300/40' : 'bg-white ring-canvas-200 hover:bg-canvas-100',
       )}
     >
       <span
         className={cn(
           'h-5 w-5 shrink-0 rounded-md grid place-items-center transition-colors mt-0.5',
-          checked ? 'bg-success-500 text-white' : 'bg-ink-100 text-transparent',
+          checked ? 'bg-gold-400 text-ink-950' : 'bg-canvas-200 text-transparent',
         )}
       >
         <CheckIcon size={13} strokeWidth={3} />

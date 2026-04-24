@@ -72,7 +72,7 @@ export default function NoteTracking() {
   return (
     <>
       <Header title={t('track.noteTitle')} showBack />
-      <Screen padded={false} className="bg-ink-50">
+      <Screen padded={false} className="bg-canvas">
         <div className="px-4 pt-4 pb-8 space-y-4">
           {/* Premium note hero */}
           <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-ink-900 via-ink-800 to-ink-900 text-white p-5 shadow-float">
