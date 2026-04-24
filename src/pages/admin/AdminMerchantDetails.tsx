@@ -288,7 +288,7 @@ export default function AdminMerchantDetails() {
                     </div>
                   </div>
                   {i < request.branches.length - 1 && (
-                    <div className="mt-3 h-px bg-ink-100" />
+                    <div className="mt-3 h-px bg-canvas-200/80" />
                   )}
                 </div>
               ))}
@@ -318,7 +318,7 @@ export default function AdminMerchantDetails() {
                   tone="danger"
                 />
               </div>
-              <div className="h-px bg-ink-100" />
+              <div className="h-px bg-canvas-200/80" />
               <div className="space-y-2">
                 {DOC_KEYS.map((k) => (
                   <DocRow

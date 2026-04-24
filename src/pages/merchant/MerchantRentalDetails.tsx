@@ -441,8 +441,8 @@ export default function MerchantRentalDetails() {
                             state === 'done'
                               ? 'bg-success-500 text-white ring-success-500/25'
                               : state === 'current'
-                                ? 'bg-brand-500 text-white ring-brand-500/25'
-                                : 'bg-ink-100 text-ink-400 ring-ink-100',
+                                ? 'bg-gold-400 text-ink-950 ring-gold-100'
+                                : 'bg-canvas-200 text-ink-400 hairline',
                           )}
                         >
                           {state === 'done' ? <CheckIcon size={14} /> : icon}
@@ -564,7 +564,7 @@ export default function MerchantRentalDetails() {
             </Button>
           </div>
 
-          <div className="rounded-xl2 bg-brand-50/70 ring-1 hairline p-3.5 flex items-start gap-3">
+          <div className="rounded-xl2 bg-gold-50 hairline p-3.5 flex items-start gap-3">
             <span className="h-9 w-9 shrink-0 rounded-xl bg-white text-gold-700 grid place-items-center ring-1 hairline">
               <ShieldIcon size={18} />
             </span>
@@ -791,7 +791,7 @@ function eventVisual(key: MerchantRentalTimelineKey): {
     case 'due-reminder':
       return { icon: <ClockIcon size={14} />, tone: 'bg-warn-50 text-warn-600' };
     case 'returned':
-      return { icon: <CheckIcon size={14} />, tone: 'bg-ink-100 text-ink-600' };
+      return { icon: <CheckIcon size={14} />, tone: 'bg-canvas-200 text-ink-600' };
   }
 }
 

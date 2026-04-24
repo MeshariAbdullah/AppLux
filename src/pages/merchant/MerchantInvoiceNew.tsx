@@ -461,8 +461,8 @@ export default function MerchantInvoiceNew() {
       <>
         <Header title={t('merchant.invoice.qr.title')} showBack />
         <Screen padded={false} className="bg-canvas">
-          <div className="px-4 pt-4 pb-8 space-y-4">
-            <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-ink-900 via-ink-800 to-ink-900 text-white p-5 shadow-float text-center">
+          <div className="px-5 pt-5 pb-10 space-y-5">
+            <div className="relative overflow-hidden rounded-xl3 bg-gradient-to-br from-ink-900 via-ink-800 to-ink-900 text-white p-6 shadow-plush text-center">
               <div
                 aria-hidden
                 className="pointer-events-none absolute -top-12 start-1/2 -translate-x-1/2 h-48 w-48 rounded-full bg-success-500/25 blur-3xl"
@@ -728,7 +728,7 @@ export default function MerchantInvoiceNew() {
         showBack
       />
       <Screen padded={false} className="bg-canvas">
-        <div className="px-4 pt-4 pb-8 space-y-4">
+        <div className="px-5 pt-5 pb-10 space-y-5">
           <form className="space-y-4" onSubmit={onSubmit} noValidate>
             <Card padded className="space-y-3">
               <SectionHeader
@@ -739,7 +739,7 @@ export default function MerchantInvoiceNew() {
                 {t('merchant.invoice.steps.customerSub')}
               </p>
 
-              <div className="grid grid-cols-2 gap-2 rounded-xl2 bg-ink-50 p-1">
+              <div className="grid grid-cols-2 gap-2 rounded-xl2 bg-canvas-100 p-1">
                 {(['existing', 'new'] as const).map((mode) => {
                   const active = values.customerMode === mode;
                   return (
@@ -750,7 +750,7 @@ export default function MerchantInvoiceNew() {
                       className={cn(
                         'h-9 rounded-xl text-[13px] font-semibold transition-colors',
                         active
-                          ? 'bg-white text-ink-900 shadow-soft ring-1 ring-ink-100'
+                          ? 'bg-white text-ink-900 shadow-soft ring-1 hairline'
                           : 'text-ink-500 hover:text-ink-700',
                       )}
                     >
@@ -786,8 +786,8 @@ export default function MerchantInvoiceNew() {
                             className={cn(
                               'w-full text-start flex items-center gap-3 rounded-xl2 p-3 ring-1 transition-colors',
                               selected
-                                ? 'bg-brand-50 ring-brand-300'
-                                : 'bg-white ring-ink-100 hover:bg-ink-50',
+                                ? 'bg-gold-50 ring-gold-300/50'
+                                : 'bg-white hairline hover:bg-canvas-100',
                             )}
                           >
                             <span
@@ -795,7 +795,7 @@ export default function MerchantInvoiceNew() {
                                 'h-10 w-10 shrink-0 rounded-xl grid place-items-center font-semibold text-[13px]',
                                 selected
                                   ? 'bg-brand-600 text-white'
-                                  : 'bg-ink-100 text-ink-600',
+                                  : 'bg-canvas-200 text-ink-600',
                               )}
                             >
                               {c.initials}
@@ -812,7 +812,7 @@ export default function MerchantInvoiceNew() {
                               className={cn(
                                 'h-5 w-5 shrink-0 rounded-full grid place-items-center ring-1',
                                 selected
-                                  ? 'bg-brand-600 text-white ring-brand-600'
+                                  ? 'bg-ink-900 text-white ring-ink-900'
                                   : 'bg-white text-transparent ring-ink-200',
                               )}
                             >
@@ -829,7 +829,7 @@ export default function MerchantInvoiceNew() {
                     </div>
                   )}
                   {selectedCustomer && (
-                    <div className="rounded-xl2 bg-ink-50 p-3 flex items-center gap-2 text-[12px] text-ink-600">
+                    <div className="rounded-xl2 bg-canvas-100 p-3 flex items-center gap-2 text-[12px] text-ink-600">
                       <UsersIcon size={14} />
                       <span className="truncate num">
                         {selectedCustomer.mobile} · {selectedCustomer.email}
@@ -1060,7 +1060,7 @@ export default function MerchantInvoiceNew() {
                       </div>
 
                       {sub > 0 && (
-                        <div className="flex items-center justify-between rounded-xl bg-ink-50 px-3 py-2 text-[12px]">
+                        <div className="flex items-center justify-between rounded-xl bg-canvas-100 px-3 py-2 text-[12px]">
                           <span className="text-ink-500">
                             {t('merchant.invoice.itemSubtotal')}
                           </span>
@@ -1095,7 +1095,7 @@ export default function MerchantInvoiceNew() {
               </p>
 
               {(liabilityTotal > 0 || itemValueTotal > 0) && (
-                <div className="rounded-xl2 bg-brand-50 ring-1 hairline p-3 flex items-center justify-between gap-2">
+                <div className="rounded-xl2 bg-gold-50 hairline p-3 flex items-center justify-between gap-2">
                   <div className="min-w-0">
                     <div className="text-[11.5px] text-gold-700/70 uppercase tracking-wide">
                       {t('merchant.invoice.suggest')}
@@ -1115,7 +1115,7 @@ export default function MerchantInvoiceNew() {
                         ),
                       })
                     }
-                    className="shrink-0 inline-flex items-center gap-1.5 rounded-lg bg-white ring-1 ring-brand-200 text-gold-700 text-[12px] font-semibold px-2.5 py-1.5 hover:bg-brand-50"
+                    className="shrink-0 inline-flex items-center gap-1.5 rounded-lg bg-white ring-1 ring-gold-300/40 text-gold-700 text-[12px] font-semibold px-2.5 py-1.5 hover:bg-gold-50"
                   >
                     <SparkleIcon size={12} />
                     {t('merchant.invoice.applySuggestion')}
@@ -1303,7 +1303,7 @@ export default function MerchantInvoiceNew() {
               </Card>
             )}
 
-            <div className="rounded-xl2 bg-brand-50/70 ring-1 hairline p-3.5 flex items-start gap-3">
+            <div className="rounded-xl2 bg-gold-50 hairline p-3.5 flex items-start gap-3">
               <span className="h-9 w-9 shrink-0 rounded-xl bg-white text-gold-700 grid place-items-center ring-1 hairline">
                 <BadgeCheckIcon size={18} />
               </span>

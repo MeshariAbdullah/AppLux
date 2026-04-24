@@ -55,9 +55,9 @@ export default function MerchantRentalContract() {
         }
       />
       <Screen padded={false} className="bg-canvas">
-        <div className="px-4 pt-4 pb-8 space-y-4">
+        <div className="px-5 pt-5 pb-10 space-y-5">
           {/* Hero */}
-          <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-ink-900 via-ink-800 to-ink-900 text-white p-5 shadow-float">
+          <div className="relative overflow-hidden rounded-xl3 bg-gradient-to-br from-ink-900 via-ink-800 to-ink-900 text-white p-6 shadow-plush">
             <div
               aria-hidden
               className="pointer-events-none absolute -top-10 end-[-15%] h-48 w-48 rounded-full bg-gold-400/22 blur-3xl"
@@ -217,7 +217,7 @@ export default function MerchantRentalContract() {
           </Card>
 
           {/* Nafith placeholder */}
-          <div className="rounded-xl2 bg-brand-50/70 ring-1 hairline p-3.5 flex items-start gap-3">
+          <div className="rounded-xl2 bg-gold-50 hairline p-3.5 flex items-start gap-3">
             <span className="h-9 w-9 shrink-0 rounded-xl bg-white text-gold-700 grid place-items-center ring-1 hairline">
               <BadgeCheckIcon size={18} />
             </span>
@@ -276,7 +276,7 @@ function Stat({
   value: React.ReactNode;
 }) {
   return (
-    <div className="rounded-xl2 bg-ink-50 p-3">
+    <div className="rounded-xl2 bg-canvas-100 p-3">
       <div className="flex items-center gap-1.5 text-[11px] uppercase tracking-wide text-ink-500">
         {icon}
         {label}

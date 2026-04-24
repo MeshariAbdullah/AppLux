@@ -341,7 +341,7 @@ export default function AdminUserDetails() {
                 <MetricTile
                   label={t('admin.user.eligibility.limit')}
                   value={formatCurrency(user.eligibilityLimit)}
-                  tone="bg-ink-50 text-ink-900"
+                  tone="bg-canvas-100 text-ink-900"
                 />
                 <MetricTile
                   label={t('admin.user.eligibility.used')}
@@ -367,7 +367,7 @@ export default function AdminUserDetails() {
                 />
               </div>
               <div className="grid grid-cols-2 gap-2 text-[11.5px]">
-                <div className="rounded-xl bg-ink-50 px-3 py-2">
+                <div className="rounded-xl bg-canvas-100 px-3 py-2">
                   <div className="text-ink-400 uppercase tracking-wide text-[10px]">
                     {t('admin.user.eligibility.activeRentals')}
                   </div>
@@ -375,7 +375,7 @@ export default function AdminUserDetails() {
                     {formatNumber(user.activeRentals)}
                   </div>
                 </div>
-                <div className="rounded-xl bg-ink-50 px-3 py-2">
+                <div className="rounded-xl bg-canvas-100 px-3 py-2">
                   <div className="text-ink-400 uppercase tracking-wide text-[10px]">
                     {t('admin.user.eligibility.completed')}
                   </div>
@@ -385,7 +385,7 @@ export default function AdminUserDetails() {
                 </div>
               </div>
 
-              <div className="h-px bg-ink-100" />
+              <div className="h-px bg-canvas-200/80" />
 
               <FormField
                 label={t('admin.user.eligibility.assignLabel')}
@@ -430,7 +430,7 @@ export default function AdminUserDetails() {
                       'text-[11px] font-semibold rounded-full px-3 h-7 ring-1 ring-inset transition-colors',
                       parsed === preset
                         ? 'bg-ink-900 text-white ring-ink-900'
-                        : 'bg-white text-ink-600 ring-ink-200 hover:bg-ink-50',
+                        : 'bg-white text-ink-600 hairline hover:bg-canvas-100',
                     )}
                   >
                     <span className="num">{formatCurrency(preset)}</span>
@@ -545,7 +545,7 @@ export default function AdminUserDetails() {
                       t={t}
                     />
                     {i < recentActivity.length - 1 && (
-                      <div className="h-px bg-ink-100" />
+                      <div className="h-px bg-canvas-200/80" />
                     )}
                   </div>
                 ))}
@@ -578,7 +578,7 @@ export default function AdminUserDetails() {
             <div
               role="status"
               className={cn(
-                'pointer-events-auto max-w-sm w-full rounded-xl2 px-4 py-3 ring-1 ring-inset shadow-float flex items-start gap-3',
+                'pointer-events-auto max-w-sm w-full rounded-xl2 px-4 py-3 ring-1 ring-inset shadow-plush flex items-start gap-3',
                 toast.tone === 'success' &&
                   'bg-success-50 ring-success-500/25 text-success-700',
                 toast.tone === 'danger' &&

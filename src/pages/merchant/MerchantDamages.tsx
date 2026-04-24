@@ -38,7 +38,7 @@ export default function MerchantDamages() {
     <>
       <Header title={t('merchant.damages.title')} showBack />
       <Screen padded={false} className="bg-canvas">
-        <div className="px-4 pt-4 pb-8 space-y-4">
+        <div className="px-5 pt-5 pb-10 space-y-5">
           <p className="text-[12.5px] text-ink-500 leading-relaxed px-1">
             {t('merchant.damages.subtitle')}
           </p>
@@ -86,7 +86,7 @@ function DamageCard({ item }: { item: MerchantDamageCase }) {
   const severe = item.severity !== 'partial';
   return (
     <Link to={`/merchant/damages/${item.id}`} className="block">
-      <Card padded className="space-y-3 hover:ring-ink-200 transition-colors">
+      <Card padded className="space-y-3 hover:ring-gold-200/70 transition-colors">
         <div className="flex items-center gap-3">
           <span className="h-10 w-10 shrink-0 rounded-xl bg-danger-50 text-danger-600 grid place-items-center">
             {severe ? <AlertIcon size={18} /> : <GavelIcon size={18} />}

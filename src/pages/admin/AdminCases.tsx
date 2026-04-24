@@ -427,7 +427,7 @@ function DamageCard({
           </span>
         </div>
 
-        <div className="flex items-center justify-between gap-2 rounded-xl bg-ink-50 px-3 py-2">
+        <div className="flex items-center justify-between gap-2 rounded-xl bg-canvas-100 px-3 py-2">
           <span className="inline-flex items-center gap-1.5 text-[11.5px] text-ink-500">
             <ReceiptIcon size={12} />
             <span className="num">{item.id}</span>
@@ -444,7 +444,7 @@ function DamageCard({
 function UpdatedDot() {
   return (
     <span
-      className="h-1.5 w-1.5 shrink-0 rounded-full bg-brand-500 ring-2 hairline"
+      className="h-1.5 w-1.5 shrink-0 rounded-full bg-gold-400"
       aria-hidden
     />
   );
@@ -529,7 +529,7 @@ function OverdueCard({
           )}
         </div>
 
-        <div className="flex items-center justify-between gap-2 rounded-xl bg-ink-50 px-3 py-2">
+        <div className="flex items-center justify-between gap-2 rounded-xl bg-canvas-100 px-3 py-2">
           <span className="inline-flex items-center gap-1.5 text-[11.5px] text-ink-500">
             <ReceiptIcon size={12} />
             <span className="num">{item.id}</span>

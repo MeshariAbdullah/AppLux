@@ -120,7 +120,7 @@ export default function AdminHome() {
       desc: t('admin.home.modules.limitsDesc'),
       icon: <WalletIcon size={18} />,
       to: '/admin/limits',
-      tone: 'bg-canvas-100 text-ink-400 ring-ink-100',
+      tone: 'bg-canvas-100 text-ink-400 hairline',
       comingSoon: true,
     },
     {
@@ -128,7 +128,7 @@ export default function AdminHome() {
       desc: t('admin.home.modules.overdueDesc'),
       icon: <ClockIcon size={18} />,
       to: '/admin/overdue',
-      tone: 'bg-canvas-100 text-ink-400 ring-ink-100',
+      tone: 'bg-canvas-100 text-ink-400 hairline',
       comingSoon: true,
     },
     {
@@ -136,7 +136,7 @@ export default function AdminHome() {
       desc: t('admin.home.modules.reportsDesc'),
       icon: <ChartIcon size={18} />,
       to: '/admin/reports',
-      tone: 'bg-canvas-100 text-ink-400 ring-ink-100',
+      tone: 'bg-canvas-100 text-ink-400 hairline',
       comingSoon: true,
     },
     {
@@ -144,7 +144,7 @@ export default function AdminHome() {
       desc: t('admin.home.modules.auditDesc'),
       icon: <HistoryIcon size={18} />,
       to: '/admin/audit',
-      tone: 'bg-canvas-100 text-ink-400 ring-ink-100',
+      tone: 'bg-canvas-100 text-ink-400 hairline',
       comingSoon: true,
     },
     {
@@ -152,7 +152,7 @@ export default function AdminHome() {
       desc: t('admin.home.modules.supportDesc'),
       icon: <SupportIcon size={18} />,
       to: '/admin/support',
-      tone: 'bg-canvas-100 text-ink-400 ring-ink-100',
+      tone: 'bg-canvas-100 text-ink-400 hairline',
       comingSoon: true,
     },
   ];
@@ -321,7 +321,7 @@ export default function AdminHome() {
                       t={t}
                     />
                     {i < Math.min(2, pendingMerchants.length - 1) && (
-                      <div className="h-px bg-ink-100" />
+                      <div className="h-px bg-canvas-200/80" />
                     )}
                   </div>
                 ))}
@@ -467,7 +467,7 @@ export default function AdminHome() {
                     dir={dir}
                   />
                   {i < Math.min(2, activeCases.length - 1) && (
-                    <div className="h-px bg-ink-100" />
+                    <div className="h-px bg-canvas-200/80" />
                   )}
                 </div>
               ))}
@@ -498,7 +498,7 @@ export default function AdminHome() {
                   />
                 ))}
               </div>
-              <div className="h-px bg-ink-100" />
+              <div className="h-px bg-canvas-200/80" />
               <div className="space-y-1">
                 {overdueCases.slice(0, 3).map((o, i) => (
                   <div key={o.id}>
@@ -509,7 +509,7 @@ export default function AdminHome() {
                       dir={dir}
                     />
                     {i < Math.min(2, overdueCases.length - 1) && (
-                      <div className="h-px bg-ink-100" />
+                      <div className="h-px bg-canvas-200/80" />
                     )}
                   </div>
                 ))}
@@ -541,7 +541,7 @@ export default function AdminHome() {
                         {m.icon}
                       </span>
                       {m.comingSoon ? (
-                        <span className="text-[10px] font-bold uppercase tracking-wide bg-ink-100 text-ink-500 rounded-full px-2 py-0.5">
+                        <span className="text-[10px] font-bold uppercase tracking-wide bg-canvas-200 text-ink-500 rounded-full px-2 py-0.5">
                           {t('admin.home.modules.comingSoon')}
                         </span>
                       ) : (
@@ -634,13 +634,13 @@ function AlertRow({
       ? 'bg-danger-50 ring-danger-500/25 text-danger-700'
       : tone === 'warn'
         ? 'bg-warn-50 ring-warn-500/25 text-warn-700'
-        : 'bg-brand-50 hairline text-brand-800';
+        : 'bg-gold-50 hairline text-gold-700';
   const iconSkin =
     tone === 'danger'
       ? 'bg-danger-500/10 text-danger-600'
       : tone === 'warn'
         ? 'bg-warn-500/10 text-warn-600'
-        : 'bg-brand-500/10 text-gold-700';
+        : 'bg-gold-50 text-gold-700';
   return (
     <Link to={to} className="block">
       <div
@@ -719,7 +719,7 @@ function MiniMetric({
   numeric?: boolean;
 }) {
   return (
-    <div className="rounded-xl bg-ink-50 p-2.5">
+    <div className="rounded-xl bg-canvas-100 p-2.5">
       <div className="text-[10.5px] uppercase tracking-wide text-ink-400">
         {label}
       </div>

@@ -220,7 +220,7 @@ function InvoiceStep({ pkg }: { pkg: ScannedPackage }) {
             </span>
           }
         />
-        <Card padded={false} className="divide-y divide-ink-100">
+        <Card padded={false} className="divide-y divide-canvas-200/80">
           {pkg.items.map((it) => (
             <div key={it.id} className="p-4">
               <div className="flex items-start justify-between gap-3">
@@ -275,7 +275,7 @@ function InvoiceStep({ pkg }: { pkg: ScannedPackage }) {
           <FeeRow label={t('review.invoice.deposit')} amount={pkg.fees.deposit} />
           <FeeRow label={t('review.invoice.insurance')} amount={pkg.fees.insurance} />
           <FeeRow label={t('review.invoice.vat')} amount={pkg.fees.vat} muted />
-          <div className="h-px bg-ink-100 my-1" />
+          <div className="h-px bg-canvas-200/80 my-1" />
           <div className="flex items-center justify-between">
             <span className="text-[13px] font-semibold text-ink-900">
               {t('review.invoice.grandTotal')}
@@ -317,7 +317,7 @@ function ContractStep({ pkg }: { pkg: ScannedPackage }) {
 
       <Card padded>
         <div className="flex items-start gap-2.5">
-          <span className="h-9 w-9 shrink-0 rounded-xl bg-ink-100 text-ink-700 grid place-items-center">
+          <span className="h-9 w-9 shrink-0 rounded-xl bg-canvas-100 text-ink-700 grid place-items-center">
             <DocIcon size={18} />
           </span>
           <div className="min-w-0 flex-1">
@@ -481,7 +481,7 @@ function NoteStep({ pkg }: { pkg: ScannedPackage }) {
       </Card>
 
       {/* Note preview card — premium look */}
-      <div className="relative overflow-hidden rounded-3xl p-6 text-white shadow-float bg-gradient-to-br from-ink-900 via-ink-800 to-ink-900">
+      <div className="relative overflow-hidden rounded-xl3 p-6 text-white shadow-plush bg-gradient-to-br from-ink-900 via-ink-800 to-ink-900">
         <div aria-hidden className="pointer-events-none absolute inset-0 pattern-dots opacity-25" />
         <div aria-hidden className="pointer-events-none absolute -top-10 end-[-15%] h-48 w-48 rounded-full bg-gold-500/20 blur-3xl" />
         <div className="relative">

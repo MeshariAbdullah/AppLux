@@ -39,7 +39,7 @@ export default function MerchantHistoryPage() {
               {merchantHistory.map((h, i) => (
                 <div key={h.id}>
                   <HistoryRow item={h} />
-                  {i < merchantHistory.length - 1 && <div className="h-px bg-ink-100" />}
+                  {i < merchantHistory.length - 1 && <div className="h-px bg-canvas-200/80" />}
                 </div>
               ))}
             </Card>

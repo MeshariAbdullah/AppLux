@@ -226,7 +226,7 @@ export default function MerchantRegister() {
             <button
               type="button"
               onClick={goBack}
-              className="h-9 w-9 grid place-items-center rounded-full bg-canvas-100 text-ink-700 hover:bg-ink-100"
+              className="h-9 w-9 grid place-items-center rounded-full bg-canvas-100 text-ink-700 hover:bg-canvas-200"
               aria-label={t('common.back')}
             >
               <ArrowIcon size={18} className={cn(dir === 'rtl' ? '' : 'rotate-180')} />
@@ -330,7 +330,7 @@ export default function MerchantRegister() {
                   className="num uppercase"
                 />
               </FormField>
-              <div className="rounded-xl2 bg-brand-50/70 ring-1 hairline p-3.5 flex items-start gap-3">
+              <div className="rounded-xl2 bg-gold-50 hairline p-3.5 flex items-start gap-3">
                 <span className="h-9 w-9 shrink-0 rounded-xl bg-white text-gold-700 grid place-items-center ring-1 hairline">
                   <ShieldIcon size={18} />
                 </span>

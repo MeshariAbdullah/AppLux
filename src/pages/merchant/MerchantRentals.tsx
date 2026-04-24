@@ -84,7 +84,7 @@ export default function MerchantRentals() {
                     'h-8 px-3 rounded-full text-[12.5px] font-semibold whitespace-nowrap transition-colors ring-1 ring-inset',
                     active
                       ? 'bg-ink-900 text-white ring-ink-900'
-                      : 'bg-white text-ink-600 ring-ink-100',
+                      : 'bg-white text-ink-600 hairline',
                   )}
                 >
                   {t(f.labelKey)}

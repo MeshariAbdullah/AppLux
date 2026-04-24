@@ -70,9 +70,9 @@ export default function Tracking() {
     <>
       <Header title={t('tracking.title')} subtitle={t('tracking.subtitle')} showBack />
       <Screen padded={false} className="bg-canvas">
-        <div className="px-4 pt-4 pb-8 space-y-4">
+        <div className="px-5 pt-5 pb-10 space-y-5">
           {/* Hero status card */}
-          <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-ink-900 via-ink-800 to-ink-900 text-white p-5 shadow-float">
+          <div className="relative overflow-hidden rounded-xl3 bg-gradient-to-br from-ink-900 via-ink-800 to-ink-900 text-white p-6 shadow-plush">
             <div aria-hidden className="pointer-events-none absolute inset-0 pattern-dots opacity-25" />
             <div className="relative flex items-start gap-3">
               <StoreLogo store={store} size="md" />
@@ -125,12 +125,12 @@ export default function Tracking() {
                         <span
                           className={cn(
                             'h-8 w-8 rounded-full grid place-items-center shrink-0 ring-2',
-                            'bg-success-500 text-white ring-success-500/25',
+                            'bg-gold-400 text-ink-950 ring-gold-100',
                           )}
                         >
                           {s.icon}
                         </span>
-                        {!isLast && <span className="w-px flex-1 bg-ink-100 my-1 min-h-6" />}
+                        {!isLast && <span className="w-px flex-1 bg-canvas-200 my-1 min-h-6" />}
                       </div>
                       <div className={cn('flex-1 min-w-0', !isLast && 'pb-5')}>
                         <div className="text-[13.5px] font-semibold text-ink-900">

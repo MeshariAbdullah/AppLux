@@ -129,7 +129,7 @@ function evidenceVisual(kind: AdminCaseEvidenceKind): EvidenceVisual {
         gradient: 'from-ink-700 via-ink-800 to-ink-900',
         ring: 'ring-ink-900/40',
         icon: <SignatureIcon size={22} />,
-        chipClass: 'bg-ink-100 text-ink-700',
+        chipClass: 'bg-canvas-100 text-ink-700',
       };
     case 'receipt':
       return {
@@ -184,8 +184,8 @@ function noteVisual(role: AdminCaseNoteRole): NoteVisual {
     };
   }
   return {
-    bubble: 'bg-ink-50 ring-ink-200 text-ink-800',
-    badge: 'bg-ink-100 text-ink-600',
+    bubble: 'bg-canvas-100 hairline text-ink-800',
+    badge: 'bg-canvas-200 text-ink-600',
     icon: <SparkleIcon size={11} />,
   };
 }
@@ -214,7 +214,7 @@ function auditVisual(action: AdminCaseAuditAction): AuditVisual {
       };
     case 'note-added':
       return {
-        dotClass: 'bg-ink-100 text-ink-700 ring-ink-300/30',
+        dotClass: 'bg-canvas-100 text-ink-700 hairline',
         icon: <DocIcon size={12} />,
       };
     case 'escalated-settlement':
@@ -239,7 +239,7 @@ function auditVisual(action: AdminCaseAuditAction): AuditVisual {
       };
     default:
       return {
-        dotClass: 'bg-ink-100 text-ink-700 ring-ink-300/30',
+        dotClass: 'bg-canvas-100 text-ink-700 hairline',
         icon: <InfoIcon size={12} />,
       };
   }
@@ -561,7 +561,7 @@ export default function AdminCaseDetails() {
                   label={t(`admin.case.invoice.status.${linked.invoiceStatus}`)}
                 />
               </div>
-              <div className="h-px bg-ink-100" />
+              <div className="h-px bg-canvas-200/80" />
               <div className="flex items-center justify-between gap-2">
                 <span className="text-[11.5px] text-ink-500 inline-flex items-center gap-1.5">
                   <WalletIcon size={12} />
@@ -603,7 +603,7 @@ export default function AdminCaseDetails() {
                   )}
                 />
               </div>
-              <div className="h-px bg-ink-100" />
+              <div className="h-px bg-canvas-200/80" />
               <div className="flex items-center justify-between gap-2">
                 <span className="text-[11.5px] text-ink-500 inline-flex items-center gap-1.5">
                   <MapPinIcon size={12} />
@@ -641,7 +641,7 @@ export default function AdminCaseDetails() {
                   label={t(`admin.case.note.status.${linked.noteStatus}`)}
                 />
               </div>
-              <div className="h-px bg-ink-100" />
+              <div className="h-px bg-canvas-200/80" />
               <div className="flex items-center justify-between gap-2">
                 <span className="text-[11.5px] text-ink-500 inline-flex items-center gap-1.5">
                   <PackageIcon size={12} />
@@ -828,7 +828,7 @@ export default function AdminCaseDetails() {
                 <ol className="relative">
                   <span
                     aria-hidden
-                    className="absolute top-1 bottom-1 w-px bg-ink-100 start-[13px]"
+                    className="absolute top-1 bottom-1 w-px bg-canvas-200 start-[13px]"
                   />
                   {detail.audit.map((a, i) => {
                     const av = auditVisual(a.action);
@@ -926,7 +926,7 @@ function Section({
           {title}
         </h2>
         {typeof count === 'number' && (
-          <span className="ms-auto text-[11px] font-semibold text-ink-500 num bg-ink-100 rounded-full px-2 py-0.5">
+          <span className="ms-auto text-[11px] font-semibold text-ink-500 num bg-canvas-200 rounded-full px-2 py-0.5">
             {count}
           </span>
         )}

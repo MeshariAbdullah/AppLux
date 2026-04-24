@@ -293,7 +293,7 @@ export default function Register() {
             {step === 0 && (
               <div className="text-center text-[13px] text-ink-500">
                 {t('auth.haveAccount')}{' '}
-                <Link to="/auth/login" className="text-brand-600 font-semibold">
+                <Link to="/auth/login" className="text-gold-700 font-semibold">
                   {t('auth.login')}
                 </Link>
               </div>

@@ -186,10 +186,10 @@ export default function MerchantDamageNew() {
         showBack
       />
       <Screen padded={false} className="bg-canvas">
-        <div className="px-4 pt-4 pb-10 space-y-4">
+        <div className="px-5 pt-5 pb-10 space-y-5">
           <form className="space-y-4" onSubmit={onSubmit} noValidate>
             {/* Hero */}
-            <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-ink-900 via-ink-800 to-ink-900 text-white p-5 shadow-float">
+            <div className="relative overflow-hidden rounded-xl3 bg-gradient-to-br from-ink-900 via-ink-800 to-ink-900 text-white p-6 shadow-plush">
               <div
                 aria-hidden
                 className="pointer-events-none absolute -top-10 end-[-15%] h-48 w-48 rounded-full bg-danger-500/25 blur-3xl"
@@ -258,7 +258,7 @@ export default function MerchantDamageNew() {
                         'w-full text-start flex items-start gap-3 rounded-xl2 bg-white p-3.5 ring-1 transition-all',
                         active
                           ? `${style.activeRing} ring-2 ${style.activeBg}`
-                          : 'ring-ink-100 hover:ring-ink-200',
+                          : 'hairline hover:ring-gold-200/70',
                       )}
                     >
                       <span
@@ -282,7 +282,7 @@ export default function MerchantDamageNew() {
                           'h-5 w-5 mt-0.5 rounded-full ring-1 grid place-items-center shrink-0',
                           active
                             ? 'bg-ink-900 text-white ring-ink-900'
-                            : 'bg-white ring-ink-200',
+                            : 'bg-white hairline',
                         )}
                       >
                         {active && (
@@ -346,7 +346,7 @@ export default function MerchantDamageNew() {
                     className={cn(
                       'text-[11.5px] font-semibold num rounded-full px-2 py-0.5',
                       evidence.length === 0
-                        ? 'bg-ink-100 text-ink-500'
+                        ? 'bg-canvas-200 text-ink-500'
                         : evidence.length >= 8
                           ? 'bg-warn-50 text-warn-700'
                           : 'bg-success-50 text-success-700',
@@ -376,7 +376,7 @@ export default function MerchantDamageNew() {
 
               {/* Photography tips — shown only when no evidence yet */}
               {evidence.length === 0 && (
-                <div className="rounded-xl2 bg-ink-50 hairline p-3 space-y-2">
+                <div className="rounded-xl2 bg-canvas-100 hairline p-3 space-y-2">
                   <div className="text-[12px] font-semibold text-ink-900">
                     {t('merchant.damage.new.evidence.tipsTitle')}
                   </div>
@@ -412,7 +412,7 @@ export default function MerchantDamageNew() {
                   <button
                     type="button"
                     onClick={openGallery}
-                    className="h-11 rounded-xl bg-white ring-1 ring-ink-200/80 text-ink-800 text-[12.5px] font-semibold inline-flex items-center justify-center gap-1.5 hover:bg-ink-50"
+                    className="h-11 rounded-xl bg-white hairline text-ink-800 text-[12.5px] font-semibold inline-flex items-center justify-center gap-1.5 hover:bg-canvas-100"
                   >
                     <ImageIcon size={15} />
                     {t('merchant.damage.new.evidence.fromGallery')}
@@ -427,7 +427,7 @@ export default function MerchantDamageNew() {
                     {evidence.map((src, i) => (
                       <div
                         key={`${i}-${src.length}`}
-                        className="relative group aspect-square overflow-hidden rounded-xl bg-ink-100 hairline"
+                        className="relative group aspect-square overflow-hidden rounded-xl bg-canvas-200 hairline"
                       >
                         <button
                           type="button"
@@ -505,7 +505,7 @@ export default function MerchantDamageNew() {
               <CardDivider />
               <LinkedRow
                 icon={<ReceiptIcon size={16} />}
-                tone="bg-ink-100 text-ink-700"
+                tone="bg-canvas-100 text-ink-700"
                 label={t('merchant.damage.new.invoice')}
                 refValue={invoiceRefFromContract(rental.contractRef)}
               />

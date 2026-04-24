@@ -70,7 +70,7 @@ export default function MerchantRentalClose() {
         <Header title={t('merchant.close.title')} showBack />
         <Screen padded={false} className="bg-canvas">
           <div className="px-4 pt-6 pb-8 space-y-4 flex flex-col min-h-full">
-            <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-ink-900 via-ink-800 to-ink-900 text-white p-6 shadow-float text-center">
+            <div className="relative overflow-hidden rounded-xl3 bg-gradient-to-br from-ink-900 via-ink-800 to-ink-900 text-white p-6 shadow-plush text-center">
               <div
                 aria-hidden
                 className="pointer-events-none absolute -top-12 start-1/2 -translate-x-1/2 h-48 w-48 rounded-full bg-success-500/25 blur-3xl"
@@ -167,10 +167,10 @@ export default function MerchantRentalClose() {
         showBack
       />
       <Screen padded={false} className="bg-canvas">
-        <div className="px-4 pt-4 pb-8 space-y-4">
+        <div className="px-5 pt-5 pb-10 space-y-5">
           <form className="space-y-4" onSubmit={onSubmit} noValidate>
             {/* Hero */}
-            <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-ink-900 via-ink-800 to-ink-900 text-white p-5 shadow-float">
+            <div className="relative overflow-hidden rounded-xl3 bg-gradient-to-br from-ink-900 via-ink-800 to-ink-900 text-white p-6 shadow-plush">
               <div
                 aria-hidden
                 className="pointer-events-none absolute -top-10 end-[-15%] h-48 w-48 rounded-full bg-success-500/20 blur-3xl"
@@ -279,8 +279,8 @@ export default function MerchantRentalClose() {
               <span
                 className={`h-5 w-5 mt-0.5 shrink-0 rounded-md grid place-items-center ring-1 ${
                   confirm
-                    ? 'bg-brand-600 ring-brand-600 text-white'
-                    : 'bg-white ring-ink-200 text-transparent'
+                    ? 'bg-ink-900 ring-ink-900 text-white'
+                    : 'bg-white ring-canvas-300 text-transparent'
                 }`}
               >
                 <CheckIcon size={12} />
@@ -372,7 +372,7 @@ function MiniStat({
   numeric?: boolean;
 }) {
   return (
-    <div className="rounded-xl bg-ink-50 p-2.5">
+    <div className="rounded-xl bg-canvas-100 p-2.5">
       <div className="text-[10.5px] uppercase tracking-wide text-ink-400">
         {label}
       </div>

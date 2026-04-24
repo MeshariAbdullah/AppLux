@@ -72,9 +72,9 @@ export default function AdminMerchants() {
         trailing={<LangToggle tone="dark" />}
       />
       <Screen padded={false} className="bg-canvas">
-        <div className="px-4 pt-4 pb-10 space-y-4">
+        <div className="px-5 pt-5 pb-10 space-y-5">
           {/* Hero */}
-          <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-ink-900 via-ink-800 to-ink-900 text-white p-5 shadow-float">
+          <div className="relative overflow-hidden rounded-xl3 bg-gradient-to-br from-ink-900 via-ink-800 to-ink-900 text-white p-6 shadow-plush">
             <div
               aria-hidden
               className="pointer-events-none absolute inset-0 pattern-dots opacity-25"
@@ -134,7 +134,7 @@ export default function AdminMerchants() {
                       'inline-flex items-center gap-1.5 px-3 h-9 rounded-full text-[12.5px] font-semibold transition-colors whitespace-nowrap',
                       active
                         ? 'bg-ink-900 text-white shadow-soft'
-                        : 'text-ink-500 hover:bg-ink-50',
+                        : 'text-ink-500 hover:bg-canvas-100',
                     )}
                   >
                     {t(`admin.merchants.tabs.${k}`)}
@@ -143,7 +143,7 @@ export default function AdminMerchants() {
                         'num text-[10.5px] font-bold rounded-full h-4 min-w-4 px-1 grid place-items-center',
                         active
                           ? 'bg-white/15 text-white'
-                          : 'bg-ink-100 text-ink-600',
+                          : 'bg-canvas-200 text-ink-600',
                       )}
                     >
                       {counts[k]}

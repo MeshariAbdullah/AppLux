@@ -259,7 +259,7 @@ export default function MerchantDamageDetails() {
             {invoiceRef && (
               <DocLinkRow
                 icon={<ReceiptIcon size={16} />}
-                tone="bg-ink-100 text-ink-700"
+                tone="bg-canvas-100 text-ink-700"
                 label={t('merchant.damageCase.invoice')}
                 refValue={invoiceRef}
                 dir={dir}
@@ -286,7 +286,7 @@ export default function MerchantDamageDetails() {
                       'text-[11px] font-semibold num rounded-full px-2 py-0.5',
                       kase.evidence && kase.evidence.length > 0
                         ? 'bg-success-50 text-success-700'
-                        : 'bg-ink-100 text-ink-500',
+                        : 'bg-canvas-200 text-ink-500',
                     )}
                   >
                     {kase.evidence?.length ?? 0}
@@ -300,7 +300,7 @@ export default function MerchantDamageDetails() {
                         key={`${i}-${src.length}`}
                         type="button"
                         onClick={() => setLightboxIndex(i)}
-                        className="relative aspect-square overflow-hidden rounded-xl bg-ink-100 hairline active:scale-[0.98] transition-transform"
+                        className="relative aspect-square overflow-hidden rounded-xl bg-canvas-200 hairline active:scale-[0.98] transition-transform"
                       >
                         <img
                           src={src}
@@ -314,7 +314,7 @@ export default function MerchantDamageDetails() {
                     ))}
                   </div>
                 ) : (
-                  <div className="rounded-xl2 bg-ink-50 hairline p-4 flex items-center gap-3 text-[12px] text-ink-500">
+                  <div className="rounded-xl2 bg-canvas-100 hairline p-4 flex items-center gap-3 text-[12px] text-ink-500">
                     <span className="h-9 w-9 shrink-0 rounded-xl bg-white text-ink-400 grid place-items-center hairline">
                       <ImageIcon size={16} />
                     </span>
@@ -335,11 +335,11 @@ export default function MerchantDamageDetails() {
                   {t('merchant.damageCase.notes')}
                 </div>
                 {kase.notes ? (
-                  <div className="rounded-xl2 bg-ink-50 hairline px-4 py-3 text-[13px] text-ink-700 leading-relaxed whitespace-pre-line">
+                  <div className="rounded-xl2 bg-canvas-100 hairline px-4 py-3 text-[13px] text-ink-700 leading-relaxed whitespace-pre-line">
                     {kase.notes}
                   </div>
                 ) : (
-                  <div className="rounded-xl2 bg-ink-50 hairline p-3 text-[12px] text-ink-500 leading-relaxed">
+                  <div className="rounded-xl2 bg-canvas-100 hairline p-3 text-[12px] text-ink-500 leading-relaxed">
                     {t('merchant.damageCase.noNotes')}
                   </div>
                 )}
@@ -357,7 +357,7 @@ export default function MerchantDamageDetails() {
                 'rounded-xl2 p-3.5 flex items-start gap-3 ring-1',
                 kase.status === 'settled'
                   ? 'bg-success-50 ring-success-500/20'
-                  : 'bg-brand-50/70 hairline',
+                  : 'bg-gold-50 hairline',
               )}
             >
               <span
@@ -416,8 +416,8 @@ export default function MerchantDamageDetails() {
                           state === 'done'
                             ? 'bg-success-500 text-white ring-success-500/25'
                             : state === 'current'
-                              ? 'bg-brand-500 text-white ring-brand-500/25'
-                              : 'bg-ink-100 text-ink-400 ring-ink-100',
+                              ? 'bg-gold-400 text-ink-950 ring-gold-100'
+                              : 'bg-canvas-200 text-ink-400 hairline',
                         )}
                       >
                         {state === 'done' ? (
@@ -511,7 +511,7 @@ export default function MerchantDamageDetails() {
             </ol>
           </Card>
 
-          <div className="rounded-xl2 bg-ink-50 hairline p-3.5 flex items-start gap-3">
+          <div className="rounded-xl2 bg-canvas-100 hairline p-3.5 flex items-start gap-3">
             <span className="h-9 w-9 shrink-0 rounded-xl bg-white text-ink-700 grid place-items-center hairline">
               <InfoIcon size={16} />
             </span>

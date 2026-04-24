@@ -34,7 +34,7 @@ export default function AdminModulePlaceholder() {
       <Header title={title} showBack />
       <Screen padded={false} className="bg-canvas">
         <div className="px-4 pt-6 pb-8 space-y-4 flex flex-col min-h-full">
-          <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-ink-900 via-ink-800 to-ink-900 text-white p-6 shadow-float text-center">
+          <div className="relative overflow-hidden rounded-xl3 bg-gradient-to-br from-ink-900 via-ink-800 to-ink-900 text-white p-6 shadow-plush text-center">
             <div
               aria-hidden
               className="pointer-events-none absolute -top-14 start-1/2 -translate-x-1/2 h-48 w-48 rounded-full bg-gold-500/20 blur-3xl"

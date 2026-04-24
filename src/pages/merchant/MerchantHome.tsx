@@ -95,7 +95,7 @@ export default function MerchantHome() {
       desc: t('merchant.home.quickRentalsDesc'),
       icon: <CarIcon size={18} />,
       to: '/merchant/rentals',
-      tone: 'bg-ink-100 text-ink-700 ring-ink-100',
+      tone: 'bg-canvas-100 text-ink-700 hairline',
     },
     {
       title: t('merchant.home.quickApprovals'),
@@ -118,7 +118,7 @@ export default function MerchantHome() {
       desc: t('merchant.home.quickHistoryDesc'),
       icon: <HistoryIcon size={18} />,
       to: '/merchant/history',
-      tone: 'bg-ink-50 text-ink-500 ring-ink-100',
+      tone: 'bg-canvas-100 text-ink-500 hairline',
     },
   ];
 
@@ -231,7 +231,7 @@ export default function MerchantHome() {
                 label={t('merchant.home.summaryDamages')}
                 value={openDamageCount}
                 icon={<GavelIcon size={16} />}
-                tone="bg-ink-100 text-ink-700"
+                tone="bg-canvas-100 text-ink-700"
                 emphasize={openDamageCount > 0}
               />
             </div>
@@ -290,7 +290,7 @@ export default function MerchantHome() {
               {recent.map((r, i) => (
                 <div key={r.id}>
                   <RecentRow rental={r} formatDate={formatDate} formatCurrency={formatCurrency} t={t} />
-                  {i < recent.length - 1 && <div className="h-px bg-ink-100" />}
+                  {i < recent.length - 1 && <div className="h-px bg-canvas-200/80" />}
                 </div>
               ))}
             </Card>

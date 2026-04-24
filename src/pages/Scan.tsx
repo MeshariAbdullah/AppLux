@@ -40,7 +40,7 @@ export default function Scan() {
           </p>
 
           {/* Camera frame */}
-          <div className="mt-6 relative w-[260px] h-[260px] rounded-3xl overflow-hidden bg-gradient-to-br from-ink-800 via-ink-900 to-black ring-1 ring-white/10 shadow-float">
+          <div className="mt-6 relative w-[260px] h-[260px] rounded-xl3 overflow-hidden bg-gradient-to-br from-ink-800 via-ink-900 to-black ring-1 ring-white/10 shadow-plush">
             <div aria-hidden className="absolute inset-0 pattern-dots opacity-20" />
             <div aria-hidden className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.08),transparent_65%)]" />
 

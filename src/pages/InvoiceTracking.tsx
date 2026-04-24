@@ -73,9 +73,9 @@ export default function InvoiceTracking() {
     <>
       <Header title={t('track.invoiceTitle')} showBack />
       <Screen padded={false} className="bg-canvas">
-        <div className="px-4 pt-4 pb-8 space-y-4">
+        <div className="px-5 pt-5 pb-10 space-y-5">
           {/* Hero status */}
-          <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-ink-900 via-ink-800 to-ink-900 text-white p-5 shadow-float">
+          <div className="relative overflow-hidden rounded-xl3 bg-gradient-to-br from-ink-900 via-ink-800 to-ink-900 text-white p-6 shadow-plush">
             <div aria-hidden className="pointer-events-none absolute inset-0 pattern-dots opacity-25" />
             <div aria-hidden className="pointer-events-none absolute -top-10 end-[-15%] h-48 w-48 rounded-full bg-gold-400/22 blur-3xl" />
             <div className="relative flex items-start gap-3">
@@ -153,7 +153,7 @@ export default function InvoiceTracking() {
                 className="w-full text-start"
               >
                 <Card padded interactive className="flex items-center gap-3">
-                  <span className="h-10 w-10 shrink-0 rounded-xl bg-ink-100 text-ink-700 grid place-items-center">
+                  <span className="h-10 w-10 shrink-0 rounded-xl bg-canvas-100 text-ink-700 grid place-items-center">
                     <DocIcon size={18} />
                   </span>
                   <div className="min-w-0 flex-1">

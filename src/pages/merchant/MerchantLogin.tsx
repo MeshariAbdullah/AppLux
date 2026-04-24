@@ -101,9 +101,9 @@ export default function MerchantLogin() {
     <>
       <Header title={t('merchant.login.title')} showBack />
       <Screen padded={false} className="bg-canvas">
-        <div className="px-4 pt-4 pb-8 space-y-5">
+        <div className="px-5 pt-5 pb-10 space-y-5">
           {/* Hero */}
-          <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-ink-900 via-ink-800 to-ink-900 text-white p-5 shadow-float">
+          <div className="relative overflow-hidden rounded-xl3 bg-gradient-to-br from-ink-900 via-ink-800 to-ink-900 text-white p-6 shadow-plush">
             <div
               aria-hidden
               className="pointer-events-none absolute inset-0 pattern-dots opacity-25"
