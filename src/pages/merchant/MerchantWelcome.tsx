@@ -27,11 +27,11 @@ export default function MerchantWelcome() {
       />
       <div
         aria-hidden
-        className="pointer-events-none absolute -top-24 end-[-20%] h-72 w-72 rounded-full bg-gold-500/25 blur-3xl"
+        className="pointer-events-none absolute -top-24 end-[-20%] h-72 w-72 rounded-full bg-gold-400/22 blur-3xl"
       />
       <div
         aria-hidden
-        className="pointer-events-none absolute top-40 start-[-15%] h-60 w-60 rounded-full bg-brand-500/20 blur-3xl"
+        className="pointer-events-none absolute top-40 start-[-15%] h-60 w-60 rounded-full bg-gold-400/18 blur-3xl"
       />
 
       <div className="relative flex items-center justify-between px-5 pt-[calc(env(safe-area-inset-top)+18px)]">
@@ -51,7 +51,7 @@ export default function MerchantWelcome() {
 
       <div className="relative flex-1 px-5 pt-12 pb-6 flex flex-col">
         <div className="mt-6">
-          <div className="inline-flex items-center gap-1.5 rounded-full bg-gold-500/15 px-2.5 py-1 ring-1 ring-gold-400/30 text-[11.5px] font-semibold text-gold-200">
+          <div className="inline-flex items-center gap-1.5 rounded-full bg-gold-400/15 px-2.5 py-1 ring-1 ring-gold-400/30 text-[11.5px] font-semibold text-gold-200">
             <BuildingIcon size={13} />
             {t('merchant.entry.eyebrow')}
           </div>

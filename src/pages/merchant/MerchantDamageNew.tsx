@@ -185,7 +185,7 @@ export default function MerchantDamageNew() {
         subtitle={rental.id}
         showBack
       />
-      <Screen padded={false} className="bg-ink-50">
+      <Screen padded={false} className="bg-canvas">
         <div className="px-4 pt-4 pb-10 space-y-4">
           <form className="space-y-4" onSubmit={onSubmit} noValidate>
             {/* Hero */}
@@ -219,7 +219,7 @@ export default function MerchantDamageNew() {
                 className="mb-0"
               />
               <div className="flex items-center gap-3">
-                <span className="h-10 w-10 shrink-0 rounded-xl bg-ink-100 text-ink-700 grid place-items-center">
+                <span className="h-10 w-10 shrink-0 rounded-xl bg-canvas-100 text-ink-700 grid place-items-center">
                   <CarIcon size={18} />
                 </span>
                 <div className="min-w-0 flex-1">
@@ -376,7 +376,7 @@ export default function MerchantDamageNew() {
 
               {/* Photography tips — shown only when no evidence yet */}
               {evidence.length === 0 && (
-                <div className="rounded-xl2 bg-ink-50 ring-1 ring-ink-100 p-3 space-y-2">
+                <div className="rounded-xl2 bg-ink-50 hairline p-3 space-y-2">
                   <div className="text-[12px] font-semibold text-ink-900">
                     {t('merchant.damage.new.evidence.tipsTitle')}
                   </div>
@@ -427,7 +427,7 @@ export default function MerchantDamageNew() {
                     {evidence.map((src, i) => (
                       <div
                         key={`${i}-${src.length}`}
-                        className="relative group aspect-square overflow-hidden rounded-xl bg-ink-100 ring-1 ring-ink-100"
+                        className="relative group aspect-square overflow-hidden rounded-xl bg-ink-100 hairline"
                       >
                         <button
                           type="button"
@@ -491,14 +491,14 @@ export default function MerchantDamageNew() {
               />
               <LinkedRow
                 icon={<DocIcon size={16} />}
-                tone="bg-brand-50 text-brand-600"
+                tone="bg-canvas-100 text-ink-700"
                 label={t('merchant.rental.docs.contract')}
                 refValue={rental.contractRef}
               />
               <CardDivider />
               <LinkedRow
                 icon={<SignatureIcon size={16} />}
-                tone="bg-[#FBF2DD] text-gold-600"
+                tone="bg-gold-50 text-gold-700"
                 label={t('merchant.rental.docs.note')}
                 refValue={rental.noteRef}
               />

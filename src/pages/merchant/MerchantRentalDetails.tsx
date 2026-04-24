@@ -174,8 +174,8 @@ export default function MerchantRentalDetails() {
           />
         }
       />
-      <Screen padded={false} className="bg-ink-50">
-        <div className="px-4 pt-4 pb-8 space-y-4">
+      <Screen padded={false} className="bg-canvas">
+        <div className="px-5 pt-5 pb-10 space-y-5">
           {/* Outcome banner */}
           {closureState !== 'active' && (
             <div
@@ -248,23 +248,27 @@ export default function MerchantRentalDetails() {
           )}
 
           {/* Hero */}
-          <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-ink-900 via-ink-800 to-ink-900 text-white p-5 shadow-float">
+          <div className="relative overflow-hidden rounded-xl3 bg-gradient-to-br from-ink-900 via-ink-800 to-ink-900 text-white p-6 shadow-plush">
             <div
               aria-hidden
               className="pointer-events-none absolute inset-0 pattern-dots opacity-25"
             />
-            <div className="relative flex items-start gap-3">
-              <span className="h-11 w-11 shrink-0 rounded-2xl bg-white/10 ring-1 ring-white/15 text-white grid place-items-center">
+            <div
+              aria-hidden
+              className="pointer-events-none absolute -top-14 end-[-18%] h-52 w-52 rounded-full bg-gold-400/22 blur-[100px]"
+            />
+            <div className="relative flex items-start gap-4">
+              <span className="h-12 w-12 shrink-0 rounded-2xl bg-white/8 ring-1 ring-white/12 text-gold-300 grid place-items-center">
                 <CarIcon size={20} />
               </span>
               <div className="min-w-0 flex-1">
-                <div className="text-[11.5px] text-white/55 uppercase tracking-wide">
+                <div className="text-[10.5px] text-white/55 uppercase tracking-[0.08em]">
                   {t('merchant.rental.hero.current')}
                 </div>
-                <div className="mt-0.5 text-[16px] font-bold truncate">
+                <div className="mt-1.5 editorial-title text-[20px] leading-tight truncate text-white">
                   {rental.item}
                 </div>
-                <div className="mt-1 flex items-center gap-1.5 text-[12px] text-white/70 truncate">
+                <div className="mt-2 flex items-center gap-1.5 text-[12px] text-white/65 truncate">
                   <UsersIcon size={12} />
                   <span className="truncate">{rental.customerName}</span>
                 </div>
@@ -355,7 +359,7 @@ export default function MerchantRentalDetails() {
             />
             <DocRow
               icon={<DocIcon size={18} />}
-              tone="bg-brand-50 text-brand-600"
+              tone="bg-canvas-100 text-ink-700"
               label={t('merchant.rental.docs.contract')}
               refValue={rental.contractRef}
               state={rental.contractState}
@@ -365,7 +369,7 @@ export default function MerchantRentalDetails() {
             <CardDivider />
             <DocRow
               icon={<SignatureIcon size={18} />}
-              tone="bg-[#FBF2DD] text-gold-600"
+              tone="bg-gold-50 text-gold-700"
               label={t('merchant.rental.docs.note')}
               refValue={rental.noteRef}
               state={rental.noteState}
@@ -560,8 +564,8 @@ export default function MerchantRentalDetails() {
             </Button>
           </div>
 
-          <div className="rounded-xl2 bg-brand-50/70 ring-1 ring-brand-100 p-3.5 flex items-start gap-3">
-            <span className="h-9 w-9 shrink-0 rounded-xl bg-white text-brand-600 grid place-items-center ring-1 ring-brand-100">
+          <div className="rounded-xl2 bg-brand-50/70 ring-1 hairline p-3.5 flex items-start gap-3">
+            <span className="h-9 w-9 shrink-0 rounded-xl bg-white text-gold-700 grid place-items-center ring-1 hairline">
               <ShieldIcon size={18} />
             </span>
             <div className="min-w-0 text-[12px] text-brand-800/90 leading-relaxed">
@@ -662,8 +666,8 @@ function NafithRow({
           state === 'done'
             ? 'bg-success-50 text-success-600'
             : state === 'current'
-              ? 'bg-brand-50 text-brand-600'
-              : 'bg-ink-50 text-ink-400',
+              ? 'bg-canvas-100 text-ink-700'
+              : 'bg-canvas-100 text-ink-400',
         )}
       >
         {state === 'done' ? (
@@ -760,15 +764,15 @@ function eventVisual(key: MerchantRentalTimelineKey): {
 } {
   switch (key) {
     case 'created':
-      return { icon: <ReceiptIcon size={14} />, tone: 'bg-ink-50 text-ink-600' };
+      return { icon: <ReceiptIcon size={14} />, tone: 'bg-canvas-100 text-ink-600' };
     case 'customer-approved':
-      return { icon: <UsersIcon size={14} />, tone: 'bg-brand-50 text-brand-600' };
+      return { icon: <UsersIcon size={14} />, tone: 'bg-canvas-100 text-ink-700' };
     case 'contract-ready':
-      return { icon: <DocIcon size={14} />, tone: 'bg-brand-50 text-brand-600' };
+      return { icon: <DocIcon size={14} />, tone: 'bg-canvas-100 text-ink-700' };
     case 'note-ready':
-      return { icon: <SignatureIcon size={14} />, tone: 'bg-[#FBF2DD] text-gold-600' };
+      return { icon: <SignatureIcon size={14} />, tone: 'bg-gold-50 text-gold-700' };
     case 'nafith-submitted':
-      return { icon: <GavelIcon size={14} />, tone: 'bg-[#FBF2DD] text-gold-600' };
+      return { icon: <GavelIcon size={14} />, tone: 'bg-gold-50 text-gold-700' };
     case 'nafith-approved':
       return {
         icon: <BadgeCheckIcon size={14} />,

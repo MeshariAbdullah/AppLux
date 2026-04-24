@@ -128,10 +128,10 @@ export default function MerchantDamageDetails() {
   return (
     <>
       <Header title={kase.id} subtitle={kase.customerName} showBack />
-      <Screen padded={false} className="bg-ink-50">
-        <div className="px-4 pt-4 pb-10 space-y-4">
+      <Screen padded={false} className="bg-canvas">
+        <div className="px-5 pt-5 pb-10 space-y-5">
           {/* Hero */}
-          <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-ink-900 via-ink-800 to-ink-900 text-white p-5 shadow-float">
+          <div className="relative overflow-hidden rounded-xl3 bg-gradient-to-br from-ink-900 via-ink-800 to-ink-900 text-white p-6 shadow-plush">
             <div
               aria-hidden
               className="pointer-events-none absolute -top-10 end-[-15%] h-48 w-48 rounded-full bg-danger-500/25 blur-3xl"
@@ -154,13 +154,13 @@ export default function MerchantDamageDetails() {
                 )}
               </span>
               <div className="min-w-0 flex-1">
-                <div className="text-[11.5px] text-white/55 uppercase tracking-wide">
+                <div className="text-[10.5px] text-white/55 uppercase tracking-[0.08em]">
                   {t('merchant.damageCase.eyebrow')}
                 </div>
-                <div className="mt-0.5 text-[16px] font-bold truncate num">
+                <div className="mt-1.5 editorial-title text-[20px] truncate num text-white">
                   {kase.id}
                 </div>
-                <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+                <div className="mt-2 flex flex-wrap items-center gap-1.5">
                   <StatusChip
                     tone={sevTone}
                     dot={false}
@@ -197,7 +197,7 @@ export default function MerchantDamageDetails() {
                 to={`/merchant/rentals/${rental.id}`}
                 className="flex items-center gap-3 w-full group"
               >
-                <span className="h-10 w-10 shrink-0 rounded-xl bg-ink-100 text-ink-700 grid place-items-center">
+                <span className="h-10 w-10 shrink-0 rounded-xl bg-canvas-100 text-ink-700 grid place-items-center">
                   <CarIcon size={18} />
                 </span>
                 <div className="min-w-0 flex-1">
@@ -232,7 +232,7 @@ export default function MerchantDamageDetails() {
               <>
                 <DocLinkRow
                   icon={<DocIcon size={16} />}
-                  tone="bg-brand-50 text-brand-600"
+                  tone="bg-canvas-100 text-ink-700"
                   label={t('merchant.rental.docs.contract')}
                   refValue={contractRef}
                   to={
@@ -247,7 +247,7 @@ export default function MerchantDamageDetails() {
               <>
                 <DocLinkRow
                   icon={<SignatureIcon size={16} />}
-                  tone="bg-[#FBF2DD] text-gold-600"
+                  tone="bg-gold-50 text-gold-700"
                   label={t('merchant.rental.docs.note')}
                   refValue={noteRef}
                   to={rental ? `/merchant/rentals/${rental.id}/note` : undefined}
@@ -300,7 +300,7 @@ export default function MerchantDamageDetails() {
                         key={`${i}-${src.length}`}
                         type="button"
                         onClick={() => setLightboxIndex(i)}
-                        className="relative aspect-square overflow-hidden rounded-xl bg-ink-100 ring-1 ring-ink-100 active:scale-[0.98] transition-transform"
+                        className="relative aspect-square overflow-hidden rounded-xl bg-ink-100 hairline active:scale-[0.98] transition-transform"
                       >
                         <img
                           src={src}
@@ -314,8 +314,8 @@ export default function MerchantDamageDetails() {
                     ))}
                   </div>
                 ) : (
-                  <div className="rounded-xl2 bg-ink-50 ring-1 ring-ink-100 p-4 flex items-center gap-3 text-[12px] text-ink-500">
-                    <span className="h-9 w-9 shrink-0 rounded-xl bg-white text-ink-400 grid place-items-center ring-1 ring-ink-100">
+                  <div className="rounded-xl2 bg-ink-50 hairline p-4 flex items-center gap-3 text-[12px] text-ink-500">
+                    <span className="h-9 w-9 shrink-0 rounded-xl bg-white text-ink-400 grid place-items-center hairline">
                       <ImageIcon size={16} />
                     </span>
                     <div className="leading-relaxed">
@@ -335,11 +335,11 @@ export default function MerchantDamageDetails() {
                   {t('merchant.damageCase.notes')}
                 </div>
                 {kase.notes ? (
-                  <div className="rounded-xl2 bg-ink-50 ring-1 ring-ink-100 px-4 py-3 text-[13px] text-ink-700 leading-relaxed whitespace-pre-line">
+                  <div className="rounded-xl2 bg-ink-50 hairline px-4 py-3 text-[13px] text-ink-700 leading-relaxed whitespace-pre-line">
                     {kase.notes}
                   </div>
                 ) : (
-                  <div className="rounded-xl2 bg-ink-50 ring-1 ring-ink-100 p-3 text-[12px] text-ink-500 leading-relaxed">
+                  <div className="rounded-xl2 bg-ink-50 hairline p-3 text-[12px] text-ink-500 leading-relaxed">
                     {t('merchant.damageCase.noNotes')}
                   </div>
                 )}
@@ -357,7 +357,7 @@ export default function MerchantDamageDetails() {
                 'rounded-xl2 p-3.5 flex items-start gap-3 ring-1',
                 kase.status === 'settled'
                   ? 'bg-success-50 ring-success-500/20'
-                  : 'bg-brand-50/70 ring-brand-100',
+                  : 'bg-brand-50/70 hairline',
               )}
             >
               <span
@@ -365,7 +365,7 @@ export default function MerchantDamageDetails() {
                   'h-10 w-10 shrink-0 rounded-xl grid place-items-center ring-1',
                   kase.status === 'settled'
                     ? 'bg-white text-success-600 ring-success-500/20'
-                    : 'bg-white text-brand-600 ring-brand-100',
+                    : 'bg-white text-gold-700 hairline',
                 )}
               >
                 {kase.status === 'settled' ? (
@@ -481,7 +481,7 @@ export default function MerchantDamageDetails() {
                 tone={
                   kase.status !== 'reported'
                     ? 'bg-warn-50 text-warn-600'
-                    : 'bg-ink-50 text-ink-400'
+                    : 'bg-canvas-100 text-ink-400'
                 }
                 icon={<ShieldIcon size={14} />}
                 label={t('merchant.damageCase.timeline.investigating')}
@@ -496,7 +496,7 @@ export default function MerchantDamageDetails() {
                 tone={
                   kase.status === 'settled'
                     ? 'bg-success-50 text-success-600'
-                    : 'bg-ink-50 text-ink-400'
+                    : 'bg-canvas-100 text-ink-400'
                 }
                 icon={<BadgeCheckIcon size={14} />}
                 label={t('merchant.damageCase.timeline.settled')}
@@ -511,8 +511,8 @@ export default function MerchantDamageDetails() {
             </ol>
           </Card>
 
-          <div className="rounded-xl2 bg-ink-50 ring-1 ring-ink-100 p-3.5 flex items-start gap-3">
-            <span className="h-9 w-9 shrink-0 rounded-xl bg-white text-ink-700 grid place-items-center ring-1 ring-ink-100">
+          <div className="rounded-xl2 bg-ink-50 hairline p-3.5 flex items-start gap-3">
+            <span className="h-9 w-9 shrink-0 rounded-xl bg-white text-ink-700 grid place-items-center hairline">
               <InfoIcon size={16} />
             </span>
             <div className="min-w-0 flex-1 text-[12px] text-ink-600 leading-relaxed">

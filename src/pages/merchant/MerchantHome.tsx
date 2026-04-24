@@ -87,7 +87,7 @@ export default function MerchantHome() {
       desc: t('merchant.home.quickInvoiceDesc'),
       icon: <PlusIcon size={18} />,
       to: '/merchant/invoice/new',
-      tone: 'bg-brand-50 text-brand-600 ring-brand-100',
+      tone: 'bg-canvas-100 text-ink-700 hairline',
       featured: true,
     },
     {
@@ -102,7 +102,7 @@ export default function MerchantHome() {
       desc: t('merchant.home.quickApprovalsDesc'),
       icon: <ReceiptIcon size={18} />,
       to: '/merchant/approvals',
-      tone: 'bg-[#FBF2DD] text-gold-600 ring-gold-400/30',
+      tone: 'bg-gold-50 text-gold-700 ring-gold-400/30',
       count: pendingCount,
     },
     {
@@ -128,14 +128,14 @@ export default function MerchantHome() {
         title={t('merchant.home.title')}
         trailing={<LangToggle tone="dark" />}
       />
-      <Screen padded={false} className="bg-ink-50">
-        <div className="px-4 pt-4 pb-8 space-y-4">
+      <Screen padded={false} className="bg-canvas">
+        <div className="px-5 pt-5 pb-10 space-y-5">
           {/* Hero */}
-          <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-ink-900 via-ink-800 to-ink-900 text-white p-5 shadow-float">
+          <div className="relative overflow-hidden rounded-xl3 bg-gradient-to-br from-ink-900 via-ink-800 to-ink-900 text-white p-6 shadow-plush">
             <div aria-hidden className="pointer-events-none absolute inset-0 pattern-dots opacity-25" />
             <div
               aria-hidden
-              className="pointer-events-none absolute -top-10 end-[-15%] h-48 w-48 rounded-full bg-brand-500/25 blur-3xl"
+              className="pointer-events-none absolute -top-10 end-[-15%] h-48 w-48 rounded-full bg-gold-400/22 blur-3xl"
             />
             <div className="relative flex items-start justify-between gap-3">
               <div className="min-w-0 flex-1">
@@ -143,10 +143,10 @@ export default function MerchantHome() {
                   <BadgeCheckIcon size={13} />
                   {t('merchant.home.statusApproved')}
                 </span>
-                <h1 className="mt-3 text-[22px] leading-tight font-bold truncate">
+                <h1 className="mt-4 editorial-title text-[24px] leading-tight truncate text-white">
                   {t('merchant.home.welcome', { name: merchant.companyName })}
                 </h1>
-                <p className="mt-1.5 text-[13px] text-white/65 leading-relaxed max-w-[36ch]">
+                <p className="mt-2 text-[13px] text-white/65 leading-relaxed max-w-[36ch]">
                   {t('merchant.home.subtitle')}
                 </p>
               </div>
@@ -155,13 +155,13 @@ export default function MerchantHome() {
               </span>
             </div>
 
-            <div className="relative mt-5 rounded-2xl bg-white/5 ring-1 ring-white/10 p-3.5 backdrop-blur">
+            <div className="relative mt-6 rounded-2xl bg-white/[0.04] ring-1 ring-white/10 p-4 backdrop-blur">
               <div className="flex items-end justify-between gap-3">
                 <div className="min-w-0">
-                  <div className="text-[11px] text-white/60 uppercase tracking-wide">
+                  <div className="text-[11px] text-white/55 uppercase tracking-[0.08em]">
                     {t('merchant.home.rentalRevenue')}
                   </div>
-                  <div className="mt-1 text-[24px] font-bold num leading-none">
+                  <div className="mt-1.5 editorial-title text-[28px] num leading-none text-white">
                     {formatCurrency(rentalRevenue)}
                   </div>
                 </div>
@@ -212,13 +212,13 @@ export default function MerchantHome() {
                 label={t('merchant.home.summaryActive')}
                 value={activeCount}
                 icon={<PackageIcon size={16} />}
-                tone="bg-brand-50 text-brand-600"
+                tone="bg-canvas-100 text-ink-700"
               />
               <SummaryTile
                 label={t('merchant.home.summaryPending')}
                 value={pendingCount}
                 icon={<ReceiptIcon size={16} />}
-                tone="bg-[#FBF2DD] text-gold-600"
+                tone="bg-gold-50 text-gold-700"
               />
               <SummaryTile
                 label={t('merchant.home.summaryOverdue')}
@@ -422,7 +422,7 @@ function RecentRow({
         : 'success';
   return (
     <Link to="/merchant/rentals" className="flex items-center gap-3 py-2.5">
-      <span className="h-10 w-10 shrink-0 rounded-xl bg-ink-100 text-ink-700 grid place-items-center font-semibold text-[12px]">
+      <span className="h-10 w-10 shrink-0 rounded-xl bg-canvas-100 text-ink-700 grid place-items-center font-semibold text-[12px]">
         {rental.customerInitials}
       </span>
       <div className="flex-1 min-w-0">

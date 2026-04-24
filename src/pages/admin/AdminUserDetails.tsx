@@ -73,15 +73,15 @@ function activityIcon(type: AdminUserActivityType): ReactNode {
 function activityTone(type: AdminUserActivityType): string {
   switch (type) {
     case 'rental':
-      return 'bg-brand-50 text-brand-600';
+      return 'bg-canvas-100 text-ink-700';
     case 'payment':
       return 'bg-success-50 text-success-600';
     case 'contract':
-      return 'bg-[#FBF2DD] text-gold-600';
+      return 'bg-gold-50 text-gold-700';
     case 'return':
-      return 'bg-ink-50 text-ink-600';
+      return 'bg-canvas-100 text-ink-600';
     case 'verification':
-      return 'bg-brand-50 text-brand-600';
+      return 'bg-canvas-100 text-ink-700';
     case 'support':
       return 'bg-warn-50 text-warn-600';
   }
@@ -134,7 +134,7 @@ export default function AdminUserDetails() {
     return (
       <>
         <Header title={t('admin.user.title')} showBack />
-        <Screen padded={false} className="bg-ink-50">
+        <Screen padded={false} className="bg-canvas">
           <div className="px-4 pt-6">
             <EmptyState
               icon={<InfoIcon size={22} />}
@@ -227,17 +227,17 @@ export default function AdminUserDetails() {
         subtitle={user.fullName}
         showBack
       />
-      <Screen padded={false} className="bg-ink-50">
-        <div className="px-4 pt-4 pb-10 space-y-4">
+      <Screen padded={false} className="bg-canvas">
+        <div className="px-5 pt-5 pb-10 space-y-5">
           {/* Hero */}
-          <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-ink-900 via-ink-800 to-ink-900 text-white p-5 shadow-float">
+          <div className="relative overflow-hidden rounded-xl3 bg-gradient-to-br from-ink-900 via-ink-800 to-ink-900 text-white p-6 shadow-plush">
             <div
               aria-hidden
               className="pointer-events-none absolute inset-0 pattern-dots opacity-25"
             />
             <div
               aria-hidden
-              className="pointer-events-none absolute -top-14 end-[-15%] h-56 w-56 rounded-full bg-gold-500/25 blur-3xl"
+              className="pointer-events-none absolute -top-14 end-[-15%] h-56 w-56 rounded-full bg-gold-400/22 blur-3xl"
             />
             <div className="relative flex items-start gap-3">
               <span className="h-12 w-12 shrink-0 rounded-2xl bg-white/10 ring-1 ring-white/15 grid place-items-center text-white font-semibold text-[13px]">
@@ -245,7 +245,7 @@ export default function AdminUserDetails() {
               </span>
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-1.5">
-                  <h1 className="text-[18px] leading-tight font-bold truncate">
+                  <h1 className="editorial-title text-[22px] leading-tight truncate text-white">
                     {user.fullName}
                   </h1>
                   {user.nafathVerified && (
@@ -524,7 +524,7 @@ export default function AdminUserDetails() {
           >
             {recentActivity.length === 0 ? (
               <Card padded className="text-center">
-                <div className="mx-auto h-10 w-10 rounded-xl bg-ink-50 text-ink-500 grid place-items-center">
+                <div className="mx-auto h-10 w-10 rounded-xl bg-canvas-100 text-ink-500 grid place-items-center">
                   <HistoryIcon size={18} />
                 </div>
                 <div className="mt-2 text-[13px] font-semibold text-ink-900">
@@ -555,7 +555,7 @@ export default function AdminUserDetails() {
 
           <Link
             to="/admin/users"
-            className="block text-center text-[12.5px] font-semibold text-brand-700 py-2"
+            className="block text-center text-[12.5px] font-semibold text-gold-700 py-2"
           >
             {t('admin.user.backToList')}
           </Link>

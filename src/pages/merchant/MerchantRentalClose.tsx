@@ -68,7 +68,7 @@ export default function MerchantRentalClose() {
     return (
       <>
         <Header title={t('merchant.close.title')} showBack />
-        <Screen padded={false} className="bg-ink-50">
+        <Screen padded={false} className="bg-canvas">
           <div className="px-4 pt-6 pb-8 space-y-4 flex flex-col min-h-full">
             <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-ink-900 via-ink-800 to-ink-900 text-white p-6 shadow-float text-center">
               <div
@@ -96,7 +96,7 @@ export default function MerchantRentalClose() {
                 className="mb-0"
               />
               <div className="flex items-center gap-3">
-                <span className="h-10 w-10 shrink-0 rounded-xl bg-ink-100 text-ink-700 grid place-items-center">
+                <span className="h-10 w-10 shrink-0 rounded-xl bg-canvas-100 text-ink-700 grid place-items-center">
                   <CarIcon size={18} />
                 </span>
                 <div className="min-w-0">
@@ -166,7 +166,7 @@ export default function MerchantRentalClose() {
         subtitle={rental.id}
         showBack
       />
-      <Screen padded={false} className="bg-ink-50">
+      <Screen padded={false} className="bg-canvas">
         <div className="px-4 pt-4 pb-8 space-y-4">
           <form className="space-y-4" onSubmit={onSubmit} noValidate>
             {/* Hero */}
@@ -200,7 +200,7 @@ export default function MerchantRentalClose() {
                 className="mb-0"
               />
               <div className="flex items-center gap-3">
-                <span className="h-10 w-10 shrink-0 rounded-xl bg-ink-100 text-ink-700 grid place-items-center">
+                <span className="h-10 w-10 shrink-0 rounded-xl bg-canvas-100 text-ink-700 grid place-items-center">
                   <CarIcon size={18} />
                 </span>
                 <div className="min-w-0 flex-1">
@@ -238,14 +238,14 @@ export default function MerchantRentalClose() {
               />
               <LinkedRow
                 icon={<DocIcon size={16} />}
-                tone="bg-brand-50 text-brand-600"
+                tone="bg-canvas-100 text-ink-700"
                 label={t('merchant.rental.docs.contract')}
                 refValue={rental.contractRef}
               />
               <CardDivider />
               <LinkedRow
                 icon={<SignatureIcon size={16} />}
-                tone="bg-[#FBF2DD] text-gold-600"
+                tone="bg-gold-50 text-gold-700"
                 label={t('merchant.rental.docs.note')}
                 refValue={rental.noteRef}
               />
@@ -274,7 +274,7 @@ export default function MerchantRentalClose() {
 
             {/* Confirmation */}
             <label
-              className="flex items-start gap-3 rounded-xl2 bg-white ring-1 ring-ink-100 p-3.5 cursor-pointer select-none"
+              className="flex items-start gap-3 rounded-xl2 bg-white hairline p-3.5 cursor-pointer select-none"
             >
               <span
                 className={`h-5 w-5 mt-0.5 shrink-0 rounded-md grid place-items-center ring-1 ${

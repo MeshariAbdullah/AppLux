@@ -115,14 +115,14 @@ function evidenceVisual(kind: AdminCaseEvidenceKind): EvidenceVisual {
         gradient: 'from-brand-500/80 via-brand-600/85 to-brand-700',
         ring: 'ring-brand-500/25',
         icon: <CarIcon size={22} />,
-        chipClass: 'bg-brand-50 text-brand-700',
+        chipClass: 'bg-canvas-100 text-ink-800',
       };
     case 'odometer':
       return {
         gradient: 'from-gold-400 via-gold-500 to-gold-600',
         ring: 'ring-gold-500/30',
         icon: <ClockIcon size={22} />,
-        chipClass: 'bg-[#FBF2DD] text-gold-700',
+        chipClass: 'bg-gold-50 text-gold-700',
       };
     case 'signature':
       return {
@@ -136,7 +136,7 @@ function evidenceVisual(kind: AdminCaseEvidenceKind): EvidenceVisual {
         gradient: 'from-brand-400/80 via-brand-500/85 to-brand-600',
         ring: 'ring-brand-500/25',
         icon: <ReceiptIcon size={22} />,
-        chipClass: 'bg-brand-50 text-brand-700',
+        chipClass: 'bg-canvas-100 text-ink-800',
       };
     case 'missing':
       return {
@@ -151,7 +151,7 @@ function evidenceVisual(kind: AdminCaseEvidenceKind): EvidenceVisual {
         gradient: 'from-brand-500/80 via-brand-600/90 to-ink-800',
         ring: 'ring-brand-500/25',
         icon: <MapPinIcon size={22} />,
-        chipClass: 'bg-brand-50 text-brand-700',
+        chipClass: 'bg-canvas-100 text-ink-800',
       };
   }
 }
@@ -172,14 +172,14 @@ function noteVisual(role: AdminCaseNoteRole): NoteVisual {
   if (role === 'merchant') {
     return {
       bubble: 'bg-brand-50/80 ring-brand-500/15 text-ink-800',
-      badge: 'bg-brand-100 text-brand-700',
+      badge: 'bg-brand-100 text-gold-700',
       icon: <BuildingIcon size={11} />,
     };
   }
   if (role === 'operator') {
     return {
-      bubble: 'bg-[#FBF4DE]/90 ring-gold-500/20 text-ink-800',
-      badge: 'bg-[#FBF2DD] text-gold-700',
+      bubble: 'bg-gold-50 ring-gold-500/20 text-ink-800',
+      badge: 'bg-gold-50 text-gold-700',
       icon: <ShieldIcon size={11} />,
     };
   }
@@ -199,12 +199,12 @@ function auditVisual(action: AdminCaseAuditAction): AuditVisual {
   switch (action) {
     case 'reported':
       return {
-        dotClass: 'bg-brand-50 text-brand-700 ring-brand-500/20',
+        dotClass: 'bg-canvas-100 text-ink-800 ring-brand-500/20',
         icon: <InfoIcon size={12} />,
       };
     case 'evidence-added':
       return {
-        dotClass: 'bg-brand-50 text-brand-700 ring-brand-500/20',
+        dotClass: 'bg-canvas-100 text-ink-800 ring-brand-500/20',
         icon: <PackageIcon size={12} />,
       };
     case 'reviewed':
@@ -219,7 +219,7 @@ function auditVisual(action: AdminCaseAuditAction): AuditVisual {
       };
     case 'escalated-settlement':
       return {
-        dotClass: 'bg-[#FBF2DD] text-gold-700 ring-gold-500/25',
+        dotClass: 'bg-gold-50 text-gold-700 ring-gold-500/25',
         icon: <ArrowIcon size={12} />,
       };
     case 'escalated-nafith':
@@ -349,7 +349,7 @@ export default function AdminCaseDetails() {
     return (
       <>
         <Header title={t('admin.case.title')} showBack />
-        <Screen padded={false} className="bg-ink-50">
+        <Screen padded={false} className="bg-canvas">
           <div className="px-4 pt-6">
             <EmptyState
               icon={<InfoIcon size={22} />}
@@ -377,17 +377,17 @@ export default function AdminCaseDetails() {
         subtitle={header.customerName}
         showBack
       />
-      <Screen padded={false} className="bg-ink-50">
-        <div className="px-4 pt-4 pb-10 space-y-4">
+      <Screen padded={false} className="bg-canvas">
+        <div className="px-5 pt-5 pb-10 space-y-5">
           {/* Hero */}
-          <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-ink-900 via-ink-800 to-ink-900 text-white p-5 shadow-float">
+          <div className="relative overflow-hidden rounded-xl3 bg-gradient-to-br from-ink-900 via-ink-800 to-ink-900 text-white p-6 shadow-plush">
             <div
               aria-hidden
               className="pointer-events-none absolute inset-0 pattern-dots opacity-25"
             />
             <div
               aria-hidden
-              className="pointer-events-none absolute -top-14 end-[-15%] h-56 w-56 rounded-full bg-gold-500/25 blur-3xl"
+              className="pointer-events-none absolute -top-14 end-[-15%] h-56 w-56 rounded-full bg-gold-400/22 blur-3xl"
             />
             <div className="relative flex items-start gap-3">
               <span
@@ -405,14 +405,14 @@ export default function AdminCaseDetails() {
                 )}
               </span>
               <div className="min-w-0 flex-1">
-                <div className="inline-flex items-center gap-1.5 rounded-full bg-gold-500/15 ring-1 ring-gold-400/30 px-2.5 py-1 text-[11px] font-semibold text-gold-200">
+                <div className="inline-flex items-center gap-1.5 rounded-full bg-gold-400/15 ring-1 ring-gold-400/30 px-2.5 py-1 text-[11px] font-semibold text-gold-200">
                   <ShieldIcon size={12} />
                   {t(`admin.case.kind.${kind}`)}
                 </div>
-                <h1 className="mt-2 text-[18px] leading-tight font-bold truncate">
+                <h1 className="mt-3 editorial-title text-[22px] leading-tight truncate num text-white">
                   {detail.id}
                 </h1>
-                <div className="mt-1 text-[12px] text-white/65 truncate">
+                <div className="mt-1.5 text-[12px] text-white/65 truncate">
                   {header.merchantName} · {header.item}
                 </div>
               </div>
@@ -541,7 +541,7 @@ export default function AdminCaseDetails() {
           >
             <Card padded className="space-y-3">
               <div className="flex items-start gap-3">
-                <span className="h-10 w-10 shrink-0 rounded-xl bg-brand-50 text-brand-600 grid place-items-center">
+                <span className="h-10 w-10 shrink-0 rounded-xl bg-canvas-100 text-ink-700 grid place-items-center">
                   <ReceiptIcon size={18} />
                 </span>
                 <div className="min-w-0 flex-1">
@@ -581,7 +581,7 @@ export default function AdminCaseDetails() {
           >
             <Card padded className="space-y-3">
               <div className="flex items-start gap-3">
-                <span className="h-10 w-10 shrink-0 rounded-xl bg-[#FBF2DD] text-gold-600 grid place-items-center">
+                <span className="h-10 w-10 shrink-0 rounded-xl bg-gold-50 text-gold-700 grid place-items-center">
                   <DocIcon size={18} />
                 </span>
                 <div className="min-w-0 flex-1">
@@ -875,7 +875,7 @@ export default function AdminCaseDetails() {
 
           <Link
             to="/admin/cases"
-            className="block text-center text-[12.5px] font-semibold text-brand-700 py-2"
+            className="block text-center text-[12.5px] font-semibold text-gold-700 py-2"
           >
             {t('admin.case.backToList')}
           </Link>
@@ -941,7 +941,7 @@ function EvidenceTile({ evidence }: { evidence: AdminCaseEvidence }) {
   const { formatDate } = useI18n();
   const v = evidenceVisual(evidence.kind);
   return (
-    <div className="rounded-2xl bg-white ring-1 ring-ink-100 overflow-hidden flex flex-col">
+    <div className="rounded-2xl bg-white hairline overflow-hidden flex flex-col">
       <div
         className={cn(
           'relative aspect-[4/3] bg-gradient-to-br text-white grid place-items-center ring-1 ring-inset',

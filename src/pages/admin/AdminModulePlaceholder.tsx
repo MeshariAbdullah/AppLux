@@ -32,7 +32,7 @@ export default function AdminModulePlaceholder() {
   return (
     <>
       <Header title={title} showBack />
-      <Screen padded={false} className="bg-ink-50">
+      <Screen padded={false} className="bg-canvas">
         <div className="px-4 pt-6 pb-8 space-y-4 flex flex-col min-h-full">
           <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-ink-900 via-ink-800 to-ink-900 text-white p-6 shadow-float text-center">
             <div
@@ -51,7 +51,7 @@ export default function AdminModulePlaceholder() {
           </div>
 
           <Card padded className="flex items-start gap-3">
-            <span className="h-10 w-10 shrink-0 rounded-xl bg-brand-50 text-brand-600 grid place-items-center">
+            <span className="h-10 w-10 shrink-0 rounded-xl bg-canvas-100 text-ink-700 grid place-items-center">
               <ShieldIcon size={18} />
             </span>
             <div className="min-w-0 text-[12.5px] text-ink-600 leading-relaxed">
@@ -63,7 +63,7 @@ export default function AdminModulePlaceholder() {
           </Card>
 
           <Card padded className="flex items-start gap-3">
-            <span className="h-10 w-10 shrink-0 rounded-xl bg-[#FBF2DD] text-gold-600 grid place-items-center">
+            <span className="h-10 w-10 shrink-0 rounded-xl bg-gold-50 text-gold-700 grid place-items-center">
               <ClockIcon size={18} />
             </span>
             <div className="min-w-0 text-[12.5px] text-ink-600 leading-relaxed">

@@ -28,7 +28,7 @@ export default function MerchantApprovals() {
   return (
     <>
       <Header title={t('merchant.approvals.title')} showBack />
-      <Screen padded={false} className="bg-ink-50">
+      <Screen padded={false} className="bg-canvas">
         <div className="px-4 pt-4 pb-8 space-y-3">
           <p className="text-[12.5px] text-ink-500 leading-relaxed px-1">
             {t('merchant.approvals.subtitle')}
@@ -68,7 +68,7 @@ function ApprovalCard({ approval }: { approval: MerchantApproval }) {
   return (
     <Card padded className="space-y-3">
       <div className="flex items-center gap-3">
-        <span className="h-10 w-10 shrink-0 rounded-xl bg-[#FBF2DD] text-gold-600 grid place-items-center">
+        <span className="h-10 w-10 shrink-0 rounded-xl bg-gold-50 text-gold-700 grid place-items-center">
           <ReceiptIcon size={18} />
         </span>
         <div className="flex-1 min-w-0">

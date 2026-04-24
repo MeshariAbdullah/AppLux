@@ -226,7 +226,7 @@ export default function MerchantRegister() {
             <button
               type="button"
               onClick={goBack}
-              className="h-9 w-9 grid place-items-center rounded-full bg-ink-50 text-ink-700 hover:bg-ink-100"
+              className="h-9 w-9 grid place-items-center rounded-full bg-canvas-100 text-ink-700 hover:bg-ink-100"
               aria-label={t('common.back')}
             >
               <ArrowIcon size={18} className={cn(dir === 'rtl' ? '' : 'rotate-180')} />
@@ -330,8 +330,8 @@ export default function MerchantRegister() {
                   className="num uppercase"
                 />
               </FormField>
-              <div className="rounded-xl2 bg-brand-50/70 ring-1 ring-brand-100 p-3.5 flex items-start gap-3">
-                <span className="h-9 w-9 shrink-0 rounded-xl bg-white text-brand-600 grid place-items-center ring-1 ring-brand-100">
+              <div className="rounded-xl2 bg-brand-50/70 ring-1 hairline p-3.5 flex items-start gap-3">
+                <span className="h-9 w-9 shrink-0 rounded-xl bg-white text-gold-700 grid place-items-center ring-1 hairline">
                   <ShieldIcon size={18} />
                 </span>
                 <div className="min-w-0 text-[12px] text-brand-800/80 leading-relaxed">
@@ -396,7 +396,7 @@ export default function MerchantRegister() {
             <>
               {values.branches.length === 0 ? (
                 <Card padded className="text-center space-y-2">
-                  <div className="mx-auto h-11 w-11 rounded-xl bg-ink-50 text-ink-500 grid place-items-center">
+                  <div className="mx-auto h-11 w-11 rounded-xl bg-canvas-100 text-ink-500 grid place-items-center">
                     <BuildingIcon size={20} />
                   </div>
                   <div className="text-[14px] font-semibold text-ink-900">
@@ -497,7 +497,7 @@ export default function MerchantRegister() {
             {step === 0 && (
               <div className="text-center text-[13px] text-ink-500">
                 {t('auth.haveAccount')}{' '}
-                <Link to="/merchant/login" className="text-brand-600 font-semibold">
+                <Link to="/merchant/login" className="text-gold-700 font-semibold">
                   {t('merchant.entry.login')}
                 </Link>
               </div>

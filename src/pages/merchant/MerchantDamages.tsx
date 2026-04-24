@@ -37,7 +37,7 @@ export default function MerchantDamages() {
   return (
     <>
       <Header title={t('merchant.damages.title')} showBack />
-      <Screen padded={false} className="bg-ink-50">
+      <Screen padded={false} className="bg-canvas">
         <div className="px-4 pt-4 pb-8 space-y-4">
           <p className="text-[12.5px] text-ink-500 leading-relaxed px-1">
             {t('merchant.damages.subtitle')}

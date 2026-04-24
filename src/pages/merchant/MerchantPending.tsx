@@ -107,10 +107,10 @@ export default function MerchantPending() {
   return (
     <>
       <Header title={t(`merchant.pending.headers.${effectiveStatus}`)} />
-      <Screen padded={false} className="bg-ink-50">
-        <div className="px-4 pt-4 pb-8 space-y-4">
+      <Screen padded={false} className="bg-canvas">
+        <div className="px-5 pt-5 pb-10 space-y-5">
           {/* Hero */}
-          <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-ink-900 via-ink-800 to-ink-900 text-white p-5 shadow-float">
+          <div className="relative overflow-hidden rounded-xl3 bg-gradient-to-br from-ink-900 via-ink-800 to-ink-900 text-white p-6 shadow-plush">
             <div
               aria-hidden
               className="pointer-events-none absolute inset-0 pattern-dots opacity-25"
@@ -125,10 +125,10 @@ export default function MerchantPending() {
                   <HeroIcon size={13} />
                   {t(visual.badgeKey)}
                 </span>
-                <h1 className="mt-3 text-[22px] leading-tight font-bold">
+                <h1 className="mt-4 editorial-title text-[26px] leading-tight text-white">
                   {t(visual.titleKey)}
                 </h1>
-                <p className="mt-2 text-[13px] text-white/70 leading-relaxed max-w-[36ch]">
+                <p className="mt-2.5 text-[13px] text-white/65 leading-relaxed max-w-[36ch]">
                   {t(visual.subtitleKey)}
                 </p>
               </div>
@@ -205,7 +205,7 @@ export default function MerchantPending() {
             <SectionHeader title={t('merchant.pending.summaryTitle')} />
             <Card padded className="space-y-3">
               <div className="flex items-start gap-3">
-                <span className="h-10 w-10 rounded-xl bg-ink-100 text-ink-700 grid place-items-center shrink-0">
+                <span className="h-10 w-10 rounded-xl bg-canvas-100 text-ink-700 grid place-items-center shrink-0">
                   <BuildingIcon size={18} />
                 </span>
                 <div className="min-w-0 flex-1">
@@ -354,7 +354,7 @@ function NextStep({
 }) {
   return (
     <li className="flex items-start gap-3">
-      <span className="h-8 w-8 shrink-0 rounded-xl bg-brand-50 text-brand-600 grid place-items-center ring-1 ring-brand-100">
+      <span className="h-8 w-8 shrink-0 rounded-xl bg-canvas-100 text-ink-700 grid place-items-center ring-1 hairline">
         {icon}
       </span>
       <span className="text-[13px] text-ink-700 leading-relaxed">{label}</span>

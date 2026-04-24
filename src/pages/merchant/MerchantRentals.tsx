@@ -60,14 +60,14 @@ export default function MerchantRentals() {
         trailing={
           <Link
             to="/merchant/invoice/new"
-            className="h-9 w-9 grid place-items-center rounded-full bg-brand-500 text-white hover:bg-brand-600"
+            className="h-9 w-9 grid place-items-center rounded-full bg-ink-900 text-white hover:bg-ink-800"
             aria-label={t('merchant.home.quickInvoice')}
           >
             <PlusIcon size={16} />
           </Link>
         }
       />
-      <Screen padded={false} className="bg-ink-50">
+      <Screen padded={false} className="bg-canvas">
         <div className="px-4 pt-3 pb-8 space-y-3">
           <div
             className="flex gap-2 overflow-x-auto scrollbar-none -mx-1 px-1"
@@ -137,7 +137,7 @@ function RentalCard({ rental, dir }: { rental: MerchantRental; dir: 'rtl' | 'ltr
     <Link to={`/merchant/rentals/${rental.id}`} className="block">
     <Card padded interactive className="space-y-3">
       <div className="flex items-center gap-3">
-        <span className="h-10 w-10 shrink-0 rounded-xl bg-ink-100 text-ink-700 grid place-items-center">
+        <span className="h-10 w-10 shrink-0 rounded-xl bg-canvas-100 text-ink-700 grid place-items-center">
           <CarIcon size={18} />
         </span>
         <div className="flex-1 min-w-0">

@@ -22,7 +22,7 @@ export default function MerchantHistoryPage() {
   return (
     <>
       <Header title={t('merchant.history.title')} showBack />
-      <Screen padded={false} className="bg-ink-50">
+      <Screen padded={false} className="bg-canvas">
         <div className="px-4 pt-4 pb-8 space-y-3">
           <p className="text-[12.5px] text-ink-500 leading-relaxed px-1">
             {t('merchant.history.subtitle')}
@@ -56,7 +56,7 @@ function HistoryRow({ item }: { item: MerchantHistoryRecord }) {
   const tone = toneForOutcome(item.outcome);
   return (
     <div className="flex items-center gap-3 py-3">
-      <span className="h-10 w-10 shrink-0 rounded-xl bg-ink-50 text-ink-500 grid place-items-center">
+      <span className="h-10 w-10 shrink-0 rounded-xl bg-canvas-100 text-ink-500 grid place-items-center">
         <HistoryIcon size={18} />
       </span>
       <div className="flex-1 min-w-0">

@@ -100,7 +100,7 @@ export default function MerchantLogin() {
   return (
     <>
       <Header title={t('merchant.login.title')} showBack />
-      <Screen padded={false} className="bg-ink-50">
+      <Screen padded={false} className="bg-canvas">
         <div className="px-4 pt-4 pb-8 space-y-5">
           {/* Hero */}
           <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-ink-900 via-ink-800 to-ink-900 text-white p-5 shadow-float">
@@ -110,7 +110,7 @@ export default function MerchantLogin() {
             />
             <div
               aria-hidden
-              className="pointer-events-none absolute -top-12 end-[-15%] h-48 w-48 rounded-full bg-gold-500/25 blur-3xl"
+              className="pointer-events-none absolute -top-12 end-[-15%] h-48 w-48 rounded-full bg-gold-400/22 blur-3xl"
             />
             <div className="relative flex items-start gap-3">
               <span className="h-11 w-11 shrink-0 rounded-2xl bg-white/10 ring-1 ring-white/15 grid place-items-center">
@@ -132,7 +132,7 @@ export default function MerchantLogin() {
           </div>
 
           {/* Demo hint */}
-          <div className="rounded-xl2 bg-[#FBF2DD] ring-1 ring-gold-400/30 p-3.5 flex items-start gap-3">
+          <div className="rounded-xl2 bg-gold-50 ring-1 ring-gold-400/30 p-3.5 flex items-start gap-3">
             <span className="h-9 w-9 shrink-0 rounded-xl bg-white text-gold-600 grid place-items-center ring-1 ring-gold-400/30">
               <InfoIcon size={16} />
             </span>
@@ -203,7 +203,7 @@ export default function MerchantLogin() {
             <div className="flex justify-end">
               <button
                 type="button"
-                className="text-[12.5px] font-medium text-brand-600 hover:text-brand-700"
+                className="text-[12.5px] font-medium text-gold-700 hover:text-gold-700"
               >
                 {t('auth.forgot')}
               </button>
@@ -234,7 +234,7 @@ export default function MerchantLogin() {
 
             <div className="text-center text-[13px] text-ink-500">
               {t('merchant.login.noAccount')}{' '}
-              <Link to="/merchant/register" className="text-brand-600 font-semibold">
+              <Link to="/merchant/register" className="text-gold-700 font-semibold">
                 {t('merchant.login.register')}
               </Link>
             </div>

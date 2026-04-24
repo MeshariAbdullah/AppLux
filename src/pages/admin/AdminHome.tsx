@@ -97,7 +97,7 @@ export default function AdminHome() {
       desc: t('admin.home.modules.merchantsDesc'),
       icon: <BuildingIcon size={18} />,
       to: '/admin/merchants',
-      tone: 'bg-brand-50 text-brand-600 ring-brand-100',
+      tone: 'bg-canvas-100 text-ink-700 hairline',
       count: merchants.pending,
     },
     {
@@ -105,7 +105,7 @@ export default function AdminHome() {
       desc: t('admin.home.modules.usersDesc'),
       icon: <UsersIcon size={18} />,
       to: '/admin/users',
-      tone: 'bg-[#FBF2DD] text-gold-600 ring-gold-400/30',
+      tone: 'bg-gold-50 text-gold-700 ring-gold-400/30',
     },
     {
       title: t('admin.home.modules.cases'),
@@ -120,7 +120,7 @@ export default function AdminHome() {
       desc: t('admin.home.modules.limitsDesc'),
       icon: <WalletIcon size={18} />,
       to: '/admin/limits',
-      tone: 'bg-ink-50 text-ink-400 ring-ink-100',
+      tone: 'bg-canvas-100 text-ink-400 ring-ink-100',
       comingSoon: true,
     },
     {
@@ -128,7 +128,7 @@ export default function AdminHome() {
       desc: t('admin.home.modules.overdueDesc'),
       icon: <ClockIcon size={18} />,
       to: '/admin/overdue',
-      tone: 'bg-ink-50 text-ink-400 ring-ink-100',
+      tone: 'bg-canvas-100 text-ink-400 ring-ink-100',
       comingSoon: true,
     },
     {
@@ -136,7 +136,7 @@ export default function AdminHome() {
       desc: t('admin.home.modules.reportsDesc'),
       icon: <ChartIcon size={18} />,
       to: '/admin/reports',
-      tone: 'bg-ink-50 text-ink-400 ring-ink-100',
+      tone: 'bg-canvas-100 text-ink-400 ring-ink-100',
       comingSoon: true,
     },
     {
@@ -144,7 +144,7 @@ export default function AdminHome() {
       desc: t('admin.home.modules.auditDesc'),
       icon: <HistoryIcon size={18} />,
       to: '/admin/audit',
-      tone: 'bg-ink-50 text-ink-400 ring-ink-100',
+      tone: 'bg-canvas-100 text-ink-400 ring-ink-100',
       comingSoon: true,
     },
     {
@@ -152,7 +152,7 @@ export default function AdminHome() {
       desc: t('admin.home.modules.supportDesc'),
       icon: <SupportIcon size={18} />,
       to: '/admin/support',
-      tone: 'bg-ink-50 text-ink-400 ring-ink-100',
+      tone: 'bg-canvas-100 text-ink-400 ring-ink-100',
       comingSoon: true,
     },
   ];
@@ -163,28 +163,28 @@ export default function AdminHome() {
         title={t('admin.home.title')}
         trailing={<LangToggle tone="dark" />}
       />
-      <Screen padded={false} className="bg-ink-50">
-        <div className="px-4 pt-4 pb-10 space-y-4">
+      <Screen padded={false} className="bg-canvas">
+        <div className="px-5 pt-5 pb-10 space-y-5">
           {/* Hero */}
-          <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-ink-900 via-ink-800 to-ink-900 text-white p-5 shadow-float">
+          <div className="relative overflow-hidden rounded-xl3 bg-gradient-to-br from-ink-900 via-ink-800 to-ink-900 text-white p-6 shadow-plush">
             <div
               aria-hidden
               className="pointer-events-none absolute inset-0 pattern-dots opacity-25"
             />
             <div
               aria-hidden
-              className="pointer-events-none absolute -top-14 end-[-15%] h-56 w-56 rounded-full bg-gold-500/25 blur-3xl"
+              className="pointer-events-none absolute -top-14 end-[-15%] h-56 w-56 rounded-full bg-gold-400/22 blur-3xl"
             />
             <div className="relative flex items-start justify-between gap-3">
               <div className="min-w-0 flex-1">
-                <span className="inline-flex items-center gap-1.5 rounded-full bg-gold-500/15 ring-1 ring-gold-400/30 px-2.5 py-1 text-[11.5px] font-semibold text-gold-200">
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-gold-400/15 ring-1 ring-gold-400/30 px-2.5 py-1 text-[11.5px] font-semibold text-gold-200">
                   <ShieldIcon size={13} />
                   {t('admin.home.eyebrow')}
                 </span>
-                <h1 className="mt-3 text-[22px] leading-tight font-bold truncate">
+                <h1 className="mt-4 editorial-title text-[24px] leading-tight truncate text-white">
                   {t('admin.home.welcome')}
                 </h1>
-                <p className="mt-1.5 text-[13px] text-white/65 leading-relaxed max-w-[36ch]">
+                <p className="mt-2 text-[13px] text-white/65 leading-relaxed max-w-[36ch]">
                   {t('admin.home.subtitle')}
                 </p>
               </div>
@@ -255,7 +255,7 @@ export default function AdminHome() {
                   count: merchants.pending,
                 })}
                 icon={<BuildingIcon size={16} />}
-                tone="bg-brand-50 text-brand-600"
+                tone="bg-canvas-100 text-ink-700"
               />
               <SummaryTile
                 label={t('admin.home.summary.users')}
@@ -264,7 +264,7 @@ export default function AdminHome() {
                   count: formatNumber(users.verifiedUsers),
                 })}
                 icon={<UsersIcon size={16} />}
-                tone="bg-[#FBF2DD] text-gold-600"
+                tone="bg-gold-50 text-gold-700"
               />
               <SummaryTile
                 label={t('admin.home.summary.activeCases')}
@@ -292,7 +292,7 @@ export default function AdminHome() {
               action={
                 <Link
                   to="/admin/merchants"
-                  className="text-[12.5px] font-semibold text-brand-700"
+                  className="text-[12.5px] font-semibold text-gold-700"
                 >
                   {t('common.viewAll')}
                 </Link>
@@ -334,7 +334,7 @@ export default function AdminHome() {
             <SectionHeader title={t('admin.home.users.title')} />
             <Card padded className="space-y-4">
               <div className="flex items-center gap-3">
-                <span className="h-10 w-10 shrink-0 rounded-xl bg-[#FBF2DD] text-gold-600 grid place-items-center">
+                <span className="h-10 w-10 shrink-0 rounded-xl bg-gold-50 text-gold-700 grid place-items-center">
                   <UsersIcon size={18} />
                 </span>
                 <div className="min-w-0 flex-1">
@@ -352,7 +352,7 @@ export default function AdminHome() {
                 </div>
                 <Link
                   to="/admin/users"
-                  className="shrink-0 text-[12.5px] font-semibold text-brand-700 flex items-center gap-1"
+                  className="shrink-0 text-[12.5px] font-semibold text-gold-700 flex items-center gap-1"
                 >
                   {t('common.viewAll')}
                   <ChevronIcon
@@ -370,7 +370,7 @@ export default function AdminHome() {
                 <MiniMetric
                   label={t('admin.home.users.newMonth')}
                   value={`+${formatNumber(users.newThisMonth)}`}
-                  tone="text-brand-700"
+                  tone="text-gold-700"
                 />
                 <MiniMetric
                   label={t('admin.home.users.suspended')}
@@ -434,7 +434,7 @@ export default function AdminHome() {
                 <MiniMetric
                   label={t('admin.home.limits.pending')}
                   value={formatNumber(limits.pendingRequests)}
-                  tone="text-brand-700"
+                  tone="text-gold-700"
                 />
               </div>
               <div className="pt-1 flex items-center justify-center gap-1.5 text-[11.5px] text-ink-400">
@@ -451,7 +451,7 @@ export default function AdminHome() {
               action={
                 <Link
                   to="/admin/cases"
-                  className="text-[12.5px] font-semibold text-brand-700"
+                  className="text-[12.5px] font-semibold text-gold-700"
                 >
                   {t('common.viewAll')}
                 </Link>
@@ -481,7 +481,7 @@ export default function AdminHome() {
               action={
                 <Link
                   to="/admin/cases"
-                  className="text-[12.5px] font-semibold text-brand-700"
+                  className="text-[12.5px] font-semibold text-gold-700"
                 >
                   {t('common.viewAll')}
                 </Link>
@@ -634,13 +634,13 @@ function AlertRow({
       ? 'bg-danger-50 ring-danger-500/25 text-danger-700'
       : tone === 'warn'
         ? 'bg-warn-50 ring-warn-500/25 text-warn-700'
-        : 'bg-brand-50 ring-brand-100 text-brand-800';
+        : 'bg-brand-50 hairline text-brand-800';
   const iconSkin =
     tone === 'danger'
       ? 'bg-danger-500/10 text-danger-600'
       : tone === 'warn'
         ? 'bg-warn-500/10 text-warn-600'
-        : 'bg-brand-500/10 text-brand-600';
+        : 'bg-brand-500/10 text-gold-700';
   return (
     <Link to={to} className="block">
       <div
@@ -752,7 +752,7 @@ function ApprovalRow({
       to={`/admin/merchants/${item.id}`}
       className="flex items-center gap-3 py-2.5 group"
     >
-      <span className="h-10 w-10 shrink-0 rounded-xl bg-ink-100 text-ink-700 grid place-items-center font-semibold text-[11.5px]">
+      <span className="h-10 w-10 shrink-0 rounded-xl bg-canvas-100 text-ink-700 grid place-items-center font-semibold text-[11.5px]">
         {item.initials}
       </span>
       <div className="flex-1 min-w-0">
@@ -891,7 +891,7 @@ function OverdueRow({
 }) {
   return (
     <Link to="/admin/cases" className="flex items-center gap-3 py-2.5 group">
-      <span className="h-10 w-10 shrink-0 rounded-xl bg-ink-100 text-ink-700 grid place-items-center font-semibold text-[11.5px]">
+      <span className="h-10 w-10 shrink-0 rounded-xl bg-canvas-100 text-ink-700 grid place-items-center font-semibold text-[11.5px]">
         {item.customerInitials}
       </span>
       <div className="flex-1 min-w-0">

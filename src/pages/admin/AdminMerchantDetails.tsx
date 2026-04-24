@@ -76,7 +76,7 @@ export default function AdminMerchantDetails() {
     return (
       <>
         <Header title={t('admin.merchantRequest.title')} showBack />
-        <Screen padded={false} className="bg-ink-50">
+        <Screen padded={false} className="bg-canvas">
           <div className="px-4 pt-6">
             <EmptyState
               icon={<InfoIcon size={22} />}
@@ -122,28 +122,28 @@ export default function AdminMerchantDetails() {
         subtitle={request.companyName}
         showBack
       />
-      <Screen padded={false} className="bg-ink-50">
-        <div className="px-4 pt-4 pb-10 space-y-4">
+      <Screen padded={false} className="bg-canvas">
+        <div className="px-5 pt-5 pb-10 space-y-5">
           {/* Hero */}
-          <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-ink-900 via-ink-800 to-ink-900 text-white p-5 shadow-float">
+          <div className="relative overflow-hidden rounded-xl3 bg-gradient-to-br from-ink-900 via-ink-800 to-ink-900 text-white p-6 shadow-plush">
             <div
               aria-hidden
               className="pointer-events-none absolute inset-0 pattern-dots opacity-25"
             />
             <div
               aria-hidden
-              className="pointer-events-none absolute -top-14 end-[-15%] h-56 w-56 rounded-full bg-gold-500/25 blur-3xl"
+              className="pointer-events-none absolute -top-14 end-[-15%] h-56 w-56 rounded-full bg-gold-400/22 blur-3xl"
             />
             <div className="relative flex items-start gap-3">
               <span className="h-12 w-12 shrink-0 rounded-2xl bg-white/10 ring-1 ring-white/15 grid place-items-center text-white font-semibold text-[12.5px]">
                 {request.initials}
               </span>
               <div className="min-w-0 flex-1">
-                <div className="inline-flex items-center gap-1.5 rounded-full bg-gold-500/15 ring-1 ring-gold-400/30 px-2.5 py-1 text-[11px] font-semibold text-gold-200">
+                <div className="inline-flex items-center gap-1.5 rounded-full bg-gold-400/15 ring-1 ring-gold-400/30 px-2.5 py-1 text-[11px] font-semibold text-gold-200">
                   <ShieldIcon size={12} />
                   {t(`admin.merchantRequest.category.${request.category}`)}
                 </div>
-                <h1 className="mt-2 text-[18px] leading-tight font-bold">
+                <h1 className="mt-3 editorial-title text-[22px] leading-tight text-white">
                   {request.companyName}
                 </h1>
                 <div className="mt-1 text-[12px] text-white/65">
@@ -268,7 +268,7 @@ export default function AdminMerchantDetails() {
               {request.branches.map((b, i) => (
                 <div key={b.id}>
                   <div className="flex items-start gap-3">
-                    <span className="h-9 w-9 shrink-0 rounded-xl bg-ink-50 text-ink-700 grid place-items-center">
+                    <span className="h-9 w-9 shrink-0 rounded-xl bg-canvas-100 text-ink-700 grid place-items-center">
                       <BuildingIcon size={15} />
                     </span>
                     <div className="min-w-0 flex-1">
@@ -382,7 +382,7 @@ export default function AdminMerchantDetails() {
             <Link
               to="/admin/merchants"
               className={cn(
-                'block text-center text-[12.5px] font-semibold text-brand-700 py-2',
+                'block text-center text-[12.5px] font-semibold text-gold-700 py-2',
               )}
             >
               {t('admin.merchantRequest.backToList')}

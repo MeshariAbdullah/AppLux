@@ -71,7 +71,7 @@ export default function AdminMerchants() {
         showBack
         trailing={<LangToggle tone="dark" />}
       />
-      <Screen padded={false} className="bg-ink-50">
+      <Screen padded={false} className="bg-canvas">
         <div className="px-4 pt-4 pb-10 space-y-4">
           {/* Hero */}
           <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-ink-900 via-ink-800 to-ink-900 text-white p-5 shadow-float">
@@ -81,11 +81,11 @@ export default function AdminMerchants() {
             />
             <div
               aria-hidden
-              className="pointer-events-none absolute -top-14 end-[-15%] h-56 w-56 rounded-full bg-gold-500/25 blur-3xl"
+              className="pointer-events-none absolute -top-14 end-[-15%] h-56 w-56 rounded-full bg-gold-400/22 blur-3xl"
             />
             <div className="relative flex items-start justify-between gap-3">
               <div className="min-w-0 flex-1">
-                <span className="inline-flex items-center gap-1.5 rounded-full bg-gold-500/15 ring-1 ring-gold-400/30 px-2.5 py-1 text-[11.5px] font-semibold text-gold-200">
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-gold-400/15 ring-1 ring-gold-400/30 px-2.5 py-1 text-[11.5px] font-semibold text-gold-200">
                   <ShieldIcon size={13} />
                   {t('admin.merchants.eyebrow')}
                 </span>
@@ -122,7 +122,7 @@ export default function AdminMerchants() {
 
           {/* Tabs */}
           <div className="-mx-1 overflow-x-auto no-scrollbar">
-            <div className="px-1 inline-flex gap-1.5 rounded-full bg-white ring-1 ring-ink-100 p-1 shadow-soft">
+            <div className="px-1 inline-flex gap-1.5 rounded-full bg-white hairline p-1 shadow-soft">
               {TABS.map((k) => {
                 const active = tab === k;
                 return (
@@ -241,7 +241,7 @@ function RequestCard({
     <Link to={`/admin/merchants/${item.id}`} className="block">
       <Card padded interactive className="space-y-3">
         <div className="flex items-center gap-3">
-          <span className="h-11 w-11 shrink-0 rounded-xl bg-ink-100 text-ink-700 grid place-items-center font-semibold text-[12px]">
+          <span className="h-11 w-11 shrink-0 rounded-xl bg-canvas-100 text-ink-700 grid place-items-center font-semibold text-[12px]">
             {item.initials}
           </span>
           <div className="flex-1 min-w-0">

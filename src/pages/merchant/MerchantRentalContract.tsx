@@ -54,13 +54,13 @@ export default function MerchantRentalContract() {
           />
         }
       />
-      <Screen padded={false} className="bg-ink-50">
+      <Screen padded={false} className="bg-canvas">
         <div className="px-4 pt-4 pb-8 space-y-4">
           {/* Hero */}
           <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-ink-900 via-ink-800 to-ink-900 text-white p-5 shadow-float">
             <div
               aria-hidden
-              className="pointer-events-none absolute -top-10 end-[-15%] h-48 w-48 rounded-full bg-brand-500/25 blur-3xl"
+              className="pointer-events-none absolute -top-10 end-[-15%] h-48 w-48 rounded-full bg-gold-400/22 blur-3xl"
             />
             <div className="relative flex items-start gap-3">
               <span className="h-11 w-11 shrink-0 rounded-2xl bg-white/10 ring-1 ring-white/15 text-white grid place-items-center">
@@ -167,7 +167,7 @@ export default function MerchantRentalContract() {
             <ol className="space-y-2.5 list-none p-0 m-0">
               {clauses.map((c, idx) => (
                 <li key={c.id} className="flex gap-2.5">
-                  <span className="mt-0.5 h-5 w-5 shrink-0 rounded-full bg-ink-100 text-ink-600 grid place-items-center text-[11px] font-semibold num">
+                  <span className="mt-0.5 h-5 w-5 shrink-0 rounded-full bg-canvas-100 text-ink-700 grid place-items-center text-[11px] font-semibold num">
                     {idx + 1}
                   </span>
                   <div className="min-w-0">
@@ -217,8 +217,8 @@ export default function MerchantRentalContract() {
           </Card>
 
           {/* Nafith placeholder */}
-          <div className="rounded-xl2 bg-brand-50/70 ring-1 ring-brand-100 p-3.5 flex items-start gap-3">
-            <span className="h-9 w-9 shrink-0 rounded-xl bg-white text-brand-600 grid place-items-center ring-1 ring-brand-100">
+          <div className="rounded-xl2 bg-brand-50/70 ring-1 hairline p-3.5 flex items-start gap-3">
+            <span className="h-9 w-9 shrink-0 rounded-xl bg-white text-gold-700 grid place-items-center ring-1 hairline">
               <BadgeCheckIcon size={18} />
             </span>
             <div className="min-w-0 text-[12px] text-brand-800/90 leading-relaxed">
