@@ -12,7 +12,7 @@ export function Screen({ children, padded = true, className }: ScreenProps) {
     <main
       className={cn(
         'flex-1 overflow-y-auto no-scrollbar scroll-smooth',
-        padded && 'px-4 pb-8 pt-4 space-y-5',
+        padded && 'px-5 pb-10 pt-5 space-y-6',
         className,
       )}
     >

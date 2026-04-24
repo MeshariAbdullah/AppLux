@@ -32,8 +32,8 @@ export function FormField({
   return (
     <label htmlFor={htmlFor} className={cn('block', className)}>
       {label && (
-        <div className="mb-1.5 flex items-center justify-between gap-2">
-          <span className="text-[13px] font-semibold text-ink-700 leading-none">
+        <div className="mb-2 flex items-center justify-between gap-2">
+          <span className="text-[13px] font-semibold text-ink-800 leading-none">
             {label}
             {required && <span className="ms-1 text-danger-500">*</span>}
           </span>
@@ -46,20 +46,25 @@ export function FormField({
       )}
       {children}
       {error ? (
-        <div className="mt-1.5 text-[12px] font-medium text-danger-600 leading-snug">
+        <div className="mt-2 text-[12px] font-medium text-danger-600 leading-snug">
           {error}
         </div>
       ) : hint ? (
-        <div className="mt-1.5 text-[12px] text-ink-400 leading-snug">{hint}</div>
+        <div className="mt-2 text-[12px] text-ink-400 leading-snug">{hint}</div>
       ) : null}
     </label>
   );
 }
 
+// Warm, plush surface for inputs — sits softly on cream canvas.
 const controlBase =
-  'block w-full rounded-xl bg-white ring-1 ring-inset ring-ink-200/80 text-ink-900 placeholder:text-ink-300 ' +
-  'focus:outline-none focus:ring-2 focus:ring-brand-400 transition-shadow ' +
-  'disabled:bg-ink-50 disabled:text-ink-400 disabled:cursor-not-allowed disabled:ring-ink-100';
+  'block w-full rounded-xl2 bg-white text-ink-900 placeholder:text-ink-300 ' +
+  'shadow-hairline transition-shadow duration-200 ease-plush ' +
+  'focus:outline-none focus:shadow-[0_0_0_2px_rgba(212,168,85,0.45),inset_0_0_0_1px_rgba(212,168,85,0.55)] ' +
+  'disabled:bg-canvas-100 disabled:text-ink-400 disabled:cursor-not-allowed';
+
+const invalidShadow =
+  'shadow-[0_0_0_1px_rgba(220,38,38,0.55)] focus:shadow-[0_0_0_2px_rgba(220,38,38,0.40),inset_0_0_0_1px_rgba(220,38,38,0.55)]';
 
 type InputProps = InputHTMLAttributes<HTMLInputElement> & {
   leading?: ReactNode;
@@ -80,8 +85,8 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
         id={inputId}
         className={cn(
           controlBase,
-          'h-11 px-3.5 text-[14px]',
-          invalid && 'ring-danger-500 focus:ring-danger-500',
+          'h-12 px-4 text-[14.5px]',
+          invalid && invalidShadow,
           className,
         )}
         {...rest}
@@ -92,9 +97,9 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
     <div
       className={cn(
         controlBase,
-        'flex items-center h-11 px-3 gap-2 text-[14px]',
-        invalid && 'ring-danger-500 focus-within:ring-danger-500',
-        'focus-within:ring-2 focus-within:ring-brand-400',
+        'flex items-center h-12 px-3.5 gap-2.5 text-[14.5px]',
+        invalid && invalidShadow,
+        'focus-within:shadow-[0_0_0_2px_rgba(212,168,85,0.45),inset_0_0_0_1px_rgba(212,168,85,0.55)]',
       )}
     >
       {leading && <span className="text-ink-400 shrink-0">{leading}</span>}
@@ -121,8 +126,8 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(function 
       rows={rows}
       className={cn(
         controlBase,
-        'px-3.5 py-3 text-[14px] resize-none leading-relaxed',
-        invalid && 'ring-danger-500 focus:ring-danger-500',
+        'px-4 py-3.5 text-[14.5px] resize-none leading-relaxed',
+        invalid && invalidShadow,
         className,
       )}
       {...rest}
@@ -142,8 +147,8 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(function Select
         ref={ref}
         className={cn(
           controlBase,
-          'h-11 ps-3.5 pe-10 text-[14px] appearance-none',
-          invalid && 'ring-danger-500 focus:ring-danger-500',
+          'h-12 ps-4 pe-10 text-[14.5px] appearance-none',
+          invalid && invalidShadow,
           className,
         )}
         {...rest}

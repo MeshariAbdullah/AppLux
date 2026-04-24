@@ -3,20 +3,22 @@ import { Sheet } from './Sheet';
 import { Button } from './Button';
 import { cn } from '@/lib/cn';
 
-type Tone = 'danger' | 'warn' | 'brand' | 'success';
+type Tone = 'danger' | 'warn' | 'brand' | 'success' | 'gold';
 
 const toneClass: Record<Tone, string> = {
-  danger: 'bg-danger-50 text-danger-600 ring-danger-500/20',
-  warn: 'bg-warn-50 text-warn-600 ring-warn-500/20',
-  brand: 'bg-brand-50 text-brand-600 ring-brand-500/15',
-  success: 'bg-success-50 text-success-600 ring-success-500/20',
+  danger: 'bg-danger-50 text-danger-700',
+  warn: 'bg-warn-50 text-warn-700',
+  brand: 'bg-brand-50 text-brand-700',
+  success: 'bg-success-50 text-success-700',
+  gold: 'bg-gold-50 text-gold-700',
 };
 
-const confirmVariant: Record<Tone, 'primary' | 'danger'> = {
+const confirmVariant: Record<Tone, 'primary' | 'danger' | 'gold'> = {
   danger: 'danger',
   warn: 'primary',
   brand: 'primary',
-  success: 'primary',
+  success: 'gold',
+  gold: 'gold',
 };
 
 type ConfirmSheetProps = {
@@ -49,7 +51,7 @@ export function ConfirmSheet({
       open={open}
       onClose={loading ? () => undefined : onClose}
       footer={
-        <div className="flex items-center gap-2.5">
+        <div className="flex items-center gap-3">
           <Button
             variant="secondary"
             className="flex-1"
@@ -69,11 +71,11 @@ export function ConfirmSheet({
         </div>
       }
     >
-      <div className="flex items-start gap-3 pt-1">
+      <div className="flex items-start gap-4 pt-2">
         {icon && (
           <span
             className={cn(
-              'h-11 w-11 shrink-0 rounded-2xl grid place-items-center ring-1 ring-inset',
+              'h-12 w-12 shrink-0 rounded-2xl grid place-items-center',
               toneClass[tone],
             )}
           >
@@ -81,11 +83,11 @@ export function ConfirmSheet({
           </span>
         )}
         <div className="min-w-0 flex-1">
-          <div className="text-[15px] font-semibold text-ink-900 leading-snug">
+          <div className="text-[16px] font-semibold text-ink-900 leading-snug tracking-tight">
             {title}
           </div>
           {description && (
-            <p className="mt-1 text-[13px] text-ink-500 leading-relaxed">
+            <p className="mt-1.5 text-[13.5px] text-ink-500 leading-relaxed">
               {description}
             </p>
           )}

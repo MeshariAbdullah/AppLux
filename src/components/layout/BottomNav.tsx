@@ -21,19 +21,19 @@ export function BottomNav() {
 
   return (
     <nav
-      className="sticky bottom-0 z-30 border-t border-ink-100 bg-white/90 backdrop-blur-md pb-[env(safe-area-inset-bottom)]"
+      className="sticky bottom-0 z-30 bg-canvas-50/90 backdrop-blur-md pb-[env(safe-area-inset-bottom)] border-t border-canvas-200/80"
       aria-label="primary"
     >
-      <ul className="grid grid-cols-4">
+      <ul className="grid grid-cols-4 px-2 pt-2 pb-1">
         {tabs.map((tab) => (
           <li key={tab.to}>
             <NavLink
               to={tab.to}
               className={({ isActive }) =>
                 cn(
-                  'flex flex-col items-center justify-center gap-1 py-2 text-[11px] font-semibold',
-                  'transition-colors',
-                  isActive ? 'text-ink-900' : 'text-ink-400 hover:text-ink-600',
+                  'group flex flex-col items-center justify-center gap-1.5 py-1.5',
+                  'text-[10.5px] font-medium tracking-tight transition-colors',
+                  isActive ? 'text-ink-900' : 'text-ink-400',
                 )
               }
             >
@@ -41,16 +41,24 @@ export function BottomNav() {
                 <>
                   <span
                     className={cn(
-                      'h-9 w-12 grid place-items-center rounded-full',
-                      'transition-[background-color,transform,box-shadow] duration-200',
+                      'h-9 w-9 grid place-items-center rounded-full relative',
+                      'transition-[background-color,color,transform] duration-200 ease-plush',
                       isActive
-                        ? 'bg-ink-900 text-white shadow-soft scale-100'
-                        : 'bg-transparent scale-95',
+                        ? 'bg-ink-900 text-white scale-100 shadow-soft'
+                        : 'bg-transparent text-ink-400 scale-95 group-hover:text-ink-700',
                     )}
                   >
-                    <tab.icon size={20} />
+                    <tab.icon size={19} />
                   </span>
                   <span className="leading-none">{tab.label}</span>
+                  {/* Tiny gold underline indicator beneath active label. */}
+                  <span
+                    aria-hidden
+                    className={cn(
+                      'h-[3px] w-5 rounded-full transition-colors duration-200',
+                      isActive ? 'bg-gold-400' : 'bg-transparent',
+                    )}
+                  />
                 </>
               )}
             </NavLink>

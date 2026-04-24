@@ -32,11 +32,11 @@ export function Header({
       onClick={() => navigate(-1)}
       aria-label="back"
       className={cn(
-        'h-9 w-9 grid place-items-center rounded-full',
-        'transition-[background-color,transform] duration-150 active:scale-95',
+        'h-10 w-10 grid place-items-center rounded-full',
+        'transition-[background-color,transform] duration-200 ease-plush active:scale-95',
         variant === 'hero'
           ? 'bg-white/10 text-white ring-1 ring-white/15 hover:bg-white/15'
-          : 'bg-ink-50 text-ink-700 hover:bg-ink-100 ring-1 ring-ink-100',
+          : 'bg-white text-ink-800 hairline hover:bg-canvas-100',
       )}
     >
       <ChevronIcon size={18} className={dir === 'rtl' ? '' : 'rotate-180'} />
@@ -46,10 +46,10 @@ export function Header({
   return (
     <header
       className={cn(
-        'relative px-4 pt-[calc(env(safe-area-inset-top)+14px)] pb-4',
+        'relative px-5 pt-[calc(env(safe-area-inset-top)+18px)] pb-5',
         variant === 'hero'
           ? 'bg-gradient-to-b from-ink-900 via-ink-800 to-ink-900 text-white'
-          : 'bg-white/95 backdrop-blur border-b border-ink-100',
+          : 'bg-canvas-50/85 backdrop-blur-md',
         className,
       )}
     >
@@ -60,7 +60,7 @@ export function Header({
             aria-hidden
           />
           <div
-            className="pointer-events-none absolute -top-10 end-[-10%] h-40 w-40 rounded-full bg-gold-500/15 blur-3xl"
+            className="pointer-events-none absolute -top-10 end-[-10%] h-40 w-40 rounded-full bg-gold-400/15 blur-3xl"
             aria-hidden
           />
         </>
@@ -71,10 +71,10 @@ export function Header({
           {title && (
             <div
               className={cn(
-                'font-bold truncate leading-tight',
+                'font-semibold truncate leading-tight tracking-tight',
                 variant === 'hero'
-                  ? 'text-[17px] text-white'
-                  : 'text-[16px] text-ink-900',
+                  ? 'text-[18px] text-white'
+                  : 'text-[17px] text-ink-900',
               )}
             >
               {title}
@@ -83,10 +83,10 @@ export function Header({
           {subtitle && (
             <div
               className={cn(
-                'truncate mt-0.5 leading-snug',
+                'truncate mt-1 leading-snug',
                 variant === 'hero'
                   ? 'text-[12.5px] text-white/70'
-                  : 'text-[12px] text-ink-400',
+                  : 'text-[12.5px] text-ink-400',
               )}
             >
               {subtitle}

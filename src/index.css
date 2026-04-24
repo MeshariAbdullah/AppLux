@@ -7,7 +7,15 @@
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
-  --applux-shell: linear-gradient(180deg, #0D1224 0%, #141A33 60%, #0D1224 100%);
+  /* Warm cream gradient outside the mobile frame — editorial boutique feel. */
+  --applux-shell: radial-gradient(
+      120% 90% at 50% -10%,
+      #F5EFE1 0%,
+      #FAF6EE 45%,
+      #FDFBF6 100%
+    );
+  --applux-canvas: #FAF6EE;
+  --applux-ink: #161220;
 }
 
 html,
@@ -19,21 +27,21 @@ body,
 body {
   margin: 0;
   background: var(--applux-shell);
-  color: #0D1224;
+  color: var(--applux-ink);
   font-synthesis-weight: none;
 }
 
-/* Arabic gets slightly tighter weights, more generous line-height for legibility */
+/* Arabic: slightly looser rhythm and tightened weight range for luxury legibility. */
 html[dir='rtl'] body {
   font-family: 'IBM Plex Sans Arabic', 'Noto Naskh Arabic', system-ui, sans-serif;
-  line-height: 1.6;
+  line-height: 1.65;
   letter-spacing: 0;
 }
 html[dir='rtl'] :where(h1, h2, h3, h4, h5, h6) {
   font-weight: 700;
   letter-spacing: 0;
 }
-/* Tailwind tracking-* utilities produce unwanted character-space in Arabic shaping */
+/* Tailwind tracking-* utilities shouldn't affect Arabic shaping. */
 html[dir='rtl'] :where([class*='tracking-']) {
   letter-spacing: 0 !important;
 }
@@ -43,21 +51,31 @@ html[dir='ltr'] body {
   line-height: 1.5;
 }
 
-/* Hide scrollbars in mobile shell */
+/* Hide scrollbars inside the mobile shell */
 .no-scrollbar::-webkit-scrollbar { display: none; }
 .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
-/* Logical properties helpers (RTL aware) */
 @layer utilities {
+  /* Canvas surface + logical-property helpers */
+  .bg-canvas { background-color: var(--applux-canvas); }
   .ps-safe { padding-inline-start: env(safe-area-inset-left); }
   .pe-safe { padding-inline-end: env(safe-area-inset-right); }
-  .divide-border > * + * { border-top: 1px solid #EEF0F7; }
-  .hairline { box-shadow: inset 0 0 0 1px #EEF0F7; }
+  .divide-border > * + * { border-top: 1px solid rgba(60, 45, 20, 0.06); }
+  .hairline { box-shadow: inset 0 0 0 1px rgba(60, 45, 20, 0.06); }
   .fade-edge-y {
     mask-image: linear-gradient(to bottom, transparent 0, #000 24px, #000 calc(100% - 24px), transparent 100%);
   }
-  .animate-slide-in-right { animation: slideInRight 260ms cubic-bezier(0.22, 1, 0.36, 1); }
-  .animate-pop-in { animation: popIn 220ms cubic-bezier(0.22, 1, 0.36, 1); }
+  .animate-slide-in-right { animation: slideInRight 300ms cubic-bezier(0.22, 1, 0.36, 1); }
+  .animate-pop-in { animation: popIn 260ms cubic-bezier(0.22, 1, 0.36, 1); }
+
+  /* Editorial display utility — uses the display family + tighter tracking */
+  .font-display { font-family: 'Playfair Display', 'IBM Plex Sans Arabic', Georgia, serif; }
+  .editorial-title {
+    font-family: 'Playfair Display', 'IBM Plex Sans Arabic', Georgia, serif;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+  }
+  html[dir='rtl'] .editorial-title { font-weight: 700; letter-spacing: 0; }
 }
 
 @keyframes slideInRight {
@@ -69,45 +87,44 @@ html[dir='ltr'] body {
   100% { transform: scale(1); opacity: 1; }
 }
 
-/* Tap highlight off for native feel, selection tone matches brand */
+/* Tap highlight off, warm gold selection tone. */
 button, [role='button'], a {
   -webkit-tap-highlight-color: transparent;
 }
 ::selection {
-  background: #D6E6FF;
-  color: #0D1224;
+  background: #F5E9CD;
+  color: #161220;
 }
 
-/* Focus ring is always the brand — never the browser default.
-   Scoped to actionable elements; form controls keep their own Tailwind focus ring. */
+/* Brand focus ring — warm gold instead of cold blue. */
 :focus-visible {
   outline: none;
 }
 :where(button, a, [role='button']):focus-visible {
-  box-shadow: 0 0 0 2px #fff, 0 0 0 4px #4E8CFB;
-  border-radius: 12px;
+  box-shadow: 0 0 0 2px var(--applux-canvas), 0 0 0 4px #D4A855;
+  border-radius: 14px;
 }
 
-/* Pretty number rendering — ensure tabular & consistent in RTL too */
+/* Numeric rendering — tabular + RTL-neutral */
 .num {
   font-variant-numeric: tabular-nums;
   font-feature-settings: 'tnum';
   unicode-bidi: plaintext;
 }
 
-/* Subtle dotted pattern used on hero cards */
+/* Dotted + grid overlays used on dark hero cards */
 .pattern-dots {
-  background-image: radial-gradient(rgba(255,255,255,0.14) 1px, transparent 1px);
+  background-image: radial-gradient(rgba(255, 255, 255, 0.14) 1px, transparent 1px);
   background-size: 18px 18px;
 }
 .pattern-grid {
   background-image:
-    linear-gradient(rgba(255,255,255,0.06) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255,255,255,0.06) 1px, transparent 1px);
+    linear-gradient(rgba(255, 255, 255, 0.06) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.06) 1px, transparent 1px);
   background-size: 28px 28px;
 }
 
-/* Smoother container scroll on iOS */
+/* Smooth scroll on mobile */
 main, [data-scroll] {
   -webkit-overflow-scrolling: touch;
   overscroll-behavior-y: contain;

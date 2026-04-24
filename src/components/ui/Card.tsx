@@ -10,10 +10,12 @@ export function Card({ interactive, padded = true, className, children, ...rest 
   return (
     <div
       className={cn(
-        'rounded-xl2 bg-white ring-1 ring-ink-100/80 shadow-card',
-        padded && 'p-4',
+        // Soft warm surface, very thin warm hairline, plush shadow.
+        'rounded-xl3 bg-white hairline shadow-card',
+        padded && 'p-5',
         interactive &&
-          'transition-[transform,box-shadow] duration-150 active:scale-[0.995] cursor-pointer hover:shadow-float hover:ring-ink-200/80',
+          'transition-[transform,box-shadow] duration-200 ease-plush ' +
+            'active:scale-[0.997] cursor-pointer hover:shadow-plush',
         className,
       )}
       {...rest}
@@ -34,11 +36,11 @@ export function CardHeader({ title, subtitle, action, className }: CardHeaderPro
   return (
     <div className={cn('flex items-start justify-between gap-3', className)}>
       <div className="min-w-0">
-        <div className="text-[15px] font-semibold text-ink-900 truncate leading-snug">
+        <div className="text-[15.5px] font-semibold text-ink-900 truncate leading-snug">
           {title}
         </div>
         {subtitle && (
-          <div className="mt-0.5 text-[12.5px] text-ink-400 truncate leading-snug">
+          <div className="mt-1 text-[12.5px] text-ink-500 truncate leading-snug">
             {subtitle}
           </div>
         )}
@@ -49,7 +51,7 @@ export function CardHeader({ title, subtitle, action, className }: CardHeaderPro
 }
 
 export function CardDivider({ className }: { className?: string }) {
-  return <div className={cn('my-3 h-px bg-ink-100', className)} />;
+  return <div className={cn('my-4 h-px bg-canvas-200/80', className)} />;
 }
 
 type StatCardProps = {
@@ -57,15 +59,16 @@ type StatCardProps = {
   value: ReactNode;
   hint?: ReactNode;
   icon?: ReactNode;
-  tone?: 'default' | 'success' | 'warn' | 'danger' | 'brand';
+  tone?: 'default' | 'success' | 'warn' | 'danger' | 'brand' | 'gold';
 };
 
 const toneBg: Record<NonNullable<StatCardProps['tone']>, string> = {
-  default: 'bg-ink-50 text-ink-700 ring-ink-200/60',
-  success: 'bg-success-50 text-success-600 ring-success-500/15',
-  warn: 'bg-warn-50 text-warn-600 ring-warn-500/20',
-  danger: 'bg-danger-50 text-danger-600 ring-danger-500/20',
-  brand: 'bg-brand-50 text-brand-600 ring-brand-500/15',
+  default: 'bg-canvas-100 text-ink-700',
+  success: 'bg-success-50 text-success-700',
+  warn: 'bg-warn-50 text-warn-700',
+  danger: 'bg-danger-50 text-danger-700',
+  brand: 'bg-brand-50 text-brand-700',
+  gold: 'bg-gold-50 text-gold-700',
 };
 
 export function StatCard({ label, value, hint, icon, tone = 'default' }: StatCardProps) {
@@ -74,7 +77,7 @@ export function StatCard({ label, value, hint, icon, tone = 'default' }: StatCar
       {icon && (
         <div
           className={cn(
-            'h-10 w-10 rounded-xl grid place-items-center shrink-0 ring-1 ring-inset',
+            'h-11 w-11 rounded-2xl grid place-items-center shrink-0',
             toneBg[tone],
           )}
         >
@@ -82,13 +85,13 @@ export function StatCard({ label, value, hint, icon, tone = 'default' }: StatCar
         </div>
       )}
       <div className="min-w-0">
-        <div className="text-[11.5px] font-semibold text-ink-400 uppercase tracking-wide">
+        <div className="text-[11px] font-semibold text-ink-400 uppercase tracking-[0.08em]">
           {label}
         </div>
-        <div className="mt-1 text-[20px] leading-tight font-bold text-ink-900 num truncate">
+        <div className="mt-1.5 text-[22px] leading-tight font-bold text-ink-900 num truncate">
           {value}
         </div>
-        {hint && <div className="mt-0.5 text-[12px] text-ink-500 leading-snug">{hint}</div>}
+        {hint && <div className="mt-1 text-[12px] text-ink-500 leading-snug">{hint}</div>}
       </div>
     </Card>
   );

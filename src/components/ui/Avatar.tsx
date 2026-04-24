@@ -16,8 +16,8 @@ const sizeClass = {
 
 const toneClass = {
   brand: 'bg-brand-50 text-brand-700 ring-brand-500/15',
-  gold: 'bg-[#FBF2DD] text-gold-700 ring-gold-500/25',
-  ink: 'bg-ink-100 text-ink-700 ring-ink-300/40',
+  gold: 'bg-gold-50 text-gold-700 ring-gold-300/40',
+  ink: 'bg-canvas-200 text-ink-700 ring-canvas-300',
 };
 
 function initials(name: string) {

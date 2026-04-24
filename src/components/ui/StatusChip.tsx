@@ -4,12 +4,12 @@ import { cn } from '@/lib/cn';
 export type StatusTone = 'neutral' | 'brand' | 'success' | 'warn' | 'danger' | 'gold';
 
 const toneClass: Record<StatusTone, string> = {
-  neutral: 'bg-ink-50 text-ink-700 ring-ink-200/70',
-  brand: 'bg-brand-50 text-brand-700 ring-brand-500/15',
-  success: 'bg-success-50 text-success-700 ring-success-500/20',
-  warn: 'bg-warn-50 text-warn-700 ring-warn-500/25',
-  danger: 'bg-danger-50 text-danger-700 ring-danger-500/20',
-  gold: 'bg-[#FBF2DD] text-gold-700 ring-gold-500/25',
+  neutral: 'bg-canvas-100 text-ink-700',
+  brand: 'bg-brand-50 text-brand-700',
+  success: 'bg-success-50 text-success-700',
+  warn: 'bg-warn-50 text-warn-700',
+  danger: 'bg-danger-50 text-danger-700',
+  gold: 'bg-gold-50 text-gold-700',
 };
 
 const dotClass: Record<StatusTone, string> = {
@@ -18,7 +18,7 @@ const dotClass: Record<StatusTone, string> = {
   success: 'bg-success-500',
   warn: 'bg-warn-500',
   danger: 'bg-danger-500',
-  gold: 'bg-gold-500',
+  gold: 'bg-gold-400',
 };
 
 type StatusChipProps = {
@@ -41,8 +41,8 @@ export function StatusChip({
   return (
     <span
       className={cn(
-        'inline-flex items-center gap-1.5 rounded-full ring-1 ring-inset font-semibold whitespace-nowrap leading-none',
-        size === 'sm' ? 'h-6 px-2 text-[11px]' : 'h-7 px-2.5 text-[12px]',
+        'inline-flex items-center gap-1.5 rounded-full font-medium whitespace-nowrap leading-none',
+        size === 'sm' ? 'h-6 px-2.5 text-[11px]' : 'h-7 px-3 text-[12px]',
         toneClass[tone],
         className,
       )}

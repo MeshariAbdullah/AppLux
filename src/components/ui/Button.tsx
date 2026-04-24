@@ -1,7 +1,7 @@
 import { forwardRef, type ButtonHTMLAttributes, type ReactNode } from 'react';
 import { cn } from '@/lib/cn';
 
-type Variant = 'primary' | 'secondary' | 'ghost' | 'danger';
+type Variant = 'primary' | 'secondary' | 'ghost' | 'gold' | 'danger';
 type Size = 'sm' | 'md' | 'lg';
 
 export type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
@@ -14,14 +14,25 @@ export type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
 };
 
 const variantClass: Record<Variant, string> = {
+  // Deep ink as the main rest state — sits beautifully on cream canvas.
   primary:
-    'bg-ink-900 text-white hover:bg-ink-800 active:bg-ink-950 shadow-soft disabled:bg-ink-300 disabled:shadow-none',
+    'bg-ink-900 text-white hover:bg-ink-800 active:bg-ink-950 shadow-soft ' +
+    'disabled:bg-ink-300 disabled:shadow-none',
+  // Champagne gold for special CTAs (sign / approve / reserve).
+  gold:
+    'bg-gold-400 text-ink-950 hover:bg-gold-300 active:bg-gold-500 shadow-soft ' +
+    'disabled:bg-gold-200 disabled:text-ink-400 disabled:shadow-none',
+  // Calm secondary — warm canvas tint with a hairline of gold.
   secondary:
-    'bg-white text-ink-900 ring-1 ring-inset ring-ink-200/80 hover:bg-ink-50 active:bg-ink-100 shadow-soft disabled:text-ink-400 disabled:ring-ink-100',
+    'bg-canvas-50 text-ink-900 ring-1 ring-inset ring-gold-200/70 ' +
+    'hover:bg-canvas-100 active:bg-canvas-200 ' +
+    'disabled:text-ink-400 disabled:ring-canvas-200',
   ghost:
-    'bg-transparent text-ink-700 hover:bg-ink-50 active:bg-ink-100 disabled:text-ink-400',
+    'bg-transparent text-ink-700 hover:bg-canvas-100 active:bg-canvas-200 ' +
+    'disabled:text-ink-400',
   danger:
-    'bg-danger-500 text-white hover:bg-danger-600 active:bg-danger-600 shadow-soft disabled:bg-danger-500/60 disabled:shadow-none',
+    'bg-danger-500 text-white hover:bg-danger-600 active:bg-danger-600 shadow-soft ' +
+    'disabled:bg-danger-500/60 disabled:shadow-none',
 };
 
 const sizeClass: Record<Size, string> = {
@@ -52,9 +63,9 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
       type={type}
       disabled={disabled || loading}
       className={cn(
-        'inline-flex items-center justify-center font-semibold select-none',
-        'transition-[background-color,transform,box-shadow] duration-150',
-        'active:scale-[0.98] disabled:active:scale-100',
+        'inline-flex items-center justify-center font-semibold select-none tracking-tight',
+        'transition-[background-color,transform,box-shadow] duration-200 ease-plush',
+        'active:scale-[0.985] disabled:active:scale-100',
         'focus:outline-none',
         'disabled:opacity-70 disabled:cursor-not-allowed',
         variantClass[variant],
