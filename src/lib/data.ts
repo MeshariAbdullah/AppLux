@@ -1533,7 +1533,7 @@ export const SEED_ADMIN_USERS_LIST: AdminUserRecord[] = [
       {
         id: 'ACT-S-02',
         type: 'payment',
-        title: 'سداد قسط شهري',
+        title: 'سداد رسم تأجير',
         amount: 2100,
         at: '2026-04-10T12:00:00+03:00',
       },
@@ -1631,7 +1631,7 @@ export const SEED_ADMIN_USERS_LIST: AdminUserRecord[] = [
       {
         id: 'ACT-N-03',
         type: 'payment',
-        title: 'سداد قسط',
+        title: 'سداد رسم تأجير',
         amount: 3800,
         at: '2026-04-12T18:10:00+03:00',
       },
@@ -1679,7 +1679,7 @@ export const SEED_ADMIN_USERS_LIST: AdminUserRecord[] = [
       {
         id: 'ACT-F-03',
         type: 'payment',
-        title: 'سداد قسط',
+        title: 'سداد رسم تأجير',
         amount: 1200,
         at: '2026-01-28T10:10:00+03:00',
       },
@@ -1773,7 +1773,7 @@ export const SEED_ADMIN_USERS_LIST: AdminUserRecord[] = [
       {
         id: 'ACT-H-02',
         type: 'payment',
-        title: 'سداد قسط',
+        title: 'سداد رسم تأجير',
         amount: 2400,
         at: '2026-04-15T12:45:00+03:00',
       },

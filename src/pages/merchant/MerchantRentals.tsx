@@ -121,11 +121,18 @@ function toneForStatus(status: MerchantRentalStatus): StatusTone {
   return 'success';
 }
 
+function rentalPeriodDays(start: string, end: string): number {
+  const s = new Date(start).getTime();
+  const e = new Date(end).getTime();
+  if (Number.isNaN(s) || Number.isNaN(e) || e <= s) return 0;
+  return Math.max(1, Math.round((e - s) / (1000 * 60 * 60 * 24)));
+}
+
 function RentalCard({ rental, dir }: { rental: MerchantRental; dir: 'rtl' | 'ltr' }) {
   const t = useT();
   const { formatCurrency, formatDate } = useI18n();
-  const progress = (rental.paidInstallments / rental.totalInstallments) * 100;
   const tone = toneForStatus(rental.status);
+  const days = rentalPeriodDays(rental.startDate, rental.endDate);
   return (
     <Link to={`/merchant/rentals/${rental.id}`} className="block">
     <Card padded interactive className="space-y-3">
@@ -149,20 +156,10 @@ function RentalCard({ rental, dir }: { rental: MerchantRental; dir: 'rtl' | 'ltr
         />
       </div>
 
-      <div className="h-1.5 rounded-full bg-ink-100 overflow-hidden">
-        <div
-          className={cn(
-            'h-full rounded-full transition-all',
-            tone === 'danger' ? 'bg-danger-500' : tone === 'warn' ? 'bg-warn-500' : 'bg-brand-500',
-          )}
-          style={{ width: `${Math.min(100, progress)}%` }}
-        />
-      </div>
-
       <div className="grid grid-cols-3 gap-2 text-[11.5px]">
         <div>
           <div className="text-ink-400 uppercase tracking-wide text-[10.5px]">
-            {t('merchant.rentals.monthly')}
+            {t('merchant.rentals.rentalFee')}
           </div>
           <div className="mt-0.5 font-semibold text-ink-900 num">
             {formatCurrency(rental.monthlyAmount)}
@@ -170,10 +167,10 @@ function RentalCard({ rental, dir }: { rental: MerchantRental; dir: 'rtl' | 'ltr
         </div>
         <div>
           <div className="text-ink-400 uppercase tracking-wide text-[10.5px]">
-            {t('merchant.rentals.nextDue')}
+            {t('merchant.rentals.returnDate')}
           </div>
           <div className="mt-0.5 font-semibold text-ink-900 num">
-            {formatDate(rental.nextDueDate)}
+            {formatDate(rental.endDate)}
           </div>
         </div>
         <div className="text-end">
@@ -181,10 +178,7 @@ function RentalCard({ rental, dir }: { rental: MerchantRental; dir: 'rtl' | 'ltr
             {rental.id}
           </div>
           <div className="mt-0.5 text-[11.5px] text-ink-500">
-            {t('merchant.rentals.installments', {
-              paid: rental.paidInstallments,
-              total: rental.totalInstallments,
-            })}
+            {t('merchant.rentals.rentalPeriod', { count: days })}
           </div>
         </div>
       </div>

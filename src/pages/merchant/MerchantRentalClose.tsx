@@ -130,9 +130,7 @@ export default function MerchantRentalClose() {
                 label={t('merchant.close.totalPaid')}
                 value={
                   <span className="num">
-                    {formatCurrency(
-                      rental.monthlyAmount * rental.paidInstallments,
-                    )}
+                    {formatCurrency(rental.monthlyAmount)}
                   </span>
                 }
               />
@@ -225,8 +223,8 @@ export default function MerchantRentalClose() {
                   value={formatDate(rental.endDate)}
                 />
                 <MiniStat
-                  label={t('merchant.close.fields.paid')}
-                  value={`${rental.paidInstallments}/${rental.totalInstallments}`}
+                  label={t('merchant.close.fields.rentalFee')}
+                  value={formatCurrency(rental.monthlyAmount)}
                   numeric
                 />
               </div>

@@ -96,7 +96,7 @@ export function ContractRow({ contract }: { contract: Contract }) {
       title={contract.title}
       subtitle={contract.counterparty}
       amount={formatCurrency(contract.monthlyAmount)}
-      amountHint={t('sections.monthly')}
+      amountHint={t('sections.rentalFee')}
       right={<ContractStatusChip status={contract.status} />}
     />
   );

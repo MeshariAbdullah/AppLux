@@ -149,10 +149,12 @@ export default function MerchantRentalDetails() {
       : rental.closureStatus === 'damaged'
         ? 'damaged'
         : 'active';
-  const progress =
-    rental.totalInstallments > 0
-      ? (rental.paidInstallments / rental.totalInstallments) * 100
-      : 0;
+  const rentalDays = (() => {
+    const s = new Date(rental.startDate).getTime();
+    const e = new Date(rental.endDate).getTime();
+    if (Number.isNaN(s) || Number.isNaN(e) || e <= s) return 0;
+    return Math.max(1, Math.round((e - s) / (1000 * 60 * 60 * 24)));
+  })();
   const sortedTimeline = [...rental.timeline].sort((a, b) =>
     b.at.localeCompare(a.at),
   );
@@ -268,34 +270,18 @@ export default function MerchantRentalDetails() {
                 </div>
               </div>
             </div>
-            <div className="relative mt-4 h-1.5 rounded-full bg-white/10 overflow-hidden">
-              <div
-                className={cn(
-                  'h-full rounded-full transition-all',
-                  statusTone === 'danger'
-                    ? 'bg-danger-500'
-                    : statusTone === 'warn'
-                      ? 'bg-warn-500'
-                      : 'bg-success-500',
-                )}
-                style={{ width: `${Math.min(100, progress)}%` }}
-              />
-            </div>
-            <div className="relative mt-3 grid grid-cols-3 gap-3 text-[11.5px]">
+            <div className="relative mt-4 grid grid-cols-3 gap-3 text-[11.5px]">
               <HeroStat
-                label={t('merchant.rentals.monthly')}
+                label={t('merchant.rentals.rentalFee')}
                 value={formatCurrency(rental.monthlyAmount)}
               />
               <HeroStat
-                label={t('merchant.rental.hero.progress')}
-                value={t('merchant.rentals.installments', {
-                  paid: rental.paidInstallments,
-                  total: rental.totalInstallments,
-                })}
+                label={t('merchant.rentals.rentalPeriodLabel')}
+                value={t('merchant.rentals.rentalPeriod', { count: rentalDays })}
               />
               <HeroStat
-                label={t('merchant.rentals.nextDue')}
-                value={formatDate(rental.nextDueDate)}
+                label={t('merchant.rentals.returnDate')}
+                value={formatDate(rental.endDate)}
               />
             </div>
           </div>

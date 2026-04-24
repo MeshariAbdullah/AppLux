@@ -31,19 +31,11 @@ import {
 } from '@/components/track/DocTimeline';
 import { PlatformBadge } from '@/components/track/PlatformBadge';
 
-function monthsBetween(start: string, end: string) {
-  const a = new Date(start);
-  const b = new Date(end);
-  return Math.max(
-    1,
-    (b.getFullYear() - a.getFullYear()) * 12 + (b.getMonth() - a.getMonth()),
-  );
-}
-
-function addMonths(iso: string, months: number) {
-  const d = new Date(iso);
-  d.setMonth(d.getMonth() + months);
-  return d.toISOString();
+function daysBetween(start: string, end: string) {
+  const a = new Date(start).getTime();
+  const b = new Date(end).getTime();
+  if (Number.isNaN(a) || Number.isNaN(b) || b <= a) return 0;
+  return Math.max(1, Math.round((b - a) / (1000 * 60 * 60 * 24)));
 }
 
 export default function ContractTracking() {
@@ -82,7 +74,7 @@ export default function ContractTracking() {
     );
   }
 
-  const duration = monthsBetween(contract.startDate, contract.endDate);
+  const duration = daysBetween(contract.startDate, contract.endDate);
   const events = buildContractEvents(contract, t);
 
   return (
@@ -111,7 +103,7 @@ export default function ContractTracking() {
             <div className="relative mt-4 grid grid-cols-2 gap-3 text-[12px]">
               <div>
                 <div className="text-white/55 uppercase tracking-wide text-[11px]">
-                  {t('track.contract.monthly')}
+                  {t('track.contract.rentalFee')}
                 </div>
                 <div className="mt-0.5 font-semibold num">
                   {formatCurrency(contract.monthlyAmount)}
@@ -122,7 +114,7 @@ export default function ContractTracking() {
                   {t('track.contract.duration')}
                 </div>
                 <div className="mt-0.5 font-semibold num">
-                  {t('track.contract.months', { count: duration })}
+                  {t('track.contract.days', { count: duration })}
                 </div>
               </div>
             </div>
@@ -154,7 +146,7 @@ export default function ContractTracking() {
               </div>
               <CardDivider />
               <Field
-                label={t('track.contract.monthly')}
+                label={t('track.contract.rentalFee')}
                 value={<span className="num">{formatCurrency(contract.monthlyAmount)}</span>}
               />
             </Card>
@@ -283,13 +275,11 @@ function buildContractEvents(
   },
   t: (key: string, vars?: Record<string, string | number>) => string,
 ): TimelineEvent[] {
-  const created = addMonths(contract.startDate, 0);
-  const nafath = addMonths(contract.startDate, 0);
-  const signed = addMonths(contract.startDate, 0);
-  const nafith = addMonths(contract.startDate, 0);
+  const created = contract.startDate;
+  const nafath = contract.startDate;
+  const signed = contract.startDate;
+  const nafith = contract.startDate;
   const active = contract.startDate;
-  const months = monthsBetween(contract.startDate, contract.endDate);
-  const elapsed = Math.min(3, Math.max(0, months - 1));
 
   const base: TimelineEvent[] = [
     evt('created', t('track.contract.events.created'), created, 'done', 'brand', <DocIcon size={14} />),
@@ -316,32 +306,9 @@ function buildContractEvents(
     ];
   }
 
-  const installments: TimelineEvent[] = [];
-  for (let i = 0; i < elapsed; i++) {
-    installments.push(
-      evt(
-        `ins-${i}`,
-        t('track.contract.events.installment'),
-        addMonths(contract.startDate, i),
-        'done',
-        'brand',
-        <ReceiptIcon size={14} />,
-      ),
-    );
-  }
-
   return [
     ...base,
     evt('active', t('track.contract.events.active'), active, 'done', 'success', <SparkleIcon size={14} />),
-    ...installments,
-    evt(
-      'renewal',
-      t('track.contract.events.renewal'),
-      addMonths(contract.endDate, -1),
-      'pending',
-      'warn',
-      <ClockIcon size={14} />,
-    ),
     evt('ended', t('track.contract.events.ended'), contract.endDate, 'pending', 'neutral', <ArrowIcon size={14} />),
   ];
 }

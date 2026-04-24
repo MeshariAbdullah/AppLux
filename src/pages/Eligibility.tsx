@@ -14,7 +14,7 @@ export default function Eligibility() {
   const usagePct = Math.round((eligibility.used / eligibility.limit) * 100);
   const contractCommitments = contracts
     .filter((c) => c.status === 'active')
-    .reduce((sum, c) => sum + c.monthlyAmount * 12, 0);
+    .reduce((sum, c) => sum + c.monthlyAmount, 0);
   const outstandingInvoices = invoices
     .filter((i) => i.status !== 'paid')
     .reduce((sum, i) => sum + i.amount, 0);

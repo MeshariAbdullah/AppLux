@@ -209,7 +209,8 @@
     "activeNotes": "Active promissory notes",
     "history": "Rental history",
     "due": "Due",
-    "monthly": "Monthly",
+    "monthly": "Rental fee",
+    "rentalFee": "Rental fee",
     "closedOn": "Closed on",
     "ref": "Reference",
     "counterparty": "Counterparty",
@@ -506,11 +507,13 @@
       }
     },
     "contract": {
-      "monthly": "Monthly installment",
+      "monthly": "Rental fee",
+      "rentalFee": "Rental fee",
       "startOn": "Start date",
       "endOn": "End date",
       "duration": "Duration",
       "months": "{count} months",
+      "days": "{count}-day rental",
       "lessor": "Lessor",
       "parties": "Contract parties",
       "keyTerms": "Key terms",
@@ -522,8 +525,6 @@
         "signed": "Contract signed",
         "nafithAttested": "Attested via Nafith",
         "active": "Contract active",
-        "installment": "Monthly installment paid",
-        "renewal": "Renewal window",
         "ended": "Contract ended"
       }
     },
@@ -705,7 +706,8 @@
       "subtitle": "Here's a quick snapshot of your business today.",
       "statusApproved": "Account approved",
       "approvedAt": "Approved on",
-      "monthlyRevenue": "Expected revenue this month",
+      "monthlyRevenue": "Active rental revenue",
+      "rentalRevenue": "Active rental revenue",
       "viewReports": "View reports",
       "alertsTitle": "Action required",
       "overdueAlert": "{count} overdue rentals",
@@ -746,8 +748,12 @@
       "count": "{count} contracts",
       "empty": "No matching rentals",
       "emptyHint": "Try changing the filter or create a new contract.",
-      "nextDue": "Next due",
-      "monthly": "Monthly",
+      "nextDue": "Return date",
+      "monthly": "Rental fee",
+      "rentalFee": "Rental fee",
+      "returnDate": "Return date",
+      "rentalPeriod": "{count}-day rental",
+      "rentalPeriodLabel": "Rental period",
       "installments": "{paid} of {total} installments",
       "status": {
         "active": "Active",
@@ -848,8 +854,9 @@
         "lessor": "Lessor",
         "lessee": "Lessee",
         "keyTerms": "Key terms",
-        "monthly": "Monthly installment",
-        "duration": "Duration",
+        "monthly": "Rental fee",
+        "rentalFee": "Rental fee",
+        "duration": "Rental period",
         "months": "{count} months",
         "startOn": "Start date",
         "endOn": "End date",
@@ -920,7 +927,8 @@
       "fields": {
         "start": "Start",
         "end": "End",
-        "paid": "Paid"
+        "paid": "Paid",
+        "rentalFee": "Rental fee"
       },
       "linked": "Linked documents",
       "notes": {
@@ -947,7 +955,7 @@
       "summary": "Closure summary",
       "closedAt": "Closed at",
       "contractRef": "Contract",
-      "totalPaid": "Total collected",
+      "totalPaid": "Rental fee",
       "success": {
         "title": "Rental closed",
         "subtitle": "The contract is marked as closed and archived in your history.",

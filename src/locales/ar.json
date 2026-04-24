@@ -209,7 +209,8 @@
     "activeNotes": "السندات النشطة",
     "history": "سجل الإيجارات السابقة",
     "due": "الاستحقاق",
-    "monthly": "القسط الشهري",
+    "monthly": "رسم التأجير",
+    "rentalFee": "رسم التأجير",
     "closedOn": "تاريخ الإقفال",
     "ref": "المرجع",
     "counterparty": "الطرف الآخر",
@@ -506,11 +507,13 @@
       }
     },
     "contract": {
-      "monthly": "القسط الشهري",
+      "monthly": "رسم التأجير",
+      "rentalFee": "رسم التأجير",
       "startOn": "بداية العقد",
       "endOn": "نهاية العقد",
       "duration": "المدة",
       "months": "{count} شهراً",
+      "days": "{count} يوماً",
       "lessor": "المؤجِّر",
       "parties": "أطراف العقد",
       "keyTerms": "الشروط الأساسية",
@@ -522,8 +525,6 @@
         "signed": "تم توقيع العقد",
         "nafithAttested": "تم توثيق العقد عبر نافذ",
         "active": "العقد أصبح نشِطاً",
-        "installment": "سداد قسط شهري",
-        "renewal": "نافذة التجديد",
         "ended": "انتهاء العقد"
       }
     },
@@ -705,7 +706,8 @@
       "subtitle": "إليك ملخّص نشاطك التجاري اليوم.",
       "statusApproved": "الحساب معتمد",
       "approvedAt": "تاريخ الاعتماد",
-      "monthlyRevenue": "الإيرادات المتوقعة هذا الشهر",
+      "monthlyRevenue": "إيرادات التأجير الحالية",
+      "rentalRevenue": "إيرادات التأجير الحالية",
       "viewReports": "عرض التقارير",
       "alertsTitle": "تنبيهات تتطلّب إجراءً",
       "overdueAlert": "{count} عقود متأخرة عن السداد",
@@ -746,8 +748,12 @@
       "count": "{count} عقداً",
       "empty": "لا توجد عقود مطابقة",
       "emptyHint": "جرّب تغيير التصفية أو إضافة عقد جديد.",
-      "nextDue": "القسط القادم",
-      "monthly": "القسط الشهري",
+      "nextDue": "تاريخ الإرجاع",
+      "monthly": "رسم التأجير",
+      "rentalFee": "رسم التأجير",
+      "returnDate": "تاريخ الإرجاع",
+      "rentalPeriod": "{count} يوماً إيجار",
+      "rentalPeriodLabel": "فترة التأجير",
       "installments": "{paid} من {total} أقساط",
       "status": {
         "active": "نشِط",
@@ -848,8 +854,9 @@
         "lessor": "المؤجِّر",
         "lessee": "المستأجر",
         "keyTerms": "الشروط الرئيسية",
-        "monthly": "القسط الشهري",
-        "duration": "المدة",
+        "monthly": "رسم التأجير",
+        "rentalFee": "رسم التأجير",
+        "duration": "فترة التأجير",
         "months": "{count} شهر",
         "startOn": "تاريخ البدء",
         "endOn": "تاريخ الانتهاء",
@@ -920,7 +927,8 @@
       "fields": {
         "start": "البدء",
         "end": "الانتهاء",
-        "paid": "المدفوع"
+        "paid": "المدفوع",
+        "rentalFee": "رسم التأجير"
       },
       "linked": "المستندات المرتبطة",
       "notes": {
@@ -947,7 +955,7 @@
       "summary": "ملخّص الإغلاق",
       "closedAt": "وقت الإغلاق",
       "contractRef": "العقد",
-      "totalPaid": "إجمالي المحصَّل",
+      "totalPaid": "رسم التأجير",
       "success": {
         "title": "تم إغلاق التأجير",
         "subtitle": "تم تعليم العقد كمغلق وأُرشِف في سجل التأجير.",

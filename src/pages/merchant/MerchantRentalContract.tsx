@@ -30,7 +30,12 @@ export default function MerchantRentalContract() {
     return <Navigate to="/merchant/rentals" replace />;
   }
 
-  const durationMonths = rental.totalInstallments;
+  const durationDays = (() => {
+    const s = new Date(rental.startDate).getTime();
+    const e = new Date(rental.endDate).getTime();
+    if (Number.isNaN(s) || Number.isNaN(e) || e <= s) return 0;
+    return Math.max(1, Math.round((e - s) / (1000 * 60 * 60 * 24)));
+  })();
   const clauses = SEED_SCANS[0]?.contract.clauses ?? [];
   const readyAt = rental.timeline.find((e) => e.key === 'contract-ready')?.at;
   const signedAt = rental.timeline.find((e) => e.key === 'nafith-approved')?.at;
@@ -124,7 +129,7 @@ export default function MerchantRentalContract() {
                 value={rental.item}
               />
               <Stat
-                label={t('merchant.rental.contract.monthly')}
+                label={t('merchant.rental.contract.rentalFee')}
                 value={
                   <span className="num">{formatCurrency(rental.monthlyAmount)}</span>
                 }
@@ -133,7 +138,7 @@ export default function MerchantRentalContract() {
                 label={t('merchant.rental.contract.duration')}
                 value={
                   <span className="num">
-                    {t('merchant.rental.contract.months', { count: durationMonths })}
+                    {t('merchant.rentals.rentalPeriod', { count: durationDays })}
                   </span>
                 }
               />

@@ -63,7 +63,7 @@ export default function MerchantHome() {
     [merchantDamages],
   );
 
-  const monthlyRevenue = useMemo(
+  const rentalRevenue = useMemo(
     () =>
       merchantRentals
         .filter((r) => r.status !== 'returned')
@@ -74,7 +74,7 @@ export default function MerchantHome() {
   const recent = useMemo(
     () =>
       [...merchantRentals]
-        .sort((a, b) => a.nextDueDate.localeCompare(b.nextDueDate))
+        .sort((a, b) => a.endDate.localeCompare(b.endDate))
         .slice(0, 3),
     [merchantRentals],
   );
@@ -159,10 +159,10 @@ export default function MerchantHome() {
               <div className="flex items-end justify-between gap-3">
                 <div className="min-w-0">
                   <div className="text-[11px] text-white/60 uppercase tracking-wide">
-                    {t('merchant.home.monthlyRevenue')}
+                    {t('merchant.home.rentalRevenue')}
                   </div>
                   <div className="mt-1 text-[24px] font-bold num leading-none">
-                    {formatCurrency(monthlyRevenue)}
+                    {formatCurrency(rentalRevenue)}
                   </div>
                 </div>
                 <div className="text-end shrink-0 text-[11.5px] text-white/70">
@@ -430,7 +430,7 @@ function RecentRow({
           {rental.customerName}
         </div>
         <div className="mt-0.5 text-[12px] text-ink-400 truncate">
-          {rental.item} · {t('merchant.rentals.nextDue')} {formatDate(rental.nextDueDate)}
+          {rental.item} · {t('merchant.rentals.returnDate')} {formatDate(rental.endDate)}
         </div>
       </div>
       <div className="flex flex-col items-end gap-1 shrink-0">
