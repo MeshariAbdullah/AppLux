@@ -68,7 +68,7 @@ export default function MerchantRentals() {
         }
       />
       <Screen padded={false} className="bg-canvas">
-        <div className="px-4 pt-3 pb-8 space-y-3">
+        <div className="px-5 pt-4 pb-10 space-y-4">
           <div
             className="flex gap-2 overflow-x-auto scrollbar-none -mx-1 px-1"
             role="tablist"

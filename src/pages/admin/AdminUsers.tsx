@@ -107,10 +107,10 @@ export default function AdminUsers() {
                   <ShieldIcon size={13} />
                   {t('admin.users.eyebrow')}
                 </span>
-                <h1 className="mt-3 text-[20px] leading-tight font-bold">
+                <h1 className="mt-4 editorial-title text-[22px] leading-tight text-white">
                   {t('admin.users.heroTitle')}
                 </h1>
-                <p className="mt-1.5 text-[12.5px] text-white/65 leading-relaxed max-w-[36ch]">
+                <p className="mt-2 text-[12.5px] text-white/65 leading-relaxed max-w-[36ch]">
                   {t('admin.users.heroSubtitle')}
                 </p>
               </div>

@@ -69,7 +69,7 @@ export default function MerchantRentalClose() {
       <>
         <Header title={t('merchant.close.title')} showBack />
         <Screen padded={false} className="bg-canvas">
-          <div className="px-4 pt-6 pb-8 space-y-4 flex flex-col min-h-full">
+          <div className="px-5 pt-6 pb-10 space-y-5 flex flex-col min-h-full">
             <div className="relative overflow-hidden rounded-xl3 bg-gradient-to-br from-ink-900 via-ink-800 to-ink-900 text-white p-6 shadow-plush text-center">
               <div
                 aria-hidden
@@ -78,10 +78,10 @@ export default function MerchantRentalClose() {
               <div className="relative mx-auto h-14 w-14 rounded-2xl bg-success-500/20 ring-1 ring-success-400/30 text-success-200 grid place-items-center">
                 <CheckIcon size={24} />
               </div>
-              <h1 className="relative mt-4 text-[20px] font-bold">
+              <h1 className="relative mt-5 editorial-title text-[26px] leading-tight text-white">
                 {t('merchant.close.success.title')}
               </h1>
-              <p className="relative mt-2 text-[13px] text-white/70 leading-relaxed max-w-[38ch] mx-auto">
+              <p className="relative mt-2.5 text-[13px] text-white/65 leading-relaxed max-w-[38ch] mx-auto">
                 {t('merchant.close.success.subtitle')}
               </p>
               <div className="relative mt-4 inline-flex items-center gap-2 rounded-full bg-white/10 ring-1 ring-white/15 px-3 py-1.5 text-[12px] font-semibold">
@@ -180,13 +180,13 @@ export default function MerchantRentalClose() {
                   <PackageIcon size={20} />
                 </span>
                 <div className="min-w-0 flex-1">
-                  <div className="text-[11.5px] text-white/55 uppercase tracking-wide">
+                  <div className="text-[10.5px] text-white/55 uppercase tracking-[0.08em]">
                     {t('merchant.close.hero.eyebrow')}
                   </div>
-                  <div className="mt-0.5 text-[16px] font-bold truncate">
+                  <div className="mt-1.5 editorial-title text-[20px] leading-tight truncate text-white">
                     {t('merchant.close.hero.title')}
                   </div>
-                  <p className="mt-1.5 text-[12.5px] text-white/70 leading-relaxed">
+                  <p className="mt-2 text-[12.5px] text-white/65 leading-relaxed">
                     {t('merchant.close.hero.subtitle')}
                   </p>
                 </div>

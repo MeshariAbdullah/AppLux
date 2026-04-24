@@ -80,7 +80,7 @@ export default function Tracking() {
                 <div className="text-[11.5px] text-white/55 uppercase tracking-wide">
                   {t('tracking.current')}
                 </div>
-                <div className="mt-0.5 text-[17px] font-bold truncate">
+                <div className="mt-1.5 editorial-title text-[20px] leading-tight truncate text-white">
                   {pkg.rental.title[locale]}
                 </div>
                 <div className="mt-1 text-[12px] text-white/70 truncate">

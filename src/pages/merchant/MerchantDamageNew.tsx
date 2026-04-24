@@ -199,13 +199,13 @@ export default function MerchantDamageNew() {
                   <AlertIcon size={20} />
                 </span>
                 <div className="min-w-0 flex-1">
-                  <div className="text-[11.5px] text-white/55 uppercase tracking-wide">
+                  <div className="text-[10.5px] text-white/55 uppercase tracking-[0.08em]">
                     {t('merchant.damage.new.hero.eyebrow')}
                   </div>
-                  <div className="mt-0.5 text-[16px] font-bold truncate">
+                  <div className="mt-1.5 editorial-title text-[20px] leading-tight truncate text-white">
                     {t('merchant.damage.new.hero.title')}
                   </div>
-                  <p className="mt-1.5 text-[12.5px] text-white/70 leading-relaxed">
+                  <p className="mt-2 text-[12.5px] text-white/65 leading-relaxed">
                     {t('merchant.damage.new.hero.subtitle')}
                   </p>
                 </div>

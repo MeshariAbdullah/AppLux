@@ -467,13 +467,13 @@ export default function MerchantInvoiceNew() {
                 aria-hidden
                 className="pointer-events-none absolute -top-12 start-1/2 -translate-x-1/2 h-48 w-48 rounded-full bg-success-500/25 blur-3xl"
               />
-              <div className="relative mx-auto h-12 w-12 rounded-2xl bg-success-500/20 ring-1 ring-success-400/30 text-success-200 grid place-items-center">
-                <CheckIcon size={22} />
+              <div className="relative mx-auto h-14 w-14 rounded-2xl bg-gold-400/20 ring-1 ring-gold-400/30 text-gold-300 grid place-items-center">
+                <CheckIcon size={24} />
               </div>
-              <h1 className="relative mt-3 text-[18px] font-bold">
+              <h1 className="relative mt-5 editorial-title text-[26px] leading-tight text-white">
                 {t('merchant.invoice.qr.title')}
               </h1>
-              <p className="relative mt-1.5 text-[12.5px] text-white/70 leading-relaxed max-w-[38ch] mx-auto">
+              <p className="relative mt-2.5 text-[12.5px] text-white/65 leading-relaxed max-w-[38ch] mx-auto">
                 {t('merchant.invoice.qr.subtitle')}
               </p>
               <div className="relative mx-auto mt-4 rounded-2xl bg-white p-3 w-fit ring-1 ring-white/20">

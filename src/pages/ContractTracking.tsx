@@ -93,7 +93,7 @@ export default function ContractTracking() {
                 <div className="text-[11.5px] text-white/60 uppercase tracking-wide">
                   {t('track.contractTitle')}
                 </div>
-                <div className="mt-0.5 text-[17px] font-bold truncate">{contract.title}</div>
+                <div className="mt-1.5 editorial-title text-[20px] leading-tight truncate text-white">{contract.title}</div>
                 <div className="mt-1 text-[12px] text-white/70 truncate">
                   {contract.counterparty}
                 </div>

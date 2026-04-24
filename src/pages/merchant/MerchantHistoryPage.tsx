@@ -23,7 +23,7 @@ export default function MerchantHistoryPage() {
     <>
       <Header title={t('merchant.history.title')} showBack />
       <Screen padded={false} className="bg-canvas">
-        <div className="px-4 pt-4 pb-8 space-y-3">
+        <div className="px-5 pt-5 pb-10 space-y-4">
           <p className="text-[12.5px] text-ink-500 leading-relaxed px-1">
             {t('merchant.history.subtitle')}
           </p>

@@ -70,7 +70,7 @@ export default function MerchantRentalContract() {
                 <div className="text-[11.5px] text-white/55 uppercase tracking-wide">
                   {t('merchant.rental.contract.refLabel')}
                 </div>
-                <div className="mt-0.5 text-[16px] font-bold num truncate">
+                <div className="mt-1.5 editorial-title text-[20px] leading-tight num truncate text-white">
                   {rental.contractRef}
                 </div>
                 <div className="mt-1 text-[12px] text-white/70 truncate">
