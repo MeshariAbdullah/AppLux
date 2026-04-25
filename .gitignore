@@ -8,3 +8,4 @@ dist-ssr
 .vite
 coverage
 *.tsbuildinfo
+vite.config.js
