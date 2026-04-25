@@ -74,49 +74,51 @@ export default function NoteTracking() {
       <Header title={t('track.noteTitle')} showBack />
       <Screen padded={false} className="bg-canvas">
         <div className="px-5 pt-5 pb-10 space-y-5">
-          {/* Premium note hero */}
-          <div className="relative overflow-hidden rounded-xl3 bg-gradient-to-br from-ink-900 via-ink-800 to-ink-900 text-white p-6 shadow-plush">
-            <div aria-hidden className="pointer-events-none absolute inset-0 pattern-dots opacity-25" />
-            <div aria-hidden className="pointer-events-none absolute -top-10 end-[-15%] h-48 w-48 rounded-full bg-gold-500/25 blur-3xl" />
+          {/* Premium note hero — soft gold tint */}
+          <div className="relative overflow-hidden rounded-xl3 bg-gradient-to-br from-gold-50 via-white to-canvas-50 hairline p-6 shadow-card">
+            <div
+              aria-hidden
+              className="pointer-events-none absolute -top-12 end-[-15%] h-48 w-48 rounded-full bg-gold-400/22 blur-3xl"
+            />
             <div className="relative flex items-start justify-between gap-3">
               <div className="min-w-0 flex-1">
-                <span className="inline-flex items-center gap-1.5 rounded-full bg-white/10 ring-1 ring-white/15 px-2.5 py-1 text-[11.5px] font-semibold">
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-gold-400/15 ring-1 ring-gold-400/30 px-2.5 py-1 text-[11.5px] font-semibold text-gold-700">
                   <GavelIcon size={13} />
                   {t('track.noteTitle')}
                 </span>
-                <div className="mt-3 text-[11.5px] text-white/60 uppercase tracking-wide">
+                <div className="mt-3 text-[10.5px] font-semibold text-ink-400 uppercase tracking-[0.08em]">
                   {t('track.note.principal')}
                 </div>
-                <div className="mt-1 text-[26px] font-bold num leading-none">
+                <div className="mt-1 editorial-title text-[30px] font-bold num leading-none text-ink-900">
                   {formatCurrency(note.amount)}
                 </div>
               </div>
               <NoteStatusChip status={note.status} />
             </div>
-            <div className="relative mt-4 grid grid-cols-2 gap-3 text-[12px]">
+            <div className="relative mt-5 grid grid-cols-2 gap-3 text-[12px]">
               <div>
-                <div className="text-white/55 uppercase tracking-wide text-[11px]">
+                <div className="text-ink-400 uppercase tracking-wide text-[10.5px] font-medium">
                   {t('track.note.beneficiary')}
                 </div>
-                <div className="mt-0.5 font-semibold truncate">{note.counterparty}</div>
+                <div className="mt-0.5 font-semibold truncate text-ink-900">{note.counterparty}</div>
               </div>
               <div>
-                <div className="text-white/55 uppercase tracking-wide text-[11px]">
+                <div className="text-ink-400 uppercase tracking-wide text-[10.5px] font-medium">
                   {t('track.note.dueDate')}
                 </div>
-                <div className="mt-0.5 font-semibold num">{formatDate(note.dueDate)}</div>
+                <div className="mt-0.5 font-semibold num text-ink-900">{formatDate(note.dueDate)}</div>
               </div>
               <div>
-                <div className="text-white/55 uppercase tracking-wide text-[11px]">
+                <div className="text-ink-400 uppercase tracking-wide text-[10.5px] font-medium">
                   {t('review.note.reference')}
                 </div>
-                <div className="mt-0.5 font-semibold num truncate">{note.reference}</div>
+                <div className="mt-0.5 font-semibold num truncate text-ink-900">{note.reference}</div>
               </div>
               <div>
-                <div className="text-white/55 uppercase tracking-wide text-[11px]">
+                <div className="text-ink-400 uppercase tracking-wide text-[10.5px] font-medium">
                   {t('track.note.attested')}
                 </div>
-                <div className="mt-0.5 font-semibold inline-flex items-center gap-1">
+                <div className="mt-0.5 font-semibold inline-flex items-center gap-1 text-gold-700">
                   <BadgeCheckIcon size={13} />
                   {t('track.placeholders.nafith')}
                 </div>

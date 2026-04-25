@@ -7,7 +7,6 @@ import {
   CardDivider,
   EmptyState,
   SectionHeader,
-  StatusChip,
 } from '@/components/ui';
 import {
   AlertIcon,
@@ -74,37 +73,39 @@ export default function InvoiceTracking() {
       <Header title={t('track.invoiceTitle')} showBack />
       <Screen padded={false} className="bg-canvas">
         <div className="px-5 pt-5 pb-10 space-y-5">
-          {/* Hero status */}
-          <div className="relative overflow-hidden rounded-xl3 bg-gradient-to-br from-ink-900 via-ink-800 to-ink-900 text-white p-6 shadow-plush">
-            <div aria-hidden className="pointer-events-none absolute inset-0 pattern-dots opacity-25" />
-            <div aria-hidden className="pointer-events-none absolute -top-10 end-[-15%] h-48 w-48 rounded-full bg-gold-400/22 blur-3xl" />
+          {/* Hero — soft tinted */}
+          <div className="relative overflow-hidden rounded-xl3 bg-gradient-to-br from-canvas-50 via-white to-gold-50 hairline p-6 shadow-card">
+            <div
+              aria-hidden
+              className="pointer-events-none absolute -top-12 end-[-15%] h-44 w-44 rounded-full bg-gold-300/18 blur-3xl"
+            />
             <div className="relative flex items-start gap-3">
-              <span className="h-11 w-11 rounded-xl bg-white/10 ring-1 ring-white/15 grid place-items-center shrink-0">
+              <span className="h-11 w-11 rounded-xl bg-white text-ink-700 hairline grid place-items-center shrink-0">
                 <ReceiptIcon size={20} />
               </span>
               <div className="min-w-0 flex-1">
-                <div className="text-[11.5px] text-white/60 uppercase tracking-wide">
+                <div className="text-[10.5px] font-semibold text-ink-400 uppercase tracking-[0.08em]">
                   {t('track.invoice.amountDue')}
                 </div>
-                <div className="mt-0.5 text-[24px] font-bold num leading-none">
+                <div className="mt-1 editorial-title text-[28px] font-bold num leading-none text-ink-900">
                   {formatCurrency(invoice.amount)}
                 </div>
-                <div className="mt-1 text-[12px] text-white/70 truncate">{invoice.title}</div>
+                <div className="mt-1.5 text-[12px] text-ink-500 truncate">{invoice.title}</div>
               </div>
               <InvoiceStatusChip status={invoice.status} />
             </div>
             <div className="relative mt-4 grid grid-cols-2 gap-3 text-[12px]">
               <div>
-                <div className="text-white/55 uppercase tracking-wide text-[11px]">
+                <div className="text-ink-400 uppercase tracking-wide text-[10.5px] font-medium">
                   {t('track.invoice.dueOn')}
                 </div>
-                <div className="mt-0.5 font-semibold num">{formatDate(invoice.dueDate)}</div>
+                <div className="mt-0.5 font-semibold num text-ink-900">{formatDate(invoice.dueDate)}</div>
               </div>
               <div>
-                <div className="text-white/55 uppercase tracking-wide text-[11px]">
+                <div className="text-ink-400 uppercase tracking-wide text-[10.5px] font-medium">
                   {t('track.invoice.contractRef')}
                 </div>
-                <div className="mt-0.5 font-semibold num truncate">{invoice.contractRef}</div>
+                <div className="mt-0.5 font-semibold num truncate text-ink-900">{invoice.contractRef}</div>
               </div>
             </div>
           </div>

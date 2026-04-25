@@ -289,6 +289,10 @@
     },
     "quickCall": {
       "label": "Quick call — main branch"
+    },
+    "actions": {
+      "viewBoutique": "View boutique",
+      "branchesAndLocation": "Branches & location"
     }
   },
   "eligibility": {
@@ -438,6 +442,27 @@
     "approvedAt": "Signed at",
     "viewTracking": "Track contract",
     "goHome": "Back to home",
+    "summaryTitle": "Signing summary",
+    "nextStepsTitle": "What happens next",
+    "steps": {
+      "review": {
+        "title": "Keep your signed contract",
+        "hint": "You can download the contract and note any time from the tracking screen."
+      },
+      "invoice": {
+        "title": "Watch for the monthly rental invoice",
+        "hint": "We'll notify you ahead of the due date so payments stay current."
+      },
+      "return": {
+        "title": "Return the piece on the agreed date",
+        "hint": "A clean return automatically closes the note and frees up your eligibility."
+      }
+    },
+    "contact": {
+      "title": "Need a hand?",
+      "hint": "AppLux support is available for anything related to your contract or note.",
+      "cta": "Open support"
+    },
     "invalid": {
       "title": "This approval link is invalid or expired",
       "hint": "We couldn't find a signing request for this link. Ask the merchant for a fresh QR code and scan it again.",

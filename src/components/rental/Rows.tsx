@@ -9,11 +9,11 @@ import {
   InvoiceStatusChip,
   NoteStatusChip,
 } from './StatusChips';
-import { DocIcon, HistoryIcon, ReceiptIcon, WalletIcon } from '@/components/icons';
+import { WalletIcon } from '@/components/icons';
+import { RentalThumbnail } from './RentalThumbnail';
 
 type RowShellProps = {
-  icon: ReactNode;
-  iconTone: string;
+  thumb: ReactNode;
   title: ReactNode;
   subtitle: ReactNode;
   amount?: ReactNode;
@@ -23,8 +23,7 @@ type RowShellProps = {
 };
 
 function RowShell({
-  icon,
-  iconTone,
+  thumb,
   title,
   subtitle,
   amount,
@@ -41,14 +40,7 @@ function RowShell({
         className,
       )}
     >
-      <span
-        className={cn(
-          'h-11 w-11 shrink-0 rounded-2xl grid place-items-center',
-          iconTone,
-        )}
-      >
-        {icon}
-      </span>
+      {thumb}
       <div className="flex-1 min-w-0">
         <div className="text-[14px] font-semibold text-ink-900 truncate tracking-tight">{title}</div>
         <div className="mt-0.5 text-[12px] text-ink-400 truncate">{subtitle}</div>
@@ -75,8 +67,7 @@ export function InvoiceRow({ invoice }: { invoice: Invoice }) {
   return (
     <RowShell
       to={`/track/invoice/${invoice.id}`}
-      icon={<ReceiptIcon size={18} />}
-      iconTone="bg-canvas-100 text-ink-700"
+      thumb={<RentalThumbnail title={invoice.title} size="sm" tone="canvas" />}
       title={invoice.title}
       subtitle={`${t('sections.due')} · ${formatDate(invoice.dueDate)}`}
       amount={formatCurrency(invoice.amount)}
@@ -91,8 +82,7 @@ export function ContractRow({ contract }: { contract: Contract }) {
   return (
     <RowShell
       to={`/track/contract/${contract.id}`}
-      icon={<DocIcon size={18} />}
-      iconTone="bg-canvas-100 text-ink-700"
+      thumb={<RentalThumbnail title={contract.title} size="sm" tone="canvas" />}
       title={contract.title}
       subtitle={contract.counterparty}
       amount={formatCurrency(contract.monthlyAmount)}
@@ -107,8 +97,11 @@ export function NoteRow({ note }: { note: PromissoryNote }) {
   return (
     <RowShell
       to={`/track/note/${note.id}`}
-      icon={<WalletIcon size={18} />}
-      iconTone="bg-gold-50 text-gold-700"
+      thumb={
+        <span className="h-11 w-11 shrink-0 rounded-2xl bg-gold-50 text-gold-700 ring-1 ring-gold-400/20 grid place-items-center">
+          <WalletIcon size={18} />
+        </span>
+      }
       title={note.reference}
       subtitle={note.counterparty}
       amount={formatCurrency(note.amount)}
@@ -122,8 +115,7 @@ export function HistoryRow({ item }: { item: HistoryItem }) {
   const { formatCurrency, formatDate } = useI18n();
   return (
     <RowShell
-      icon={<HistoryIcon size={18} />}
-      iconTone="bg-canvas-100 text-ink-500"
+      thumb={<RentalThumbnail title={item.title} size="sm" tone="canvas" />}
       title={item.title}
       subtitle={`${t('sections.closedOn')} · ${formatDate(item.closedAt)}`}
       amount={formatCurrency(item.amount)}

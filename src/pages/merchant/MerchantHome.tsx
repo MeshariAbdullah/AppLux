@@ -26,6 +26,7 @@ import { useI18n, useT } from '@/lib/i18n';
 import { useStore } from '@/lib/store';
 import { cn } from '@/lib/cn';
 import type { MerchantRental } from '@/lib/data';
+import { RentalThumbnail } from '@/components/rental/RentalThumbnail';
 
 export default function MerchantHome() {
   const t = useT();
@@ -156,19 +157,27 @@ export default function MerchantHome() {
             </div>
 
             <div className="relative mt-6 rounded-2xl bg-white/[0.04] ring-1 ring-white/10 p-4 backdrop-blur">
-              <div className="flex items-end justify-between gap-3">
-                <div className="min-w-0">
-                  <div className="text-[11px] text-white/55 uppercase tracking-[0.08em]">
-                    {t('merchant.home.rentalRevenue')}
-                  </div>
-                  <div className="mt-1.5 editorial-title text-[28px] num leading-none text-white">
-                    {formatCurrency(rentalRevenue)}
-                  </div>
-                </div>
-                <div className="text-end shrink-0 text-[11.5px] text-white/70">
-                  <div className="num font-semibold">{activeCount}</div>
-                  <div>{t('merchant.home.summaryActive')}</div>
-                </div>
+              <div className="text-[11px] text-white/55 uppercase tracking-[0.08em]">
+                {t('merchant.home.rentalRevenue')}
+              </div>
+              <div className="mt-1.5 editorial-title text-[30px] num leading-none text-white">
+                {formatCurrency(rentalRevenue)}
+              </div>
+              <div className="mt-3 flex items-center gap-3 text-[11.5px] text-white/65">
+                <span className="inline-flex items-center gap-1.5">
+                  <span className="h-1.5 w-1.5 rounded-full bg-gold-400" />
+                  <span className="num font-semibold text-white/85">{activeCount}</span>
+                  <span>{t('merchant.home.summaryActive')}</span>
+                </span>
+                {pendingCount > 0 && (
+                  <>
+                    <span className="h-1 w-1 rounded-full bg-white/25" />
+                    <span className="inline-flex items-center gap-1.5">
+                      <span className="num font-semibold text-white/85">{pendingCount}</span>
+                      <span>{t('merchant.home.summaryPending')}</span>
+                    </span>
+                  </>
+                )}
               </div>
             </div>
           </div>
@@ -422,8 +431,16 @@ function RecentRow({
         : 'success';
   return (
     <Link to="/merchant/rentals" className="flex items-center gap-3 py-2.5">
-      <span className="h-10 w-10 shrink-0 rounded-xl bg-canvas-100 text-ink-700 grid place-items-center font-semibold text-[12px]">
-        {rental.customerInitials}
+      <span className="relative shrink-0">
+        <RentalThumbnail
+          category={rental.category}
+          title={rental.item}
+          size="md"
+          tone="canvas"
+        />
+        <span className="absolute -bottom-1 -end-1 h-5 min-w-5 px-1 rounded-full bg-ink-900 text-white num text-[9.5px] font-bold grid place-items-center ring-2 ring-white">
+          {rental.customerInitials}
+        </span>
       </span>
       <div className="flex-1 min-w-0">
         <div className="text-[13.5px] font-semibold text-ink-900 truncate">

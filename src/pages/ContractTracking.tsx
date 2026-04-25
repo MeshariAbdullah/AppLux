@@ -7,7 +7,6 @@ import {
   CardDivider,
   EmptyState,
   SectionHeader,
-  StatusChip,
 } from '@/components/ui';
 import {
   ArrowIcon,
@@ -82,19 +81,24 @@ export default function ContractTracking() {
       <Header title={t('track.contractTitle')} showBack />
       <Screen padded={false} className="bg-canvas">
         <div className="px-5 pt-5 pb-10 space-y-5">
-          {/* Hero */}
-          <div className="relative overflow-hidden rounded-xl3 bg-gradient-to-br from-ink-900 via-ink-800 to-ink-900 text-white p-6 shadow-plush">
-            <div aria-hidden className="pointer-events-none absolute inset-0 pattern-dots opacity-25" />
+          {/* Hero — soft tinted */}
+          <div className="relative overflow-hidden rounded-xl3 bg-gradient-to-br from-canvas-50 via-white to-gold-50 hairline p-6 shadow-card">
+            <div
+              aria-hidden
+              className="pointer-events-none absolute -top-12 end-[-15%] h-44 w-44 rounded-full bg-gold-300/18 blur-3xl"
+            />
             <div className="relative flex items-start gap-3">
-              <span className="h-11 w-11 rounded-xl bg-white/10 ring-1 ring-white/15 grid place-items-center shrink-0">
+              <span className="h-11 w-11 rounded-xl bg-white text-ink-700 hairline grid place-items-center shrink-0">
                 <DocIcon size={20} />
               </span>
               <div className="min-w-0 flex-1">
-                <div className="text-[11.5px] text-white/60 uppercase tracking-wide">
+                <div className="text-[10.5px] font-semibold text-ink-400 uppercase tracking-[0.08em]">
                   {t('track.contractTitle')}
                 </div>
-                <div className="mt-1.5 editorial-title text-[20px] leading-tight truncate text-white">{contract.title}</div>
-                <div className="mt-1 text-[12px] text-white/70 truncate">
+                <div className="mt-1.5 editorial-title text-[22px] leading-tight truncate text-ink-900">
+                  {contract.title}
+                </div>
+                <div className="mt-1 text-[12px] text-ink-500 truncate">
                   {contract.counterparty}
                 </div>
               </div>
@@ -102,18 +106,18 @@ export default function ContractTracking() {
             </div>
             <div className="relative mt-4 grid grid-cols-2 gap-3 text-[12px]">
               <div>
-                <div className="text-white/55 uppercase tracking-wide text-[11px]">
+                <div className="text-ink-400 uppercase tracking-wide text-[10.5px] font-medium">
                   {t('track.contract.rentalFee')}
                 </div>
-                <div className="mt-0.5 font-semibold num">
+                <div className="mt-0.5 font-semibold num text-ink-900">
                   {formatCurrency(contract.monthlyAmount)}
                 </div>
               </div>
               <div>
-                <div className="text-white/55 uppercase tracking-wide text-[11px]">
+                <div className="text-ink-400 uppercase tracking-wide text-[10.5px] font-medium">
                   {t('track.contract.duration')}
                 </div>
-                <div className="mt-0.5 font-semibold num">
+                <div className="mt-0.5 font-semibold num text-ink-900">
                   {t('track.contract.days', { count: duration })}
                 </div>
               </div>

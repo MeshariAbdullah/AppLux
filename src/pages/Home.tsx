@@ -67,8 +67,12 @@ export default function Home() {
       />
       <Screen className="bg-canvas">
         {/* Eligibility summary card */}
-        <Card padded className="-mt-12 relative space-y-5">
-          <div className="flex items-start justify-between gap-3">
+        <Card padded className="-mt-12 relative space-y-5 overflow-hidden">
+          <span
+            aria-hidden
+            className="pointer-events-none absolute -top-16 end-[-20%] h-40 w-40 rounded-full bg-gold-300/12 blur-3xl"
+          />
+          <div className="relative flex items-start justify-between gap-3">
             <div className="min-w-0">
               <div className="text-[11px] font-semibold text-ink-400 uppercase tracking-[0.08em]">
                 {t('home.eligibilityTitle')}
@@ -84,19 +88,21 @@ export default function Home() {
             />
           </div>
 
-          <div>
-            <div className="flex items-baseline gap-2">
-              <span className="editorial-title text-[34px] text-ink-900 num leading-none">
+          <div className="relative">
+            <div className="text-[10.5px] font-semibold text-ink-400 uppercase tracking-[0.08em]">
+              {t('home.remaining')}
+            </div>
+            <div className="mt-1 flex items-baseline gap-2">
+              <span className="editorial-title text-[36px] text-ink-900 num leading-none">
                 {formatCurrency(eligibility.remaining)}
               </span>
-              <span className="text-[12px] text-ink-400">{t('home.remaining')}</span>
             </div>
-            <div className="mt-1.5 text-[12px] text-ink-400">
+            <div className="mt-1.5 text-[12px] text-ink-400 num">
               {t('home.of')} {formatCurrency(eligibility.limit)}
             </div>
           </div>
 
-          <div>
+          <div className="relative">
             <ProgressBar value={eligibility.used} max={eligibility.limit} tone="gold" />
             <div className="mt-3 flex items-center justify-between text-[11.5px]">
               <span className="text-ink-500">
@@ -268,11 +274,13 @@ function SummaryChip({
   tone: string;
 }) {
   return (
-    <div className="rounded-xl2 bg-white hairline p-3.5 flex flex-col gap-2.5">
+    <div className="rounded-xl2 bg-white hairline p-3.5 flex flex-col gap-3 shadow-soft">
       <span className={cn('h-9 w-9 rounded-2xl grid place-items-center', tone)}>{icon}</span>
       <div>
-        <div className="editorial-title text-[20px] text-ink-900 num leading-none">{value}</div>
-        <div className="mt-1 text-[11.5px] text-ink-400">{label}</div>
+        <div className="editorial-title text-[22px] text-ink-900 num leading-none">{value}</div>
+        <div className="mt-1 text-[11px] uppercase tracking-[0.06em] text-ink-400 font-medium">
+          {label}
+        </div>
       </div>
     </div>
   );

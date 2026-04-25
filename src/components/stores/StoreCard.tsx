@@ -1,8 +1,8 @@
 import { Link } from 'react-router-dom';
 import { Card, StatusChip } from '@/components/ui';
 import {
+  ArrowIcon,
   BadgeCheckIcon,
-  ChevronIcon,
   MapPinIcon,
   PackageIcon,
   StarIcon,
@@ -48,13 +48,6 @@ export function StoreCard({ store }: { store: PartnerStore }) {
               )}
             </div>
           </div>
-          <ChevronIcon
-            size={14}
-            className={cn(
-              'text-ink-300 shrink-0 mt-1.5',
-              dir === 'rtl' ? '' : 'rotate-180',
-            )}
-          />
         </div>
 
         <div className="flex items-center gap-3">
@@ -74,6 +67,18 @@ export function StoreCard({ store }: { store: PartnerStore }) {
             label={t(`stores.filters.${store.category}`)}
             className="ms-auto"
           />
+        </div>
+
+        {/* Two-pill action row — both stay in-app: AppLux remains the intermediary */}
+        <div className="flex items-center gap-2 pt-1">
+          <span className="flex-1 inline-flex items-center justify-center gap-1.5 h-9 px-3 rounded-full bg-ink-900 text-white text-[12.5px] font-semibold">
+            {t('stores.actions.viewBoutique')}
+            <ArrowIcon size={12} className={cn(dir === 'rtl' ? 'rotate-180' : '')} />
+          </span>
+          <span className="inline-flex items-center justify-center gap-1.5 h-9 px-3.5 rounded-full bg-canvas-100 hairline text-ink-700 text-[12.5px] font-medium whitespace-nowrap">
+            <MapPinIcon size={12} />
+            {t('stores.actions.branchesAndLocation')}
+          </span>
         </div>
       </Card>
     </Link>

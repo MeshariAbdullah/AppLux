@@ -193,7 +193,7 @@ export default function AdminHome() {
               </span>
             </div>
 
-            <div className="relative mt-5 grid grid-cols-3 gap-2">
+            <div className="relative mt-6 rounded-2xl bg-white/[0.04] ring-1 ring-white/10 p-3 backdrop-blur grid grid-cols-3 divide-x divide-white/10 rtl:divide-x-reverse">
               <HeroStat
                 label={t('admin.home.hero.merchants')}
                 value={formatNumber(merchants.totalActive)}
@@ -601,11 +601,11 @@ type QuickModule = {
 
 function HeroStat({ label, value }: { label: ReactNode; value: ReactNode }) {
   return (
-    <div className="rounded-2xl bg-white/5 ring-1 ring-white/10 p-2.5 backdrop-blur">
-      <div className="text-white/55 uppercase tracking-wide text-[10px]">
+    <div className="px-2 first:ps-1 last:pe-1">
+      <div className="text-white/55 uppercase tracking-[0.06em] text-[9.5px] font-medium">
         {label}
       </div>
-      <div className="mt-0.5 font-bold text-white num text-[15px] leading-none">
+      <div className="mt-1 editorial-title font-bold text-white num text-[18px] leading-none">
         {value}
       </div>
     </div>
