@@ -1,7 +1,15 @@
 import { useNavigate } from 'react-router-dom';
 import { Header, Screen } from '@/components/layout';
-import { Avatar, Button, Card, SectionHeader, StatusChip } from '@/components/ui';
-import { ChevronIcon, GlobeIcon, InfoIcon, ShieldIcon, SupportIcon } from '@/components/icons';
+import { Avatar, Card, SectionHeader, StatusChip } from '@/components/ui';
+import {
+  ChevronIcon,
+  GlobeIcon,
+  HistoryIcon,
+  InfoIcon,
+  ShieldIcon,
+  SupportIcon,
+  UserIcon,
+} from '@/components/icons';
 import { useI18n, useT } from '@/lib/i18n';
 import { useStore } from '@/lib/store';
 import { cn } from '@/lib/cn';
@@ -22,6 +30,7 @@ export default function Profile() {
     <>
       <Header title={t('profile.title')} />
       <Screen className="bg-canvas">
+        {/* Identity card */}
         <Card padded>
           <div className="flex items-center gap-4">
             <Avatar name={session?.fullName ?? 'A'} size="lg" tone="gold" />
@@ -40,6 +49,27 @@ export default function Profile() {
           </div>
         </Card>
 
+        {/* Account list */}
+        <div>
+          <SectionHeader title={t('nav.profile')} />
+          <Card padded={false} className="overflow-hidden">
+            <Row
+              icon={<UserIcon size={18} />}
+              tone="lavender"
+              label={t('profile.title')}
+              dir={dir}
+            />
+            <Divider />
+            <Row
+              icon={<HistoryIcon size={18} />}
+              tone="canvas"
+              label={t('sections.history')}
+              dir={dir}
+            />
+          </Card>
+        </div>
+
+        {/* Language toggle */}
         <div>
           <SectionHeader title={t('profile.language')} />
           <Card padded={false} className="overflow-hidden">
@@ -49,7 +79,9 @@ export default function Profile() {
                 onClick={() => setLocale('ar')}
                 className={cn(
                   'py-4 text-[13.5px] font-medium transition-colors tracking-tight',
-                  locale === 'ar' ? 'bg-ink-900 text-white' : 'text-ink-700 hover:bg-canvas-100',
+                  locale === 'ar'
+                    ? 'bg-lavender-400 text-white'
+                    : 'text-ink-700 hover:bg-lavender-50',
                 )}
               >
                 {t('profile.arabic')}
@@ -59,7 +91,9 @@ export default function Profile() {
                 onClick={() => setLocale('en')}
                 className={cn(
                   'py-4 text-[13.5px] font-medium transition-colors tracking-tight',
-                  locale === 'en' ? 'bg-ink-900 text-white' : 'text-ink-700 hover:bg-canvas-100',
+                  locale === 'en'
+                    ? 'bg-lavender-400 text-white'
+                    : 'text-ink-700 hover:bg-lavender-50',
                 )}
               >
                 {t('profile.english')}
@@ -68,24 +102,46 @@ export default function Profile() {
           </Card>
         </div>
 
-        <Card padded={false} className="overflow-hidden">
-          <Row icon={<ShieldIcon size={18} />} label={t('profile.security')} dir={dir} />
-          <Divider />
-          <Row icon={<GlobeIcon size={18} />} label={t('profile.appearance')} dir={dir} />
-          <Divider />
-          <Row icon={<SupportIcon size={18} />} label={t('profile.support')} dir={dir} />
-          <Divider />
-          <Row
-            icon={<InfoIcon size={18} />}
-            label={t('profile.about')}
-            trailing={<span className="text-[12px] text-ink-400">{t('profile.version')} 0.1.0</span>}
-            dir={dir}
-          />
-        </Card>
+        {/* Settings list */}
+        <div>
+          <SectionHeader title={t('profile.appearance')} />
+          <Card padded={false} className="overflow-hidden">
+            <Row icon={<ShieldIcon size={18} />} tone="lavender" label={t('profile.security')} dir={dir} />
+            <Divider />
+            <Row icon={<GlobeIcon size={18} />} tone="canvas" label={t('profile.appearance')} dir={dir} />
+          </Card>
+        </div>
 
-        <Button variant="secondary" block onClick={onSignOut}>
+        {/* Support list */}
+        <div>
+          <SectionHeader title={t('profile.support')} />
+          <Card padded={false} className="overflow-hidden">
+            <Row icon={<SupportIcon size={18} />} tone="lavender" label={t('profile.support')} dir={dir} />
+            <Divider />
+            <Row
+              icon={<InfoIcon size={18} />}
+              tone="canvas"
+              label={t('profile.about')}
+              trailing={
+                <span className="text-[12px] text-ink-400 num">{t('profile.version')} 0.1.0</span>
+              }
+              dir={dir}
+            />
+          </Card>
+        </div>
+
+        {/* Sign out — soft lavender outline */}
+        <button
+          type="button"
+          onClick={onSignOut}
+          className="w-full inline-flex items-center justify-center gap-2 h-12 rounded-xl2 bg-lavender-50 text-lavender-700 font-semibold ring-1 ring-inset ring-lavender-200 hover:bg-lavender-100 transition-colors"
+        >
           {t('profile.signOut')}
-        </Button>
+        </button>
+
+        <p className="text-center text-[11px] text-ink-400 num">
+          AppLux v0.1.0
+        </p>
       </Screen>
     </>
   );
@@ -100,18 +156,27 @@ function Row({
   label,
   trailing,
   dir,
+  tone = 'canvas',
 }: {
   icon: ReactNode;
   label: ReactNode;
   trailing?: ReactNode;
   dir: 'rtl' | 'ltr';
+  tone?: 'lavender' | 'canvas';
 }) {
   return (
     <button
       type="button"
-      className="flex w-full items-center gap-3.5 px-5 py-4 text-start hover:bg-canvas-100 transition-colors"
+      className="flex w-full items-center gap-3.5 px-5 py-4 text-start hover:bg-lavender-50 transition-colors"
     >
-      <span className="h-10 w-10 rounded-2xl bg-canvas-100 text-ink-700 grid place-items-center">
+      <span
+        className={cn(
+          'h-10 w-10 rounded-2xl grid place-items-center',
+          tone === 'lavender'
+            ? 'bg-lavender-50 text-lavender-600'
+            : 'bg-canvas-100 text-ink-700',
+        )}
+      >
         {icon}
       </span>
       <span className="flex-1 text-[14px] font-medium text-ink-800 tracking-tight">{label}</span>

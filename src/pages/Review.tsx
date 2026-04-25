@@ -677,7 +677,7 @@ function ConsentRow({
       <span
         className={cn(
           'h-5 w-5 shrink-0 rounded-md grid place-items-center transition-colors mt-0.5',
-          checked ? 'bg-gold-400 text-ink-950' : 'bg-canvas-200 text-transparent',
+          checked ? 'bg-lavender-400 text-white' : 'bg-canvas-200 text-transparent',
         )}
       >
         <CheckIcon size={13} strokeWidth={3} />

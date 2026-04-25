@@ -36,17 +36,30 @@ export default {
           800: '#133782',
           900: '#102C63',
         },
-        // Expanded champagne-gold palette — luxury accent.
+        // Lavender accent — primary brand color (token names kept as `gold-*`
+        // for migration safety; values are the soft-luxury lavender ramp).
         gold: {
-          50: '#FBF5E8',
-          100: '#F5E9CD',
-          200: '#EDD9A7',
-          300: '#E8C27A',
-          400: '#D4A855',
-          500: '#B88A3A',
-          600: '#8A6625',
-          700: '#5E4418',
-          800: '#3B2B0F',
+          50: '#F6F1FB',
+          100: '#EDE6F8',
+          200: '#DBCEF0',
+          300: '#C2AEE5',
+          400: '#A48DDA',
+          500: '#8267C4',
+          600: '#604A9D',
+          700: '#42326F',
+          800: '#2A2046',
+        },
+        // Direct lavender alias for new code that prefers the semantic name.
+        lavender: {
+          50: '#F6F1FB',
+          100: '#EDE6F8',
+          200: '#DBCEF0',
+          300: '#C2AEE5',
+          400: '#A48DDA',
+          500: '#8267C4',
+          600: '#604A9D',
+          700: '#42326F',
+          800: '#2A2046',
         },
         success: {
           50: '#E8F7EE',
@@ -101,8 +114,8 @@ export default {
           '100%': { opacity: '1' },
         },
         pulseRing: {
-          '0%': { boxShadow: '0 0 0 0 rgba(212, 168, 85, 0.5)' },
-          '100%': { boxShadow: '0 0 0 16px rgba(212, 168, 85, 0)' },
+          '0%': { boxShadow: '0 0 0 0 rgba(164, 141, 218, 0.5)' },
+          '100%': { boxShadow: '0 0 0 16px rgba(164, 141, 218, 0)' },
         },
         shimmer: {
           '100%': { transform: 'translateX(100%)' },

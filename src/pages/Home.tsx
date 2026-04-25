@@ -5,9 +5,7 @@ import {
   Card,
   EmptyState,
   IconButton,
-  ProgressBar,
   SectionHeader,
-  StatusChip,
 } from '@/components/ui';
 import {
   ArrowIcon,
@@ -66,63 +64,70 @@ export default function Home() {
         }
       />
       <Screen className="bg-canvas">
-        {/* Eligibility summary card */}
-        <Card padded className="-mt-12 relative space-y-5 overflow-hidden">
+        {/* Eligibility summary card — soft lavender surface */}
+        <div className="-mt-12 relative rounded-xl3 bg-gradient-to-br from-lavender-300 via-lavender-400 to-lavender-500 text-white p-6 shadow-plush overflow-hidden">
           <span
             aria-hidden
-            className="pointer-events-none absolute -top-16 end-[-20%] h-40 w-40 rounded-full bg-gold-300/12 blur-3xl"
+            className="pointer-events-none absolute -top-12 end-[-12%] h-44 w-44 rounded-full bg-white/15 blur-3xl"
+          />
+          <span
+            aria-hidden
+            className="pointer-events-none absolute -bottom-12 start-[-15%] h-40 w-40 rounded-full bg-lavender-700/20 blur-3xl"
           />
           <div className="relative flex items-start justify-between gap-3">
             <div className="min-w-0">
-              <div className="text-[11px] font-semibold text-ink-400 uppercase tracking-[0.08em]">
+              <div className="text-[11px] font-semibold text-white/80 uppercase tracking-[0.08em]">
                 {t('home.eligibilityTitle')}
               </div>
-              <div className="text-[12.5px] text-ink-500 mt-1">
+              <div className="text-[12.5px] text-white/70 mt-1">
                 {t('home.eligibilitySub')}
               </div>
             </div>
-            <StatusChip
-              tone="gold"
-              dot={false}
-              label={t(`eligibility.tiers.${eligibility.tier}`)}
-            />
+            <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-lavender-700 bg-white rounded-full px-2.5 py-1 shadow-soft">
+              {t(`eligibility.tiers.${eligibility.tier}`)}
+            </span>
           </div>
 
-          <div className="relative">
-            <div className="text-[10.5px] font-semibold text-ink-400 uppercase tracking-[0.08em]">
+          <div className="relative mt-5">
+            <div className="text-[10.5px] font-semibold text-white/75 uppercase tracking-[0.08em]">
               {t('home.remaining')}
             </div>
-            <div className="mt-1 flex items-baseline gap-2">
-              <span className="editorial-title text-[36px] text-ink-900 num leading-none">
+            <div className="mt-1.5 flex items-baseline gap-2">
+              <span className="editorial-title text-[40px] text-white num leading-none">
                 {formatCurrency(eligibility.remaining)}
               </span>
             </div>
-            <div className="mt-1.5 text-[12px] text-ink-400 num">
+            <div className="mt-1.5 text-[12px] text-white/70 num">
               {t('home.of')} {formatCurrency(eligibility.limit)}
             </div>
           </div>
 
-          <div className="relative">
-            <ProgressBar value={eligibility.used} max={eligibility.limit} tone="gold" />
+          <div className="relative mt-5">
+            <div className="h-1.5 rounded-full bg-white/20 overflow-hidden">
+              <div
+                className="h-full rounded-full bg-white/95 transition-[width]"
+                style={{ width: `${Math.min(100, usagePct)}%` }}
+              />
+            </div>
             <div className="mt-3 flex items-center justify-between text-[11.5px]">
-              <span className="text-ink-500">
+              <span className="text-white/75">
                 {t('home.used')}{' '}
-                <span className="text-ink-900 font-semibold num">
+                <span className="text-white font-semibold num">
                   {formatCurrency(eligibility.used)}
                 </span>{' '}
-                <span className="text-ink-400 num">({usagePct}%)</span>
+                <span className="text-white/55 num">({usagePct}%)</span>
               </span>
               <button
                 type="button"
                 onClick={() => navigate('/eligibility')}
-                className="inline-flex items-center gap-1 text-gold-700 font-semibold hover:text-gold-600"
+                className="inline-flex items-center gap-1 text-white font-semibold hover:text-white/85"
               >
                 {t('home.viewDetails')}
                 <ArrowIcon size={14} className={cn(dir === 'rtl' ? 'rotate-180' : '')} />
               </button>
             </div>
           </div>
-        </Card>
+        </div>
 
         {/* Scan CTA — editorial dark band */}
         <button

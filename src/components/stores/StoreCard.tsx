@@ -71,7 +71,7 @@ export function StoreCard({ store }: { store: PartnerStore }) {
 
         {/* Two-pill action row — both stay in-app: AppLux remains the intermediary */}
         <div className="flex items-center gap-2 pt-1">
-          <span className="flex-1 inline-flex items-center justify-center gap-1.5 h-9 px-3 rounded-full bg-ink-900 text-white text-[12.5px] font-semibold">
+          <span className="flex-1 inline-flex items-center justify-center gap-1.5 h-9 px-3 rounded-full bg-lavender-400 text-white text-[12.5px] font-semibold shadow-soft">
             {t('stores.actions.viewBoutique')}
             <ArrowIcon size={12} className={cn(dir === 'rtl' ? 'rotate-180' : '')} />
           </span>

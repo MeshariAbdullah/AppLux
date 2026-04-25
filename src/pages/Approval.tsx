@@ -93,7 +93,7 @@ export default function Approval() {
               aria-hidden
               className="absolute inset-2 rounded-full bg-gold-300/40"
             />
-            <span className="absolute inset-4 rounded-full bg-gold-400 grid place-items-center text-ink-950 shadow-plush">
+            <span className="absolute inset-4 rounded-full bg-lavender-400 grid place-items-center text-white shadow-plush">
               <CheckIcon size={36} strokeWidth={3} />
             </span>
           </div>

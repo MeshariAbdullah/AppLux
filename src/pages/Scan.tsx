@@ -59,14 +59,14 @@ export default function Scan() {
 
             {/* Scan line */}
             {phase === 'scanning' && (
-              <div className="absolute inset-x-4 top-1/2 h-0.5 bg-gold-400 shadow-[0_0_14px_rgba(212,168,85,0.9)] animate-pulse" />
+              <div className="absolute inset-x-4 top-1/2 h-0.5 bg-lavender-400 shadow-[0_0_14px_rgba(164,141,218,0.9)] animate-pulse" />
             )}
 
             {/* Matched overlay */}
             {phase === 'matched' && (
               <div className="absolute inset-0 grid place-items-center bg-ink-950/70 backdrop-blur-sm">
                 <div className="flex flex-col items-center gap-2.5">
-                  <span className="h-12 w-12 rounded-full bg-gold-400 text-ink-950 grid place-items-center shadow-plush">
+                  <span className="h-12 w-12 rounded-full bg-lavender-400 text-white grid place-items-center shadow-plush">
                     <SparkleIcon size={22} />
                   </span>
                   <span className="text-[13px] font-semibold tracking-tight">{t('qr.matched')}</span>
@@ -115,7 +115,7 @@ export default function Scan() {
 }
 
 function Corners() {
-  const base = 'absolute h-7 w-7 border-gold-400';
+  const base = 'absolute h-7 w-7 border-lavender-400';
   return (
     <>
       <span className={cn(base, 'top-3 left-3 border-t-2 border-s-2 rounded-tl-xl')} />

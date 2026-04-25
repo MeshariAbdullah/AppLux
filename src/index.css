@@ -7,14 +7,14 @@
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
-  /* Warm cream gradient outside the mobile frame — editorial boutique feel. */
+  /* Soft lavender→ivory shell outside the mobile frame — boutique-luxury feel. */
   --applux-shell: radial-gradient(
       120% 90% at 50% -10%,
-      #F5EFE1 0%,
-      #FAF6EE 45%,
-      #FDFBF6 100%
+      #EDE6F8 0%,
+      #F6F1FB 40%,
+      #FBFAFD 100%
     );
-  --applux-canvas: #FAF6EE;
+  --applux-canvas: #FBFAFD;
   --applux-ink: #161220;
 }
 
@@ -87,21 +87,21 @@ html[dir='ltr'] body {
   100% { transform: scale(1); opacity: 1; }
 }
 
-/* Tap highlight off, warm gold selection tone. */
+/* Tap highlight off, soft lavender selection tone. */
 button, [role='button'], a {
   -webkit-tap-highlight-color: transparent;
 }
 ::selection {
-  background: #F5E9CD;
+  background: #EDE6F8;
   color: #161220;
 }
 
-/* Brand focus ring — warm gold instead of cold blue. */
+/* Brand focus ring — soft lavender. */
 :focus-visible {
   outline: none;
 }
 :where(button, a, [role='button']):focus-visible {
-  box-shadow: 0 0 0 2px var(--applux-canvas), 0 0 0 4px #D4A855;
+  box-shadow: 0 0 0 2px var(--applux-canvas), 0 0 0 4px #A48DDA;
   border-radius: 14px;
 }
 

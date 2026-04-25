@@ -252,18 +252,31 @@ export default function MerchantHome() {
             <div className="space-y-2.5">
               {quickActions.map((a) => (
                 <Link key={a.to} to={a.to} className="block">
-                  <Card padded interactive className="flex items-center gap-3">
+                  <Card
+                    padded
+                    interactive
+                    className={cn(
+                      'flex items-center gap-3',
+                      a.featured &&
+                        'bg-gradient-to-br from-lavender-300 via-lavender-400 to-lavender-500 ring-0 shadow-plush',
+                    )}
+                  >
                     <span
                       className={cn(
                         'h-10 w-10 shrink-0 rounded-xl grid place-items-center ring-1 ring-inset',
-                        a.tone,
+                        a.featured ? 'bg-white/15 text-white ring-white/20' : a.tone,
                       )}
                     >
                       {a.icon}
                     </span>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
-                        <div className="text-[13.5px] font-semibold text-ink-900 truncate">
+                        <div
+                          className={cn(
+                            'text-[13.5px] font-semibold truncate',
+                            a.featured ? 'text-white' : 'text-ink-900',
+                          )}
+                        >
                           {a.title}
                         </div>
                         {typeof a.count === 'number' && a.count > 0 && (
@@ -272,14 +285,20 @@ export default function MerchantHome() {
                           </span>
                         )}
                       </div>
-                      <div className="mt-0.5 text-[12px] text-ink-400 leading-relaxed truncate">
+                      <div
+                        className={cn(
+                          'mt-0.5 text-[12px] leading-relaxed truncate',
+                          a.featured ? 'text-white/75' : 'text-ink-400',
+                        )}
+                      >
                         {a.desc}
                       </div>
                     </div>
                     <ChevronIcon
                       size={16}
                       className={cn(
-                        'text-ink-300 shrink-0',
+                        'shrink-0',
+                        a.featured ? 'text-white/75' : 'text-ink-300',
                         dir === 'rtl' ? 'rotate-180' : '',
                       )}
                     />

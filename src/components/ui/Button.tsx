@@ -1,7 +1,7 @@
 import { forwardRef, type ButtonHTMLAttributes, type ReactNode } from 'react';
 import { cn } from '@/lib/cn';
 
-type Variant = 'primary' | 'secondary' | 'ghost' | 'gold' | 'danger';
+type Variant = 'primary' | 'secondary' | 'ghost' | 'gold' | 'lavender' | 'danger';
 type Size = 'sm' | 'md' | 'lg';
 
 export type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
@@ -14,21 +14,25 @@ export type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
 };
 
 const variantClass: Record<Variant, string> = {
-  // Deep ink as the main rest state — sits beautifully on cream canvas.
+  // Lavender as the new primary — soft luxury accent, matches reference boards.
   primary:
-    'bg-ink-900 text-white hover:bg-ink-800 active:bg-ink-950 shadow-soft ' +
-    'disabled:bg-ink-300 disabled:shadow-none',
-  // Champagne gold for special CTAs (sign / approve / reserve).
+    'bg-lavender-400 text-white hover:bg-lavender-500 active:bg-lavender-500 shadow-soft ' +
+    'disabled:bg-lavender-200 disabled:text-white/80 disabled:shadow-none',
+  // Direct semantic alias for `primary`.
+  lavender:
+    'bg-lavender-400 text-white hover:bg-lavender-500 active:bg-lavender-500 shadow-soft ' +
+    'disabled:bg-lavender-200 disabled:text-white/80 disabled:shadow-none',
+  // Legacy `gold` variant — same lavender body so existing call sites keep working.
   gold:
-    'bg-gold-400 text-ink-950 hover:bg-gold-300 active:bg-gold-500 shadow-soft ' +
-    'disabled:bg-gold-200 disabled:text-ink-400 disabled:shadow-none',
-  // Calm secondary — warm canvas tint with a hairline of gold.
+    'bg-lavender-400 text-white hover:bg-lavender-500 active:bg-lavender-500 shadow-soft ' +
+    'disabled:bg-lavender-200 disabled:text-white/80 disabled:shadow-none',
+  // Calm secondary — soft lavender tint card with hairline ring.
   secondary:
-    'bg-canvas-50 text-ink-900 ring-1 ring-inset ring-gold-200/70 ' +
-    'hover:bg-canvas-100 active:bg-canvas-200 ' +
+    'bg-white text-ink-900 ring-1 ring-inset ring-lavender-200 ' +
+    'hover:bg-lavender-50 active:bg-lavender-100 ' +
     'disabled:text-ink-400 disabled:ring-canvas-200',
   ghost:
-    'bg-transparent text-ink-700 hover:bg-canvas-100 active:bg-canvas-200 ' +
+    'bg-transparent text-ink-700 hover:bg-lavender-50 active:bg-lavender-100 ' +
     'disabled:text-ink-400',
   danger:
     'bg-danger-500 text-white hover:bg-danger-600 active:bg-danger-600 shadow-soft ' +
