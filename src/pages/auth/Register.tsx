@@ -321,11 +321,13 @@ function SupabaseRegister() {
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [errors, setErrors] = useState<{
     fullName?: string;
     email?: string;
     password?: string;
+    confirmPassword?: string;
     form?: string;
   }>({});
 
@@ -337,7 +339,11 @@ function SupabaseRegister() {
     else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
       next.email = t('auth.errors.emailFormat');
     if (!password.trim()) next.password = t('auth.errors.passwordRequired');
-    else if (password.length < 6) next.password = t('auth.errors.passwordShort');
+    else if (password.length < 6) next.password = t('auth.errors.passwordMinChars');
+    if (!confirmPassword.trim())
+      next.confirmPassword = t('auth.errors.confirmPasswordRequired');
+    else if (password && confirmPassword !== password)
+      next.confirmPassword = t('auth.errors.passwordMismatch');
     setErrors(next);
     if (Object.keys(next).length > 0) return;
 
@@ -385,12 +391,30 @@ function SupabaseRegister() {
               autoComplete="email"
             />
           </FormField>
-          <FormField label={t('auth.password')} required error={errors.password}>
+          <FormField
+            label={t('auth.password')}
+            required
+            error={errors.password}
+            hint={!errors.password ? t('auth.passwordHint') : undefined}
+          >
             <Input
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               invalid={Boolean(errors.password)}
+              autoComplete="new-password"
+            />
+          </FormField>
+          <FormField
+            label={t('auth.confirmPassword')}
+            required
+            error={errors.confirmPassword}
+          >
+            <Input
+              type="password"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              invalid={Boolean(errors.confirmPassword)}
               autoComplete="new-password"
             />
           </FormField>

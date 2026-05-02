@@ -56,6 +56,8 @@
     "email": "البريد الإلكتروني",
     "emailPh": "name@example.com",
     "password": "كلمة المرور",
+    "passwordHint": "6 رموز على الأقل.",
+    "confirmPassword": "تأكيد كلمة المرور",
     "forgot": "نسيت كلمة المرور؟",
     "noAccount": "ليس لديك حساب؟",
     "haveAccount": "لديك حساب بالفعل؟",
@@ -111,6 +113,9 @@
       "emailFormat": "تنسيق البريد الإلكتروني غير صالح.",
       "passwordRequired": "أدخل كلمة المرور للمتابعة.",
       "passwordShort": "كلمة المرور قصيرة جداً (4 رموز على الأقل).",
+      "passwordMinChars": "كلمة المرور يجب أن تتكوّن من 6 رموز على الأقل.",
+      "confirmPasswordRequired": "أعد إدخال كلمة المرور لتأكيدها.",
+      "passwordMismatch": "كلمتا المرور غير متطابقتين.",
       "fullNameRequired": "أدخل الاسم الكامل للمتابعة.",
       "signInFailed": "تعذّر تسجيل الدخول. تحقق من بياناتك وحاول مجدداً.",
       "signUpFailed": "تعذّر إنشاء الحساب. حاول مجدداً لاحقاً."

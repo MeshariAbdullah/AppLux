@@ -56,6 +56,8 @@
     "email": "Email",
     "emailPh": "name@example.com",
     "password": "Password",
+    "passwordHint": "Use at least 6 characters.",
+    "confirmPassword": "Confirm password",
     "forgot": "Forgot password?",
     "noAccount": "Don't have an account?",
     "haveAccount": "Already have an account?",
@@ -111,6 +113,9 @@
       "emailFormat": "That email doesn't look right.",
       "passwordRequired": "Enter your password to continue.",
       "passwordShort": "Password is too short (use at least 4 characters).",
+      "passwordMinChars": "Password must be at least 6 characters.",
+      "confirmPasswordRequired": "Confirm your password to continue.",
+      "passwordMismatch": "Passwords do not match.",
       "fullNameRequired": "Enter your full name to continue.",
       "signInFailed": "Sign-in failed. Check your credentials and try again.",
       "signUpFailed": "Could not create the account. Please try again."

@@ -56,12 +56,19 @@ export default function Login() {
     return undefined;
   }, [configured, email, touched.email, errors.email, t]);
 
+  // Real (configured) auth uses Supabase's default 6-char minimum so the
+  // sign-in rule matches the sign-up rule. Demo (mobile-only) keeps the
+  // looser 4-char hint since it's a local-only stub.
+  const minPasswordChars = configured ? 6 : 4;
   const passwordError = useMemo(() => {
     if (!touched.password && !errors.password) return undefined;
     if (!password.trim()) return t('auth.errors.passwordRequired');
-    if (password.length < 4) return t('auth.errors.passwordShort');
+    if (password.length < minPasswordChars)
+      return configured
+        ? t('auth.errors.passwordMinChars')
+        : t('auth.errors.passwordShort');
     return undefined;
-  }, [password, touched.password, errors.password, t]);
+  }, [password, touched.password, errors.password, t, minPasswordChars, configured]);
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -74,7 +81,7 @@ export default function Login() {
       else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
         next.email = t('auth.errors.emailFormat');
       if (!password.trim()) next.password = t('auth.errors.passwordRequired');
-      else if (password.length < 4) next.password = t('auth.errors.passwordShort');
+      else if (password.length < 6) next.password = t('auth.errors.passwordMinChars');
       setErrors(next);
       if (Object.keys(next).length > 0) return;
 

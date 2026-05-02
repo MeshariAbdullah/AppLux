@@ -43,12 +43,18 @@ export default function MerchantLogin() {
     return undefined;
   }, [email, touched.email, errors.email, t]);
 
+  // Real (configured) auth uses Supabase's default 6-char minimum so the
+  // sign-in rule matches the sign-up rule. Demo path keeps min 4.
+  const minPasswordChars = configured ? 6 : 4;
   const passwordError = useMemo(() => {
     if (!touched.password && !errors.password) return undefined;
     if (!password.trim()) return t('merchant.login.errors.passwordRequired');
-    if (password.length < 4) return t('merchant.login.errors.passwordShort');
+    if (password.length < minPasswordChars)
+      return configured
+        ? t('auth.errors.passwordMinChars')
+        : t('merchant.login.errors.passwordShort');
     return undefined;
-  }, [password, touched.password, errors.password, t]);
+  }, [password, touched.password, errors.password, t, minPasswordChars, configured]);
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -61,8 +67,10 @@ export default function MerchantLogin() {
       next.email = t('merchant.login.errors.emailFormat');
     if (!password.trim())
       next.password = t('merchant.login.errors.passwordRequired');
-    else if (password.length < 4)
-      next.password = t('merchant.login.errors.passwordShort');
+    else if (password.length < minPasswordChars)
+      next.password = configured
+        ? t('auth.errors.passwordMinChars')
+        : t('merchant.login.errors.passwordShort');
     setErrors(next);
     if (Object.keys(next).length > 0) return;
 
