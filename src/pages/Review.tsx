@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Header, Screen } from '@/components/layout';
 import {
@@ -25,6 +25,13 @@ import {
 } from '@/components/icons';
 import { useI18n, useT } from '@/lib/i18n';
 import { useStore } from '@/lib/store';
+import {
+  acceptRentalInvoice,
+  fetchInvoiceByToken,
+  fetchMerchant,
+  synthesizePackageFromInvoice,
+  useSupabaseAuth,
+} from '@/lib/supabase';
 import type { ScannedPackage } from '@/lib/data';
 import { ReviewStepper, type ReviewStepKey } from '@/components/review/ReviewStepper';
 import { StoreLogo } from '@/components/stores/StoreLogo';
@@ -35,12 +42,60 @@ export default function Review() {
   const { token } = useParams();
   const navigate = useNavigate();
   const { scans, stores, session, approvePackage } = useStore();
-  const pkg = useMemo(() => scans.find((s) => s.token === token), [scans, token]);
-  const store = useMemo(() => stores.find((s) => s.id === pkg?.storeId), [stores, pkg]);
+  const { configured } = useSupabaseAuth();
+  const demoPkg = useMemo(
+    () => scans.find((s) => s.token === token),
+    [scans, token],
+  );
+  const demoStore = useMemo(
+    () => stores.find((s) => s.id === demoPkg?.storeId),
+    [stores, demoPkg],
+  );
+
+  // Live invoice resolution when configured. Falls back to demo if missing.
+  const [livePkg, setLivePkg] = useState<ScannedPackage | null>(null);
+  const [liveInvoiceId, setLiveInvoiceId] = useState<string | null>(null);
+  const [resolving, setResolving] = useState(false);
+
+  useEffect(() => {
+    if (!configured || !token) {
+      setLivePkg(null);
+      setLiveInvoiceId(null);
+      return;
+    }
+    let cancelled = false;
+    setResolving(true);
+    fetchInvoiceByToken(token)
+      .then(async (res) => {
+        if (cancelled || !res) {
+          setLivePkg(null);
+          setLiveInvoiceId(null);
+          return;
+        }
+        const merchant = await fetchMerchant(res.invoice.merchant_id).catch(() => null);
+        if (cancelled) return;
+        setLivePkg(synthesizePackageFromInvoice(res.invoice, res.items, merchant));
+        setLiveInvoiceId(res.invoice.id);
+      })
+      .catch((err) => {
+        // eslint-disable-next-line no-console
+        console.error('[applux] fetchInvoiceByToken failed', err);
+      })
+      .finally(() => {
+        if (!cancelled) setResolving(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [configured, token]);
+
+  const pkg = livePkg ?? demoPkg;
+  const store = demoStore; // Customer-side store lookup stays demo for now
 
   const [step, setStep] = useState<ReviewStepKey>('invoice');
+  const [acceptError, setAcceptError] = useState<string | null>(null);
 
-  if (!pkg || !store) {
+  if (!pkg || (!store && !livePkg)) {
     return (
       <>
         <Header title={t('review.title')} showBack />
@@ -48,12 +103,14 @@ export default function Review() {
           <EmptyState
             tone="warn"
             icon={<AlertIcon size={22} />}
-            title={t('qr.invalidCode')}
-            description={t('review.invalid.hint')}
+            title={resolving ? t('review.title') : t('qr.invalidCode')}
+            description={resolving ? t('review.title') : t('review.invalid.hint')}
             action={
-              <Button size="sm" onClick={() => navigate('/scan', { replace: true })}>
-                {t('qr.tryAgain')}
-              </Button>
+              !resolving && (
+                <Button size="sm" onClick={() => navigate('/scan', { replace: true })}>
+                  {t('qr.tryAgain')}
+                </Button>
+              )
             }
           />
         </Screen>
@@ -61,7 +118,18 @@ export default function Review() {
     );
   }
 
-  const handleApproved = () => {
+  const handleApproved = async () => {
+    setAcceptError(null);
+    if (configured && liveInvoiceId) {
+      try {
+        await acceptRentalInvoice(liveInvoiceId);
+        navigate(`/approval/${pkg.token}`, { replace: true });
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : 'Failed to accept invoice.';
+        setAcceptError(msg);
+      }
+      return;
+    }
     approvePackage(pkg.token);
     navigate(`/approval/${pkg.token}`, { replace: true });
   };
@@ -81,6 +149,11 @@ export default function Review() {
               userName={session?.fullName}
               onApproved={handleApproved}
             />
+          )}
+          {acceptError && (
+            <div className="rounded-xl2 bg-danger-50 ring-1 ring-danger-500/25 px-3.5 py-2.5 text-[12.5px] text-danger-700 leading-relaxed">
+              {acceptError}
+            </div>
           )}
         </div>
       </Screen>

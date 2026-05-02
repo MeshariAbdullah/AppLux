@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Header, Screen } from '@/components/layout';
 import {
@@ -18,7 +19,18 @@ import {
 } from '@/components/icons';
 import { useI18n, useT } from '@/lib/i18n';
 import { useStore } from '@/lib/store';
-import { adaptEligibility, useSupabaseAuth } from '@/lib/supabase';
+import {
+  adaptContract,
+  adaptContractToHistory,
+  adaptEligibility,
+  adaptInvoice,
+  adaptNote,
+  listCustomerContracts,
+  listCustomerInvoices,
+  listCustomerNotes,
+  useSupabaseAuth,
+} from '@/lib/supabase';
+import type { Contract, HistoryItem, Invoice, PromissoryNote } from '@/lib/data';
 import { cn } from '@/lib/cn';
 import {
   ContractRow,
@@ -31,8 +43,8 @@ import type { ReactNode } from 'react';
 export default function Home() {
   const t = useT();
   const { dir, formatCurrency } = useI18n();
-  const { session, eligibility: demoEligibility, invoices, contracts, notes, history } = useStore();
-  const { configured, eligibility: dbEligibility, profile } = useSupabaseAuth();
+  const { session, eligibility: demoEligibility, invoices: demoInvoices, contracts: demoContracts, notes: demoNotes, history: demoHistory } = useStore();
+  const { configured, eligibility: dbEligibility, profile, session: realSession } = useSupabaseAuth();
   const navigate = useNavigate();
 
   // Real eligibility from Supabase when configured + present; otherwise demo seed.
@@ -45,6 +57,52 @@ export default function Home() {
     eligibility.limit > 0
       ? Math.round((eligibility.used / eligibility.limit) * 100)
       : 0;
+
+  // Pull live customer rentals when configured.
+  const [liveInvoices, setLiveInvoices] = useState<Invoice[] | null>(null);
+  const [liveContracts, setLiveContracts] = useState<Contract[] | null>(null);
+  const [liveNotes, setLiveNotes] = useState<PromissoryNote[] | null>(null);
+  const [liveHistory, setLiveHistory] = useState<HistoryItem[] | null>(null);
+
+  useEffect(() => {
+    const userId = realSession?.user?.id;
+    if (!configured || !userId) {
+      setLiveInvoices(null);
+      setLiveContracts(null);
+      setLiveNotes(null);
+      setLiveHistory(null);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      const [invoiceRows, contractRows, noteRows] = await Promise.all([
+        listCustomerInvoices(userId).catch(() => []),
+        listCustomerContracts(userId).catch(() => []),
+        listCustomerNotes(userId).catch(() => []),
+      ]);
+      if (cancelled) return;
+      setLiveInvoices(invoiceRows.map((r) => adaptInvoice(r)));
+      setLiveContracts(
+        contractRows
+          .filter((c) => c.status !== 'ended' && c.status !== 'cancelled')
+          .map((r) => adaptContract(r)),
+      );
+      setLiveNotes(noteRows.map((r) => adaptNote(r)));
+      setLiveHistory(
+        contractRows
+          .filter((c) => c.status === 'ended' || c.status === 'cancelled')
+          .map((r) => adaptContractToHistory(r)),
+      );
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [configured, realSession?.user?.id]);
+
+  const invoices = liveInvoices ?? demoInvoices;
+  const contracts = liveContracts ?? demoContracts;
+  const notes = liveNotes ?? demoNotes;
+  const history = liveHistory ?? demoHistory;
 
   return (
     <>

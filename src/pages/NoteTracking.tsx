@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Header, Screen } from '@/components/layout';
 import {
@@ -21,6 +21,15 @@ import {
 } from '@/components/icons';
 import { useI18n, useT } from '@/lib/i18n';
 import { useStore } from '@/lib/store';
+import {
+  adaptContract,
+  adaptNote,
+  fetchContractById,
+  fetchMerchant,
+  fetchNoteById,
+  useSupabaseAuth,
+} from '@/lib/supabase';
+import type { Contract, PromissoryNote } from '@/lib/data';
 import { NoteStatusChip } from '@/components/rental/StatusChips';
 import {
   DocTimeline,
@@ -39,13 +48,44 @@ export default function NoteTracking() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { notes, contracts } = useStore();
+  const { configured } = useSupabaseAuth();
   const { formatCurrency, formatDate } = useI18n();
 
-  const note = useMemo(() => notes.find((n) => n.id === id), [notes, id]);
-  const linkedContract = useMemo(
-    () => contracts.find((c) => c.counterparty === note?.counterparty),
-    [contracts, note],
-  );
+  const demoNote = useMemo(() => notes.find((n) => n.id === id), [notes, id]);
+
+  const [liveNote, setLiveNote] = useState<PromissoryNote | null>(null);
+  const [liveContract, setLiveContract] = useState<Contract | null>(null);
+
+  useEffect(() => {
+    if (!configured || !id) {
+      setLiveNote(null);
+      setLiveContract(null);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      const row = await fetchNoteById(id).catch(() => null);
+      if (cancelled || !row) return;
+      const merchant = await fetchMerchant(row.merchant_id).catch(() => null);
+      if (cancelled) return;
+      const merchantName =
+        merchant?.display_name?.en ?? merchant?.company_name ?? row.beneficiary_name;
+      setLiveNote(adaptNote(row, merchantName));
+
+      const contractRow = await fetchContractById(row.contract_id).catch(() => null);
+      if (!cancelled && contractRow) {
+        setLiveContract(adaptContract(contractRow, merchantName));
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [configured, id]);
+
+  const note = liveNote ?? demoNote;
+  const linkedContract =
+    liveContract ??
+    (note ? contracts.find((c) => c.counterparty === note.counterparty) : undefined);
 
   if (!note) {
     return (

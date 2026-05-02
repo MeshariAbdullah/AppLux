@@ -29,6 +29,12 @@ import {
 import { cn } from '@/lib/cn';
 import { useI18n, useT } from '@/lib/i18n';
 import { useStore } from '@/lib/store';
+import {
+  createDamageCase,
+  fetchContractById,
+  useSupabaseAuth,
+  type DamageSeverity,
+} from '@/lib/supabase';
 import type { MerchantDamageSeverity } from '@/lib/data';
 
 type SeverityOption = {
@@ -89,6 +95,7 @@ export default function MerchantDamageNew() {
   const navigate = useNavigate();
   const { id } = useParams();
   const { merchantRentals, reportDamage } = useStore();
+  const supabaseAuth = useSupabaseAuth();
   const galleryInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
 
@@ -161,9 +168,38 @@ export default function MerchantDamageNew() {
     setConfirmOpen(true);
   };
 
-  const handleConfirmedReport = () => {
+  const mapSeverityToDB = (s: MerchantDamageSeverity): DamageSeverity =>
+    s === 'non-return' ? 'non_return' : s;
+
+  const handleConfirmedReport = async () => {
     if (!canSubmit || submitting || !severity) return;
     setSubmitting(true);
+
+    // Real path: create the damage_cases row. The rental.id is the
+    // contract id when liveRentals is in effect; when on demo we fall
+    // through to the demo reporter below. Storage uploads for evidence
+    // are deferred to Phase 5 (uploadDamageEvidence is exported and ready).
+    if (supabaseAuth.configured) {
+      try {
+        const contract = await fetchContractById(rental.id);
+        if (!contract) throw new Error('Contract not found for this rental.');
+        const created = await createDamageCase({
+          contract_id: contract.id,
+          customer_user_id: contract.customer_user_id,
+          merchant_id: contract.merchant_id,
+          raised_by_user_id: supabaseAuth.session?.user?.id ?? null,
+          severity: mapSeverityToDB(severity),
+          claim_amount: claimValue,
+          description: notes || `Damage report for ${rental.contractRef}`,
+        });
+        navigate(`/merchant/damages/${created.id}`, { replace: true });
+        return;
+      } catch (err) {
+        // eslint-disable-next-line no-console
+        console.error('[applux] createDamageCase failed; falling back to demo', err);
+      }
+    }
+
     const created = reportDamage(rental.id, {
       severity,
       claimAmount: claimValue,

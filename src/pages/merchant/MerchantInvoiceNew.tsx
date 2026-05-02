@@ -31,6 +31,12 @@ import { cn } from '@/lib/cn';
 import { useI18n, useT } from '@/lib/i18n';
 import { useStore } from '@/lib/store';
 import { SEED_SCANS } from '@/lib/data';
+import {
+  createInvoiceWithItems,
+  fetchMyMerchant,
+  requireSupabase,
+  useSupabaseAuth,
+} from '@/lib/supabase';
 
 type CustomerMode = 'existing' | 'new';
 
@@ -164,6 +170,9 @@ export default function MerchantInvoiceNew() {
   const { formatCurrency, formatDate, locale } = useI18n();
   const navigate = useNavigate();
   const { merchant, merchantCustomers } = useStore();
+  const supabaseAuth = useSupabaseAuth();
+  const [submitting, setSubmitting] = useState(false);
+  const [submitWarning, setSubmitWarning] = useState<string | null>(null);
   const [values, setValues] = useState<Draft>(() => ({
     ...emptyDraft,
     clauses: defaultClauses(locale),
@@ -382,13 +391,103 @@ export default function MerchantInvoiceNew() {
     return flat || Boolean(itemsNested) || Boolean(clauseNested);
   };
 
-  const onSubmit = (e: React.FormEvent) => {
+  const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const err = validate();
     if (hasErrors(err)) {
       setErrors(err);
       return;
     }
+    setSubmitWarning(null);
+
+    // Real Supabase path: create rental_invoice + items, surface scan_token.
+    if (supabaseAuth.configured && supabaseAuth.session?.user?.id) {
+      setSubmitting(true);
+      try {
+        const myMerchant = await fetchMyMerchant(supabaseAuth.session.user.id);
+        if (!myMerchant) {
+          throw new Error(
+            'No merchant entity exists for this account yet. Ask an admin to approve and provision your application.',
+          );
+        }
+
+        // Customer linkage requires the customer to already have an AppLux
+        // account. Look them up by email.
+        const customerEmail =
+          values.customerMode === 'existing'
+            ? merchantCustomers.find((c) => c.id === values.selectedCustomerId)?.email ?? ''
+            : values.customerEmail;
+        if (!customerEmail) {
+          throw new Error('Customer email is required to issue a real invoice.');
+        }
+        const sb = requireSupabase();
+        const { data: customerProfile, error: profileErr } = await sb
+          .from('profiles')
+          .select('id')
+          .eq('email', customerEmail)
+          .maybeSingle();
+        if (profileErr) throw profileErr;
+        if (!customerProfile) {
+          throw new Error(
+            "We couldn't find a customer with that email. Ask them to sign up first.",
+          );
+        }
+
+        const subtotal = values.items.reduce(
+          (s, it) =>
+            s +
+            (Number(it.rentalPrice) || 0) * Math.max(Number(it.quantity) || 1, 1),
+          0,
+        );
+        const liability = values.items.reduce(
+          (s, it) => s + (Number(it.liability) || 0),
+          0,
+        );
+
+        const result = await createInvoiceWithItems({
+          merchantId: myMerchant.id,
+          customerUserId: customerProfile.id,
+          subtotalAmount: subtotal,
+          totalAmount: subtotal,
+          securityDeposit: liability,
+          items: values.items.map((it, i) => ({
+            position: i,
+            item_name: it.name,
+            // Demo form doesn't yet collect category — default to merchant's
+            // primary category (Phase 5 adds an explicit picker).
+            category: myMerchant.primary_category,
+            size_label: null,
+            color: null,
+            daily_rate: Number(it.rentalPrice) || 0,
+            rental_days: Math.max(Number(it.quantity) || 1, 1),
+            subtotal:
+              (Number(it.rentalPrice) || 0) * Math.max(Number(it.quantity) || 1, 1),
+            replacement_value: Number(it.itemValue) || null,
+            notes: null,
+          })),
+        });
+
+        const inv = result.invoice;
+        setIssuance({
+          token: inv.scan_token ?? inv.invoice_number,
+          contractRef: inv.invoice_number,
+          noteRef: inv.invoice_number,
+          issuedAt: inv.issued_at ?? inv.created_at,
+          dueDate:
+            inv.expires_at ??
+            new Date(Date.now() + 30 * 86_400_000).toISOString(),
+        });
+      } catch (caught) {
+        const message =
+          caught instanceof Error ? caught.message : 'Failed to issue invoice.';
+        setSubmitWarning(`${message} (Falling back to demo issuance.)`);
+        setIssuance(generateIssuance());
+      } finally {
+        setSubmitting(false);
+      }
+      return;
+    }
+
     setIssuance(generateIssuance());
   };
 
@@ -1316,7 +1415,18 @@ export default function MerchantInvoiceNew() {
               </div>
             </div>
 
-            <Button type="submit" size="lg" block leading={<ReceiptIcon size={18} />}>
+            {submitWarning && (
+              <div className="rounded-xl2 bg-warn-50 ring-1 ring-warn-500/25 px-3.5 py-2.5 text-[12.5px] text-warn-700 leading-relaxed">
+                {submitWarning}
+              </div>
+            )}
+            <Button
+              type="submit"
+              size="lg"
+              block
+              loading={submitting}
+              leading={<ReceiptIcon size={18} />}
+            >
               {t('merchant.invoice.submit')}
             </Button>
           </form>

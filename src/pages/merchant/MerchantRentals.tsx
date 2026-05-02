@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { Header, Screen } from '@/components/layout';
 import {
@@ -16,6 +16,12 @@ import {
 } from '@/components/icons';
 import { useI18n, useT } from '@/lib/i18n';
 import { useStore } from '@/lib/store';
+import {
+  adaptContractToMerchantRental,
+  fetchMyMerchant,
+  listMerchantContracts,
+  useSupabaseAuth,
+} from '@/lib/supabase';
 import type { MerchantRental, MerchantRentalStatus } from '@/lib/data';
 import { cn } from '@/lib/cn';
 
@@ -31,12 +37,39 @@ const FILTERS: { key: Filter; labelKey: string }[] = [
 export default function MerchantRentals() {
   const t = useT();
   const { dir } = useI18n();
-  const { merchantRentals } = useStore();
+  const { merchantRentals: demoRentals } = useStore();
+  const { configured, session } = useSupabaseAuth();
+  const [liveRentals, setLiveRentals] = useState<MerchantRental[] | null>(null);
   const [searchParams, setSearchParams] = useSearchParams();
   const initialFilter = (searchParams.get('filter') as Filter | null) ?? 'all';
   const [filter, setFilter] = useState<Filter>(
     FILTERS.some((f) => f.key === initialFilter) ? initialFilter : 'all',
   );
+
+  useEffect(() => {
+    const userId = session?.user?.id;
+    if (!configured || !userId) {
+      setLiveRentals(null);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      const myMerchant = await fetchMyMerchant(userId).catch(() => null);
+      if (cancelled || !myMerchant) return;
+      const contractRows = await listMerchantContracts(myMerchant.id).catch(() => []);
+      if (cancelled) return;
+      setLiveRentals(
+        contractRows.map((r) =>
+          adaptContractToMerchantRental(r, { category: myMerchant.primary_category }),
+        ),
+      );
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [configured, session?.user?.id]);
+
+  const merchantRentals = liveRentals ?? demoRentals;
 
   const filtered = useMemo(() => {
     if (filter === 'all') return merchantRentals;

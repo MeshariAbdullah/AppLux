@@ -32,6 +32,7 @@ import {
   adaptMerchantApplication,
   decideMerchantApplication,
   fetchMerchantApplication,
+  provisionMerchantFromApplication,
   useSupabaseAuth,
 } from '@/lib/supabase';
 import type {
@@ -139,6 +140,20 @@ export default function AdminMerchantDetails() {
       if (configured) {
         const updated = await decideMerchantApplication(request.id, 'approved', notes);
         setLiveRequest(adaptMerchantApplication(updated));
+        // Provisioning is the link that turns the approved application
+        // into a real merchant entity + lifts profiles.role to 'merchant'.
+        // Idempotent on the server side, so safe to retry.
+        try {
+          await provisionMerchantFromApplication(request.id);
+        } catch (provErr) {
+          // eslint-disable-next-line no-console
+          console.error('[applux] provisionMerchantFromApplication failed', provErr);
+          setDecisionError(
+            provErr instanceof Error
+              ? `Application approved, but provisioning failed: ${provErr.message}`
+              : 'Application approved, but provisioning failed.',
+          );
+        }
       } else {
         approveMerchantRequest(request.id, notes);
       }

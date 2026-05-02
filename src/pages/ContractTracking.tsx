@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Header, Screen } from '@/components/layout';
 import {
@@ -23,6 +23,18 @@ import {
 } from '@/components/icons';
 import { useI18n, useT } from '@/lib/i18n';
 import { useStore } from '@/lib/store';
+import {
+  adaptContract,
+  adaptInvoice,
+  adaptNote,
+  fetchContractById,
+  fetchInvoiceById,
+  fetchMerchant,
+  fetchNoteByContractId,
+  listInvoiceItems,
+  useSupabaseAuth,
+} from '@/lib/supabase';
+import type { Contract, Invoice, PromissoryNote } from '@/lib/data';
 import { ContractStatusChip } from '@/components/rental/StatusChips';
 import {
   DocTimeline,
@@ -42,17 +54,57 @@ export default function ContractTracking() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { contracts, invoices, notes, session } = useStore();
+  const { configured } = useSupabaseAuth();
   const { formatCurrency, formatDate } = useI18n();
 
-  const contract = useMemo(() => contracts.find((c) => c.id === id), [contracts, id]);
-  const linkedInvoices = useMemo(
-    () => invoices.filter((i) => i.contractRef === id),
-    [invoices, id],
-  );
-  const linkedNote = useMemo(
-    () => notes.find((n) => n.counterparty === contract?.counterparty),
-    [notes, contract],
-  );
+  const demoContract = useMemo(() => contracts.find((c) => c.id === id), [contracts, id]);
+  const [liveContract, setLiveContract] = useState<Contract | null>(null);
+  const [liveInvoices, setLiveInvoices] = useState<Invoice[] | null>(null);
+  const [liveNote, setLiveNote] = useState<PromissoryNote | null>(null);
+
+  useEffect(() => {
+    if (!configured || !id) {
+      setLiveContract(null);
+      setLiveInvoices(null);
+      setLiveNote(null);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      const row = await fetchContractById(id).catch(() => null);
+      if (cancelled || !row) return;
+      const merchant = await fetchMerchant(row.merchant_id).catch(() => null);
+      if (cancelled) return;
+      const merchantName =
+        merchant?.display_name?.en ?? merchant?.company_name ?? '—';
+      setLiveContract(adaptContract(row, merchantName));
+
+      const invoiceRow = await fetchInvoiceById(row.invoice_id).catch(() => null);
+      if (cancelled || !invoiceRow) {
+        setLiveInvoices([]);
+      } else {
+        const items = await listInvoiceItems(invoiceRow.id).catch(() => []);
+        if (cancelled) return;
+        setLiveInvoices([adaptInvoice(invoiceRow, items)]);
+      }
+
+      const noteRow = await fetchNoteByContractId(row.id).catch(() => null);
+      if (!cancelled && noteRow) {
+        setLiveNote(adaptNote(noteRow, merchantName));
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [configured, id]);
+
+  const contract = liveContract ?? demoContract;
+  const linkedInvoices =
+    liveInvoices ??
+    (contract ? invoices.filter((i) => i.contractRef === id) : []);
+  const linkedNote =
+    liveNote ??
+    (contract ? notes.find((n) => n.counterparty === contract.counterparty) : undefined);
 
   if (!contract) {
     return (

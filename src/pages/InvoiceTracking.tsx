@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Header, Screen } from '@/components/layout';
 import {
@@ -21,6 +21,15 @@ import {
 } from '@/components/icons';
 import { useI18n, useT } from '@/lib/i18n';
 import { useStore } from '@/lib/store';
+import {
+  adaptContract,
+  adaptInvoice,
+  fetchInvoiceById,
+  getSupabase,
+  listInvoiceItems,
+  useSupabaseAuth,
+} from '@/lib/supabase';
+import type { Contract, Invoice } from '@/lib/data';
 import { InvoiceStatusChip } from '@/components/rental/StatusChips';
 import {
   DocTimeline,
@@ -39,13 +48,48 @@ export default function InvoiceTracking() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { invoices, contracts } = useStore();
+  const { configured } = useSupabaseAuth();
   const { formatCurrency, formatDate } = useI18n();
 
-  const invoice = useMemo(() => invoices.find((i) => i.id === id), [invoices, id]);
-  const contract = useMemo(
-    () => contracts.find((c) => c.id === invoice?.contractRef),
-    [contracts, invoice],
-  );
+  const demoInvoice = useMemo(() => invoices.find((i) => i.id === id), [invoices, id]);
+
+  const [liveInvoice, setLiveInvoice] = useState<Invoice | null>(null);
+  const [liveContract, setLiveContract] = useState<Contract | null>(null);
+
+  useEffect(() => {
+    if (!configured || !id) {
+      setLiveInvoice(null);
+      setLiveContract(null);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      const row = await fetchInvoiceById(id).catch(() => null);
+      if (cancelled || !row) return;
+      const items = await listInvoiceItems(row.id).catch(() => []);
+      if (cancelled) return;
+      setLiveInvoice(adaptInvoice(row, items));
+
+      // Find the linked contract via invoice_id
+      const sb = getSupabase();
+      if (!sb) return;
+      const { data: contractRow } = await sb
+        .from('rental_contracts')
+        .select('*')
+        .eq('invoice_id', row.id)
+        .maybeSingle();
+      if (cancelled || !contractRow) return;
+      setLiveContract(adaptContract(contractRow));
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [configured, id]);
+
+  const invoice = liveInvoice ?? demoInvoice;
+  const contract =
+    liveContract ??
+    (invoice ? contracts.find((c) => c.id === (invoice as Invoice).contractRef) : undefined);
 
   if (!invoice) {
     return (

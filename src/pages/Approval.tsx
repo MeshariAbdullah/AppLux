@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Header, Screen } from '@/components/layout';
 import { Button, Card, EmptyState } from '@/components/ui';
@@ -16,22 +16,61 @@ import {
 import { cn } from '@/lib/cn';
 import { useI18n, useT } from '@/lib/i18n';
 import { useStore } from '@/lib/store';
+import {
+  fetchInvoiceByToken,
+  fetchMerchant,
+  synthesizePackageFromInvoice,
+  useSupabaseAuth,
+} from '@/lib/supabase';
+import type { ScannedPackage } from '@/lib/data';
 
 export default function Approval() {
   const t = useT();
   const { token } = useParams();
   const navigate = useNavigate();
   const { approvals, scans, approvePackage } = useStore();
+  const { configured } = useSupabaseAuth();
   const record = token ? approvals[token] : undefined;
-  const pkg = useMemo(() => scans.find((s) => s.token === token), [scans, token]);
+  const demoPkg = useMemo(
+    () => scans.find((s) => s.token === token),
+    [scans, token],
+  );
   const { dir, formatDate, formatNumber } = useI18n();
 
-  useEffect(() => {
-    if (!token || !pkg || record) return;
-    approvePackage(token);
-  }, [token, pkg, record, approvePackage]);
+  const [livePkg, setLivePkg] = useState<ScannedPackage | null>(null);
+  const [resolving, setResolving] = useState(false);
 
-  if (!token || !pkg) {
+  useEffect(() => {
+    if (!configured || !token || demoPkg) {
+      setLivePkg(null);
+      return;
+    }
+    let cancelled = false;
+    setResolving(true);
+    fetchInvoiceByToken(token)
+      .then(async (res) => {
+        if (cancelled || !res) return;
+        const merchant = await fetchMerchant(res.invoice.merchant_id).catch(() => null);
+        if (cancelled) return;
+        setLivePkg(synthesizePackageFromInvoice(res.invoice, res.items, merchant));
+      })
+      .catch(() => {})
+      .finally(() => {
+        if (!cancelled) setResolving(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [configured, token, demoPkg]);
+
+  const pkg = demoPkg ?? livePkg;
+
+  useEffect(() => {
+    if (!token || !demoPkg || record) return;
+    approvePackage(token);
+  }, [token, demoPkg, record, approvePackage]);
+
+  if (!token || (!pkg && !resolving)) {
     return (
       <>
         <Header title={t('approval.title')} showBack />
@@ -64,6 +103,8 @@ export default function Approval() {
       </>
     );
   }
+
+  if (!pkg) return null; // resolving
 
   const approvedAt = record?.approvedAt ?? new Date().toISOString();
   const approvedTime = formatDate(approvedAt, { dateStyle: 'medium', timeStyle: 'short' });

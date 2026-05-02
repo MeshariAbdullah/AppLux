@@ -53,10 +53,6 @@ export async function fetchMerchantApplication(
 /**
  * Admin-only: decide on a pending application.
  * RLS ensures only admins can perform this update.
- *
- * Note: this only updates the application row. Provisioning the actual
- * `merchants` row + lifting `profiles.role` is a Phase 3 concern (Edge
- * Function or RPC), not Phase 2.
  */
 export async function decideMerchantApplication(
   id: string,
@@ -76,4 +72,24 @@ export async function decideMerchantApplication(
     .single();
   if (error) throw error;
   return data;
+}
+
+/**
+ * Admin-only: provision the actual merchant entity from an approved
+ * application — creates the `merchants` row and lifts `profiles.role`
+ * to 'merchant'. Backed by a SECURITY DEFINER Postgres function so the
+ * two writes happen in a single transaction.
+ *
+ * Idempotent: calling twice for the same approved application returns
+ * the existing merchant id without duplicating the row.
+ */
+export async function provisionMerchantFromApplication(
+  applicationId: string,
+): Promise<string> {
+  const sb = requireSupabase();
+  const { data, error } = await sb.rpc('provision_merchant_from_application', {
+    p_application_id: applicationId,
+  });
+  if (error) throw error;
+  return data as string;
 }

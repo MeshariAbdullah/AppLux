@@ -2,18 +2,38 @@
 // so screens can switch data sources without changing their render code.
 
 import type {
+  Contract,
+  ContractStatus as UIContractStatus,
+  HistoryItem,
+  Invoice,
+  InvoiceStatus as UIInvoiceStatus,
   Localized,
+  MerchantRental,
+  MerchantRentalCategory,
+  MerchantRentalStatus,
+  NoteStatus as UINoteStatus,
   PartnerStore,
+  PromissoryNote,
   RentalEligibility,
+  ScannedItem,
+  ScannedPackage,
   StoreBranch,
   StoreCategory,
 } from '@/lib/data';
 import type { AdminMerchantRequest } from '@/lib/store';
 import type {
+  ContractStatusDB,
+  DamageCaseRow,
+  InvoiceStatus as DBInvoiceStatus,
   MerchantApplicationRow,
   MerchantRow,
+  NoteStatus as DBNoteStatus,
+  PromissoryNoteRow,
   RentalCategoryDB,
+  RentalContractRow,
   RentalEligibilityRow,
+  RentalInvoiceItemRow,
+  RentalInvoiceRow,
 } from './types';
 
 // ---------------------------------------------------------------------
@@ -103,6 +123,247 @@ function deriveTextInitials(text: string): string {
 }
 
 const DB_TO_STORE_CATEGORY: Record<RentalCategoryDB, StoreCategory> = SINGULAR_TO_PLURAL;
+
+// ---------------------------------------------------------------------
+// Invoice / contract / note adapters → customer-facing UI types
+// ---------------------------------------------------------------------
+
+function mapInvoiceStatus(status: DBInvoiceStatus): UIInvoiceStatus {
+  // The UI status set is narrower than the DB set:
+  //   accepted/issued/viewed → 'due', cancelled/rejected/superseded → 'paid'
+  //   (cancelled is rendered as 'paid' so it disappears from "due" lists)
+  if (status === 'accepted') return 'paid';
+  if (status === 'rejected' || status === 'cancelled' || status === 'superseded')
+    return 'paid';
+  return 'due';
+}
+
+function mapContractStatus(status: ContractStatusDB): UIContractStatus {
+  if (status === 'cancelled') return 'ended';
+  return status;
+}
+
+function mapNoteStatus(status: DBNoteStatus): UINoteStatus {
+  if (status === 'settled') return 'signed';
+  return status;
+}
+
+export function adaptInvoice(
+  row: RentalInvoiceRow,
+  items: RentalInvoiceItemRow[] = [],
+): Invoice {
+  const headline =
+    items[0]?.item_name ??
+    (row.notes ?? '').split('\n')[0] ??
+    `Invoice ${row.invoice_number}`;
+  return {
+    id: row.id,
+    title: headline,
+    contractRef: row.invoice_number,
+    issuedAt: row.issued_at ?? row.created_at,
+    dueDate: row.expires_at ?? row.issued_at ?? row.created_at,
+    amount: Number(row.total_amount),
+    status: mapInvoiceStatus(row.status),
+  };
+}
+
+export function adaptContract(
+  row: RentalContractRow,
+  merchantName?: string,
+): Contract {
+  return {
+    id: row.id,
+    title: `Rental ${row.contract_number}`,
+    counterparty: merchantName ?? '—',
+    startDate: row.start_date,
+    endDate: row.end_date,
+    monthlyAmount: Number(row.rental_fee_amount),
+    status: mapContractStatus(row.status),
+  };
+}
+
+export function adaptNote(
+  row: PromissoryNoteRow,
+  counterparty?: string,
+): PromissoryNote {
+  return {
+    id: row.id,
+    reference: row.reference_number,
+    counterparty: counterparty ?? row.beneficiary_name,
+    amount: Number(row.principal_amount),
+    dueDate: row.due_date,
+    status: mapNoteStatus(row.status),
+  };
+}
+
+export function adaptContractToHistory(
+  row: RentalContractRow,
+  merchantName?: string,
+): HistoryItem {
+  return {
+    id: row.id,
+    title: `Rental ${row.contract_number}`,
+    counterparty: merchantName ?? '—',
+    closedAt: row.ended_at ?? row.end_date,
+    amount: Number(row.total_amount),
+    status: row.status === 'cancelled' ? 'cancelled' : 'completed',
+  };
+}
+
+// ---------------------------------------------------------------------
+// MerchantRental — operational view for the merchant side
+// ---------------------------------------------------------------------
+
+const DB_TO_RENTAL_CATEGORY: Record<RentalCategoryDB, MerchantRentalCategory> = {
+  dress: 'dress',
+  bag: 'bag',
+  watch: 'watch',
+  bisht: 'bisht',
+};
+
+function deriveRentalStatus(row: RentalContractRow): MerchantRentalStatus {
+  if (row.status === 'ended' || row.status === 'cancelled') return 'returned';
+  const today = new Date();
+  const end = new Date(row.end_date);
+  const days = Math.round((end.getTime() - today.getTime()) / 86_400_000);
+  if (days < 0) return 'overdue';
+  if (days <= 5) return 'due-soon';
+  return 'active';
+}
+
+export function adaptContractToMerchantRental(
+  row: RentalContractRow,
+  ctx: {
+    customerName?: string;
+    customerInitials?: string;
+    customerCity?: string;
+    customerMobile?: string;
+    headlineItem?: string;
+    category?: RentalCategoryDB;
+    noteRef?: string;
+    itemValue?: number;
+  } = {},
+): MerchantRental {
+  const status = deriveRentalStatus(row);
+  return {
+    id: row.id,
+    customerName: ctx.customerName ?? '—',
+    customerInitials: ctx.customerInitials ?? '—',
+    customerCity: ctx.customerCity ?? '',
+    customerMobile: ctx.customerMobile ?? '',
+    item: ctx.headlineItem ?? `Rental ${row.contract_number}`,
+    category: ctx.category ? DB_TO_RENTAL_CATEGORY[ctx.category] : 'dress',
+    branchId: row.branch_id ?? '',
+    startDate: row.start_date,
+    endDate: row.end_date,
+    nextDueDate: row.end_date,
+    monthlyAmount: Number(row.rental_fee_amount),
+    itemValue: ctx.itemValue ?? Number(row.total_amount),
+    liabilityTotal: Number(row.total_amount),
+    paidInstallments: 0,
+    totalInstallments: 1,
+    status,
+    contractRef: row.contract_number,
+    noteRef: ctx.noteRef ?? row.contract_number,
+    customerApproved: row.status !== 'pending',
+    contractState: row.signed_at ? 'signed' : 'sent',
+    noteState: row.signed_at ? 'signed' : 'sent',
+    nafithState: 'pending',
+    timeline: [],
+  };
+}
+
+// ---------------------------------------------------------------------
+// Synthesize a ScannedPackage from a real invoice + items (+ optional
+// merchant info). The Review flow uses this when configured so the
+// existing rich review UI keeps rendering against real data.
+// ---------------------------------------------------------------------
+
+function dur(startIso: string, days: number): string {
+  return new Date(new Date(startIso).getTime() + days * 86_400_000).toISOString();
+}
+
+export function synthesizePackageFromInvoice(
+  invoice: RentalInvoiceRow,
+  items: RentalInvoiceItemRow[],
+  merchant?: MerchantRow | null,
+): ScannedPackage {
+  const issuedAt = invoice.issued_at ?? invoice.created_at;
+  const headlineCategory = items[0]?.category ?? 'dress';
+  const durationDays = items[0]?.rental_days ?? 30;
+  const pickupDate = issuedAt;
+  const returnDate = invoice.expires_at ?? dur(issuedAt, durationDays);
+  const beneficiary = merchant
+    ? localized(merchant.display_name)
+    : { ar: 'AppLux Partner', en: 'AppLux Partner' };
+  const cityLocalized = merchant
+    ? { ar: merchant.city, en: merchant.city }
+    : { ar: '—', en: '—' };
+
+  return {
+    token: invoice.scan_token ?? invoice.id,
+    storeId: invoice.merchant_id,
+    branchId: invoice.branch_id ?? '',
+    issuedAt,
+    currency: 'SAR',
+    rental: {
+      title: {
+        ar: items[0]?.item_name ?? `قطعة ${headlineCategory}`,
+        en: items[0]?.item_name ?? headlineCategory,
+      },
+      purpose: { ar: 'إيجار', en: 'Rental' },
+      pickupDate,
+      returnDate,
+      durationDays,
+      pickupLocation: cityLocalized,
+    },
+    items: items.map<ScannedItem>((it) => ({
+      id: it.id,
+      name: { ar: it.item_name, en: it.item_name },
+      qty: it.rental_days,
+      unitValue: Number(it.replacement_value ?? it.subtotal),
+      serial: undefined,
+      attributes:
+        it.size_label || it.color
+          ? [
+              ...(it.size_label
+                ? [{ label: { ar: 'المقاس', en: 'Size' }, value: { ar: it.size_label, en: it.size_label } }]
+                : []),
+              ...(it.color
+                ? [{ label: { ar: 'اللون', en: 'Color' }, value: { ar: it.color, en: it.color } }]
+                : []),
+            ]
+          : undefined,
+    })),
+    fees: {
+      rentalTotal: Number(invoice.subtotal_amount),
+      deposit: Number(invoice.security_deposit),
+      insurance: 0,
+      vat: Number(invoice.tax_amount),
+      grandTotal: Number(invoice.total_amount),
+    },
+    damages: {
+      nonReturn: items.reduce((s, it) => s + Number(it.replacement_value ?? 0), 0),
+      partialDamage: 0,
+      totalDamage: items.reduce((s, it) => s + Number(it.replacement_value ?? 0), 0),
+      note: { ar: '', en: '' },
+    },
+    contract: {
+      reference: invoice.invoice_number,
+      clauses: [],
+    },
+    note: {
+      reference: invoice.invoice_number,
+      beneficiary,
+      principal: Number(invoice.total_amount) + Number(invoice.security_deposit),
+      dueDate: dur(issuedAt, 60),
+      place: cityLocalized,
+      purpose: { ar: 'تأجير', en: 'Rental' },
+    },
+  };
+}
+
+// ---------------------------------------------------------------------
 
 export function adaptMerchantApplication(
   row: MerchantApplicationRow,

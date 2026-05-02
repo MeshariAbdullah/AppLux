@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Header, Screen } from '@/components/layout';
 import {
@@ -27,6 +27,13 @@ import { useStore } from '@/lib/store';
 import { cn } from '@/lib/cn';
 import type { MerchantRental } from '@/lib/data';
 import { RentalThumbnail } from '@/components/rental/RentalThumbnail';
+import {
+  adaptContractToMerchantRental,
+  fetchMyMerchant,
+  listMerchantContracts,
+  listMerchantInvoices,
+  useSupabaseAuth,
+} from '@/lib/supabase';
 
 export default function MerchantHome() {
   const t = useT();
@@ -35,10 +42,43 @@ export default function MerchantHome() {
   const {
     merchant,
     signOutMerchant,
-    merchantRentals,
+    merchantRentals: demoRentals,
     merchantApprovals,
     merchantDamages,
   } = useStore();
+  const supabaseAuth = useSupabaseAuth();
+  const [liveRentals, setLiveRentals] = useState<MerchantRental[] | null>(null);
+  const [livePendingInvoices, setLivePendingInvoices] = useState<number | null>(null);
+
+  useEffect(() => {
+    const userId = supabaseAuth.session?.user?.id;
+    if (!supabaseAuth.configured || !userId) {
+      setLiveRentals(null);
+      setLivePendingInvoices(null);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      const myMerchant = await fetchMyMerchant(userId).catch(() => null);
+      if (cancelled || !myMerchant) return;
+      const [contractRows, pendingInvoices] = await Promise.all([
+        listMerchantContracts(myMerchant.id).catch(() => []),
+        listMerchantInvoices(myMerchant.id, { status: 'issued' }).catch(() => []),
+      ]);
+      if (cancelled) return;
+      setLiveRentals(
+        contractRows.map((r) =>
+          adaptContractToMerchantRental(r, { category: myMerchant.primary_category }),
+        ),
+      );
+      setLivePendingInvoices(pendingInvoices.length);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [supabaseAuth.configured, supabaseAuth.session?.user?.id]);
+
+  const merchantRentals = liveRentals ?? demoRentals;
 
   useEffect(() => {
     if (!merchant) {
@@ -58,7 +98,7 @@ export default function MerchantHome() {
     () => merchantRentals.filter((r) => r.status !== 'returned').length,
     [merchantRentals],
   );
-  const pendingCount = merchantApprovals.length;
+  const pendingCount = livePendingInvoices ?? merchantApprovals.length;
   const openDamageCount = useMemo(
     () => merchantDamages.filter((d) => d.status !== 'settled').length,
     [merchantDamages],

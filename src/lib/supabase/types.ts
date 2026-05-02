@@ -109,6 +109,179 @@ export type MerchantApplicationInsert = Omit<
 };
 export type MerchantApplicationUpdate = Partial<MerchantApplicationRow>;
 
+// ---------------------------------------------------------------------
+// Rental document chain — invoices, items, contracts, notes
+// ---------------------------------------------------------------------
+
+export type InvoiceStatus =
+  | 'draft'
+  | 'issued'
+  | 'viewed'
+  | 'accepted'
+  | 'rejected'
+  | 'cancelled'
+  | 'superseded';
+
+export type ContractStatusDB = 'pending' | 'active' | 'ended' | 'cancelled';
+
+export type NoteStatus = 'pending' | 'signed' | 'settled' | 'defaulted';
+
+export type RentalInvoiceRow = {
+  id: string;
+  invoice_number: string;
+  merchant_id: string;
+  branch_id: string | null;
+  customer_user_id: string;
+  subtotal_amount: number;
+  tax_amount: number;
+  security_deposit: number;
+  total_amount: number;
+  status: InvoiceStatus;
+  issued_at: string | null;
+  expires_at: string | null;
+  scan_token: string | null;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+};
+export type RentalInvoiceInsert = Partial<RentalInvoiceRow> & {
+  invoice_number: string;
+  merchant_id: string;
+  customer_user_id: string;
+};
+export type RentalInvoiceUpdate = Partial<RentalInvoiceRow>;
+
+export type RentalInvoiceItemRow = {
+  id: string;
+  invoice_id: string;
+  position: number;
+  item_name: string;
+  category: RentalCategoryDB;
+  size_label: string | null;
+  color: string | null;
+  daily_rate: number;
+  rental_days: number;
+  subtotal: number;
+  replacement_value: number | null;
+  notes: string | null;
+  created_at: string;
+};
+export type RentalInvoiceItemInsert = Omit<RentalInvoiceItemRow, 'id' | 'created_at'> & {
+  id?: string;
+};
+export type RentalInvoiceItemUpdate = Partial<RentalInvoiceItemRow>;
+
+export type RentalContractRow = {
+  id: string;
+  contract_number: string;
+  invoice_id: string;
+  customer_user_id: string;
+  merchant_id: string;
+  branch_id: string | null;
+  start_date: string;
+  end_date: string;
+  rental_fee_amount: number;
+  security_deposit: number;
+  total_amount: number;
+  status: ContractStatusDB;
+  signed_at: string | null;
+  ended_at: string | null;
+  nafath_verified_at: string | null;
+  nafith_attested_at: string | null;
+  created_at: string;
+  updated_at: string;
+};
+export type RentalContractInsert = Partial<RentalContractRow> & {
+  contract_number: string;
+  invoice_id: string;
+  customer_user_id: string;
+  merchant_id: string;
+  start_date: string;
+  end_date: string;
+  rental_fee_amount: number;
+  total_amount: number;
+};
+export type RentalContractUpdate = Partial<RentalContractRow>;
+
+export type PromissoryNoteRow = {
+  id: string;
+  reference_number: string;
+  contract_id: string;
+  customer_user_id: string;
+  merchant_id: string;
+  beneficiary_name: string;
+  principal_amount: number;
+  due_date: string;
+  status: NoteStatus;
+  signed_at: string | null;
+  settled_at: string | null;
+  defaulted_at: string | null;
+  nafith_attested_at: string | null;
+  created_at: string;
+  updated_at: string;
+};
+export type PromissoryNoteInsert = Partial<PromissoryNoteRow> & {
+  reference_number: string;
+  contract_id: string;
+  customer_user_id: string;
+  merchant_id: string;
+  beneficiary_name: string;
+  principal_amount: number;
+  due_date: string;
+};
+export type PromissoryNoteUpdate = Partial<PromissoryNoteRow>;
+
+// ---------------------------------------------------------------------
+// Damage cases + evidence
+// ---------------------------------------------------------------------
+
+export type DamageSeverity = 'partial' | 'total' | 'non_return';
+export type DamageStage    = 'review' | 'settlement' | 'nafith' | 'execution';
+export type DamageStatus   = 'open' | 'settled' | 'escalated' | 'dismissed';
+export type EvidenceType   = 'photo' | 'video' | 'document';
+
+export type DamageCaseRow = {
+  id: string;
+  case_number: string;
+  contract_id: string;
+  customer_user_id: string;
+  merchant_id: string;
+  raised_by_user_id: string | null;
+  severity: DamageSeverity;
+  stage: DamageStage;
+  status: DamageStatus;
+  claim_amount: number;
+  description: string;
+  raised_at: string;
+  resolved_at: string | null;
+  resolved_by_user_id: string | null;
+  resolution_notes: string | null;
+  created_at: string;
+  updated_at: string;
+};
+export type DamageCaseInsert = Partial<DamageCaseRow> & {
+  case_number: string;
+  contract_id: string;
+  customer_user_id: string;
+  merchant_id: string;
+  severity: DamageSeverity;
+  description: string;
+};
+export type DamageCaseUpdate = Partial<DamageCaseRow>;
+
+export type DamageEvidenceRow = {
+  id: string;
+  case_id: string;
+  evidence_type: EvidenceType;
+  storage_path: string;
+  caption: string | null;
+  uploaded_by_user_id: string | null;
+  uploaded_at: string;
+};
+export type DamageEvidenceInsert = Omit<DamageEvidenceRow, 'id' | 'uploaded_at'> & {
+  id?: string;
+};
+
 // Minimal Database surface for typed supabase client. Add tables here as
 // Phase 3+ wires in invoices, contracts, notes, damage cases, etc.
 //
@@ -141,8 +314,57 @@ export type Database = {
         Update: MerchantApplicationUpdate;
         Relationships: [];
       };
+      rental_invoices: {
+        Row: RentalInvoiceRow;
+        Insert: RentalInvoiceInsert;
+        Update: RentalInvoiceUpdate;
+        Relationships: [];
+      };
+      rental_invoice_items: {
+        Row: RentalInvoiceItemRow;
+        Insert: RentalInvoiceItemInsert;
+        Update: RentalInvoiceItemUpdate;
+        Relationships: [];
+      };
+      rental_contracts: {
+        Row: RentalContractRow;
+        Insert: RentalContractInsert;
+        Update: RentalContractUpdate;
+        Relationships: [];
+      };
+      promissory_notes: {
+        Row: PromissoryNoteRow;
+        Insert: PromissoryNoteInsert;
+        Update: PromissoryNoteUpdate;
+        Relationships: [];
+      };
+      damage_cases: {
+        Row: DamageCaseRow;
+        Insert: DamageCaseInsert;
+        Update: DamageCaseUpdate;
+        Relationships: [];
+      };
+      damage_evidence: {
+        Row: DamageEvidenceRow;
+        Insert: DamageEvidenceInsert;
+        Update: Partial<DamageEvidenceRow>;
+        Relationships: [];
+      };
     };
     Views: Record<string, never>;
-    Functions: Record<string, never>;
+    Functions: {
+      accept_rental_invoice: {
+        Args: { p_invoice_id: string };
+        Returns: string;
+      };
+      provision_merchant_from_application: {
+        Args: { p_application_id: string };
+        Returns: string;
+      };
+      next_invoice_number: { Args: Record<string, never>; Returns: string };
+      next_contract_number: { Args: Record<string, never>; Returns: string };
+      next_note_number: { Args: Record<string, never>; Returns: string };
+      next_case_number: { Args: Record<string, never>; Returns: string };
+    };
   };
 };

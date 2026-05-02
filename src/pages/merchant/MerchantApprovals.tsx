@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { Header, Screen } from '@/components/layout';
 import {
   Card,
@@ -14,6 +15,12 @@ import {
 } from '@/components/icons';
 import { useI18n, useT } from '@/lib/i18n';
 import { useStore } from '@/lib/store';
+import {
+  fetchMyMerchant,
+  listMerchantInvoices,
+  useSupabaseAuth,
+  type RentalInvoiceRow,
+} from '@/lib/supabase';
 import type { MerchantApproval, MerchantApprovalStage } from '@/lib/data';
 
 function toneForStage(stage: MerchantApprovalStage): StatusTone {
@@ -22,9 +29,48 @@ function toneForStage(stage: MerchantApprovalStage): StatusTone {
   return 'brand';
 }
 
+function invoiceRowToApproval(row: RentalInvoiceRow): MerchantApproval {
+  return {
+    id: row.id,
+    customerName: '—',
+    customerInitials: '—',
+    item: `Invoice ${row.invoice_number}`,
+    category: 'dress',
+    amount: Number(row.total_amount),
+    submittedAt: row.issued_at ?? row.created_at,
+    branchId: row.branch_id ?? '',
+    stage: 'awaiting-customer',
+  };
+}
+
 export default function MerchantApprovals() {
   const t = useT();
-  const { merchantApprovals } = useStore();
+  const { merchantApprovals: demoApprovals } = useStore();
+  const { configured, session } = useSupabaseAuth();
+  const [liveApprovals, setLiveApprovals] = useState<MerchantApproval[] | null>(null);
+
+  useEffect(() => {
+    const userId = session?.user?.id;
+    if (!configured || !userId) {
+      setLiveApprovals(null);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      const myMerchant = await fetchMyMerchant(userId).catch(() => null);
+      if (cancelled || !myMerchant) return;
+      const rows = await listMerchantInvoices(myMerchant.id, {
+        status: 'issued',
+      }).catch(() => []);
+      if (cancelled) return;
+      setLiveApprovals(rows.map(invoiceRowToApproval));
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [configured, session?.user?.id]);
+
+  const merchantApprovals = liveApprovals ?? demoApprovals;
   return (
     <>
       <Header title={t('merchant.approvals.title')} showBack />

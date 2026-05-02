@@ -9,9 +9,19 @@
 export { getSupabase, requireSupabase, supabaseConfigured } from './client';
 export type { Database } from './types';
 export type {
-  AppRole,
   AccountStatus,
+  AppRole,
+  ContractStatusDB,
+  DamageCaseInsert,
+  DamageCaseRow,
+  DamageEvidenceInsert,
+  DamageEvidenceRow,
+  DamageSeverity,
+  DamageStage,
+  DamageStatus,
   EligibilityTier,
+  EvidenceType,
+  InvoiceStatus,
   LocalizedJson,
   MerchantApplicationInsert,
   MerchantApplicationRow,
@@ -21,13 +31,22 @@ export type {
   MerchantRow,
   MerchantStatusDB,
   MerchantUpdate,
+  NoteStatus,
   ProfileInsert,
   ProfileRow,
   ProfileUpdate,
+  PromissoryNoteInsert,
+  PromissoryNoteRow,
   RentalCategoryDB,
+  RentalContractInsert,
+  RentalContractRow,
   RentalEligibilityInsert,
   RentalEligibilityRow,
   RentalEligibilityUpdate,
+  RentalInvoiceInsert,
+  RentalInvoiceItemInsert,
+  RentalInvoiceItemRow,
+  RentalInvoiceRow,
 } from './types';
 
 export {
@@ -52,7 +71,41 @@ export {
   listMerchantApplications,
   fetchMerchantApplication,
   decideMerchantApplication,
+  provisionMerchantFromApplication,
 } from './queries/merchant-applications';
+
+export {
+  acceptRentalInvoice,
+  createInvoiceWithItems,
+  fetchInvoiceById,
+  fetchInvoiceByToken,
+  listCustomerInvoices,
+  listInvoiceItems,
+  listMerchantInvoices,
+} from './queries/invoices';
+export type { CreateInvoiceInput, CreatedInvoice } from './queries/invoices';
+
+export {
+  fetchContractById,
+  listCustomerContracts,
+  listMerchantContracts,
+} from './queries/contracts';
+
+export {
+  fetchNoteById,
+  fetchNoteByContractId,
+  listCustomerNotes,
+} from './queries/notes';
+
+export {
+  createDamageCase,
+  fetchDamageCase,
+  listMerchantDamageCases,
+  listCaseEvidence,
+  uploadDamageEvidence,
+  DAMAGE_EVIDENCE_BUCKET,
+} from './queries/damages';
+export type { CreateDamageCaseInput, UploadEvidenceInput } from './queries/damages';
 
 export {
   SupabaseAuthProvider,
@@ -60,7 +113,13 @@ export {
 } from './SupabaseAuthProvider';
 
 export {
+  adaptContract,
+  adaptContractToHistory,
+  adaptContractToMerchantRental,
   adaptEligibility,
-  adaptMerchantToStore,
+  adaptInvoice,
   adaptMerchantApplication,
+  adaptMerchantToStore,
+  adaptNote,
+  synthesizePackageFromInvoice,
 } from './adapters';
