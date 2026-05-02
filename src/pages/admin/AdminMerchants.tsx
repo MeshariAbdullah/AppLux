@@ -1,4 +1,4 @@
-import { useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { Header, Screen } from '@/components/layout';
 import {
@@ -20,6 +20,11 @@ import {
 import { cn } from '@/lib/cn';
 import { useI18n, useT } from '@/lib/i18n';
 import { useStore, type AdminMerchantRequest } from '@/lib/store';
+import {
+  adaptMerchantApplication,
+  listMerchantApplications,
+  useSupabaseAuth,
+} from '@/lib/supabase';
 import type { AdminMerchantDecisionStatus } from '@/lib/data';
 
 type TabKey = 'all' | AdminMerchantDecisionStatus;
@@ -34,25 +39,47 @@ function statusTone(status: AdminMerchantDecisionStatus): StatusTone {
 export default function AdminMerchants() {
   const t = useT();
   const { dir, formatDate } = useI18n();
-  const { adminMerchantRequests } = useStore();
+  const { adminMerchantRequests: demoRequests } = useStore();
+  const { configured } = useSupabaseAuth();
+  const [requests, setRequests] = useState<AdminMerchantRequest[]>(demoRequests);
   const [tab, setTab] = useState<TabKey>('pending');
+
+  useEffect(() => {
+    if (!configured) {
+      setRequests(demoRequests);
+      return;
+    }
+    let cancelled = false;
+    listMerchantApplications()
+      .then((rows) => {
+        if (!cancelled) setRequests(rows.map(adaptMerchantApplication));
+      })
+      .catch((err) => {
+        // eslint-disable-next-line no-console
+        console.error('[applux] listMerchantApplications failed; falling back to demo seed', err);
+        if (!cancelled) setRequests(demoRequests);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [configured, demoRequests]);
 
   const counts = useMemo(() => {
     const acc: Record<TabKey, number> = {
-      all: adminMerchantRequests.length,
+      all: requests.length,
       pending: 0,
       approved: 0,
       rejected: 0,
     };
-    for (const r of adminMerchantRequests) acc[r.decision.status] += 1;
+    for (const r of requests) acc[r.decision.status] += 1;
     return acc;
-  }, [adminMerchantRequests]);
+  }, [requests]);
 
   const visible = useMemo(() => {
     const list =
       tab === 'all'
-        ? adminMerchantRequests
-        : adminMerchantRequests.filter((r) => r.decision.status === tab);
+        ? requests
+        : requests.filter((r) => r.decision.status === tab);
     // Sort: pending first, then by decidedAt desc
     return [...list].sort((a, b) => {
       if (a.decision.status === 'pending' && b.decision.status !== 'pending') return -1;
@@ -62,7 +89,7 @@ export default function AdminMerchants() {
         new Date(a.decision.decidedAt).getTime()
       );
     });
-  }, [adminMerchantRequests, tab]);
+  }, [requests, tab]);
 
   return (
     <>

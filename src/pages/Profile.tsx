@@ -12,17 +12,44 @@ import {
 } from '@/components/icons';
 import { useI18n, useT } from '@/lib/i18n';
 import { useStore } from '@/lib/store';
+import { useSupabaseAuth } from '@/lib/supabase';
 import { cn } from '@/lib/cn';
 import type { ReactNode } from 'react';
 
 export default function Profile() {
   const t = useT();
   const { locale, setLocale, dir } = useI18n();
-  const { session, signOut } = useStore();
+  const { session: demoSession, signOut: demoSignOut } = useStore();
+  const {
+    configured,
+    profile,
+    session: realSession,
+    signOut: supabaseSignOut,
+  } = useSupabaseAuth();
   const navigate = useNavigate();
 
-  const onSignOut = () => {
-    signOut();
+  // Real profile when configured + loaded; otherwise demo session.
+  const fullName = configured
+    ? profile?.full_name ?? realSession?.user?.email ?? '—'
+    : demoSession?.fullName ?? '—';
+  const email = configured
+    ? profile?.email ?? realSession?.user?.email ?? '—'
+    : demoSession?.email ?? '—';
+  const nafathVerified = configured
+    ? Boolean(profile?.nafath_verified_at)
+    : Boolean(demoSession?.nafathVerified);
+
+  const onSignOut = async () => {
+    if (configured) {
+      try {
+        await supabaseSignOut();
+      } catch (err) {
+        // eslint-disable-next-line no-console
+        console.error('[applux] signOut failed', err);
+      }
+    } else {
+      demoSignOut();
+    }
     navigate('/welcome', { replace: true });
   };
 
@@ -33,15 +60,15 @@ export default function Profile() {
         {/* Identity card */}
         <Card padded>
           <div className="flex items-center gap-4">
-            <Avatar name={session?.fullName ?? 'A'} size="lg" tone="gold" />
+            <Avatar name={fullName !== '—' ? fullName : 'A'} size="lg" tone="gold" />
             <div className="min-w-0">
               <div className="editorial-title text-[17px] text-ink-900 truncate">
-                {session?.fullName ?? '—'}
+                {fullName}
               </div>
-              <div className="text-[12.5px] text-ink-400 truncate mt-0.5">{session?.email ?? '—'}</div>
+              <div className="text-[12.5px] text-ink-400 truncate mt-0.5">{email}</div>
               <div className="mt-2 flex items-center gap-1.5">
                 <StatusChip tone="gold" label={t('app.name')} />
-                {session?.nafathVerified && (
+                {nafathVerified && (
                   <StatusChip tone="gold" label={t('nafath.verified')} />
                 )}
               </div>

@@ -6,6 +6,11 @@ import { useI18n, useT } from '@/lib/i18n';
 import { useStore } from '@/lib/store';
 import type { PartnerStore, StoreCategory } from '@/lib/data';
 import { StoreCard } from '@/components/stores/StoreCard';
+import {
+  adaptMerchantToStore,
+  listMerchants,
+  useSupabaseAuth,
+} from '@/lib/supabase';
 import { cn } from '@/lib/cn';
 
 const FILTERS: (StoreCategory | 'all')[] = [
@@ -21,7 +26,9 @@ type SortKey = 'recommended' | 'rating' | 'branches' | 'name';
 export default function Stores() {
   const t = useT();
   const { locale } = useI18n();
-  const { stores } = useStore();
+  const { stores: demoStores } = useStore();
+  const { configured } = useSupabaseAuth();
+  const [stores, setStores] = useState<PartnerStore[]>(demoStores);
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState('');
   const [category, setCategory] = useState<StoreCategory | 'all'>('all');
@@ -29,9 +36,31 @@ export default function Stores() {
   const [sort, setSort] = useState<SortKey>('recommended');
 
   useEffect(() => {
-    const id = window.setTimeout(() => setLoading(false), 550);
-    return () => window.clearTimeout(id);
-  }, []);
+    let cancelled = false;
+    if (!configured) {
+      setStores(demoStores);
+      const id = window.setTimeout(() => setLoading(false), 350);
+      return () => window.clearTimeout(id);
+    }
+    setLoading(true);
+    listMerchants()
+      .then((rows) => {
+        if (cancelled) return;
+        setStores(rows.map(adaptMerchantToStore));
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        // eslint-disable-next-line no-console
+        console.error('[applux] listMerchants failed; falling back to demo seed', err);
+        setStores(demoStores);
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [configured, demoStores]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();

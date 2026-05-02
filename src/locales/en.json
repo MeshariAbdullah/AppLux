@@ -53,6 +53,8 @@
     "registerEntryTitle": "Start with AppLux",
     "registerEntrySubtitle": "Create a merchant account in minutes.",
     "mobile": "Mobile number",
+    "email": "Email",
+    "emailPh": "name@example.com",
     "password": "Password",
     "forgot": "Forgot password?",
     "noAccount": "Don't have an account?",
@@ -105,8 +107,13 @@
     "errors": {
       "mobileRequired": "Enter your mobile number to continue.",
       "mobileFormat": "Mobile must start with 5 and contain 9 digits.",
+      "emailRequired": "Enter your email to continue.",
+      "emailFormat": "That email doesn't look right.",
       "passwordRequired": "Enter your password to continue.",
-      "passwordShort": "Password is too short (use at least 4 characters)."
+      "passwordShort": "Password is too short (use at least 4 characters).",
+      "fullNameRequired": "Enter your full name to continue.",
+      "signInFailed": "Sign-in failed. Check your credentials and try again.",
+      "signUpFailed": "Could not create the account. Please try again."
     }
   },
   "register": {

@@ -4,6 +4,7 @@ import { Header, Screen } from '@/components/layout';
 import { Button, FormField, Input, Select, Textarea } from '@/components/ui';
 import { useI18n, useT } from '@/lib/i18n';
 import { useStore, emptyRegistration, type RegistrationDraft } from '@/lib/store';
+import { useSupabaseAuth } from '@/lib/supabase';
 import { cn } from '@/lib/cn';
 import { ArrowIcon, ShieldIcon } from '@/components/icons';
 
@@ -30,6 +31,13 @@ export default function Register() {
   const { dir } = useI18n();
   const navigate = useNavigate();
   const { draft, updateDraft, resetDraft } = useStore();
+  const { configured } = useSupabaseAuth();
+
+  // When the Supabase env is wired, the heavy 3-step demo registration is
+  // replaced by a minimal email/password sign-up. The demo flow stays as-is.
+  if (configured) {
+    return <SupabaseRegister />;
+  }
 
   const [values, setValues] = useState<RegistrationDraft>(() =>
     draft.fullName || draft.mobile ? draft : emptyRegistration,
@@ -298,6 +306,114 @@ export default function Register() {
                 </Link>
               </div>
             )}
+          </div>
+        </form>
+      </Screen>
+    </>
+  );
+}
+
+function SupabaseRegister() {
+  const t = useT();
+  const navigate = useNavigate();
+  const { signUp } = useSupabaseAuth();
+
+  const [fullName, setFullName] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const [errors, setErrors] = useState<{
+    fullName?: string;
+    email?: string;
+    password?: string;
+    form?: string;
+  }>({});
+
+  const onSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const next: typeof errors = {};
+    if (!fullName.trim()) next.fullName = t('auth.errors.fullNameRequired');
+    if (!email.trim()) next.email = t('auth.errors.emailRequired');
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
+      next.email = t('auth.errors.emailFormat');
+    if (!password.trim()) next.password = t('auth.errors.passwordRequired');
+    else if (password.length < 6) next.password = t('auth.errors.passwordShort');
+    setErrors(next);
+    if (Object.keys(next).length > 0) return;
+
+    setSubmitting(true);
+    try {
+      await signUp({ email: email.trim(), password, fullName: fullName.trim() });
+      navigate('/', { replace: true });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : t('auth.errors.signUpFailed');
+      setErrors({ form: message });
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <>
+      <Header title={t('register.title')} showBack />
+      <Screen className="bg-canvas">
+        <div>
+          <h1 className="editorial-title text-[24px] text-ink-900 leading-tight">
+            {t('register.title')}
+          </h1>
+          <p className="mt-2 text-[13.5px] text-ink-500 leading-relaxed">
+            {t('register.step1Sub')}
+          </p>
+        </div>
+
+        <form className="space-y-4" onSubmit={onSubmit} noValidate>
+          <FormField label={t('register.fullName')} required error={errors.fullName}>
+            <Input
+              placeholder={t('register.fullNamePh')}
+              value={fullName}
+              onChange={(e) => setFullName(e.target.value)}
+              invalid={Boolean(errors.fullName)}
+              autoComplete="name"
+            />
+          </FormField>
+          <FormField label={t('auth.email')} required error={errors.email}>
+            <Input
+              type="email"
+              placeholder={t('auth.emailPh')}
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              invalid={Boolean(errors.email)}
+              autoComplete="email"
+            />
+          </FormField>
+          <FormField label={t('auth.password')} required error={errors.password}>
+            <Input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              invalid={Boolean(errors.password)}
+              autoComplete="new-password"
+            />
+          </FormField>
+
+          {errors.form && (
+            <div className="rounded-xl2 bg-danger-50 ring-1 ring-danger-500/25 px-3.5 py-2.5 text-[12.5px] text-danger-700 leading-relaxed">
+              {errors.form}
+            </div>
+          )}
+
+          <div className="pt-2 space-y-2">
+            <Button type="submit" size="lg" block loading={submitting}>
+              {t('register.submit')}
+            </Button>
+            <div className="text-center text-[13px] text-ink-500">
+              {t('auth.haveAccount')}{' '}
+              <Link
+                to="/auth/login"
+                className="text-lavender-600 font-semibold hover:text-lavender-700"
+              >
+                {t('auth.login')}
+              </Link>
+            </div>
           </div>
         </form>
       </Screen>

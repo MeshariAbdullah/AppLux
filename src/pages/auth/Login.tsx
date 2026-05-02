@@ -13,10 +13,13 @@ import {
 import { useT } from '@/lib/i18n';
 import { useStore } from '@/lib/store';
 import { emptyRegistration } from '@/lib/store';
+import { useSupabaseAuth } from '@/lib/supabase';
 
 type FieldErrors = {
   mobile?: string;
+  email?: string;
   password?: string;
+  form?: string;
 };
 
 function isValidSaudiMobile(value: string): boolean {
@@ -28,7 +31,9 @@ export default function Login() {
   const t = useT();
   const navigate = useNavigate();
   const { completeRegistration, updateDraft } = useStore();
+  const { configured, signIn } = useSupabaseAuth();
   const [mobile, setMobile] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -36,11 +41,20 @@ export default function Login() {
   const [touched, setTouched] = useState<Record<string, boolean>>({});
 
   const mobileError = useMemo(() => {
+    if (configured) return undefined;
     if (!touched.mobile && !errors.mobile) return undefined;
     if (!mobile.trim()) return t('auth.errors.mobileRequired');
     if (!isValidSaudiMobile(mobile)) return t('auth.errors.mobileFormat');
     return undefined;
-  }, [mobile, touched.mobile, errors.mobile, t]);
+  }, [configured, mobile, touched.mobile, errors.mobile, t]);
+
+  const emailError = useMemo(() => {
+    if (!configured) return undefined;
+    if (!touched.email && !errors.email) return undefined;
+    if (!email.trim()) return t('auth.errors.emailRequired');
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return t('auth.errors.emailFormat');
+    return undefined;
+  }, [configured, email, touched.email, errors.email, t]);
 
   const passwordError = useMemo(() => {
     if (!touched.password && !errors.password) return undefined;
@@ -49,10 +63,36 @@ export default function Login() {
     return undefined;
   }, [password, touched.password, errors.password, t]);
 
-  const onSubmit = (e: React.FormEvent) => {
+  const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setTouched({ mobile: true, password: true });
+    setErrors((prev) => ({ ...prev, form: undefined }));
 
+    if (configured) {
+      setTouched({ email: true, password: true });
+      const next: FieldErrors = {};
+      if (!email.trim()) next.email = t('auth.errors.emailRequired');
+      else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
+        next.email = t('auth.errors.emailFormat');
+      if (!password.trim()) next.password = t('auth.errors.passwordRequired');
+      else if (password.length < 4) next.password = t('auth.errors.passwordShort');
+      setErrors(next);
+      if (Object.keys(next).length > 0) return;
+
+      setSubmitting(true);
+      try {
+        await signIn({ email: email.trim(), password });
+        // Provider's onAuthStateChange will hydrate role; let RootRedirect route us.
+        navigate('/', { replace: true });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : t('auth.errors.signInFailed');
+        setErrors({ form: message });
+        setSubmitting(false);
+      }
+      return;
+    }
+
+    // Demo mode (env not configured)
+    setTouched({ mobile: true, password: true });
     const next: FieldErrors = {};
     if (!mobile.trim()) next.mobile = t('auth.errors.mobileRequired');
     else if (!isValidSaudiMobile(mobile)) next.mobile = t('auth.errors.mobileFormat');
@@ -75,6 +115,7 @@ export default function Login() {
 
   const fillDemoCredentials = () => {
     setMobile('501234567');
+    setEmail('demo@applux.app');
     setPassword('demo1234');
     setErrors({});
     setTouched({});
@@ -130,26 +171,40 @@ export default function Login() {
           </div>
 
           <form className="space-y-5" onSubmit={onSubmit} noValidate>
-            <FormField
-              label={t('auth.mobile')}
-              required
-              error={mobileError}
-              hint={!mobileError ? t('auth.login.mobileHint') : undefined}
-            >
-              <Input
-                inputMode="tel"
-                placeholder="5XXXXXXXX"
-                value={mobile}
-                onChange={(e) => setMobile(e.target.value)}
-                onBlur={() => setTouched((prev) => ({ ...prev, mobile: true }))}
-                leading={
-                  <span className="text-ink-500 text-[13px] font-medium num">+966</span>
-                }
-                invalid={Boolean(mobileError)}
-                autoComplete="tel"
-                maxLength={10}
-              />
-            </FormField>
+            {configured ? (
+              <FormField label={t('auth.email')} required error={emailError}>
+                <Input
+                  type="email"
+                  placeholder={t('auth.emailPh')}
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  onBlur={() => setTouched((prev) => ({ ...prev, email: true }))}
+                  invalid={Boolean(emailError)}
+                  autoComplete="email"
+                />
+              </FormField>
+            ) : (
+              <FormField
+                label={t('auth.mobile')}
+                required
+                error={mobileError}
+                hint={!mobileError ? t('auth.login.mobileHint') : undefined}
+              >
+                <Input
+                  inputMode="tel"
+                  placeholder="5XXXXXXXX"
+                  value={mobile}
+                  onChange={(e) => setMobile(e.target.value)}
+                  onBlur={() => setTouched((prev) => ({ ...prev, mobile: true }))}
+                  leading={
+                    <span className="text-ink-500 text-[13px] font-medium num">+966</span>
+                  }
+                  invalid={Boolean(mobileError)}
+                  autoComplete="tel"
+                  maxLength={10}
+                />
+              </FormField>
+            )}
             <FormField
               label={t('auth.password')}
               required
@@ -191,6 +246,12 @@ export default function Login() {
                 {t('auth.forgot')}
               </button>
             </div>
+
+            {errors.form && (
+              <div className="rounded-xl2 bg-danger-50 ring-1 ring-danger-500/25 px-3.5 py-2.5 text-[12.5px] text-danger-700 leading-relaxed">
+                {errors.form}
+              </div>
+            )}
 
             <Button type="submit" size="lg" block loading={submitting}>
               {submitting ? t('auth.login.submitting') : t('auth.login')}

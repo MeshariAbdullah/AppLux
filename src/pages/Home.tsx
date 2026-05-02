@@ -18,6 +18,7 @@ import {
 } from '@/components/icons';
 import { useI18n, useT } from '@/lib/i18n';
 import { useStore } from '@/lib/store';
+import { adaptEligibility, useSupabaseAuth } from '@/lib/supabase';
 import { cn } from '@/lib/cn';
 import {
   ContractRow,
@@ -30,11 +31,20 @@ import type { ReactNode } from 'react';
 export default function Home() {
   const t = useT();
   const { dir, formatCurrency } = useI18n();
-  const { session, eligibility, invoices, contracts, notes, history } = useStore();
+  const { session, eligibility: demoEligibility, invoices, contracts, notes, history } = useStore();
+  const { configured, eligibility: dbEligibility, profile } = useSupabaseAuth();
   const navigate = useNavigate();
 
-  const firstName = session?.fullName?.split(' ')[0] ?? '';
-  const usagePct = Math.round((eligibility.used / eligibility.limit) * 100);
+  // Real eligibility from Supabase when configured + present; otherwise demo seed.
+  const eligibility =
+    configured && dbEligibility ? adaptEligibility(dbEligibility) : demoEligibility;
+
+  const fullName = profile?.full_name ?? session?.fullName ?? '';
+  const firstName = fullName.split(' ')[0] ?? '';
+  const usagePct =
+    eligibility.limit > 0
+      ? Math.round((eligibility.used / eligibility.limit) * 100)
+      : 0;
 
   return (
     <>

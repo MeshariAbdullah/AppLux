@@ -16,6 +16,10 @@ import {
   type MerchantBranchDraft,
   type MerchantDraft,
 } from '@/lib/store';
+import {
+  submitMerchantApplication,
+  useSupabaseAuth,
+} from '@/lib/supabase';
 import { cn } from '@/lib/cn';
 import {
   ArrowIcon,
@@ -99,12 +103,15 @@ export default function MerchantRegister() {
     resetMerchantDraft,
     submitMerchantApproval,
   } = useStore();
+  const { configured, session } = useSupabaseAuth();
 
   const [values, setValues] = useState<MerchantDraft>(() =>
     merchantDraft.companyName ? merchantDraft : emptyMerchantDraft,
   );
   const [step, setStep] = useState(0);
   const [errors, setErrors] = useState<Errors>({});
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   const current = STEPS[step];
   const totalSteps = STEPS.length;
@@ -184,7 +191,7 @@ export default function MerchantRegister() {
     return next;
   };
 
-  const goNext = () => {
+  const goNext = async () => {
     const e: Errors =
       current.key === 'branches' ? validateBranches() : validateFlat(current.key);
     const hasErrors =
@@ -198,7 +205,42 @@ export default function MerchantRegister() {
       setStep((s) => s + 1);
       return;
     }
+
     updateMerchantDraft(values);
+
+    // Real submission when Supabase is configured.
+    if (configured) {
+      if (!session?.user) {
+        // Customer account required before applying as a merchant.
+        navigate('/auth/login', { replace: true });
+        return;
+      }
+      setSubmitting(true);
+      setSubmitError(null);
+      try {
+        await submitMerchantApplication({
+          applicant_user_id: session.user.id,
+          company_name: values.companyName,
+          commercial_reg_number: values.commercialReg,
+          authorized_name: values.authorizedName,
+          authorized_national_id: values.authorizedId,
+          city: values.city,
+          // The demo form doesn't collect a category yet; default to 'dress'
+          // so the row is valid. Admin can re-categorise on review (Phase 4
+          // adds an explicit category picker to the form).
+          primary_category: 'dress',
+          contact_email: values.contactEmail || null,
+          contact_phone: values.contactPhone || null,
+          notes: null,
+        });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'Submission failed.';
+        setSubmitError(message);
+        setSubmitting(false);
+        return;
+      }
+    }
+
     submitMerchantApproval();
     navigate('/merchant/pending', { replace: true });
   };
@@ -488,8 +530,14 @@ export default function MerchantRegister() {
             </>
           )}
 
+          {submitError && (
+            <div className="rounded-xl2 bg-danger-50 ring-1 ring-danger-500/25 px-3.5 py-2.5 text-[12.5px] text-danger-700 leading-relaxed">
+              {submitError}
+            </div>
+          )}
+
           <div className="pt-2 space-y-2">
-            <Button type="submit" size="lg" block>
+            <Button type="submit" size="lg" block loading={submitting}>
               {step === totalSteps - 1
                 ? t('merchant.register.submit')
                 : t('common.continue')}

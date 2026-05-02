@@ -58,3 +58,9 @@ export {
   SupabaseAuthProvider,
   useSupabaseAuth,
 } from './SupabaseAuthProvider';
+
+export {
+  adaptEligibility,
+  adaptMerchantToStore,
+  adaptMerchantApplication,
+} from './adapters';

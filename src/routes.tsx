@@ -2,6 +2,8 @@ import type { ReactElement } from 'react';
 import { Navigate, Route, Routes } from 'react-router-dom';
 import { AppLayout, AuthLayout } from '@/components/layout';
 import { useStore } from '@/lib/store';
+import { useSupabaseAuth } from '@/lib/supabase';
+import { RequireRole } from '@/components/auth/RequireRole';
 import Home from '@/pages/Home';
 import Eligibility from '@/pages/Eligibility';
 import Stores from '@/pages/Stores';
@@ -47,14 +49,26 @@ import AdminCases from '@/pages/admin/AdminCases';
 import AdminCaseDetails from '@/pages/admin/AdminCaseDetails';
 import AdminModulePlaceholder from '@/pages/admin/AdminModulePlaceholder';
 
-function RequireAuth({ children }: { children: ReactElement }) {
-  const { session } = useStore();
-  return session ? children : <Navigate to="/welcome" replace />;
+function RequireCustomer({ children }: { children: ReactElement }) {
+  return (
+    <RequireRole role={['customer', 'admin']} fallback="/welcome">
+      {children}
+    </RequireRole>
+  );
 }
 
 function RootRedirect() {
-  const { session } = useStore();
-  return <Navigate to={session ? '/home' : '/welcome'} replace />;
+  const { configured, status, role } = useSupabaseAuth();
+  const { session: demoSession } = useStore();
+
+  if (!configured) {
+    return <Navigate to={demoSession ? '/home' : '/welcome'} replace />;
+  }
+  if (status === 'loading') return null;
+  if (status !== 'authenticated') return <Navigate to="/welcome" replace />;
+  if (role === 'merchant') return <Navigate to="/merchant/home" replace />;
+  if (role === 'admin') return <Navigate to="/admin/home" replace />;
+  return <Navigate to="/home" replace />;
 }
 
 export function AppRoutes() {
@@ -63,6 +77,7 @@ export function AppRoutes() {
       <Route path="/" element={<RootRedirect />} />
 
       <Route element={<AuthLayout />}>
+        {/* Public auth screens */}
         <Route path="/welcome" element={<Welcome />} />
         <Route path="/auth" element={<AuthEntry />} />
         <Route path="/auth/login" element={<Login />} />
@@ -72,44 +87,218 @@ export function AppRoutes() {
         <Route path="/merchant/welcome" element={<MerchantWelcome />} />
         <Route path="/merchant/login" element={<MerchantLogin />} />
         <Route path="/merchant/register" element={<MerchantRegister />} />
-        <Route path="/merchant/pending" element={<MerchantPending />} />
-        <Route path="/merchant/home" element={<MerchantHome />} />
-        <Route path="/merchant/rentals" element={<MerchantRentals />} />
-        <Route path="/merchant/rentals/:id" element={<MerchantRentalDetails />} />
+
+        {/* Merchant area — guarded by role */}
+        <Route
+          path="/merchant/pending"
+          element={
+            <RequireRole role="merchant" fallback="/merchant/welcome">
+              <MerchantPending />
+            </RequireRole>
+          }
+        />
+        <Route
+          path="/merchant/home"
+          element={
+            <RequireRole role="merchant" fallback="/merchant/welcome">
+              <MerchantHome />
+            </RequireRole>
+          }
+        />
+        <Route
+          path="/merchant/rentals"
+          element={
+            <RequireRole role="merchant" fallback="/merchant/welcome">
+              <MerchantRentals />
+            </RequireRole>
+          }
+        />
+        <Route
+          path="/merchant/rentals/:id"
+          element={
+            <RequireRole role="merchant" fallback="/merchant/welcome">
+              <MerchantRentalDetails />
+            </RequireRole>
+          }
+        />
         <Route
           path="/merchant/rentals/:id/contract"
-          element={<MerchantRentalContract />}
+          element={
+            <RequireRole role="merchant" fallback="/merchant/welcome">
+              <MerchantRentalContract />
+            </RequireRole>
+          }
         />
-        <Route path="/merchant/rentals/:id/note" element={<MerchantRentalNote />} />
-        <Route path="/merchant/rentals/:id/close" element={<MerchantRentalClose />} />
+        <Route
+          path="/merchant/rentals/:id/note"
+          element={
+            <RequireRole role="merchant" fallback="/merchant/welcome">
+              <MerchantRentalNote />
+            </RequireRole>
+          }
+        />
+        <Route
+          path="/merchant/rentals/:id/close"
+          element={
+            <RequireRole role="merchant" fallback="/merchant/welcome">
+              <MerchantRentalClose />
+            </RequireRole>
+          }
+        />
         <Route
           path="/merchant/rentals/:id/damage/new"
-          element={<MerchantDamageNew />}
+          element={
+            <RequireRole role="merchant" fallback="/merchant/welcome">
+              <MerchantDamageNew />
+            </RequireRole>
+          }
         />
-        <Route path="/merchant/approvals" element={<MerchantApprovals />} />
-        <Route path="/merchant/damages" element={<MerchantDamages />} />
-        <Route path="/merchant/damages/:id" element={<MerchantDamageDetails />} />
-        <Route path="/merchant/history" element={<MerchantHistoryPage />} />
-        <Route path="/merchant/invoice/new" element={<MerchantInvoiceNew />} />
-        <Route path="/admin/home" element={<AdminHome />} />
-        <Route path="/admin/merchants" element={<AdminMerchants />} />
-        <Route path="/admin/merchants/:id" element={<AdminMerchantDetails />} />
-        <Route path="/admin/users" element={<AdminUsers />} />
-        <Route path="/admin/users/:id" element={<AdminUserDetails />} />
-        <Route path="/admin/limits" element={<AdminModulePlaceholder />} />
-        <Route path="/admin/cases" element={<AdminCases />} />
-        <Route path="/admin/cases/:kind/:id" element={<AdminCaseDetails />} />
-        <Route path="/admin/overdue" element={<AdminModulePlaceholder />} />
-        <Route path="/admin/reports" element={<AdminModulePlaceholder />} />
-        <Route path="/admin/audit" element={<AdminModulePlaceholder />} />
-        <Route path="/admin/support" element={<AdminModulePlaceholder />} />
+        <Route
+          path="/merchant/approvals"
+          element={
+            <RequireRole role="merchant" fallback="/merchant/welcome">
+              <MerchantApprovals />
+            </RequireRole>
+          }
+        />
+        <Route
+          path="/merchant/damages"
+          element={
+            <RequireRole role="merchant" fallback="/merchant/welcome">
+              <MerchantDamages />
+            </RequireRole>
+          }
+        />
+        <Route
+          path="/merchant/damages/:id"
+          element={
+            <RequireRole role="merchant" fallback="/merchant/welcome">
+              <MerchantDamageDetails />
+            </RequireRole>
+          }
+        />
+        <Route
+          path="/merchant/history"
+          element={
+            <RequireRole role="merchant" fallback="/merchant/welcome">
+              <MerchantHistoryPage />
+            </RequireRole>
+          }
+        />
+        <Route
+          path="/merchant/invoice/new"
+          element={
+            <RequireRole role="merchant" fallback="/merchant/welcome">
+              <MerchantInvoiceNew />
+            </RequireRole>
+          }
+        />
+
+        {/* Admin area — guarded by role */}
+        <Route
+          path="/admin/home"
+          element={
+            <RequireRole role="admin" fallback="/welcome">
+              <AdminHome />
+            </RequireRole>
+          }
+        />
+        <Route
+          path="/admin/merchants"
+          element={
+            <RequireRole role="admin" fallback="/welcome">
+              <AdminMerchants />
+            </RequireRole>
+          }
+        />
+        <Route
+          path="/admin/merchants/:id"
+          element={
+            <RequireRole role="admin" fallback="/welcome">
+              <AdminMerchantDetails />
+            </RequireRole>
+          }
+        />
+        <Route
+          path="/admin/users"
+          element={
+            <RequireRole role="admin" fallback="/welcome">
+              <AdminUsers />
+            </RequireRole>
+          }
+        />
+        <Route
+          path="/admin/users/:id"
+          element={
+            <RequireRole role="admin" fallback="/welcome">
+              <AdminUserDetails />
+            </RequireRole>
+          }
+        />
+        <Route
+          path="/admin/limits"
+          element={
+            <RequireRole role="admin" fallback="/welcome">
+              <AdminModulePlaceholder />
+            </RequireRole>
+          }
+        />
+        <Route
+          path="/admin/cases"
+          element={
+            <RequireRole role="admin" fallback="/welcome">
+              <AdminCases />
+            </RequireRole>
+          }
+        />
+        <Route
+          path="/admin/cases/:kind/:id"
+          element={
+            <RequireRole role="admin" fallback="/welcome">
+              <AdminCaseDetails />
+            </RequireRole>
+          }
+        />
+        <Route
+          path="/admin/overdue"
+          element={
+            <RequireRole role="admin" fallback="/welcome">
+              <AdminModulePlaceholder />
+            </RequireRole>
+          }
+        />
+        <Route
+          path="/admin/reports"
+          element={
+            <RequireRole role="admin" fallback="/welcome">
+              <AdminModulePlaceholder />
+            </RequireRole>
+          }
+        />
+        <Route
+          path="/admin/audit"
+          element={
+            <RequireRole role="admin" fallback="/welcome">
+              <AdminModulePlaceholder />
+            </RequireRole>
+          }
+        />
+        <Route
+          path="/admin/support"
+          element={
+            <RequireRole role="admin" fallback="/welcome">
+              <AdminModulePlaceholder />
+            </RequireRole>
+          }
+        />
       </Route>
 
+      {/* Customer area */}
       <Route
         element={
-          <RequireAuth>
+          <RequireCustomer>
             <AppLayout />
-          </RequireAuth>
+          </RequireCustomer>
         }
       >
         <Route path="/home" element={<Home />} />

@@ -53,6 +53,8 @@
     "registerEntryTitle": "ابدأ رحلتك مع AppLux",
     "registerEntrySubtitle": "أنشئ حساب التاجر خلال دقائق.",
     "mobile": "رقم الجوال",
+    "email": "البريد الإلكتروني",
+    "emailPh": "name@example.com",
     "password": "كلمة المرور",
     "forgot": "نسيت كلمة المرور؟",
     "noAccount": "ليس لديك حساب؟",
@@ -105,8 +107,13 @@
     "errors": {
       "mobileRequired": "أدخل رقم الجوال للمتابعة.",
       "mobileFormat": "رقم الجوال يجب أن يبدأ بالرقم 5 ويتكوّن من 9 أرقام.",
+      "emailRequired": "أدخل البريد الإلكتروني للمتابعة.",
+      "emailFormat": "تنسيق البريد الإلكتروني غير صالح.",
       "passwordRequired": "أدخل كلمة المرور للمتابعة.",
-      "passwordShort": "كلمة المرور قصيرة جداً (4 رموز على الأقل)."
+      "passwordShort": "كلمة المرور قصيرة جداً (4 رموز على الأقل).",
+      "fullNameRequired": "أدخل الاسم الكامل للمتابعة.",
+      "signInFailed": "تعذّر تسجيل الدخول. تحقق من بياناتك وحاول مجدداً.",
+      "signUpFailed": "تعذّر إنشاء الحساب. حاول مجدداً لاحقاً."
     }
   },
   "register": {

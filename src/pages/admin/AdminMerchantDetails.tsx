@@ -28,6 +28,12 @@ import {
 import { cn } from '@/lib/cn';
 import { useI18n, useT } from '@/lib/i18n';
 import { useStore, type AdminMerchantRequest } from '@/lib/store';
+import {
+  adaptMerchantApplication,
+  decideMerchantApplication,
+  fetchMerchantApplication,
+  useSupabaseAuth,
+} from '@/lib/supabase';
 import type {
   AdminMerchantDecisionStatus,
   AdminMerchantDocStatus,
@@ -58,11 +64,37 @@ export default function AdminMerchantDetails() {
     rejectMerchantRequest,
     resetMerchantRequest,
   } = useStore();
+  const { configured } = useSupabaseAuth();
 
-  const request = useMemo(
+  const demoRequest = useMemo<AdminMerchantRequest | null>(
     () => adminMerchantRequests.find((r) => r.id === id) ?? null,
     [adminMerchantRequests, id],
   );
+
+  const [liveRequest, setLiveRequest] = useState<AdminMerchantRequest | null>(null);
+  const [decisionError, setDecisionError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!configured || !id) {
+      setLiveRequest(null);
+      return;
+    }
+    let cancelled = false;
+    fetchMerchantApplication(id)
+      .then((row) => {
+        if (cancelled) return;
+        setLiveRequest(row ? adaptMerchantApplication(row) : null);
+      })
+      .catch((err) => {
+        // eslint-disable-next-line no-console
+        console.error('[applux] fetchMerchantApplication failed', err);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [configured, id]);
+
+  const request = configured ? liveRequest : demoRequest;
 
   const [notes, setNotes] = useState('');
   const [busy, setBusy] = useState<'approve' | 'reject' | null>(null);
@@ -100,18 +132,41 @@ export default function AdminMerchantDetails() {
   const docsPending = DOC_KEYS.filter((k) => request.docs[k] === 'pending').length;
   const docsMissing = DOC_KEYS.filter((k) => request.docs[k] === 'missing').length;
 
-  const handleApprove = () => {
+  const handleApprove = async () => {
     setBusy('approve');
-    approveMerchantRequest(request.id, notes);
-    setBusy(null);
+    setDecisionError(null);
+    try {
+      if (configured) {
+        const updated = await decideMerchantApplication(request.id, 'approved', notes);
+        setLiveRequest(adaptMerchantApplication(updated));
+      } else {
+        approveMerchantRequest(request.id, notes);
+      }
+    } catch (err) {
+      setDecisionError(err instanceof Error ? err.message : 'Failed to approve.');
+    } finally {
+      setBusy(null);
+    }
   };
-  const handleConfirmedReject = () => {
+  const handleConfirmedReject = async () => {
     setBusy('reject');
-    rejectMerchantRequest(request.id, notes);
-    setBusy(null);
-    setRejectConfirmOpen(false);
+    setDecisionError(null);
+    try {
+      if (configured) {
+        const updated = await decideMerchantApplication(request.id, 'rejected', notes);
+        setLiveRequest(adaptMerchantApplication(updated));
+      } else {
+        rejectMerchantRequest(request.id, notes);
+      }
+    } catch (err) {
+      setDecisionError(err instanceof Error ? err.message : 'Failed to reject.');
+    } finally {
+      setBusy(null);
+      setRejectConfirmOpen(false);
+    }
   };
   const handleReset = () => {
+    if (configured) return; // Reset is a demo-only convenience
     resetMerchantRequest(request.id);
   };
 
@@ -353,6 +408,11 @@ export default function AdminMerchantDetails() {
                     rows={3}
                   />
                 </FormField>
+                {decisionError && (
+                  <div className="rounded-xl2 bg-danger-50 ring-1 ring-danger-500/25 px-3.5 py-2.5 text-[12.5px] text-danger-700 leading-relaxed">
+                    {decisionError}
+                  </div>
+                )}
                 <div className="flex flex-col gap-2 pt-1">
                   <Button
                     size="lg"
