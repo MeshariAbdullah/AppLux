@@ -1,4 +1,4 @@
-import { useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { Header, Screen } from '@/components/layout';
 import {
@@ -22,6 +22,12 @@ import {
 import { cn } from '@/lib/cn';
 import { useI18n, useT } from '@/lib/i18n';
 import { useStore } from '@/lib/store';
+import {
+  adaptUserRecord,
+  fetchEligibilityByUserIds,
+  listProfiles,
+  useSupabaseAuth,
+} from '@/lib/supabase';
 import type { AdminUserRecord, AdminUserStatus } from '@/lib/data';
 
 type TabKey = 'all' | AdminUserStatus;
@@ -36,9 +42,35 @@ function statusTone(s: AdminUserStatus): StatusTone {
 export default function AdminUsers() {
   const t = useT();
   const { dir, formatCurrency, formatNumber } = useI18n();
-  const { adminUsers } = useStore();
+  const { adminUsers: demoUsers } = useStore();
+  const { configured } = useSupabaseAuth();
+  const [liveUsers, setLiveUsers] = useState<AdminUserRecord[] | null>(null);
   const [tab, setTab] = useState<TabKey>('all');
   const [query, setQuery] = useState('');
+
+  useEffect(() => {
+    if (!configured) {
+      setLiveUsers(null);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      // List customer profiles only — admin/merchant users live in their
+      // own areas. The eligibility join is one extra round-trip.
+      const profiles = await listProfiles({ role: 'customer' }).catch(() => []);
+      if (cancelled) return;
+      const eligibility = await fetchEligibilityByUserIds(
+        profiles.map((p) => p.id),
+      ).catch(() => new Map());
+      if (cancelled) return;
+      setLiveUsers(profiles.map((p) => adaptUserRecord(p, eligibility.get(p.id))));
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [configured]);
+
+  const adminUsers = liveUsers ?? demoUsers;
 
   const counts = useMemo(() => {
     const acc: Record<TabKey, number> = {

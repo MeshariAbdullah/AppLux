@@ -44,3 +44,22 @@ export async function listMerchantContracts(
   if (error) throw error;
   return data ?? [];
 }
+
+/**
+ * End a rental contract (normal closure or post-damage closure).
+ * RLS allows the merchant owner or admin to update.
+ */
+export async function endRentalContract(
+  contractId: string,
+  endedAt: string = new Date().toISOString(),
+): Promise<RentalContractRow> {
+  const sb = requireSupabase();
+  const { data, error } = await sb
+    .from('rental_contracts')
+    .update({ status: 'ended', ended_at: endedAt })
+    .eq('id', contractId)
+    .select('*')
+    .single();
+  if (error) throw error;
+  return data;
+}

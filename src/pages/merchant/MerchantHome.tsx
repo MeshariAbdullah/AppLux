@@ -30,6 +30,7 @@ import { RentalThumbnail } from '@/components/rental/RentalThumbnail';
 import {
   adaptContractToMerchantRental,
   fetchMyMerchant,
+  fetchProfilesByIds,
   listMerchantContracts,
   listMerchantInvoices,
   useSupabaseAuth,
@@ -66,10 +67,28 @@ export default function MerchantHome() {
         listMerchantInvoices(myMerchant.id, { status: 'issued' }).catch(() => []),
       ]);
       if (cancelled) return;
+      const profileMap = await fetchProfilesByIds(
+        contractRows.map((c) => c.customer_user_id),
+      ).catch(() => new Map<string, never>());
+      if (cancelled) return;
       setLiveRentals(
-        contractRows.map((r) =>
-          adaptContractToMerchantRental(r, { category: myMerchant.primary_category }),
-        ),
+        contractRows.map((r) => {
+          const customer = profileMap.get(r.customer_user_id);
+          const name = customer?.full_name ?? '—';
+          const initials =
+            name.trim().split(/\s+/).slice(0, 2)
+              .map((p) => p[0]?.toUpperCase() ?? '')
+              .join('') || '—';
+          return adaptContractToMerchantRental(r, {
+            category: myMerchant.primary_category,
+            customerName: name,
+            customerInitials: initials,
+            customerCity: customer?.city ?? '',
+            customerMobile: customer?.mobile ?? '',
+            headlineItem: `Rental ${r.contract_number}`,
+            itemValue: Number(r.total_amount),
+          });
+        }),
       );
       setLivePendingInvoices(pendingInvoices.length);
     })();

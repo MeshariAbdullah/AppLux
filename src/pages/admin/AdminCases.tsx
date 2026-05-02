@@ -1,4 +1,4 @@
-import { useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { Header, Screen } from '@/components/layout';
 import {
@@ -21,6 +21,12 @@ import {
 import { cn } from '@/lib/cn';
 import { useI18n, useT } from '@/lib/i18n';
 import { useStore } from '@/lib/store';
+import {
+  adaptDamageCase,
+  fetchProfilesByIds,
+  listAllDamageCases,
+  useSupabaseAuth,
+} from '@/lib/supabase';
 import {
   SEED_ADMIN_ACTIVE_CASES,
   SEED_ADMIN_CASE_DETAILS,
@@ -70,9 +76,47 @@ export default function AdminCases() {
   const t = useT();
   const { dir, formatCurrency, formatDate, formatNumber } = useI18n();
   const { adminCases } = useStore();
+  const { configured } = useSupabaseAuth();
   const [tab, setTab] = useState<TabKey>('damage');
+  const [liveDamage, setLiveDamage] = useState<AdminActiveCase[] | null>(null);
 
-  const damageCases = SEED_ADMIN_ACTIVE_CASES;
+  useEffect(() => {
+    if (!configured) {
+      setLiveDamage(null);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      const rows = await listAllDamageCases().catch(() => []);
+      if (cancelled) return;
+      const customerIds = rows.map((r) => r.customer_user_id);
+      const profileMap = await fetchProfilesByIds(customerIds).catch(
+        () => new Map<string, never>(),
+      );
+      if (cancelled) return;
+      setLiveDamage(
+        rows.map((r) => {
+          const customer = profileMap.get(r.customer_user_id);
+          const customerName = customer?.full_name ?? '—';
+          const initials =
+            customerName.trim().split(/\s+/).slice(0, 2)
+              .map((p) => p[0]?.toUpperCase() ?? '')
+              .join('') || '—';
+          return adaptDamageCase(r, {
+            customerName,
+            customerInitials: initials,
+            headlineItem: `Case ${r.case_number}`,
+          });
+        }),
+      );
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [configured]);
+
+  const damageCases = liveDamage ?? SEED_ADMIN_ACTIVE_CASES;
+  // Overdue payments aren't modelled in Phase 5 yet — keep demo seed.
   const overdueCases = SEED_ADMIN_OVERDUE;
   const buckets = SEED_ADMIN_OVERDUE_BUCKETS;
 

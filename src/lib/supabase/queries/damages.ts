@@ -59,6 +59,23 @@ export async function listMerchantDamageCases(
   return data ?? [];
 }
 
+/**
+ * Admin: list every damage case (RLS allows admin select-all).
+ */
+export async function listAllDamageCases(filter?: {
+  status?: DamageStatus;
+  limit?: number;
+}): Promise<DamageCaseRow[]> {
+  const sb = requireSupabase();
+  let q = sb.from('damage_cases').select('*');
+  if (filter?.status) q = q.eq('status', filter.status);
+  if (filter?.limit) q = q.limit(filter.limit);
+  q = q.order('raised_at', { ascending: false });
+  const { data, error } = await q;
+  if (error) throw error;
+  return data ?? [];
+}
+
 export async function listCaseEvidence(
   caseId: string,
 ): Promise<DamageEvidenceRow[]> {

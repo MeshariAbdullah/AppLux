@@ -1,4 +1,4 @@
-import { useMemo, type ReactNode } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom';
 import { Header, Screen } from '@/components/layout';
 import { Button, Card, CardDivider, SectionHeader, StatusChip, type StatusTone } from '@/components/ui';
@@ -24,6 +24,13 @@ import {
 import { cn } from '@/lib/cn';
 import { useI18n, useT } from '@/lib/i18n';
 import { useStore } from '@/lib/store';
+import {
+  adaptContractToMerchantRental,
+  fetchContractById,
+  fetchMerchant,
+  fetchProfile,
+  useSupabaseAuth,
+} from '@/lib/supabase';
 import type {
   MerchantNafithState,
   MerchantRental,
@@ -131,13 +138,58 @@ export default function MerchantRentalDetails() {
   const navigate = useNavigate();
   const { id } = useParams();
   const { merchantRentals } = useStore();
+  const { configured } = useSupabaseAuth();
 
-  const rental = useMemo(
+  const demoRental = useMemo(
     () => merchantRentals.find((r) => r.id === id),
     [id, merchantRentals],
   );
 
+  const [liveRental, setLiveRental] = useState<MerchantRental | null>(null);
+  const [resolving, setResolving] = useState(false);
+
+  useEffect(() => {
+    if (!configured || !id || demoRental) {
+      setLiveRental(null);
+      return;
+    }
+    let cancelled = false;
+    setResolving(true);
+    (async () => {
+      const contract = await fetchContractById(id).catch(() => null);
+      if (cancelled || !contract) return;
+      const [merchant, customer] = await Promise.all([
+        fetchMerchant(contract.merchant_id).catch(() => null),
+        fetchProfile(contract.customer_user_id).catch(() => null),
+      ]);
+      if (cancelled) return;
+      const customerName = customer?.full_name ?? '—';
+      const initialsSource = customerName.trim().split(/\s+/).slice(0, 2);
+      setLiveRental(
+        adaptContractToMerchantRental(contract, {
+          customerName,
+          customerInitials:
+            initialsSource.map((p) => p[0]?.toUpperCase() ?? '').join('') || '—',
+          customerCity: customer?.city ?? '',
+          customerMobile: customer?.mobile ?? '',
+          headlineItem: `Rental ${contract.contract_number}`,
+          category: merchant?.primary_category,
+          itemValue: Number(contract.total_amount),
+        }),
+      );
+    })()
+      .finally(() => {
+        if (!cancelled) setResolving(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [configured, id, demoRental]);
+
+  const rental = liveRental ?? demoRental;
+
   if (!rental) {
+    if (resolving) return null;
     return <Navigate to="/merchant/rentals" replace />;
   }
 

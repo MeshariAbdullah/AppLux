@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Navigate, useNavigate, useParams } from 'react-router-dom';
 import { Header, Screen } from '@/components/layout';
 import { Button, Card, CardDivider, SectionHeader, StatusChip } from '@/components/ui';
@@ -11,7 +11,15 @@ import {
 } from '@/components/icons';
 import { useI18n, useT } from '@/lib/i18n';
 import { useStore } from '@/lib/store';
+import {
+  adaptContractToMerchantRental,
+  fetchContractById,
+  fetchMerchant,
+  fetchProfile,
+  useSupabaseAuth,
+} from '@/lib/supabase';
 import { SEED_SCANS } from '@/lib/data';
+import type { MerchantRental } from '@/lib/data';
 import { toneForDocState } from './MerchantRentalDetails';
 
 export default function MerchantRentalContract() {
@@ -20,12 +28,48 @@ export default function MerchantRentalContract() {
   const navigate = useNavigate();
   const { id } = useParams();
   const { merchantRentals, merchant } = useStore();
+  const { configured } = useSupabaseAuth();
 
-  const rental = useMemo(
+  const demoRental = useMemo(
     () => merchantRentals.find((r) => r.id === id),
     [id, merchantRentals],
   );
+  const [liveRental, setLiveRental] = useState<MerchantRental | null>(null);
 
+  useEffect(() => {
+    if (!configured || !id || demoRental) {
+      setLiveRental(null);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      const contract = await fetchContractById(id).catch(() => null);
+      if (cancelled || !contract) return;
+      const [m, c] = await Promise.all([
+        fetchMerchant(contract.merchant_id).catch(() => null),
+        fetchProfile(contract.customer_user_id).catch(() => null),
+      ]);
+      if (cancelled) return;
+      const customerName = c?.full_name ?? '—';
+      setLiveRental(
+        adaptContractToMerchantRental(contract, {
+          customerName,
+          customerInitials:
+            customerName.trim().split(/\s+/).slice(0, 2).map((p) => p[0]?.toUpperCase() ?? '').join('') || '—',
+          customerCity: c?.city ?? '',
+          customerMobile: c?.mobile ?? '',
+          headlineItem: `Rental ${contract.contract_number}`,
+          category: m?.primary_category,
+          itemValue: Number(contract.total_amount),
+        }),
+      );
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [configured, id, demoRental]);
+
+  const rental = liveRental ?? demoRental;
   if (!rental) {
     return <Navigate to="/merchant/rentals" replace />;
   }

@@ -34,6 +34,13 @@ import {
 import { cn } from '@/lib/cn';
 import { useI18n, useT } from '@/lib/i18n';
 import { useStore } from '@/lib/store';
+import {
+  adaptUserRecord,
+  fetchEligibility,
+  fetchProfile,
+  useSupabaseAuth,
+} from '@/lib/supabase';
+import type { AdminUserRecord } from '@/lib/data';
 import type {
   AdminUserActivity,
   AdminUserActivityType,
@@ -104,11 +111,34 @@ export default function AdminUserDetails() {
     setAdminUserLimit,
     resetAdminUser,
   } = useStore();
+  const { configured } = useSupabaseAuth();
+  const [liveUser, setLiveUser] = useState<AdminUserRecord | null>(null);
 
-  const user = useMemo(
+  useEffect(() => {
+    if (!configured || !id) {
+      setLiveUser(null);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      const [profile, eligibility] = await Promise.all([
+        fetchProfile(id).catch(() => null),
+        fetchEligibility(id).catch(() => null),
+      ]);
+      if (cancelled || !profile) return;
+      setLiveUser(adaptUserRecord(profile, eligibility));
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [configured, id]);
+
+  const demoUser = useMemo(
     () => adminUsers.find((u) => u.id === id) ?? null,
     [adminUsers, id],
   );
+
+  const user = configured ? liveUser : demoUser;
 
   const [limitDraft, setLimitDraft] = useState<string>(
     user ? String(user.eligibilityLimit) : '',

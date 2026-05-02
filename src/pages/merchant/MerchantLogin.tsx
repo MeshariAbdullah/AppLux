@@ -13,12 +13,14 @@ import {
 } from '@/components/icons';
 import { useT } from '@/lib/i18n';
 import { useStore } from '@/lib/store';
+import { useSupabaseAuth } from '@/lib/supabase';
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 type FieldErrors = {
   email?: string;
   password?: string;
+  form?: string;
 };
 
 export default function MerchantLogin() {
@@ -26,6 +28,7 @@ export default function MerchantLogin() {
   const navigate = useNavigate();
   const { updateMerchantDraft, submitMerchantApproval, approveMerchant } =
     useStore();
+  const { configured, signIn } = useSupabaseAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -47,9 +50,10 @@ export default function MerchantLogin() {
     return undefined;
   }, [password, touched.password, errors.password, t]);
 
-  const onSubmit = (e: React.FormEvent) => {
+  const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setTouched({ email: true, password: true });
+    setErrors((prev) => ({ ...prev, form: undefined }));
 
     const next: FieldErrors = {};
     if (!email.trim()) next.email = t('merchant.login.errors.emailRequired');
@@ -63,6 +67,24 @@ export default function MerchantLogin() {
     if (Object.keys(next).length > 0) return;
 
     setSubmitting(true);
+
+    // Real Supabase auth — provider's onAuthStateChange will hydrate role,
+    // then RootRedirect routes merchants to /merchant/home.
+    if (configured) {
+      try {
+        await signIn({ email: email.trim(), password });
+        navigate('/', { replace: true });
+        return;
+      } catch (err) {
+        const message =
+          err instanceof Error ? err.message : t('auth.errors.signInFailed');
+        setErrors({ form: message });
+        setSubmitting(false);
+        return;
+      }
+    }
+
+    // Demo path
     updateMerchantDraft({
       companyName: 'AppLux Demo Partner',
       commercialReg: '1010123456',
@@ -208,6 +230,12 @@ export default function MerchantLogin() {
                 {t('auth.forgot')}
               </button>
             </div>
+
+            {errors.form && (
+              <div className="rounded-xl2 bg-danger-50 ring-1 ring-danger-500/25 px-3.5 py-2.5 text-[12.5px] text-danger-700 leading-relaxed">
+                {errors.form}
+              </div>
+            )}
 
             <Button type="submit" size="lg" block loading={submitting}>
               {submitting

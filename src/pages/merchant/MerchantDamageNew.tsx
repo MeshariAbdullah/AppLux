@@ -32,6 +32,7 @@ import { useStore } from '@/lib/store';
 import {
   createDamageCase,
   fetchContractById,
+  uploadDamageEvidence,
   useSupabaseAuth,
   type DamageSeverity,
 } from '@/lib/supabase';
@@ -109,6 +110,9 @@ export default function MerchantDamageNew() {
   const [claimTouched, setClaimTouched] = useState(false);
   const [notes, setNotes] = useState('');
   const [evidence, setEvidence] = useState<string[]>([]);
+  // Original File objects kept alongside the dataURL previews so we can
+  // upload to Storage when configured. Index-aligned with `evidence`.
+  const [evidenceFiles, setEvidenceFiles] = useState<File[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
@@ -136,9 +140,11 @@ export default function MerchantDamageNew() {
     sourceRef: React.RefObject<HTMLInputElement | null>,
   ) => {
     if (!files) return;
+    const accepted: File[] = [];
     const pending: Promise<string>[] = [];
     Array.from(files).forEach((f) => {
       if (!f.type.startsWith('image/')) return;
+      accepted.push(f);
       pending.push(
         new Promise((resolve, reject) => {
           const reader = new FileReader();
@@ -149,15 +155,20 @@ export default function MerchantDamageNew() {
       );
     });
     Promise.all(pending)
-      .then((datas) => setEvidence((prev) => [...prev, ...datas].slice(0, 8)))
+      .then((datas) => {
+        setEvidence((prev) => [...prev, ...datas].slice(0, 8));
+        setEvidenceFiles((prev) => [...prev, ...accepted].slice(0, 8));
+      })
       .catch(() => {
         /* ignore */
       });
     if (sourceRef.current) sourceRef.current.value = '';
   };
 
-  const removeEvidence = (idx: number) =>
+  const removeEvidence = (idx: number) => {
     setEvidence((prev) => prev.filter((_, i) => i !== idx));
+    setEvidenceFiles((prev) => prev.filter((_, i) => i !== idx));
+  };
 
   const claimValue = Number(claim) || 0;
   const canSubmit = severity !== null && claimValue > 0;
@@ -175,10 +186,11 @@ export default function MerchantDamageNew() {
     if (!canSubmit || submitting || !severity) return;
     setSubmitting(true);
 
-    // Real path: create the damage_cases row. The rental.id is the
-    // contract id when liveRentals is in effect; when on demo we fall
-    // through to the demo reporter below. Storage uploads for evidence
-    // are deferred to Phase 5 (uploadDamageEvidence is exported and ready).
+    // Real path: create the damage_cases row + upload evidence to the
+    // `damage-evidence` Storage bucket. The rental.id is the contract id
+    // when liveRentals is in effect; when on demo we fall through to the
+    // demo reporter below. Bucket setup is documented in
+    // docs/mvp-phase5-operational.md (one-time Supabase dashboard task).
     if (supabaseAuth.configured) {
       try {
         const contract = await fetchContractById(rental.id);
@@ -192,6 +204,25 @@ export default function MerchantDamageNew() {
           claim_amount: claimValue,
           description: notes || `Damage report for ${rental.contractRef}`,
         });
+
+        // Best-effort evidence upload — failures are logged but don't
+        // unwind the case creation (the merchant already has the row).
+        if (evidenceFiles.length > 0) {
+          await Promise.all(
+            evidenceFiles.map((file) =>
+              uploadDamageEvidence({
+                caseId: created.id,
+                file,
+                evidenceType: 'photo',
+                uploadedByUserId: supabaseAuth.session?.user?.id,
+              }).catch((err) => {
+                // eslint-disable-next-line no-console
+                console.error('[applux] uploadDamageEvidence failed', err);
+              }),
+            ),
+          );
+        }
+
         navigate(`/merchant/damages/${created.id}`, { replace: true });
         return;
       } catch (err) {

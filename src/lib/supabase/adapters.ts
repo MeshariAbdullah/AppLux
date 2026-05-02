@@ -2,6 +2,11 @@
 // so screens can switch data sources without changing their render code.
 
 import type {
+  AdminActiveCase,
+  AdminCaseSeverity,
+  AdminCaseStage,
+  AdminUserRecord,
+  AdminUserStatus,
   Contract,
   ContractStatus as UIContractStatus,
   HistoryItem,
@@ -22,12 +27,16 @@ import type {
 } from '@/lib/data';
 import type { AdminMerchantRequest } from '@/lib/store';
 import type {
+  AccountStatus,
   ContractStatusDB,
   DamageCaseRow,
+  DamageSeverity,
+  DamageStage,
   InvoiceStatus as DBInvoiceStatus,
   MerchantApplicationRow,
   MerchantRow,
   NoteStatus as DBNoteStatus,
+  ProfileRow,
   PromissoryNoteRow,
   RentalCategoryDB,
   RentalContractRow,
@@ -360,6 +369,76 @@ export function synthesizePackageFromInvoice(
       place: cityLocalized,
       purpose: { ar: 'تأجير', en: 'Rental' },
     },
+  };
+}
+
+// ---------------------------------------------------------------------
+
+// ---------------------------------------------------------------------
+// Admin: profile + eligibility → AdminUserRecord
+// ---------------------------------------------------------------------
+
+function mapAccountStatus(s: AccountStatus): AdminUserStatus {
+  return s; // 'pending' | 'active' | 'suspended' aligns with both shapes
+}
+
+export function adaptUserRecord(
+  profile: ProfileRow,
+  eligibility?: RentalEligibilityRow | null,
+  ctx: { activeRentals?: number; completedRentals?: number } = {},
+): AdminUserRecord {
+  const fullName = profile.full_name || profile.email || '—';
+  return {
+    id: profile.id,
+    fullName,
+    initials: deriveTextInitials(fullName),
+    nationalId: profile.national_id ?? '',
+    mobile: profile.mobile ?? '',
+    email: profile.email ?? '',
+    city: profile.city ?? '',
+    status: mapAccountStatus(profile.account_status),
+    nafathVerified: Boolean(profile.nafath_verified_at),
+    createdAt: profile.created_at,
+    lastActiveAt: profile.updated_at,
+    eligibilityLimit: Number(eligibility?.limit_amount ?? 0),
+    usedAmount: Number(eligibility?.used_amount ?? 0),
+    activeRentals: ctx.activeRentals ?? 0,
+    completedRentals: ctx.completedRentals ?? 0,
+    riskTier: 'standard',
+    activity: [],
+  };
+}
+
+// ---------------------------------------------------------------------
+// Admin: damage_cases → AdminActiveCase
+// ---------------------------------------------------------------------
+
+function mapCaseSeverity(s: DamageSeverity): AdminCaseSeverity {
+  return s === 'non_return' ? 'non-return' : s;
+}
+function mapCaseStage(s: DamageStage): AdminCaseStage {
+  return s;
+}
+
+export function adaptDamageCase(
+  row: DamageCaseRow,
+  ctx: {
+    merchantName?: string;
+    customerName?: string;
+    customerInitials?: string;
+    headlineItem?: string;
+  } = {},
+): AdminActiveCase {
+  return {
+    id: row.id,
+    merchantName: ctx.merchantName ?? '—',
+    customerName: ctx.customerName ?? '—',
+    customerInitials: ctx.customerInitials ?? '—',
+    item: ctx.headlineItem ?? `Case ${row.case_number}`,
+    severity: mapCaseSeverity(row.severity),
+    stage: mapCaseStage(row.stage),
+    claimAmount: Number(row.claim_amount),
+    reportedAt: row.raised_at,
   };
 }
 

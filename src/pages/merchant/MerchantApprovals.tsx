@@ -17,8 +17,10 @@ import { useI18n, useT } from '@/lib/i18n';
 import { useStore } from '@/lib/store';
 import {
   fetchMyMerchant,
+  fetchProfilesByIds,
   listMerchantInvoices,
   useSupabaseAuth,
+  type ProfileRow,
   type RentalInvoiceRow,
 } from '@/lib/supabase';
 import type { MerchantApproval, MerchantApprovalStage } from '@/lib/data';
@@ -29,11 +31,19 @@ function toneForStage(stage: MerchantApprovalStage): StatusTone {
   return 'brand';
 }
 
-function invoiceRowToApproval(row: RentalInvoiceRow): MerchantApproval {
+function invoiceRowToApproval(
+  row: RentalInvoiceRow,
+  customer?: ProfileRow,
+): MerchantApproval {
+  const customerName = customer?.full_name ?? '—';
+  const initials =
+    customerName.trim().split(/\s+/).slice(0, 2)
+      .map((p) => p[0]?.toUpperCase() ?? '')
+      .join('') || '—';
   return {
     id: row.id,
-    customerName: '—',
-    customerInitials: '—',
+    customerName,
+    customerInitials: initials,
     item: `Invoice ${row.invoice_number}`,
     category: 'dress',
     amount: Number(row.total_amount),
@@ -63,7 +73,13 @@ export default function MerchantApprovals() {
         status: 'issued',
       }).catch(() => []);
       if (cancelled) return;
-      setLiveApprovals(rows.map(invoiceRowToApproval));
+      const profileMap = await fetchProfilesByIds(
+        rows.map((r) => r.customer_user_id),
+      ).catch(() => new Map());
+      if (cancelled) return;
+      setLiveApprovals(
+        rows.map((r) => invoiceRowToApproval(r, profileMap.get(r.customer_user_id))),
+      );
     })();
     return () => {
       cancelled = true;

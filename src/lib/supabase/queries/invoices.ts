@@ -87,6 +87,20 @@ export async function fetchInvoiceById(id: string): Promise<RentalInvoiceRow | n
   return data;
 }
 
+export async function fetchInvoiceByContractId(
+  contractId: string,
+): Promise<RentalInvoiceRow | null> {
+  const sb = requireSupabase();
+  const { data: contract, error: cErr } = await sb
+    .from('rental_contracts')
+    .select('invoice_id')
+    .eq('id', contractId)
+    .maybeSingle();
+  if (cErr) throw cErr;
+  if (!contract?.invoice_id) return null;
+  return fetchInvoiceById(contract.invoice_id);
+}
+
 export async function fetchInvoiceByToken(
   token: string,
 ): Promise<{ invoice: RentalInvoiceRow; items: RentalInvoiceItemRow[] } | null> {

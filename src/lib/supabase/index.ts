@@ -58,8 +58,16 @@ export {
 
 export type { SignInInput, SignUpInput } from './auth';
 
-export { fetchProfile, updateProfile } from './queries/profile';
-export { fetchEligibility } from './queries/eligibility';
+export {
+  fetchProfile,
+  fetchProfilesByIds,
+  listProfiles,
+  updateProfile,
+} from './queries/profile';
+export {
+  fetchEligibility,
+  fetchEligibilityByUserIds,
+} from './queries/eligibility';
 export {
   listMerchants,
   fetchMerchant,
@@ -77,6 +85,7 @@ export {
 export {
   acceptRentalInvoice,
   createInvoiceWithItems,
+  fetchInvoiceByContractId,
   fetchInvoiceById,
   fetchInvoiceByToken,
   listCustomerInvoices,
@@ -86,6 +95,7 @@ export {
 export type { CreateInvoiceInput, CreatedInvoice } from './queries/invoices';
 
 export {
+  endRentalContract,
   fetchContractById,
   listCustomerContracts,
   listMerchantContracts,
@@ -100,6 +110,7 @@ export {
 export {
   createDamageCase,
   fetchDamageCase,
+  listAllDamageCases,
   listMerchantDamageCases,
   listCaseEvidence,
   uploadDamageEvidence,
@@ -116,10 +127,12 @@ export {
   adaptContract,
   adaptContractToHistory,
   adaptContractToMerchantRental,
+  adaptDamageCase,
   adaptEligibility,
   adaptInvoice,
   adaptMerchantApplication,
   adaptMerchantToStore,
   adaptNote,
+  adaptUserRecord,
   synthesizePackageFromInvoice,
 } from './adapters';
