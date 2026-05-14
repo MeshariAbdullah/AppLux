@@ -22,6 +22,8 @@ import {
   synthesizePackageFromInvoice,
   useSupabaseAuth,
 } from '@/lib/supabase';
+import { RentalJourneyTimeline } from '@/components/rental/RentalJourneyTimeline';
+import { deriveJourneyOnApproval } from '@/lib/rentalJourney';
 import type { ScannedPackage } from '@/lib/data';
 
 export default function Approval() {
@@ -147,6 +149,14 @@ export default function Approval() {
         </div>
 
         <div className="px-5 pt-2 pb-10 space-y-5">
+          {/* Canonical 7-stage rental journey — stages 1–3 completed, stage 4 active */}
+          <RentalJourneyTimeline
+            steps={deriveJourneyOnApproval(
+              { issuedAt: pkg.issuedAt },
+              approvedAt,
+            )}
+          />
+
           {/* Signing summary — compact two-row strip preserves contract + note linkage */}
           <Card padded className="space-y-3">
             <div className="flex items-center gap-3">

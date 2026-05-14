@@ -34,6 +34,8 @@ import {
 } from '@/lib/supabase';
 import type { ScannedPackage } from '@/lib/data';
 import { ReviewStepper, type ReviewStepKey } from '@/components/review/ReviewStepper';
+import { RentalJourneyTimeline } from '@/components/rental/RentalJourneyTimeline';
+import { deriveJourneyFromInvoice, type JourneyStep } from '@/lib/rentalJourney';
 import { StoreLogo } from '@/components/stores/StoreLogo';
 import { cn } from '@/lib/cn';
 
@@ -134,12 +136,22 @@ export default function Review() {
     navigate(`/approval/${pkg.token}`, { replace: true });
   };
 
+  const journeySteps: JourneyStep[] = deriveJourneyFromInvoice(
+    {
+      issued_at: pkg.issuedAt,
+      created_at: pkg.issuedAt,
+      status: 'issued',
+    },
+    { viewerIsReviewing: true },
+  );
+
   return (
     <>
       <Header title={t('review.title')} showBack />
       <ReviewStepper active={step} />
       <Screen padded={false} className="bg-canvas">
         <div className="px-4 pt-4 pb-28 space-y-4">
+          <RentalJourneyTimeline steps={journeySteps} />
           {step === 'invoice' && <InvoiceStep pkg={pkg} />}
           {step === 'contract' && <ContractStep pkg={pkg} />}
           {step === 'note' && <NoteStep pkg={pkg} />}

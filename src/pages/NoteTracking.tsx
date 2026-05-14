@@ -31,6 +31,8 @@ import {
 } from '@/lib/supabase';
 import type { Contract, PromissoryNote } from '@/lib/data';
 import { NoteStatusChip } from '@/components/rental/StatusChips';
+import { RentalJourneyTimeline } from '@/components/rental/RentalJourneyTimeline';
+import { deriveJourneyFromUIContract } from '@/lib/rentalJourney';
 import {
   DocTimeline,
   type TimelineEvent,
@@ -165,6 +167,14 @@ export default function NoteTracking() {
               </div>
             </div>
           </div>
+
+          {linkedContract && (
+            <RentalJourneyTimeline
+              steps={deriveJourneyFromUIContract(linkedContract, null, {
+                status: note.status,
+              })}
+            />
+          )}
 
           {isDefaulted && (
             <div className="rounded-xl2 bg-danger-50 ring-1 ring-danger-500/20 px-4 py-3 flex items-start gap-2.5 text-[12.5px] text-danger-600">

@@ -23,6 +23,8 @@ import {
 } from '@/components/icons';
 import { cn } from '@/lib/cn';
 import { useI18n, useT } from '@/lib/i18n';
+import { RentalJourneyTimeline } from '@/components/rental/RentalJourneyTimeline';
+import { deriveJourneyFromMerchantRental } from '@/lib/rentalJourney';
 import { useStore } from '@/lib/store';
 import {
   adaptContractToMerchantRental,
@@ -228,6 +230,8 @@ export default function MerchantRentalDetails() {
       />
       <Screen padded={false} className="bg-canvas">
         <div className="px-5 pt-5 pb-10 space-y-5">
+          <RentalJourneyTimeline steps={deriveJourneyFromMerchantRental(rental)} />
+
           {/* Outcome banner */}
           {closureState !== 'active' && (
             <div

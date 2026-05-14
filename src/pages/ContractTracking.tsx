@@ -36,6 +36,8 @@ import {
 } from '@/lib/supabase';
 import type { Contract, Invoice, PromissoryNote } from '@/lib/data';
 import { ContractStatusChip } from '@/components/rental/StatusChips';
+import { RentalJourneyTimeline } from '@/components/rental/RentalJourneyTimeline';
+import { deriveJourneyFromUIContract } from '@/lib/rentalJourney';
 import {
   DocTimeline,
   type TimelineEvent,
@@ -175,6 +177,14 @@ export default function ContractTracking() {
               </div>
             </div>
           </div>
+
+          <RentalJourneyTimeline
+            steps={deriveJourneyFromUIContract(
+              contract,
+              linkedInvoices[0] ? { issuedAt: linkedInvoices[0].issuedAt } : null,
+              linkedNote ? { status: linkedNote.status } : null,
+            )}
+          />
 
           {/* Parties */}
           <section>

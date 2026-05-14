@@ -31,11 +31,40 @@ import {
 } from '@/lib/supabase';
 import type { Contract, Invoice } from '@/lib/data';
 import { InvoiceStatusChip } from '@/components/rental/StatusChips';
+import { RentalJourneyTimeline } from '@/components/rental/RentalJourneyTimeline';
+import {
+  deriveJourneyFromUIContract,
+  RENTAL_STAGES,
+  type JourneyStep,
+} from '@/lib/rentalJourney';
 import {
   DocTimeline,
   type TimelineEvent,
 } from '@/components/track/DocTimeline';
 import { PlatformBadge } from '@/components/track/PlatformBadge';
+
+function buildInvoiceJourney(
+  invoice: Invoice | undefined,
+  contract: Contract | null | undefined,
+): JourneyStep[] {
+  if (contract) {
+    return deriveJourneyFromUIContract(
+      contract,
+      invoice ? { issuedAt: invoice.issuedAt } : null,
+    );
+  }
+  return RENTAL_STAGES.map((stage): JourneyStep => {
+    if (stage === 'request')
+      return { stage, status: 'completed', at: invoice?.issuedAt ?? null };
+    if (stage === 'review')
+      return {
+        stage,
+        status: invoice?.status === 'paid' ? 'completed' : 'active',
+        at: null,
+      };
+    return { stage, status: 'pending', at: null };
+  });
+}
 
 function addDays(iso: string, days: number) {
   const d = new Date(iso);
@@ -153,6 +182,8 @@ export default function InvoiceTracking() {
               </div>
             </div>
           </div>
+
+          <RentalJourneyTimeline steps={buildInvoiceJourney(invoice, contract)} />
 
           {invoice.status === 'overdue' && (
             <div className="rounded-xl2 bg-danger-50 ring-1 ring-danger-500/20 px-4 py-3 flex items-start gap-2.5 text-[12.5px] text-danger-600">

@@ -446,6 +446,33 @@
       "processing": "Attesting…"
     }
   },
+  "journey": {
+    "title": "Rental Journey",
+    "step": "Step {current} of {total}",
+    "stages": {
+      "request": "Rental Request",
+      "review": "Store Review",
+      "agreement": "Agreement Documented",
+      "started": "Rental Started",
+      "tracking": "Active Tracking",
+      "return": "Return",
+      "closed": "Closed"
+    },
+    "descriptions": {
+      "request": "The boutique has issued the rental request to you.",
+      "review": "You're reviewing the contract and promissory note before signing.",
+      "agreement": "Contract signed and promissory note attested digitally.",
+      "started": "The agreed rental period has officially begun.",
+      "tracking": "The contract is active — the remaining period is being tracked.",
+      "return": "The rental period is closing — it's time to return the piece.",
+      "closed": "The contract has been closed and the journey is complete."
+    },
+    "status": {
+      "pending": "Upcoming",
+      "active": "Current",
+      "completed": "Completed"
+    }
+  },
   "approval": {
     "title": "Approved",
     "subtitle": "Your contract has been approved and the promissory note signed.",
