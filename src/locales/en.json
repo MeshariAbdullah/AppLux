@@ -437,13 +437,24 @@
     "confirm": {
       "title": "Confirm approval",
       "subtitle": "Please confirm your approval of the contract and note to complete the digital signature.",
+      "eyebrow": "Final step",
+      "commitmentTitle": "Sign the contract and attest the promissory note",
+      "commitmentBody": "This is the decision that documents the rental. Once you sign, the contract and promissory note become part of your official rental record under our care.",
       "consent1": "I confirm I have reviewed the invoice, contract and promissory note",
       "consent2": "I accept the damage liabilities outlined above",
       "consent3": "I agree to digitally sign the promissory note via Nafith",
       "nafith": "Nafith — digital promissory note platform",
       "nafithNote": "You will be redirected to Nafith to complete the electronic signature.",
       "approve": "Approve & sign",
-      "processing": "Attesting…"
+      "commitAction": "Sign and document the rental",
+      "afterHint": "After signing, the rental becomes officially recorded — you can return to this record any time.",
+      "processing": "Recording the rental…"
+    },
+    "framing": {
+      "eyebrow": "Entering a rental",
+      "title": "You're about to enter a documented rental with {boutique}",
+      "boutiqueFallback": "the boutique",
+      "body": "We take you through the contract, the promissory note and the agreement. Anything you sign is recorded on this rental's official record."
     }
   },
   "journey": {
@@ -494,6 +505,9 @@
   "approval": {
     "title": "Approved",
     "subtitle": "Your contract has been approved and the promissory note signed.",
+    "documentedHeadline": "Your rental is officially documented",
+    "documentedSubtitle": "The contract and promissory note are now part of your rental's official record, kept under our care.",
+    "officialSeal": "Official rental record",
     "contractSigned": "Contract signed",
     "noteSigned": "Note attested digitally",
     "approvedAt": "Signed at",

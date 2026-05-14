@@ -119,24 +119,34 @@ export default function Approval() {
             className="pointer-events-none absolute inset-x-0 top-0 h-40 bg-gradient-to-b from-white/60 to-transparent"
           />
           <div className="relative mx-auto h-24 w-24">
+            {/* One-shot halo sweep — the system has just recorded something.
+                After it completes the ring settles to a calm steady state
+                so the moment doesn't keep agitating. */}
             <span
               aria-hidden
-              className="absolute inset-0 rounded-full bg-gold-300/30 animate-pulse-ring"
+              className="absolute inset-0 rounded-full bg-lavender-300/30 animate-halo-sweep"
             />
             <span
               aria-hidden
-              className="absolute inset-2 rounded-full bg-gold-300/40"
+              className="absolute inset-2 rounded-full bg-lavender-200/60"
             />
-            <span className="absolute inset-4 rounded-full bg-lavender-400 grid place-items-center text-white shadow-plush">
+            <span className="absolute inset-4 rounded-full bg-lavender-400 grid place-items-center text-white shadow-plush animate-stamp-in">
               <CheckIcon size={36} strokeWidth={3} />
             </span>
           </div>
-          <h1 className="mt-7 editorial-title text-[26px] text-ink-900 leading-tight">
-            {t('approval.title')}
+          <h1 className="mt-7 editorial-title text-[26px] text-ink-900 leading-tight animate-reveal-up">
+            {t('approval.documentedHeadline')}
           </h1>
-          <p className="mt-2.5 text-[13.5px] text-ink-500 leading-relaxed max-w-xs mx-auto">
-            {t('approval.subtitle')}
+          <p className="mt-2.5 text-[13.5px] text-ink-500 leading-relaxed max-w-xs mx-auto animate-reveal-up">
+            {t('approval.documentedSubtitle')}
           </p>
+          <div className="mt-5 inline-flex items-center gap-2 rounded-full bg-white ring-1 ring-lavender-200 px-3 py-1.5 text-[10.5px] font-semibold uppercase tracking-[0.14em] text-lavender-700 animate-stamp-in">
+            <BadgeCheckIcon size={11} />
+            <span>{t('approval.officialSeal')}</span>
+            <span className="text-ink-400 num">
+              #{formatNumber(Date.parse(approvedAt) % 1_000_000)}
+            </span>
+          </div>
         </div>
 
         <div className="px-5 pt-2 pb-10 space-y-5">
@@ -193,13 +203,11 @@ export default function Approval() {
             </div>
           </section>
 
-          {/* Nafith disclaimer band — preserved per business model, slimmer. */}
+          {/* Nafith disclaimer band — quiet and calm. The official record
+              number lives on the seal above, so it's not repeated here. */}
           <div className="rounded-xl2 bg-canvas-100 ring-1 ring-canvas-200 p-3.5 flex items-start gap-3 text-[11.5px] leading-relaxed text-ink-600">
             <SparkleIcon size={14} className="mt-0.5 shrink-0 text-lavender-600" />
             <div className="min-w-0 flex-1">{t('review.note.disclaimer')}</div>
-            <span className="num text-[10.5px] text-ink-400 self-start">
-              #{formatNumber(Date.parse(approvedAt) % 1_000_000)}
-            </span>
           </div>
 
           {/* Single primary action — anything else is a quiet inline link. */}

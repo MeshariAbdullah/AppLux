@@ -87,6 +87,43 @@ html[dir='ltr'] body {
   100% { transform: scale(1); opacity: 1; }
 }
 
+/* Calm, one-shot reveal — used for moments where the system has just
+   recorded something. Faster than a hero animation, slower than a button
+   press. Same cubic-bezier as ease-plush. */
+@keyframes revealUp {
+  0% { transform: translateY(6px); opacity: 0; }
+  100% { transform: translateY(0); opacity: 1; }
+}
+.animate-reveal-up { animation: revealUp 460ms cubic-bezier(0.22, 1, 0.36, 1) both; }
+
+/* Stamp-in — used by the Documented / Signed / Verified badges. Small
+   scale settle, no bounce, holds at the end. Feels like a stamp pressing
+   onto paper rather than a UI element fading in. */
+@keyframes stampIn {
+  0% { transform: scale(0.86); opacity: 0; }
+  60% { transform: scale(1.02); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+.animate-stamp-in { animation: stampIn 420ms cubic-bezier(0.22, 1, 0.36, 1) both; }
+
+/* Soft halo — for the approval ring once, then quiet. Single sweep. */
+@keyframes haloSweep {
+  0% { transform: scale(0.94); opacity: 0; }
+  40% { opacity: 1; }
+  100% { transform: scale(1.04); opacity: 0; }
+}
+.animate-halo-sweep { animation: haloSweep 1400ms cubic-bezier(0.22, 1, 0.36, 1) both; }
+
+/* Reduce motion respectfully. */
+@media (prefers-reduced-motion: reduce) {
+  .animate-reveal-up,
+  .animate-stamp-in,
+  .animate-halo-sweep,
+  .animate-pulse-ring {
+    animation: none;
+  }
+}
+
 /* Tap highlight off, soft lavender selection tone. */
 button, [role='button'], a {
   -webkit-tap-highlight-color: transparent;

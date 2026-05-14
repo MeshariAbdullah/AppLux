@@ -41,6 +41,7 @@ import { cn } from '@/lib/cn';
 
 export default function Review() {
   const t = useT();
+  const { locale } = useI18n();
   const { token } = useParams();
   const navigate = useNavigate();
   const { scans, stores, session, approvePackage } = useStore();
@@ -151,6 +152,23 @@ export default function Review() {
       <ReviewStepper active={step} />
       <Screen padded={false} className="bg-canvas">
         <div className="px-4 pt-4 pb-28 space-y-4">
+          {/* Framing band — names what the customer is about to do.
+              Calm, single sentence, no CTA. Sets the room before the
+              decision. */}
+          <section className="rounded-xl3 bg-lavender-50/60 ring-1 ring-lavender-200/60 p-5 animate-reveal-up">
+            <div className="text-[10.5px] font-semibold text-lavender-700 uppercase tracking-[0.14em]">
+              {t('review.framing.eyebrow')}
+            </div>
+            <p className="mt-2 editorial-title text-[17px] text-ink-900 leading-snug">
+              {t('review.framing.title', {
+                boutique: store ? store.name[locale] : t('review.framing.boutiqueFallback'),
+              })}
+            </p>
+            <p className="mt-2 text-[12.5px] text-ink-500 leading-relaxed">
+              {t('review.framing.body')}
+            </p>
+          </section>
+
           <RentalJourneyTimeline variant="lead" steps={journeySteps} />
           {step === 'invoice' && <InvoiceStep pkg={pkg} />}
           {step === 'contract' && <ContractStep pkg={pkg} />}
@@ -665,20 +683,27 @@ function ConfirmStep({
 
   return (
     <>
-      <Card padded>
-        <div className="flex items-start gap-2.5">
-          <span className="h-10 w-10 shrink-0 rounded-2xl bg-gold-50 text-gold-700 grid place-items-center">
-            <SignatureIcon size={18} />
+      {/* Commitment headline — names the decision. */}
+      <section className="rounded-xl3 bg-white hairline shadow-soft p-5 animate-reveal-up">
+        <div className="flex items-start gap-3">
+          <span className="h-11 w-11 shrink-0 rounded-2xl bg-lavender-50 text-lavender-700 grid place-items-center ring-1 ring-lavender-200">
+            <SignatureIcon size={20} />
           </span>
           <div className="min-w-0">
-            <div className="text-[15px] font-semibold text-ink-900">{t('review.confirm.title')}</div>
-            <div className="mt-0.5 text-[12.5px] text-ink-500 leading-relaxed">
-              {t('review.confirm.subtitle')}
+            <div className="text-[10.5px] font-semibold text-lavender-700 uppercase tracking-[0.14em]">
+              {t('review.confirm.eyebrow')}
+            </div>
+            <div className="mt-1.5 editorial-title text-[18px] text-ink-900 leading-snug">
+              {t('review.confirm.commitmentTitle')}
+            </div>
+            <div className="mt-2 text-[12.5px] text-ink-500 leading-relaxed">
+              {t('review.confirm.commitmentBody')}
             </div>
           </div>
         </div>
-      </Card>
+      </section>
 
+      {/* The three core facts of the agreement, no headers, calm rhythm. */}
       <Card padded className="space-y-3">
         <Field label={t('review.contract.lessee')} value={userName ?? '—'} />
         <CardDivider />
@@ -693,38 +718,24 @@ function ConfirmStep({
         />
       </Card>
 
-      <section>
-        <SectionHeader title={t('review.confirm.title')} />
-        <Card padded className="space-y-2.5">
-          <ConsentRow
-            checked={accepted[0]}
-            onChange={() => toggle(0)}
-            label={t('review.confirm.consent1')}
-          />
-          <ConsentRow
-            checked={accepted[1]}
-            onChange={() => toggle(1)}
-            label={t('review.confirm.consent2')}
-          />
-          <ConsentRow
-            checked={accepted[2]}
-            onChange={() => toggle(2)}
-            label={t('review.confirm.consent3')}
-          />
-        </Card>
-      </section>
-
-      <div className="rounded-xl2 bg-ink-900/95 px-4 py-3.5 flex items-start gap-3 text-[12.5px] text-white">
-        <span className="h-9 w-9 shrink-0 rounded-lg bg-white/10 grid place-items-center ring-1 ring-white/15">
-          <BadgeCheckIcon size={18} />
-        </span>
-        <div className="min-w-0 flex-1">
-          <div className="font-semibold">{t('review.confirm.nafith')}</div>
-          <div className="mt-0.5 text-white/70 leading-relaxed">
-            {t('review.confirm.nafithNote')}
-          </div>
-        </div>
-      </div>
+      {/* Consent rows — kept, label tightened on the page. */}
+      <Card padded className="space-y-2.5">
+        <ConsentRow
+          checked={accepted[0]}
+          onChange={() => toggle(0)}
+          label={t('review.confirm.consent1')}
+        />
+        <ConsentRow
+          checked={accepted[1]}
+          onChange={() => toggle(1)}
+          label={t('review.confirm.consent2')}
+        />
+        <ConsentRow
+          checked={accepted[2]}
+          onChange={() => toggle(2)}
+          label={t('review.confirm.consent3')}
+        />
+      </Card>
 
       <Button
         variant="primary"
@@ -733,10 +744,13 @@ function ConfirmStep({
         onClick={handleSign}
         disabled={!allAccepted || processing}
         loading={processing}
-        leading={!processing ? <SparkleIcon size={18} /> : undefined}
+        leading={!processing ? <SignatureIcon size={18} /> : undefined}
       >
-        {processing ? t('review.confirm.processing') : t('review.confirm.approve')}
+        {processing ? t('review.confirm.processing') : t('review.confirm.commitAction')}
       </Button>
+      <p className="text-center text-[11.5px] text-ink-400 leading-relaxed px-4">
+        {t('review.confirm.afterHint')}
+      </p>
     </>
   );
 }

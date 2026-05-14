@@ -210,7 +210,7 @@ function DocumentedStamp({ badge }: { badge: StageBadge }) {
     );
   return (
     <span
-      className="inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-[0.08em] text-lavender-700 bg-lavender-50 ring-1 ring-inset ring-lavender-200 rounded-full px-1.5 py-0.5"
+      className="inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-[0.08em] text-lavender-700 bg-lavender-50 ring-1 ring-inset ring-lavender-200 rounded-full px-1.5 py-0.5 animate-stamp-in"
       title={t(`journey.badges.${badge}.hint`)}
     >
       {icon}
