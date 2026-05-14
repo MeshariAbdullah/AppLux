@@ -448,7 +448,8 @@
       "approve": "Approve & sign",
       "commitAction": "Sign and document the rental",
       "afterHint": "After signing, the rental becomes officially recorded — you can return to this record any time.",
-      "processing": "Recording the rental…"
+      "processing": "Recording the rental…",
+      "recording": "Recording on the official record"
     },
     "framing": {
       "eyebrow": "Entering a rental",
@@ -566,9 +567,11 @@
     }
   },
   "track": {
-    "invoiceTitle": "Invoice tracking",
-    "contractTitle": "Contract tracking",
-    "noteTitle": "Promissory note tracking",
+    "invoiceTitle": "Invoice record",
+    "contractTitle": "Contract record",
+    "noteTitle": "Promissory note record",
+    "officialRecord": "Official record",
+    "recordedOn": "Recorded · {date}",
     "details": "Details",
     "status": "Status",
     "summary": "Summary",
@@ -803,6 +806,8 @@
       "title": "Merchant dashboard",
       "welcome": "Hello, {name}",
       "subtitle": "Here's a quick snapshot of your business today.",
+      "operationsEyebrow": "Rental operations",
+      "operationsSubtitle": "You're overseeing your boutique's active rental records.",
       "statusApproved": "Account approved",
       "approvedAt": "Approved on",
       "monthlyRevenue": "Active rental revenue",

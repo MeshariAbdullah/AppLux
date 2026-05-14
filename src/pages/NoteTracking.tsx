@@ -116,7 +116,7 @@ export default function NoteTracking() {
       <Header title={t('track.noteTitle')} showBack />
       <Screen padded={false} className="bg-canvas">
         <div className="px-5 pt-5 pb-10 space-y-5">
-          {/* Premium note hero — soft gold tint */}
+          {/* Premium note hero — soft gold tint, framed as an official record */}
           <div className="relative overflow-hidden rounded-xl3 bg-gradient-to-br from-gold-50 via-white to-canvas-50 hairline p-6 shadow-card">
             <div
               aria-hidden
@@ -124,10 +124,14 @@ export default function NoteTracking() {
             />
             <div className="relative flex items-start justify-between gap-3">
               <div className="min-w-0 flex-1">
-                <span className="inline-flex items-center gap-1.5 rounded-full bg-gold-400/15 ring-1 ring-gold-400/30 px-2.5 py-1 text-[11.5px] font-semibold text-gold-700">
+                <div className="inline-flex items-center gap-1.5 rounded-full bg-white ring-1 ring-lavender-200 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-lavender-700">
+                  <BadgeCheckIcon size={11} />
+                  {t('track.recordedOn', { date: formatDate(note.dueDate) })}
+                </div>
+                <div className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-gold-400/15 ring-1 ring-gold-400/30 px-2.5 py-1 text-[11.5px] font-semibold text-gold-700">
                   <GavelIcon size={13} />
                   {t('track.noteTitle')}
-                </span>
+                </div>
                 <div className="mt-3 text-[10.5px] font-semibold text-ink-400 uppercase tracking-[0.08em]">
                   {t('track.note.principal')}
                 </div>

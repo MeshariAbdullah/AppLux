@@ -448,7 +448,8 @@
       "approve": "الموافقة والتوقيع",
       "commitAction": "وقّع وسجّل الإيجار رسمياً",
       "afterHint": "بعد التوقيع، يُسجَّل الإيجار رسمياً، ويمكنك الرجوع إلى هذا السجل في أي وقت.",
-      "processing": "جارٍ تسجيل الإيجار…"
+      "processing": "جارٍ تسجيل الإيجار…",
+      "recording": "جارٍ التسجيل في السجل الرسمي"
     },
     "framing": {
       "eyebrow": "بداية إيجار",
@@ -566,9 +567,11 @@
     }
   },
   "track": {
-    "invoiceTitle": "متابعة الفاتورة",
-    "contractTitle": "متابعة العقد",
-    "noteTitle": "متابعة السند لأمر",
+    "invoiceTitle": "سجل الفاتورة",
+    "contractTitle": "سجل العقد",
+    "noteTitle": "سجل السند لأمر",
+    "officialRecord": "السجل الرسمي",
+    "recordedOn": "مُسجَّل · {date}",
     "details": "التفاصيل",
     "status": "الحالة",
     "summary": "الملخّص",
@@ -803,6 +806,8 @@
       "title": "لوحة التاجر",
       "welcome": "أهلاً {name}",
       "subtitle": "إليك ملخّص نشاطك التجاري اليوم.",
+      "operationsEyebrow": "إدارة عمليات الإيجار",
+      "operationsSubtitle": "أنت تشرف على السجلات الفعّالة لإيجارات بوتيكك.",
       "statusApproved": "الحساب معتمد",
       "approvedAt": "تاريخ الاعتماد",
       "monthlyRevenue": "إيرادات التأجير الحالية",

@@ -199,15 +199,15 @@ export default function MerchantHome() {
             />
             <div className="relative flex items-start justify-between gap-3">
               <div className="min-w-0 flex-1">
-                <span className="inline-flex items-center gap-1.5 rounded-full bg-success-500/15 ring-1 ring-success-400/30 px-2.5 py-1 text-[11.5px] font-semibold text-success-200">
-                  <BadgeCheckIcon size={13} />
-                  {t('merchant.home.statusApproved')}
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-white/8 ring-1 ring-white/15 px-2.5 py-1 text-[10.5px] font-semibold uppercase tracking-[0.14em] text-white/85">
+                  <BadgeCheckIcon size={11} />
+                  {t('merchant.home.operationsEyebrow')}
                 </span>
                 <h1 className="mt-4 editorial-title text-[24px] leading-tight truncate text-white">
                   {t('merchant.home.welcome', { name: merchant.companyName })}
                 </h1>
                 <p className="mt-2 text-[13px] text-white/65 leading-relaxed max-w-[36ch]">
-                  {t('merchant.home.subtitle')}
+                  {t('merchant.home.operationsSubtitle')}
                 </p>
               </div>
               <span className="h-11 w-11 shrink-0 rounded-2xl bg-white/10 ring-1 ring-white/15 grid place-items-center">

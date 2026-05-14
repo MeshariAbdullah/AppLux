@@ -678,13 +678,23 @@ function ConfirmStep({
   const handleSign = () => {
     if (!allAccepted || processing) return;
     setProcessing(true);
-    window.setTimeout(onApproved, 1800);
+    // Calm 600ms still moment — the content above the button quiets while
+    // the system "records" the rental, then we hand off to Approval where
+    // the halo + stamp animations fire. Long enough to feel deliberate,
+    // short enough that the user doesn't wait. Sits in the 0.3–0.6s sweet
+    // spot called out by the design brief.
+    window.setTimeout(onApproved, 600);
   };
 
   return (
     <>
       {/* Commitment headline — names the decision. */}
-      <section className="rounded-xl3 bg-white hairline shadow-soft p-5 animate-reveal-up">
+      <section
+        className={cn(
+          'rounded-xl3 bg-white hairline shadow-soft p-5 animate-reveal-up transition-opacity duration-500',
+          processing && 'opacity-50',
+        )}
+      >
         <div className="flex items-start gap-3">
           <span className="h-11 w-11 shrink-0 rounded-2xl bg-lavender-50 text-lavender-700 grid place-items-center ring-1 ring-lavender-200">
             <SignatureIcon size={20} />
@@ -704,7 +714,14 @@ function ConfirmStep({
       </section>
 
       {/* The three core facts of the agreement, no headers, calm rhythm. */}
-      <Card padded className="space-y-3">
+      <Card
+        padded
+        className={cn(
+          'space-y-3 animate-reveal-up transition-opacity duration-500',
+          processing && 'opacity-50',
+        )}
+        style={{ animationDelay: '80ms' }}
+      >
         <Field label={t('review.contract.lessee')} value={userName ?? '—'} />
         <CardDivider />
         <Field
@@ -719,7 +736,14 @@ function ConfirmStep({
       </Card>
 
       {/* Consent rows — kept, label tightened on the page. */}
-      <Card padded className="space-y-2.5">
+      <Card
+        padded
+        className={cn(
+          'space-y-2.5 animate-reveal-up transition-opacity duration-500',
+          processing && 'opacity-50',
+        )}
+        style={{ animationDelay: '160ms' }}
+      >
         <ConsentRow
           checked={accepted[0]}
           onChange={() => toggle(0)}
@@ -737,20 +761,34 @@ function ConfirmStep({
         />
       </Card>
 
-      <Button
-        variant="primary"
-        size="lg"
-        block
-        onClick={handleSign}
-        disabled={!allAccepted || processing}
-        loading={processing}
-        leading={!processing ? <SignatureIcon size={18} /> : undefined}
-      >
-        {processing ? t('review.confirm.processing') : t('review.confirm.commitAction')}
-      </Button>
-      <p className="text-center text-[11.5px] text-ink-400 leading-relaxed px-4">
-        {t('review.confirm.afterHint')}
-      </p>
+      {/* Quiet breathing space + the decision button. The breath line is
+          a single 1px lavender hairline — visual pause before the act. */}
+      <div className="pt-2 space-y-3 animate-reveal-up" style={{ animationDelay: '240ms' }}>
+        <div className="h-px bg-lavender-200/60 mx-1" aria-hidden />
+        <Button
+          variant="primary"
+          size="lg"
+          block
+          onClick={handleSign}
+          disabled={!allAccepted || processing}
+          loading={processing}
+          leading={!processing ? <SignatureIcon size={18} /> : undefined}
+        >
+          {processing ? t('review.confirm.processing') : t('review.confirm.commitAction')}
+        </Button>
+        {processing ? (
+          <p
+            className="text-center text-[11px] font-semibold text-lavender-700 uppercase tracking-[0.14em] animate-reveal-up"
+            aria-live="polite"
+          >
+            {t('review.confirm.recording')}
+          </p>
+        ) : (
+          <p className="text-center text-[11.5px] text-ink-400 leading-relaxed px-4">
+            {t('review.confirm.afterHint')}
+          </p>
+        )}
+      </div>
     </>
   );
 }
