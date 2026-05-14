@@ -25,7 +25,7 @@ import { useI18n, useT } from '@/lib/i18n';
 import { useStore } from '@/lib/store';
 import {
   adaptContractToMerchantRental,
-  endRentalContract,
+  closeRentalContract,
   fetchContractById,
   fetchMerchant,
   fetchProfile,
@@ -110,11 +110,14 @@ export default function MerchantRentalClose() {
     setCloseError(null);
     try {
       if (configured) {
-        // Real path: mark rental_contracts.status = 'ended'.
-        // Optional damage case is captured separately via /damage/new
-        // (the existing button below routes there) — that path already
-        // calls createDamageCase when configured.
-        await endRentalContract(rental.id);
+        // Real path goes through the close_rental_contract RPC which
+        // atomically: flips contract to 'ended', decrements
+        // rental_eligibility.used_amount, and settles the linked note
+        // when there are no live damage cases. Damage-driven closure
+        // happens automatically via the AFTER INSERT trigger on
+        // damage_cases — that path raises a case AND closes the
+        // contract in one server-side transaction.
+        await closeRentalContract(rental.id);
       }
       // Always sync the demo store too so demo-only screens still reflect closure.
       closeRental(rental.id, { notes });

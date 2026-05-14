@@ -46,20 +46,18 @@ export async function listMerchantContracts(
 }
 
 /**
- * End a rental contract (normal closure or post-damage closure).
- * RLS allows the merchant owner or admin to update.
+ * Close a rental contract through the lifecycle RPC. Idempotent. Atomically:
+ *   1. flips the contract to status='ended' with ended_at=now()
+ *   2. decrements rental_eligibility.used_amount by the contract total
+ *   3. settles the linked promissory note when no live damage cases exist
+ *
+ * Damage-driven closure happens automatically via the AFTER INSERT trigger
+ * on damage_cases (steps 1 + 2; note stays open as security for the claim).
  */
-export async function endRentalContract(
-  contractId: string,
-  endedAt: string = new Date().toISOString(),
-): Promise<RentalContractRow> {
+export async function closeRentalContract(contractId: string): Promise<void> {
   const sb = requireSupabase();
-  const { data, error } = await sb
-    .from('rental_contracts')
-    .update({ status: 'ended', ended_at: endedAt })
-    .eq('id', contractId)
-    .select('*')
-    .single();
+  const { error } = await sb.rpc('close_rental_contract', {
+    p_contract_id: contractId,
+  });
   if (error) throw error;
-  return data;
 }

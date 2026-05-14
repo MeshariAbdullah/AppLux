@@ -471,6 +471,24 @@
       "pending": "Upcoming",
       "active": "Current",
       "completed": "Completed"
+    },
+    "badges": {
+      "documented": {
+        "label": "Documented",
+        "hint": "This step is recorded on the rental's official record."
+      },
+      "signed": {
+        "label": "Signed",
+        "hint": "This step has been digitally signed."
+      },
+      "verified": {
+        "label": "Verified",
+        "hint": "This step has been reviewed and verified."
+      },
+      "attested": {
+        "label": "Nafith attested",
+        "hint": "The note has been digitally attested via Nafith."
+      }
     }
   },
   "approval": {
@@ -482,6 +500,8 @@
     "viewTracking": "Track contract",
     "goHome": "Back to home",
     "summaryTitle": "Signing summary",
+    "documentedRecordTitle": "Official rental record",
+    "documentedRecordTime": "Documented at {time}",
     "nextStepsTitle": "What happens next",
     "steps": {
       "review": {
@@ -581,6 +601,7 @@
       "lessor": "Lessor",
       "parties": "Contract parties",
       "keyTerms": "Key terms",
+      "recordTitle": "Documented contract record",
       "linkedDocs": "Linked documents",
       "openContract": "Open full contract",
       "events": {

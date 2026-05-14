@@ -195,7 +195,6 @@ export default function MerchantRentalDetails() {
     return <Navigate to="/merchant/rentals" replace />;
   }
 
-  const stages = stageStates(rental);
   const statusTone = toneForStatus(rental.status);
   const closureState: 'active' | 'closed' | 'damaged' =
     rental.closureStatus === 'closed'
@@ -230,7 +229,10 @@ export default function MerchantRentalDetails() {
       />
       <Screen padded={false} className="bg-canvas">
         <div className="px-5 pt-5 pb-10 space-y-5">
-          <RentalJourneyTimeline steps={deriveJourneyFromMerchantRental(rental)} />
+          <RentalJourneyTimeline
+            variant="lead"
+            steps={deriveJourneyFromMerchantRental(rental)}
+          />
 
           {/* Outcome banner */}
           {closureState !== 'active' && (
@@ -470,74 +472,10 @@ export default function MerchantRentalDetails() {
             />
           </Card>
 
-          {/* Status timeline */}
-          <section>
-            <SectionHeader
-              title={t('merchant.rental.timeline.title')}
-              action={
-                <span className="inline-flex items-center gap-1.5 text-[12px] text-ink-400">
-                  <TimelineIcon size={14} />
-                  {t('merchant.rental.timeline.hint')}
-                </span>
-              }
-            />
-            <Card padded>
-              <ol className="relative">
-                {STAGE_ORDER.map((key, i) => {
-                  const state = stages[key];
-                  const at = stageAt(rental, key);
-                  const isLast = i === STAGE_ORDER.length - 1;
-                  const icon = stageIcon(key);
-                  return (
-                    <li key={key} className="flex items-start gap-3 relative">
-                      <div className="flex flex-col items-center">
-                        <span
-                          className={cn(
-                            'h-8 w-8 rounded-full grid place-items-center shrink-0 ring-2',
-                            state === 'done'
-                              ? 'bg-success-500 text-white ring-success-500/25'
-                              : state === 'current'
-                                ? 'bg-gold-400 text-ink-950 ring-gold-100'
-                                : 'bg-canvas-200 text-ink-400 hairline',
-                          )}
-                        >
-                          {state === 'done' ? <CheckIcon size={14} /> : icon}
-                        </span>
-                        {!isLast && (
-                          <span
-                            className={cn(
-                              'w-px flex-1 my-1 min-h-6',
-                              state === 'done' ? 'bg-success-500/30' : 'bg-ink-100',
-                            )}
-                          />
-                        )}
-                      </div>
-                      <div className={cn('flex-1 min-w-0', !isLast && 'pb-5')}>
-                        <div
-                          className={cn(
-                            'text-[13.5px] font-semibold',
-                            state === 'pending' ? 'text-ink-500' : 'text-ink-900',
-                          )}
-                        >
-                          {t(`merchant.rental.timeline.stage.${key}`)}
-                        </div>
-                        <div className="mt-0.5 text-[11.5px] text-ink-400 num">
-                          {state === 'done' && at
-                            ? formatDate(at, {
-                                dateStyle: 'medium',
-                                timeStyle: 'short',
-                              })
-                            : state === 'current'
-                              ? t('merchant.rental.timeline.inProgress')
-                              : t('merchant.rental.timeline.pending')}
-                        </div>
-                      </div>
-                    </li>
-                  );
-                })}
-              </ol>
-            </Card>
-          </section>
+          {/* The bespoke status timeline used to live here. It's been
+              consolidated into the Rental Journey Timeline at the top of
+              the page so the merchant + customer + admin see the same
+              canonical 7-stage progression. */}
 
           {/* Activity log preview */}
           <section>

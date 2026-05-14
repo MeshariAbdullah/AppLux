@@ -1,19 +1,16 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Header, Screen } from '@/components/layout';
-import { Button, Card, EmptyState } from '@/components/ui';
+import { Button, EmptyState } from '@/components/ui';
 import {
   AlertIcon,
-  ArrowIcon,
   BadgeCheckIcon,
   CheckIcon,
   DocIcon,
   GavelIcon,
   QrIcon,
   SparkleIcon,
-  SupportIcon,
 } from '@/components/icons';
-import { cn } from '@/lib/cn';
 import { useI18n, useT } from '@/lib/i18n';
 import { useStore } from '@/lib/store';
 import {
@@ -37,7 +34,7 @@ export default function Approval() {
     () => scans.find((s) => s.token === token),
     [scans, token],
   );
-  const { dir, formatDate, formatNumber } = useI18n();
+  const { formatDate, formatNumber } = useI18n();
 
   const [livePkg, setLivePkg] = useState<ScannedPackage | null>(null);
   const [resolving, setResolving] = useState(false);
@@ -111,12 +108,6 @@ export default function Approval() {
   const approvedAt = record?.approvedAt ?? new Date().toISOString();
   const approvedTime = formatDate(approvedAt, { dateStyle: 'medium', timeStyle: 'short' });
 
-  const steps: { key: 'review' | 'invoice' | 'return'; icon: React.ReactNode }[] = [
-    { key: 'review', icon: <DocIcon size={16} /> },
-    { key: 'invoice', icon: <SparkleIcon size={16} /> },
-    { key: 'return', icon: <BadgeCheckIcon size={16} /> },
-  ];
-
   return (
     <>
       <Header title={t('approval.title')} />
@@ -149,114 +140,70 @@ export default function Approval() {
         </div>
 
         <div className="px-5 pt-2 pb-10 space-y-5">
-          {/* Canonical 7-stage rental journey — stages 1–3 completed, stage 4 active */}
+          {/* Journey is the primary structural element of this screen. */}
           <RentalJourneyTimeline
+            variant="lead"
             steps={deriveJourneyOnApproval(
               { issuedAt: pkg.issuedAt },
               approvedAt,
             )}
           />
 
-          {/* Signing summary — compact two-row strip preserves contract + note linkage */}
-          <Card padded className="space-y-3">
-            <div className="flex items-center gap-3">
-              <span className="h-10 w-10 shrink-0 rounded-2xl bg-canvas-100 text-ink-700 grid place-items-center">
-                <DocIcon size={18} />
-              </span>
-              <div className="min-w-0 flex-1">
-                <div className="text-[10.5px] font-semibold text-ink-400 uppercase tracking-[0.08em]">
-                  {t('approval.contractSigned')}
-                </div>
-                <div className="mt-0.5 text-[13.5px] font-semibold text-ink-900 num truncate">
-                  {pkg.contract.reference}
-                </div>
-              </div>
-              <span className="num text-[11px] text-ink-400">{approvedTime}</span>
+          {/* Documented record — the contract + note are now part of the
+              rental's official record. Quiet, lavender, no actions. */}
+          <section className="rounded-xl3 bg-lavender-50/60 ring-1 ring-lavender-200/60 p-5">
+            <div className="text-[10.5px] font-semibold text-lavender-700 uppercase tracking-[0.14em]">
+              {t('approval.documentedRecordTitle')}
             </div>
-            <div className="h-px bg-canvas-200/80" />
-            <div className="flex items-center gap-3">
-              <span className="h-10 w-10 shrink-0 rounded-2xl bg-gold-50 text-gold-700 grid place-items-center ring-1 ring-gold-400/20">
-                <GavelIcon size={18} />
-              </span>
-              <div className="min-w-0 flex-1">
-                <div className="text-[10.5px] font-semibold text-ink-400 uppercase tracking-[0.08em]">
-                  {t('approval.noteSigned')}
-                </div>
-                <div className="mt-0.5 text-[13.5px] font-semibold text-ink-900 num truncate">
-                  {pkg.note.reference}
-                </div>
-              </div>
-              <span className="inline-flex items-center gap-1 text-[10.5px] font-semibold text-gold-700 bg-gold-50 rounded-full px-1.5 py-0.5">
-                <BadgeCheckIcon size={11} />
-                {t('track.placeholders.nafith')}
-              </span>
-            </div>
-          </Card>
-
-          {/* Next steps */}
-          <section>
-            <div className="text-[11.5px] font-semibold text-ink-500 uppercase tracking-[0.08em] mb-2.5 px-1">
-              {t('approval.nextStepsTitle')}
-            </div>
-            <Card padded className="space-y-1">
-              {steps.map((s, i) => (
-                <div key={s.key}>
-                  <div className="flex items-start gap-3.5 py-2.5">
-                    <span className="relative h-9 w-9 shrink-0 rounded-2xl bg-canvas-100 text-ink-700 grid place-items-center">
-                      {s.icon}
-                      <span className="absolute -top-1.5 -end-1.5 h-5 w-5 rounded-full bg-ink-900 text-white num text-[10.5px] font-bold grid place-items-center ring-2 ring-white">
-                        {i + 1}
-                      </span>
-                    </span>
-                    <div className="min-w-0 flex-1">
-                      <div className="text-[13.5px] font-semibold text-ink-900 leading-tight">
-                        {t(`approval.steps.${s.key}.title`)}
-                      </div>
-                      <div className="mt-1 text-[12px] text-ink-500 leading-relaxed">
-                        {t(`approval.steps.${s.key}.hint`)}
-                      </div>
-                    </div>
+            <div className="mt-3 space-y-3">
+              <div className="flex items-center gap-3">
+                <span className="h-9 w-9 shrink-0 rounded-2xl bg-white text-lavender-700 grid place-items-center ring-1 ring-lavender-200">
+                  <DocIcon size={16} />
+                </span>
+                <div className="min-w-0 flex-1">
+                  <div className="text-[12px] text-ink-500">{t('approval.contractSigned')}</div>
+                  <div className="text-[13px] font-semibold text-ink-900 num truncate">
+                    {pkg.contract.reference}
                   </div>
-                  {i < steps.length - 1 && <div className="h-px bg-canvas-200/80" />}
                 </div>
-              ))}
-            </Card>
+                <span className="inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-[0.08em] text-lavender-700 bg-white ring-1 ring-inset ring-lavender-200 rounded-full px-1.5 py-0.5">
+                  <BadgeCheckIcon size={10} />
+                  {t('journey.badges.signed.label')}
+                </span>
+              </div>
+              <div className="h-px bg-lavender-200/60" />
+              <div className="flex items-center gap-3">
+                <span className="h-9 w-9 shrink-0 rounded-2xl bg-white text-lavender-700 grid place-items-center ring-1 ring-lavender-200">
+                  <GavelIcon size={16} />
+                </span>
+                <div className="min-w-0 flex-1">
+                  <div className="text-[12px] text-ink-500">{t('approval.noteSigned')}</div>
+                  <div className="text-[13px] font-semibold text-ink-900 num truncate">
+                    {pkg.note.reference}
+                  </div>
+                </div>
+                <span className="inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-[0.08em] text-lavender-700 bg-white ring-1 ring-inset ring-lavender-200 rounded-full px-1.5 py-0.5">
+                  <BadgeCheckIcon size={10} />
+                  {t('journey.badges.attested.label')}
+                </span>
+              </div>
+            </div>
+            <div className="mt-4 text-[11px] text-ink-500 num">
+              {t('approval.documentedRecordTime', { time: approvedTime })}
+            </div>
           </section>
 
-          {/* Nafith disclaimer band — preserved per business model */}
-          <div className="rounded-xl3 bg-ink-900 text-white p-4 flex items-start gap-3.5 shadow-card">
-            <span className="h-10 w-10 shrink-0 rounded-2xl bg-white/8 ring-1 ring-white/12 grid place-items-center text-gold-300">
-              <SparkleIcon size={16} />
-            </span>
-            <div className="min-w-0 flex-1 text-[12.5px] leading-relaxed text-white/75">
-              {t('review.note.disclaimer')}
-            </div>
-            <span className="num text-[11.5px] text-white/45 self-start">
+          {/* Nafith disclaimer band — preserved per business model, slimmer. */}
+          <div className="rounded-xl2 bg-canvas-100 ring-1 ring-canvas-200 p-3.5 flex items-start gap-3 text-[11.5px] leading-relaxed text-ink-600">
+            <SparkleIcon size={14} className="mt-0.5 shrink-0 text-lavender-600" />
+            <div className="min-w-0 flex-1">{t('review.note.disclaimer')}</div>
+            <span className="num text-[10.5px] text-ink-400 self-start">
               #{formatNumber(Date.parse(approvedAt) % 1_000_000)}
             </span>
           </div>
 
-          {/* Contact card */}
-          <Card padded interactive className="flex items-center gap-3.5">
-            <span className="h-10 w-10 shrink-0 rounded-2xl bg-canvas-100 text-ink-700 grid place-items-center">
-              <SupportIcon size={18} />
-            </span>
-            <div className="min-w-0 flex-1">
-              <div className="text-[13.5px] font-semibold text-ink-900">
-                {t('approval.contact.title')}
-              </div>
-              <div className="mt-0.5 text-[12px] text-ink-500 leading-relaxed">
-                {t('approval.contact.hint')}
-              </div>
-            </div>
-            <span className="inline-flex items-center gap-1 text-[12px] font-semibold text-gold-700 shrink-0">
-              {t('approval.contact.cta')}
-              <ArrowIcon size={12} className={cn(dir === 'rtl' ? 'rotate-180' : '')} />
-            </span>
-          </Card>
-
-          {/* CTA stack */}
-          <div className="space-y-2.5 pt-2">
+          {/* Single primary action — anything else is a quiet inline link. */}
+          <div className="pt-2 space-y-3">
             <Button
               variant="primary"
               size="lg"
@@ -265,13 +212,15 @@ export default function Approval() {
             >
               {t('approval.viewTracking')}
             </Button>
-            <Button
-              variant="ghost"
-              block
-              onClick={() => navigate('/home', { replace: true })}
-            >
-              {t('approval.goHome')}
-            </Button>
+            <div className="text-center text-[12.5px] text-ink-500">
+              <button
+                type="button"
+                onClick={() => navigate('/home', { replace: true })}
+                className="text-ink-700 hover:text-ink-900 underline underline-offset-4 decoration-canvas-300 hover:decoration-ink-700"
+              >
+                {t('approval.goHome')}
+              </button>
+            </div>
           </div>
         </div>
       </Screen>

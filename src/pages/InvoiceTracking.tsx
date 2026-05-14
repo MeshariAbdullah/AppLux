@@ -183,7 +183,10 @@ export default function InvoiceTracking() {
             </div>
           </div>
 
-          <RentalJourneyTimeline steps={buildInvoiceJourney(invoice, contract)} />
+          <RentalJourneyTimeline
+            variant="lead"
+            steps={buildInvoiceJourney(invoice, contract)}
+          />
 
           {invoice.status === 'overdue' && (
             <div className="rounded-xl2 bg-danger-50 ring-1 ring-danger-500/20 px-4 py-3 flex items-start gap-2.5 text-[12.5px] text-danger-600">

@@ -361,6 +361,10 @@ export type Database = {
         Args: { p_application_id: string };
         Returns: string;
       };
+      close_rental_contract: {
+        Args: { p_contract_id: string };
+        Returns: void;
+      };
       next_invoice_number: { Args: Record<string, never>; Returns: string };
       next_contract_number: { Args: Record<string, never>; Returns: string };
       next_note_number: { Args: Record<string, never>; Returns: string };

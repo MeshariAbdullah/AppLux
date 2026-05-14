@@ -95,7 +95,7 @@ export {
 export type { CreateInvoiceInput, CreatedInvoice } from './queries/invoices';
 
 export {
-  endRentalContract,
+  closeRentalContract,
   fetchContractById,
   listCustomerContracts,
   listMerchantContracts,

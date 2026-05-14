@@ -1,15 +1,22 @@
 import type { ReactNode } from 'react';
-import { CheckIcon } from '@/components/icons';
+import { BadgeCheckIcon, CheckIcon, ShieldIcon } from '@/components/icons';
 import { useI18n, useT } from '@/lib/i18n';
 import { cn } from '@/lib/cn';
-import type { JourneyStep, RentalStage, StageStatus } from '@/lib/rentalJourney';
+import type {
+  JourneyStep,
+  RentalStage,
+  StageBadge,
+  StageStatus,
+} from '@/lib/rentalJourney';
 
 type RentalJourneyTimelineProps = {
   steps: JourneyStep[];
-  /** Show an eyebrow header above the list ("Rental Journey · Step N of 7"). */
+  /** Show an eyebrow header above the list. Default true. */
   showHeader?: boolean;
-  /** Show timestamps on completed steps when available. Default: true. */
+  /** Show completed timestamps. Default true. */
   showTimestamps?: boolean;
+  /** Visual variant. 'lead' = full presence (page-leading); 'card' = condensed. */
+  variant?: 'lead' | 'card';
   className?: string;
 };
 
@@ -20,6 +27,10 @@ type RentalJourneyTimelineProps = {
  * dots with a check, the current stage marked with a soft halo, pending
  * stages as quiet outlines on a thin connector.
  *
+ * Documentation seals (badges) render on completed stages whose underlying
+ * state is provable (signed_at, ended_at, etc.) — so the timeline reads as
+ * a system of record, not a progress bar.
+ *
  * Always renders 7 rows in the canonical order so the rhythm stays the
  * same regardless of how far along the rental is.
  */
@@ -27,6 +38,7 @@ export function RentalJourneyTimeline({
   steps,
   showHeader = true,
   showTimestamps = true,
+  variant = 'card',
   className,
 }: RentalJourneyTimelineProps) {
   const t = useT();
@@ -37,23 +49,30 @@ export function RentalJourneyTimeline({
   const headlineIndex = activeIndex >= 0 ? activeIndex : completedCount - 1;
   const headlineStage = headlineIndex >= 0 ? steps[headlineIndex]?.stage : null;
   const stepNumber = headlineIndex >= 0 ? headlineIndex + 1 : 1;
+  const isLead = variant === 'lead';
 
   return (
     <section
       className={cn(
-        'rounded-xl3 bg-white hairline shadow-soft p-5',
+        'rounded-xl3 bg-white hairline shadow-soft',
+        isLead ? 'p-6' : 'p-5',
         className,
       )}
       aria-label={t('journey.title')}
     >
       {showHeader && (
-        <header className="mb-4 flex items-baseline justify-between gap-3">
-          <div>
-            <div className="text-[10.5px] font-semibold text-lavender-600 uppercase tracking-[0.12em]">
+        <header className={cn('flex items-baseline justify-between gap-3', isLead ? 'mb-5' : 'mb-4')}>
+          <div className="min-w-0">
+            <div className="text-[10.5px] font-semibold text-lavender-600 uppercase tracking-[0.14em]">
               {t('journey.title')}
             </div>
             {headlineStage && (
-              <div className="mt-1 editorial-title text-[15px] text-ink-900 leading-tight">
+              <div
+                className={cn(
+                  'mt-1.5 editorial-title text-ink-900 leading-tight',
+                  isLead ? 'text-[18px]' : 'text-[15px]',
+                )}
+              >
                 {t(`journey.stages.${headlineStage}`)}
               </div>
             )}
@@ -67,8 +86,7 @@ export function RentalJourneyTimeline({
       <ol className="relative">
         {steps.map((step, i) => {
           const isLast = i === steps.length - 1;
-          const nextIsReached =
-            !isLast && (steps[i + 1].status !== 'pending');
+          const nextIsReached = !isLast && steps[i + 1].status !== 'pending';
           return (
             <li key={step.stage} className="flex items-start gap-3.5">
               <div className="flex flex-col items-center">
@@ -77,7 +95,8 @@ export function RentalJourneyTimeline({
                   <span
                     aria-hidden
                     className={cn(
-                      'w-px flex-1 my-1 min-h-7 transition-colors',
+                      'w-px flex-1 my-1 transition-colors',
+                      isLead ? 'min-h-9' : 'min-h-7',
                       step.status === 'completed' && nextIsReached
                         ? 'bg-lavender-300'
                         : step.status === 'completed'
@@ -87,19 +106,24 @@ export function RentalJourneyTimeline({
                   />
                 )}
               </div>
-              <div className={cn('flex-1 min-w-0', !isLast && 'pb-4')}>
-                <div className="flex items-baseline justify-between gap-3">
+              <div className={cn('flex-1 min-w-0', !isLast && (isLead ? 'pb-5' : 'pb-4'))}>
+                <div className="flex items-start justify-between gap-3">
                   <StageLabel stage={step.stage} status={step.status} />
-                  {showTimestamps && step.at && step.status === 'completed' && (
-                    <span className="shrink-0 text-[11px] text-ink-400 num">
-                      {formatDate(step.at, { dateStyle: 'medium' })}
-                    </span>
-                  )}
-                  {step.status === 'active' && (
-                    <span className="shrink-0 inline-flex items-center gap-1 text-[10.5px] font-semibold text-lavender-700 bg-lavender-50 rounded-full px-2 py-0.5">
-                      {t('journey.status.active')}
-                    </span>
-                  )}
+                  <div className="shrink-0 flex flex-col items-end gap-1">
+                    {step.status === 'active' && (
+                      <span className="inline-flex items-center gap-1 text-[10.5px] font-semibold text-lavender-700 bg-lavender-50 rounded-full px-2 py-0.5">
+                        {t('journey.status.active')}
+                      </span>
+                    )}
+                    {showTimestamps && step.at && step.status === 'completed' && (
+                      <span className="text-[11px] text-ink-400 num">
+                        {formatDate(step.at, { dateStyle: 'medium' })}
+                      </span>
+                    )}
+                    {step.badge && step.status === 'completed' && (
+                      <DocumentedStamp badge={step.badge} />
+                    )}
+                  </div>
                 </div>
               </div>
             </li>
@@ -168,5 +192,29 @@ function StageLabel({
         {t(`journey.descriptions.${stage}`)}
       </div>
     </div>
+  );
+}
+
+/**
+ * The "Documented" layer — a quiet seal next to a completed stage telling
+ * the user that the step is officially recorded. Lavender border, subtle
+ * shield icon, no shadow. Reads as a stamp on paper, not a notification.
+ */
+function DocumentedStamp({ badge }: { badge: StageBadge }) {
+  const t = useT();
+  const icon =
+    badge === 'signed' || badge === 'attested' ? (
+      <BadgeCheckIcon size={10} />
+    ) : (
+      <ShieldIcon size={10} />
+    );
+  return (
+    <span
+      className="inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-[0.08em] text-lavender-700 bg-lavender-50 ring-1 ring-inset ring-lavender-200 rounded-full px-1.5 py-0.5"
+      title={t(`journey.badges.${badge}.hint`)}
+    >
+      {icon}
+      {t(`journey.badges.${badge}.label`)}
+    </span>
   );
 }

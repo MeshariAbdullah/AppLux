@@ -151,7 +151,7 @@ export default function Review() {
       <ReviewStepper active={step} />
       <Screen padded={false} className="bg-canvas">
         <div className="px-4 pt-4 pb-28 space-y-4">
-          <RentalJourneyTimeline steps={journeySteps} />
+          <RentalJourneyTimeline variant="lead" steps={journeySteps} />
           {step === 'invoice' && <InvoiceStep pkg={pkg} />}
           {step === 'contract' && <ContractStep pkg={pkg} />}
           {step === 'note' && <NoteStep pkg={pkg} />}

@@ -4,7 +4,6 @@ import { Header, Screen } from '@/components/layout';
 import {
   Button,
   Card,
-  CardDivider,
   EmptyState,
   SectionHeader,
 } from '@/components/ui';
@@ -38,11 +37,7 @@ import type { Contract, Invoice, PromissoryNote } from '@/lib/data';
 import { ContractStatusChip } from '@/components/rental/StatusChips';
 import { RentalJourneyTimeline } from '@/components/rental/RentalJourneyTimeline';
 import { deriveJourneyFromUIContract } from '@/lib/rentalJourney';
-import {
-  DocTimeline,
-  type TimelineEvent,
-} from '@/components/track/DocTimeline';
-import { PlatformBadge } from '@/components/track/PlatformBadge';
+import type { TimelineEvent } from '@/components/track/DocTimeline';
 
 function daysBetween(start: string, end: string) {
   const a = new Date(start).getTime();
@@ -128,7 +123,6 @@ export default function ContractTracking() {
   }
 
   const duration = daysBetween(contract.startDate, contract.endDate);
-  const events = buildContractEvents(contract, t);
 
   return (
     <>
@@ -178,7 +172,9 @@ export default function ContractTracking() {
             </div>
           </div>
 
+          {/* Journey is the primary structural element — leads the page. */}
           <RentalJourneyTimeline
+            variant="lead"
             steps={deriveJourneyFromUIContract(
               contract,
               linkedInvoices[0] ? { issuedAt: linkedInvoices[0].issuedAt } : null,
@@ -186,72 +182,44 @@ export default function ContractTracking() {
             )}
           />
 
-          {/* Parties */}
-          <section>
-            <SectionHeader title={t('track.contract.parties')} />
-            <Card padded className="space-y-3">
-              <Field label={t('track.contract.lessor')} value={contract.counterparty} />
-              <CardDivider />
-              <Field label={t('review.contract.lessee')} value={session?.fullName ?? '—'} />
-            </Card>
-          </section>
-
-          {/* Key terms */}
-          <section>
-            <SectionHeader title={t('track.contract.keyTerms')} />
-            <Card padded className="space-y-3">
-              <div className="grid grid-cols-2 gap-3">
-                <Field
-                  label={t('track.contract.startOn')}
-                  value={<span className="num">{formatDate(contract.startDate)}</span>}
-                />
-                <Field
-                  label={t('track.contract.endOn')}
-                  value={<span className="num">{formatDate(contract.endDate)}</span>}
-                />
-              </div>
-              <CardDivider />
+          {/* Single calm "Record" card — parties + key terms merged. */}
+          <section className="rounded-xl3 bg-white hairline p-5 shadow-soft">
+            <div className="text-[10.5px] font-semibold text-lavender-700 uppercase tracking-[0.14em]">
+              {t('track.contract.recordTitle')}
+            </div>
+            <div className="mt-4 grid grid-cols-2 gap-x-4 gap-y-3.5">
+              <Field
+                label={t('track.contract.lessor')}
+                value={contract.counterparty}
+              />
+              <Field
+                label={t('review.contract.lessee')}
+                value={session?.fullName ?? '—'}
+              />
+              <Field
+                label={t('track.contract.startOn')}
+                value={<span className="num">{formatDate(contract.startDate)}</span>}
+              />
+              <Field
+                label={t('track.contract.endOn')}
+                value={<span className="num">{formatDate(contract.endDate)}</span>}
+              />
+              <div className="col-span-2 h-px bg-canvas-200/80" />
               <Field
                 label={t('track.contract.rentalFee')}
-                value={<span className="num">{formatCurrency(contract.monthlyAmount)}</span>}
+                value={
+                  <span className="num">{formatCurrency(contract.monthlyAmount)}</span>
+                }
               />
-            </Card>
-          </section>
-
-          {/* Platform placeholders */}
-          <div className="grid grid-cols-1 gap-2.5">
-            <PlatformBadge
-              platform="nafath"
-              state={contract.status === 'pending' ? 'pending' : 'verified'}
-              title={t('track.placeholders.nafath')}
-              description={t('track.placeholders.nafathDesc')}
-              stateLabel={
-                contract.status === 'pending'
-                  ? t('track.placeholders.pending')
-                  : t('track.placeholders.verified')
-              }
-              meta={formatDate(contract.startDate)}
-            />
-            <PlatformBadge
-              platform="nafith"
-              state={contract.status === 'pending' ? 'pending' : 'verified'}
-              title={t('track.placeholders.nafith')}
-              description={t('track.placeholders.nafithDesc')}
-              stateLabel={
-                contract.status === 'pending'
-                  ? t('track.placeholders.pending')
-                  : t('track.placeholders.verified')
-              }
-              meta={formatDate(contract.startDate)}
-            />
-          </div>
-
-          {/* Timeline */}
-          <section>
-            <SectionHeader title={t('track.activity')} />
-            <Card padded>
-              <DocTimeline events={events} />
-            </Card>
+              <Field
+                label={t('track.contract.duration')}
+                value={
+                  <span className="num">
+                    {t('track.contract.days', { count: duration })}
+                  </span>
+                }
+              />
+            </div>
           </section>
 
           {/* Linked docs */}
@@ -318,14 +286,19 @@ export default function ContractTracking() {
             </div>
           </section>
 
-          {/* Actions */}
-          <div className="space-y-2.5">
+          {/* Single primary action — anything else is a quiet inline link. */}
+          <div className="pt-2 space-y-3">
             <Button variant="primary" size="lg" block leading={<DocIcon size={18} />}>
               {t('track.contract.openContract')}
             </Button>
-            <Button variant="secondary" block leading={<SupportIcon size={16} />}>
-              {t('track.contactSupport')}
-            </Button>
+            <div className="text-center text-[12.5px] text-ink-500">
+              <button
+                type="button"
+                className="text-ink-700 hover:text-ink-900 underline underline-offset-4 decoration-canvas-300 hover:decoration-ink-700"
+              >
+                {t('track.contactSupport')}
+              </button>
+            </div>
           </div>
         </div>
       </Screen>

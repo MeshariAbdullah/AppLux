@@ -39,11 +39,20 @@ export type RentalStage =
 
 export type StageStatus = 'pending' | 'active' | 'completed';
 
+/**
+ * Documentation seal attached to a stage when the underlying state
+ * justifies it. Only completed stages can carry a badge — the badge is
+ * the visible promise that the step is recorded and protected.
+ */
+export type StageBadge = 'documented' | 'signed' | 'verified' | 'attested';
+
 export type JourneyStep = {
   stage: RentalStage;
   status: StageStatus;
   /** ISO timestamp if the stage has a known moment; null otherwise. */
   at: string | null;
+  /** Documentation seal — only meaningful when status === 'completed'. */
+  badge?: StageBadge;
 };
 
 export const RENTAL_STAGES: RentalStage[] = [
@@ -87,7 +96,7 @@ export function deriveJourneyFromInvoice(
   return RENTAL_STAGES.map((stage): JourneyStep => {
     switch (stage) {
       case 'request':
-        return { stage, status: 'completed', at: requestAt };
+        return { stage, status: 'completed', at: requestAt, badge: 'documented' };
       case 'review':
         return {
           stage,
@@ -133,22 +142,23 @@ export function deriveJourneyFromContract(
   return RENTAL_STAGES.map((stage): JourneyStep => {
     switch (stage) {
       case 'request':
-        return { stage, status: 'completed', at: requestAt };
+        return { stage, status: 'completed', at: requestAt, badge: 'documented' };
       case 'review':
         // If a contract exists, review was already done.
-        return { stage, status: 'completed', at: signedAt };
+        return { stage, status: 'completed', at: signedAt, badge: 'verified' };
       case 'agreement':
-        // Documented at signing (note settled later flips no state here).
         return {
           stage,
           status: signedAt ? 'completed' : 'active',
           at: signedAt ?? note?.signed_at ?? null,
+          badge: signedAt ? 'signed' : undefined,
         };
       case 'started':
         return {
           stage,
           status: started ? 'completed' : signedAt ? 'active' : 'pending',
           at: started ? contract.start_date : null,
+          badge: started ? 'documented' : undefined,
         };
       case 'tracking':
         return {
@@ -161,12 +171,18 @@ export function deriveJourneyFromContract(
           stage,
           status: closed ? 'completed' : inReturnWindow ? 'active' : 'pending',
           at: closed ? contract.ended_at ?? contract.end_date : null,
+          badge: closed ? 'documented' : undefined,
         };
       case 'closed':
         return {
           stage,
           status: closed ? 'completed' : 'pending',
           at: closed ? contract.ended_at ?? null : null,
+          badge: closed
+            ? note?.status === 'settled'
+              ? 'attested'
+              : 'documented'
+            : undefined,
         };
     }
   });
@@ -201,25 +217,38 @@ export function deriveJourneyFromUIContract(
   return RENTAL_STAGES.map((stage): JourneyStep => {
     switch (stage) {
       case 'request':
-        return { stage, status: 'completed', at: requestAt };
+        return { stage, status: 'completed', at: requestAt, badge: 'documented' };
       case 'review':
-        return { stage, status: documented ? 'completed' : 'active', at: null };
+        return {
+          stage,
+          status: documented ? 'completed' : 'active',
+          at: null,
+          badge: documented ? 'verified' : undefined,
+        };
       case 'agreement':
         return {
           stage,
           status: documented ? 'completed' : 'pending',
           at: documented ? contract.startDate : null,
+          badge: documented ? 'signed' : undefined,
         };
       case 'started':
         return {
           stage,
           status: started ? 'completed' : documented ? 'active' : 'pending',
           at: started ? contract.startDate : null,
+          badge: started ? 'documented' : undefined,
         };
       case 'tracking':
         return {
           stage,
-          status: closed ? 'completed' : inReturnWindow ? 'completed' : started ? 'active' : 'pending',
+          status: closed
+            ? 'completed'
+            : inReturnWindow
+              ? 'completed'
+              : started
+                ? 'active'
+                : 'pending',
           at: null,
         };
       case 'return':
@@ -227,9 +256,19 @@ export function deriveJourneyFromUIContract(
           stage,
           status: closed ? 'completed' : inReturnWindow ? 'active' : 'pending',
           at: closed ? contract.endDate : null,
+          badge: closed ? 'documented' : undefined,
         };
       case 'closed':
-        return { stage, status: closed ? 'completed' : 'pending', at: closed ? contract.endDate : null };
+        return {
+          stage,
+          status: closed ? 'completed' : 'pending',
+          at: closed ? contract.endDate : null,
+          badge: closed
+            ? note?.status === 'signed'
+              ? 'attested'
+              : 'documented'
+            : undefined,
+        };
     }
   });
 }
@@ -248,20 +287,27 @@ export function deriveJourneyFromMerchantRental(rental: MerchantRental): Journey
   return RENTAL_STAGES.map((stage): JourneyStep => {
     switch (stage) {
       case 'request':
-        return { stage, status: 'completed', at: rental.startDate };
+        return { stage, status: 'completed', at: rental.startDate, badge: 'documented' };
       case 'review':
-        return { stage, status: documented ? 'completed' : 'active', at: null };
+        return {
+          stage,
+          status: documented ? 'completed' : 'active',
+          at: null,
+          badge: documented ? 'verified' : undefined,
+        };
       case 'agreement':
         return {
           stage,
           status: documented ? 'completed' : 'pending',
           at: documented ? rental.startDate : null,
+          badge: documented ? 'signed' : undefined,
         };
       case 'started':
         return {
           stage,
           status: documented ? 'completed' : 'pending',
           at: documented ? rental.startDate : null,
+          badge: documented ? 'documented' : undefined,
         };
       case 'tracking':
         return {
@@ -274,12 +320,14 @@ export function deriveJourneyFromMerchantRental(rental: MerchantRental): Journey
           stage,
           status: closed ? 'completed' : inReturnWindow ? 'active' : 'pending',
           at: closed ? rental.closedAt ?? rental.endDate : null,
+          badge: closed ? 'documented' : undefined,
         };
       case 'closed':
         return {
           stage,
           status: closed ? 'completed' : 'pending',
           at: closed ? rental.closedAt ?? null : null,
+          badge: closed ? 'attested' : undefined,
         };
     }
   });
@@ -297,11 +345,11 @@ export function deriveJourneyOnApproval(
   return RENTAL_STAGES.map((stage): JourneyStep => {
     switch (stage) {
       case 'request':
-        return { stage, status: 'completed', at: pkg.issuedAt };
+        return { stage, status: 'completed', at: pkg.issuedAt, badge: 'documented' };
       case 'review':
-        return { stage, status: 'completed', at: approvedAt };
+        return { stage, status: 'completed', at: approvedAt, badge: 'verified' };
       case 'agreement':
-        return { stage, status: 'completed', at: approvedAt };
+        return { stage, status: 'completed', at: approvedAt, badge: 'signed' };
       case 'started':
         return { stage, status: 'active', at: approvedAt };
       case 'tracking':

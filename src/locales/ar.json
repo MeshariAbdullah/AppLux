@@ -471,6 +471,24 @@
       "pending": "قادمة",
       "active": "الحالية",
       "completed": "مكتملة"
+    },
+    "badges": {
+      "documented": {
+        "label": "موثَّق",
+        "hint": "تم تسجيل هذه الخطوة رسمياً ضمن السجل."
+      },
+      "signed": {
+        "label": "موقَّع",
+        "hint": "تم التوقيع الرقمي على هذه الخطوة."
+      },
+      "verified": {
+        "label": "مُحقَّق",
+        "hint": "تمت مراجعة هذه الخطوة والتحقق منها."
+      },
+      "attested": {
+        "label": "موثَّق عبر نافذ",
+        "hint": "تم توثيق السند رقمياً عبر نافذ."
+      }
     }
   },
   "approval": {
@@ -482,6 +500,8 @@
     "viewTracking": "متابعة العقد",
     "goHome": "العودة للرئيسية",
     "summaryTitle": "ملخّص التوقيع",
+    "documentedRecordTitle": "السجل الرسمي للإيجار",
+    "documentedRecordTime": "تم التوثيق في {time}",
     "nextStepsTitle": "الخطوات التالية",
     "steps": {
       "review": {
@@ -581,6 +601,7 @@
       "lessor": "المؤجِّر",
       "parties": "أطراف العقد",
       "keyTerms": "الشروط الأساسية",
+      "recordTitle": "السجل الموثَّق للعقد",
       "linkedDocs": "المستندات المرتبطة",
       "openContract": "عرض العقد الكامل",
       "events": {

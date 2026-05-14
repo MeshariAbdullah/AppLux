@@ -170,6 +170,7 @@ export default function NoteTracking() {
 
           {linkedContract && (
             <RentalJourneyTimeline
+              variant="lead"
               steps={deriveJourneyFromUIContract(linkedContract, null, {
                 status: note.status,
               })}
