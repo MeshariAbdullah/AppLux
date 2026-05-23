@@ -28,11 +28,14 @@ import {
   type RentalEligibilityRow,
   type RentalInvoiceRow,
 } from '@/lib/supabase';
-import { lookupRenterByMobile, sendOtp, verifyOtp, OtpError } from '@/lib/otp';
+import { lookupRenterByMobile } from '@/lib/otp';
+import {
+  confirmRenterPresence,
+  RenterPresenceError,
+} from '@/lib/renterVerification';
 import {
   classifyMobile,
   maskMobile,
-  normalizeMobile,
   type MobileIssue,
 } from '@/lib/mobile';
 import { RentalJourneyTimeline } from '@/components/rental/RentalJourneyTimeline';
@@ -40,9 +43,15 @@ import { deriveJourneyFromInvoice } from '@/lib/rentalJourney';
 import { cn } from '@/lib/cn';
 
 // =====================================================================
-// Dev-only demo fallback. Production builds (`vite build`) set
-// import.meta.env.DEV to false, which lets Vite tree-shake every branch
-// gated on this flag. In configured live mode this is never reached.
+// Dev-only demo fallback. Two independent gates make sure demo code can
+// never run against a live backend:
+//
+//   1. import.meta.env.DEV is `false` in `vite build` output, so every
+//      branch under DEV_DEMO_FALLBACK is tree-shaken from production.
+//   2. Inside handlers we ALSO require !supabaseAuth.configured — when
+//      a Supabase URL/anon key are set, the demo branch is unreachable
+//      regardless of build mode. This protects `npm run dev` against a
+//      live project from accidentally producing demo data.
 // =====================================================================
 const DEV_DEMO_FALLBACK = import.meta.env.DEV;
 
@@ -77,15 +86,16 @@ function verifyMobileIssueMessage(
 type SessionStep = 'start' | 'verify' | 'operation' | 'eligibility' | 'issued';
 
 /**
- * Granular verification status the placeholder OTP machine flows through.
- * Macro-grouped for display by `macroVerificationState` below.
+ * Granular verification status. The interim renter-presence flow uses
+ * a 4-state machine (no separate "code sent" step — the challenge input
+ * is rendered immediately once existence is confirmed). When Twilio OTP
+ * edge functions are deployed, an `otp_sent` state can be reintroduced.
  */
 type VerificationStatus =
   | 'unverified'   // mobile field empty / has not been searched yet
   | 'looking_up'   // querying profiles by mobile
   | 'not_found'    // no profile matches; renter must complete account first
-  | 'found'        // profile matched; waiting for OTP confirmation
-  | 'otp_sent'     // placeholder code "sent" — UI shows the confirm step
+  | 'found'        // existence confirmed — UI prompts for the ID last-4
   | 'verified';    // identity confirmed for this session
 
 /** Three macro states the merchant + renter actually need to see. */
@@ -97,7 +107,9 @@ type MacroVerification =
 
 type VerifyState = {
   mobile: string;
-  otp: string;
+  /** Renter challenge — currently the last 4 of their National ID;
+   *  becomes the SMS OTP when the Twilio edge functions are deployed. */
+  challenge: string;
   status: VerificationStatus;
   renter: ProfileRow | null;
   error: string | null;
@@ -140,7 +152,7 @@ const INITIAL_SESSION: SessionState = {
   step: 'start',
   verify: {
     mobile: '',
-    otp: '',
+    challenge: '',
     status: 'unverified',
     renter: null,
     error: null,
@@ -164,7 +176,7 @@ const STEPS: SessionStep[] = ['start', 'verify', 'operation', 'eligibility', 'is
 function macroVerificationState(s: VerificationStatus): MacroVerification {
   if (s === 'verified') return 'verified';
   if (s === 'not_found') return 'not_found';
-  if (s === 'found' || s === 'otp_sent' || s === 'looking_up') return 'pending';
+  if (s === 'found' || s === 'looking_up') return 'pending';
   return 'idle';
 }
 
@@ -332,73 +344,37 @@ export default function MerchantRentalSession() {
     }
   };
 
-  const handleSendCode = async () => {
-    // We only need the existence check to have succeeded — the renter
-    // object stays null until OTP verification. Send to the typed
-    // mobile (already canonicalized by the lookup step).
-    if (session.verify.status !== 'found' && session.verify.status !== 'otp_sent') return;
-    updateVerify({ error: null });
-    // Defense-in-depth: even though the lookup step already canonicalized
-    // the number, re-classify here so a tampered field cannot trigger an
-    // SMS send for a malformed number.
+  // Interim renter-presence confirmation. Replaces the OTP send/verify
+  // pair until Twilio Verify edge functions are deployed. Returns the
+  // renter's safe profile fields only when the canonical mobile AND the
+  // last 4 of their National ID both match server-side.
+  const handleConfirmPresence = async () => {
+    if (session.verify.status !== 'found') return;
+    // Re-classify the mobile (defense-in-depth — lookup normally catches
+    // this first, but the field could be edited after lookup succeeded).
     const classification = classifyMobile(session.verify.mobile);
     if (classification.kind !== 'valid') {
       updateVerify({ error: verifyMobileIssueMessage(classification.issue, t) });
       return;
     }
-
-    if (!supabaseAuth.configured) {
-      if (DEV_DEMO_FALLBACK) {
-        await new Promise((r) => window.setTimeout(r, 300));
-        updateVerify({ status: 'otp_sent' });
-        return;
-      }
-      updateVerify({ error: t('merchant.session.verify.errors.backendRequired') });
-      return;
-    }
-
-    try {
-      await sendOtp(session.verify.mobile);
-      updateVerify({ status: 'otp_sent' });
-    } catch (err) {
-      const message =
-        err instanceof OtpError && err.code === 'twilio_not_configured'
-          ? t('merchant.session.verify.errors.providerOffline')
-          : err instanceof Error
-            ? err.message
-            : t('merchant.session.verify.errors.sendFailed');
-      updateVerify({ error: message });
-    }
-  };
-
-  const handleConfirmCode = async () => {
-    // The OTP verify endpoint is itself the renter-identity gate. Still,
-    // we re-classify the mobile here so a malformed value never reaches
-    // the SMS provider (defense-in-depth — the lookup step normally
-    // catches this first).
-    const classification = classifyMobile(session.verify.mobile);
-    if (classification.kind !== 'valid') {
-      updateVerify({ error: verifyMobileIssueMessage(classification.issue, t) });
-      return;
-    }
-    const trimmed = session.verify.otp.replace(/\D/g, '');
-    if (trimmed.length < 4) {
-      updateVerify({ error: t('merchant.session.verify.errors.codeShort') });
+    const trimmed = session.verify.challenge.replace(/\D/g, '');
+    if (trimmed.length !== 4) {
+      updateVerify({ error: t('merchant.session.verify.errors.idLast4Length') });
       return;
     }
 
     if (!supabaseAuth.configured) {
       if (DEV_DEMO_FALLBACK) {
         // Synthesize a renter only at verification time, mirroring the
-        // production flow where renter details are exclusively revealed
-        // after a successful OTP check.
+        // live flow where renter details are exclusively revealed after
+        // a successful match.
         updateVerify({
           status: 'verified',
           error: null,
           renter: {
             id: 'dev-renter',
             full_name: '[dev] Renter',
-            mobile: normalizeMobile(session.verify.mobile)?.canonical ?? null,
+            mobile: classification.canonical,
             email: null,
             national_id: null,
             city: 'riyadh',
@@ -417,44 +393,44 @@ export default function MerchantRentalSession() {
     }
 
     try {
-      const result = await verifyOtp(session.verify.mobile, trimmed);
+      const result = await confirmRenterPresence(
+        session.verify.mobile,
+        trimmed,
+      );
       if (!result.verified) {
-        updateVerify({ error: t('merchant.session.verify.errors.codeFailed') });
+        updateVerify({ error: t('merchant.session.verify.errors.idLast4Failed') });
         return;
       }
-      // The verify endpoint is authoritative for the renter identity —
-      // overwrite the lookup-RPC snapshot with what Twilio + the
-      // service-role-keyed fetch returned (mobile is guaranteed canonical
-      // server-side; this is the renter we just confirmed by OTP).
-      if (result.renter) {
-        updateVerify({
-          status: 'verified',
-          error: null,
-          renter: {
-            id: result.renter.id,
-            full_name: result.renter.full_name,
-            mobile: result.renter.mobile,
-            email: null,
-            national_id: null,
-            city: result.renter.city,
-            role: 'customer',
-            account_status: 'active',
-            nafath_verified_at: result.renter.has_nafath ? new Date(0).toISOString() : null,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-          } as ProfileRow,
-        });
-      } else {
-        updateVerify({ status: 'verified', error: null });
-      }
+      // The RPC is authoritative for the renter identity — populate the
+      // verify state from its payload, not the lookup snapshot.
+      updateVerify({
+        status: 'verified',
+        error: null,
+        renter: {
+          id: result.renter.id,
+          full_name: result.renter.full_name,
+          mobile: result.renter.mobile,
+          email: null,
+          national_id: null,
+          city: result.renter.city,
+          role: 'customer',
+          account_status: 'active',
+          nafath_verified_at: result.renter.has_nafath ? new Date(0).toISOString() : null,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        } as ProfileRow,
+      });
       setStep('operation');
     } catch (err) {
       const message =
-        err instanceof OtpError && err.code === 'twilio_not_configured'
-          ? t('merchant.session.verify.errors.providerOffline')
-          : err instanceof Error
-            ? err.message
-            : t('merchant.session.verify.errors.codeFailed');
+        err instanceof RenterPresenceError && err.code === 'forbidden'
+          ? t('merchant.session.verify.errors.forbidden')
+          : err instanceof RenterPresenceError && err.code === 'invalid_mobile'
+            ? verifyMobileIssueMessage('invalid_format', t)
+            : err instanceof RenterPresenceError && err.code === 'invalid_id_last4'
+              ? t('merchant.session.verify.errors.idLast4Length')
+              : t('merchant.session.verify.errors.idLast4Failed');
+      console.error('[verify] confirmRenterPresence failed', err);
       updateVerify({ error: message });
     }
   };
@@ -641,12 +617,11 @@ export default function MerchantRentalSession() {
                 });
               }}
               renter={session.verify.renter}
-              otp={session.verify.otp}
-              setOtp={(v) => updateVerify({ otp: v })}
+              challenge={session.verify.challenge}
+              setChallenge={(v) => updateVerify({ challenge: v })}
               verifyError={session.verify.error}
               onLookup={handleLookupRenter}
-              onSendCode={handleSendCode}
-              onConfirmCode={handleConfirmCode}
+              onConfirmPresence={handleConfirmPresence}
               active={session.step === 'verify'}
               locked={session.step !== 'verify' && session.verify.status === 'verified'}
             />
@@ -845,12 +820,11 @@ function VerifyCard({
   mobile,
   setMobile,
   renter,
-  otp,
-  setOtp,
+  challenge,
+  setChallenge,
   verifyError,
   onLookup,
-  onSendCode,
-  onConfirmCode,
+  onConfirmPresence,
   active,
   locked,
 }: {
@@ -861,12 +835,11 @@ function VerifyCard({
   mobile: string;
   setMobile: (v: string) => void;
   renter: ProfileRow | null;
-  otp: string;
-  setOtp: (v: string) => void;
+  challenge: string;
+  setChallenge: (v: string) => void;
   verifyError: string | null;
   onLookup: () => void;
-  onSendCode: () => void;
-  onConfirmCode: () => void;
+  onConfirmPresence: () => void;
   active: boolean;
   locked: boolean;
 }) {
@@ -962,9 +935,9 @@ function VerifyCard({
 
           {/* Pending — renter exists, verification in progress.
               By policy, renter identity is NOT shown to the merchant
-              at this stage. Only after OTP confirmation does the
-              name surface. */}
-          {(status === 'found' || status === 'otp_sent') && (
+              at this stage. The challenge (last 4 of National ID) is
+              what reveals the renter's profile. */}
+          {status === 'found' && (
             <>
               <VerificationBanner macro="pending" t={t}>
                 <div className="rounded-xl2 bg-white ring-1 ring-canvas-200 p-3 flex items-start gap-3">
@@ -978,55 +951,47 @@ function VerifyCard({
                     <div className="mt-0.5 text-[11.5px] text-ink-500 leading-relaxed num">
                       {t('merchant.session.verify.privacy.body', {
                         mask: maskMobile(
-                          normalizeMobile(mobile)?.canonical ?? mobile,
+                          normalizedMobile ? normalizedMobile.canonical : mobile,
                         ),
                       })}
                     </div>
                   </div>
                 </div>
               </VerificationBanner>
-              {status === 'found' && (
-                <Button variant="primary" size="lg" block onClick={onSendCode}>
-                  {t('merchant.session.verify.sendCodeCta', {
-                    mask: maskMobile(
-                      normalizeMobile(mobile)?.canonical ?? mobile,
-                    ),
-                  })}
-                </Button>
+              <FormField
+                label={t('merchant.session.verify.idLast4Label')}
+                hint={t('merchant.session.verify.idLast4Hint')}
+              >
+                <Input
+                  inputMode="numeric"
+                  placeholder="1234"
+                  value={challenge}
+                  onChange={(e) =>
+                    setChallenge(e.target.value.replace(/\D/g, '').slice(0, 4))
+                  }
+                  maxLength={4}
+                  leading={<ShieldIcon size={14} className="text-lavender-600" />}
+                  className="num tracking-[0.4em] text-center"
+                />
+              </FormField>
+              {verifyError && (
+                <div className="rounded-xl2 bg-danger-50 ring-1 ring-danger-500/25 px-3.5 py-2.5 text-[12.5px] text-danger-700">
+                  {verifyError}
+                </div>
               )}
-              {status === 'otp_sent' && (
-                <>
-                  <FormField
-                    label={t('merchant.session.verify.codeLabel')}
-                    hint={t('merchant.session.verify.codeHint', {
-                      mask: maskMobile(
-                        normalizeMobile(mobile)?.canonical ?? mobile,
-                      ),
-                    })}
-                  >
-                    <Input
-                      inputMode="numeric"
-                      placeholder="1234"
-                      value={otp}
-                      onChange={(e) => setOtp(e.target.value)}
-                      maxLength={6}
-                      leading={<ShieldIcon size={14} className="text-lavender-600" />}
-                    />
-                  </FormField>
-                  {verifyError && (
-                    <div className="rounded-xl2 bg-danger-50 ring-1 ring-danger-500/25 px-3.5 py-2.5 text-[12.5px] text-danger-700">
-                      {verifyError}
-                    </div>
-                  )}
-                  <Button variant="primary" size="lg" block onClick={onConfirmCode}>
-                    {t('merchant.session.verify.confirmCta')}
-                    <ArrowIcon
-                      size={14}
-                      className={cn('ms-1', dir === 'rtl' ? 'rotate-180' : '')}
-                    />
-                  </Button>
-                </>
-              )}
+              <Button
+                variant="primary"
+                size="lg"
+                block
+                onClick={onConfirmPresence}
+                disabled={challenge.replace(/\D/g, '').length !== 4}
+              >
+                {t('merchant.session.verify.confirmCta')}
+                <ArrowIcon
+                  size={14}
+                  className={cn('ms-1', dir === 'rtl' ? 'rotate-180' : '')}
+                />
+              </Button>
             </>
           )}
 

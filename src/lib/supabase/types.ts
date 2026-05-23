@@ -379,6 +379,16 @@ export type Database = {
           has_nafath: boolean;
         }>;
       };
+      confirm_renter_presence: {
+        Args: { p_mobile: string; p_id_last4: string };
+        Returns: Array<{
+          id: string;
+          full_name: string;
+          mobile: string | null;
+          city: string | null;
+          has_nafath: boolean;
+        }>;
+      };
       next_invoice_number: { Args: Record<string, never>; Returns: string };
       next_contract_number: { Args: Record<string, never>; Returns: string };
       next_note_number: { Args: Record<string, never>; Returns: string };

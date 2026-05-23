@@ -694,9 +694,8 @@
         "mobileHint": "9 digits, starts with 5. We'll send a one-time code.",
         "mobileAccepted": "Number accepted · {e164}",
         "lookupCta": "Look up renter",
-        "sendCodeCta": "Send code to {mask}",
-        "codeLabel": "Verification code",
-        "codeHint": "We sent a 4-digit code to {mask}. Ask the renter to read it out.",
+        "idLast4Label": "Last 4 digits of renter's National ID",
+        "idLast4Hint": "Ask the renter to read out the last 4 digits of their National ID. The merchant should confirm against the physical card.",
         "confirmCta": "Confirm and continue",
         "nafathBadge": "Nafath verified",
         "macro": {
@@ -718,11 +717,10 @@
           "mobileIncomplete": "That number isn't finished yet — Saudi mobiles are 9 digits starting with 5.",
           "mobileUnsupportedCountry": "Only Saudi mobile numbers (+966) are supported here.",
           "mobileVerifyFailed": "We couldn't verify this number right now. Please try again.",
-          "codeShort": "Enter the 4–6 digit code.",
-          "codeFailed": "That code did not match. Please try again.",
-          "backendRequired": "Live backend is required to verify renters. Connect Supabase and try again.",
-          "providerOffline": "The verification provider is not configured. Contact AppLux support.",
-          "sendFailed": "Could not send the verification code. Please try again."
+          "idLast4Length": "Enter exactly the last 4 digits of the renter's National ID.",
+          "idLast4Failed": "Those digits did not match the renter's National ID. Re-check the physical card and try again.",
+          "forbidden": "Your account isn't authorised to verify renters. Contact AppLux support.",
+          "backendRequired": "Live backend is required to verify renters. Connect Supabase and try again."
         }
       },
       "operation": {
