@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Header, Screen } from '@/components/layout';
 import { Button, Card, FormField, Input } from '@/components/ui';
@@ -28,13 +28,23 @@ export default function MerchantLogin() {
   const navigate = useNavigate();
   const { updateMerchantDraft, submitMerchantApproval, approveMerchant } =
     useStore();
-  const { configured, signIn } = useSupabaseAuth();
+  const { configured, signIn, status } = useSupabaseAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [errors, setErrors] = useState<FieldErrors>({});
   const [touched, setTouched] = useState<Record<string, boolean>>({});
+
+  // Post-auth redirect — see the same comment in src/pages/auth/Login.tsx.
+  // The provider's `setStatus('authenticated')` fires asynchronously after
+  // signIn resolves; navigating synchronously races that update and the
+  // user gets bounced to /welcome. Observe `status` instead.
+  useEffect(() => {
+    if (configured && status === 'authenticated') {
+      navigate('/', { replace: true });
+    }
+  }, [configured, status, navigate]);
 
   const emailError = useMemo(() => {
     if (!touched.email && !errors.email) return undefined;
@@ -77,11 +87,12 @@ export default function MerchantLogin() {
     setSubmitting(true);
 
     // Real Supabase auth — provider's onAuthStateChange will hydrate role,
-    // then RootRedirect routes merchants to /merchant/home.
+    // then the post-auth effect above routes us to '/' and RootRedirect
+    // sends merchants to /merchant/home.
     if (configured) {
       try {
         await signIn({ email: email.trim(), password });
-        navigate('/', { replace: true });
+        // Intentionally no navigate() here — see useEffect comment above.
         return;
       } catch (err) {
         const message =

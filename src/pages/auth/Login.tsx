@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Header, Screen } from '@/components/layout';
 import { Button, Card, FormField, Input } from '@/components/ui';
@@ -31,7 +31,7 @@ export default function Login() {
   const t = useT();
   const navigate = useNavigate();
   const { completeRegistration, updateDraft } = useStore();
-  const { configured, signIn } = useSupabaseAuth();
+  const { configured, signIn, status } = useSupabaseAuth();
   const [mobile, setMobile] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -39,6 +39,23 @@ export default function Login() {
   const [submitting, setSubmitting] = useState(false);
   const [errors, setErrors] = useState<FieldErrors>({});
   const [touched, setTouched] = useState<Record<string, boolean>>({});
+
+  // Post-auth redirect — observe the provider's `status`, navigate when
+  // it transitions to 'authenticated'. We must NOT navigate synchronously
+  // after `await signIn(...)` resolves: at that moment the provider's
+  // onAuthStateChange listener has only queued `setSession(s)` and is
+  // still awaiting `loadUserContext` before calling `setStatus`. A
+  // synchronous Navigate would render RootRedirect with `status` still
+  // at 'anonymous' and bounce the user to /welcome. Letting the effect
+  // run when status flips removes the race entirely. The effect also
+  // covers the case where the user lands on /auth/login while already
+  // authenticated (session in storage) — they get routed home instead
+  // of seeing the form.
+  useEffect(() => {
+    if (configured && status === 'authenticated') {
+      navigate('/', { replace: true });
+    }
+  }, [configured, status, navigate]);
 
   const mobileError = useMemo(() => {
     if (configured) return undefined;
@@ -88,8 +105,10 @@ export default function Login() {
       setSubmitting(true);
       try {
         await signIn({ email: email.trim(), password });
-        // Provider's onAuthStateChange will hydrate role; let RootRedirect route us.
-        navigate('/', { replace: true });
+        // Do NOT navigate here. The useEffect above watches `status` and
+        // navigates once the provider has hydrated the session + profile.
+        // Navigating synchronously would race against `setStatus('authenticated')`
+        // and bounce the user to /welcome (see RootRedirect in routes.tsx).
       } catch (err) {
         const message = err instanceof Error ? err.message : t('auth.errors.signInFailed');
         setErrors({ form: message });
