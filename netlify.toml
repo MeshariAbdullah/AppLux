@@ -1,0 +1,30 @@
+# Netlify is the only deployment target for AppLux.
+# This file is the source of truth for build behaviour — do not rely on
+# Netlify's UI auto-detection or the in-UI build settings.
+
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+[build.environment]
+  # Pin Node so the build is reproducible across deploys and matches the
+  # version Vite 5 + the @supabase/supabase-js v2 toolchain expects.
+  NODE_VERSION = "20"
+
+# SPA fallback for React Router. Without this, refreshing /merchant/home
+# (or any non-root path) returns Netlify's 404. The catch-all rewrites
+# every path to /index.html so the client-side router can resolve it.
+# A matching rule is duplicated in public/_redirects as a safety net.
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+# --- Required environment variables (set in Netlify UI, NOT here) -----
+# Site settings → Build & deploy → Environment, scoped to the deploy
+# context you intend to test (Production, Branch deploys, Deploy previews).
+# Vite inlines VITE_* vars at build time — after editing values, trigger
+# "Clear cache and deploy site" so the new build picks them up.
+#
+#   VITE_SUPABASE_URL       https://<project-ref>.supabase.co
+#   VITE_SUPABASE_ANON_KEY  <the anon public key from the Supabase dashboard>
