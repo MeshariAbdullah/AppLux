@@ -58,6 +58,14 @@ function RequireCustomer({ children }: { children: ReactElement }) {
   );
 }
 
+/**
+ * Single role-routing decision point for the whole app.
+ *
+ * Driven entirely by provider state (`useSupabaseAuth().status` + `.role`).
+ * Login pages do NOT duplicate this logic — once their post-auth effect
+ * sees `status === 'authenticated'`, they navigate to '/' and hand off
+ * to this component, which is the only place that maps role → home.
+ */
 function RootRedirect() {
   const { configured, status, role } = useSupabaseAuth();
   const { session: demoSession } = useStore();

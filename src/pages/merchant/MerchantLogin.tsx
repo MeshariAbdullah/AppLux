@@ -36,10 +36,11 @@ export default function MerchantLogin() {
   const [errors, setErrors] = useState<FieldErrors>({});
   const [touched, setTouched] = useState<Record<string, boolean>>({});
 
-  // Post-auth redirect — see the same comment in src/pages/auth/Login.tsx.
-  // The provider's `setStatus('authenticated')` fires asynchronously after
-  // signIn resolves; navigating synchronously races that update and the
-  // user gets bounced to /welcome. Observe `status` instead.
+  // Post-auth handoff — see the matching block + architecture note in
+  // src/pages/auth/Login.tsx. This page does NOT route by role; it just
+  // releases the user to '/' once the provider hydrates. RootRedirect
+  // (routes.tsx) is the single role-routing point and sends merchants
+  // to /merchant/home.
   useEffect(() => {
     if (configured && status === 'authenticated') {
       navigate('/', { replace: true });

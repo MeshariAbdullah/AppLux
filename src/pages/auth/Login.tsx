@@ -40,17 +40,22 @@ export default function Login() {
   const [errors, setErrors] = useState<FieldErrors>({});
   const [touched, setTouched] = useState<Record<string, boolean>>({});
 
-  // Post-auth redirect — observe the provider's `status`, navigate when
-  // it transitions to 'authenticated'. We must NOT navigate synchronously
-  // after `await signIn(...)` resolves: at that moment the provider's
-  // onAuthStateChange listener has only queued `setSession(s)` and is
-  // still awaiting `loadUserContext` before calling `setStatus`. A
+  // Post-auth handoff — single redirect, driven by provider state.
+  //
+  // Architecture: the login page's only job is to RELEASE the user once
+  // the provider has finished hydrating; it does NOT decide which home
+  // to land on. That decision lives in RootRedirect (routes.tsx) — the
+  // single role-routing point in the app. We just navigate to '/' and
+  // RootRedirect maps role → /merchant/home, /admin/home, or /home.
+  //
+  // Why this effect instead of a synchronous navigate after signIn:
+  // `signInWithPassword` fires `onAuthStateChange` synchronously before
+  // returning, but the listener's `setStatus('authenticated')` only runs
+  // after `await loadUserContext` resolves a few ticks later. A
   // synchronous Navigate would render RootRedirect with `status` still
-  // at 'anonymous' and bounce the user to /welcome. Letting the effect
-  // run when status flips removes the race entirely. The effect also
-  // covers the case where the user lands on /auth/login while already
-  // authenticated (session in storage) — they get routed home instead
-  // of seeing the form.
+  // at 'anonymous' and bounce the user to /welcome. Watching `status`
+  // removes the race. The same effect also covers the case where the
+  // user lands on /auth/login while already authenticated.
   useEffect(() => {
     if (configured && status === 'authenticated') {
       navigate('/', { replace: true });
