@@ -40,6 +40,7 @@ import MerchantDamageNew from '@/pages/merchant/MerchantDamageNew';
 import MerchantDamageDetails from '@/pages/merchant/MerchantDamageDetails';
 import MerchantHistoryPage from '@/pages/merchant/MerchantHistoryPage';
 import MerchantInvoiceNew from '@/pages/merchant/MerchantInvoiceNew';
+import MerchantRentalSession from '@/pages/merchant/MerchantRentalSession';
 import AdminHome from '@/pages/admin/AdminHome';
 import AdminMerchants from '@/pages/admin/AdminMerchants';
 import AdminMerchantDetails from '@/pages/admin/AdminMerchantDetails';
@@ -190,6 +191,14 @@ export function AppRoutes() {
           element={
             <RequireRole role="merchant" fallback="/merchant/welcome">
               <MerchantInvoiceNew />
+            </RequireRole>
+          }
+        />
+        <Route
+          path="/merchant/session/new"
+          element={
+            <RequireRole role="merchant" fallback="/merchant/welcome">
+              <MerchantRentalSession />
             </RequireRole>
           }
         />

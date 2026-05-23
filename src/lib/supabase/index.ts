@@ -60,6 +60,7 @@ export type { SignInInput, SignUpInput } from './auth';
 
 export {
   fetchProfile,
+  fetchProfileByMobile,
   fetchProfilesByIds,
   listProfiles,
   updateProfile,

@@ -48,8 +48,31 @@ export async function fetchProfilesByIds(
 }
 
 /**
- * Admin: list all profiles, optionally filtered by role.
+ * Look up a single profile by mobile number. Used by the merchant
+ * rental session flow to verify a renter before starting operation
+ * setup. Returns null when no match is found (callers should branch
+ * into a "renter must complete account first" UX).
+ *
+ * Matching is case-insensitive at the DB level via citext-free `mobile`
+ * comparison; we trim + collapse the value client-side to a canonical
+ * `5XXXXXXXX` shape so leading-zero or country-code variants land on
+ * the same row.
  */
+export async function fetchProfileByMobile(
+  mobile: string,
+): Promise<ProfileRow | null> {
+  const normalized = mobile.replace(/\D/g, '').replace(/^966/, '').replace(/^0/, '');
+  if (!normalized) return null;
+  const sb = requireSupabase();
+  const { data, error } = await sb
+    .from('profiles')
+    .select('*')
+    .eq('mobile', normalized)
+    .limit(1)
+    .maybeSingle();
+  if (error) throw error;
+  return data;
+}
 export async function listProfiles(filter?: {
   role?: AppRole;
   limit?: number;

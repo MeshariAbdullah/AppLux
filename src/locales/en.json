@@ -673,6 +673,95 @@
     },
     "switchToMerchant": "Are you a merchant?",
     "openMerchantPortal": "Merchant portal",
+    "session": {
+      "title": "Rental session",
+      "eyebrow": "In-store rental session",
+      "stepCounter": "Step {current} of {total}",
+      "start": {
+        "eyebrow": "Begin in-store session",
+        "title": "Open a rental session with this customer",
+        "body": "You'll verify the renter, set up the operation, and confirm eligibility before the rental package is prepared for documentation.",
+        "cta": "Begin session"
+      },
+      "verify": {
+        "title": "Verify the renter",
+        "hint": "Look up the renter by Saudi mobile number, then confirm a short code to authorise this session.",
+        "mobileLabel": "Renter mobile",
+        "mobileHint": "9 digits, starts with 5. We'll send a one-time code.",
+        "lookupCta": "Look up renter",
+        "sendCodeCta": "Send code to {mask}",
+        "codeLabel": "Verification code",
+        "codeHint": "We sent a 4-digit code to {mask}. Ask the renter to read it out.",
+        "confirmCta": "Confirm and continue",
+        "nafathBadge": "Nafath verified",
+        "macro": {
+          "verified": { "label": "Renter verified" },
+          "pending":  { "label": "Verification in progress" },
+          "not_found": { "label": "Renter not registered" }
+        },
+        "notFound": {
+          "body": "No AppLux account is linked to this mobile. The renter must complete their account before you can open a rental session for them.",
+          "copyLink": "Copy onboarding link",
+          "tryDifferent": "Try a different number"
+        },
+        "errors": {
+          "mobileFormat": "Enter a Saudi mobile starting with 5 (9 digits).",
+          "codeShort": "Enter the 4–6 digit code.",
+          "codeFailed": "That code did not match. Please try again."
+        }
+      },
+      "operation": {
+        "title": "Set up the operation",
+        "hint": "Item, period and amount define the rental before we check eligibility.",
+        "itemLabel": "Rented item",
+        "itemPlaceholder": "e.g. Lavandière evening gown — size 40",
+        "categoryLabel": "Category",
+        "categoryHint": "This differs from the boutique's primary category.",
+        "daysLabel": "Rental days",
+        "rateLabel": "Daily rate",
+        "depositLabel": "Security deposit",
+        "amountLabel": "Operation amount",
+        "continueCta": "Continue to eligibility check",
+        "summary": "{days}-day rental at {rate} per day"
+      },
+      "eligibility": {
+        "title": "Eligibility availability check",
+        "hint": "Checks the renter's existing limit against this operation amount. No new assessment.",
+        "limit": "Limit",
+        "used": "Used",
+        "remaining": "Remaining",
+        "verdict": {
+          "approved": "Approved",
+          "insufficient": "Insufficient remaining limit"
+        },
+        "detailApproved": "Available to cover this operation of {amount}.",
+        "detailShort": "Short by {shortBy}. Reduce the operation amount or cancel.",
+        "issuePackageCta": "Issue rental package · {amount}",
+        "issuePackageHint": "This prepares the rental for documentation. The renter then reviews and signs.",
+        "reduceCta": "Reduce operation amount",
+        "cancelCta": "Cancel session",
+        "missing": "This renter has no eligibility profile yet. Ask an AppLux operator to assign one.",
+        "errors": {
+          "fetch": "Could not load the renter's eligibility."
+        }
+      },
+      "handoff": {
+        "seal": "Rental package issued",
+        "title": "The in-store session is complete",
+        "body": "The rental is now ready for documentation. The renter takes it from here.",
+        "line1Label": "Rental package",
+        "line1Value": "Created · {ref}",
+        "line2Label": "Renter",
+        "line2Value": "{name} can now review and sign on their device.",
+        "renterFallback": "The renter",
+        "line3Label": "Documented journey",
+        "line3Value": "Begins the moment the renter accepts. You'll see it in the timeline below.",
+        "tokenLabel": "Rental review token",
+        "copyCta": "Copy token",
+        "openReviewCta": "Open review screen",
+        "doneCta": "Return to operations"
+      }
+    },
     "login": {
       "title": "Merchant sign in",
       "subtitle": "Enter your business account details to continue.",
@@ -825,6 +914,8 @@
       "summaryOverdue": "Overdue",
       "summaryDamages": "Damage cases",
       "quickActionsTitle": "Quick actions",
+      "startSession": "Start rental session",
+      "startSessionDesc": "Verify the renter, set up the operation, confirm eligibility.",
       "quickInvoice": "Create rental invoice",
       "quickInvoiceDesc": "Issue a new contract & promissory note",
       "quickRentals": "Active rentals",

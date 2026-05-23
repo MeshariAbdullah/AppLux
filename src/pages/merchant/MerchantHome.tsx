@@ -21,6 +21,7 @@ import {
   PackageIcon,
   PlusIcon,
   ReceiptIcon,
+  SparkleIcon,
 } from '@/components/icons';
 import { useI18n, useT } from '@/lib/i18n';
 import { useStore } from '@/lib/store';
@@ -143,12 +144,19 @@ export default function MerchantHome() {
 
   const quickActions: QuickAction[] = [
     {
+      title: t('merchant.home.startSession'),
+      desc: t('merchant.home.startSessionDesc'),
+      icon: <SparkleIcon size={18} />,
+      to: '/merchant/session/new',
+      tone: 'bg-canvas-100 text-ink-700 hairline',
+      featured: true,
+    },
+    {
       title: t('merchant.home.quickInvoice'),
       desc: t('merchant.home.quickInvoiceDesc'),
       icon: <PlusIcon size={18} />,
       to: '/merchant/invoice/new',
       tone: 'bg-canvas-100 text-ink-700 hairline',
-      featured: true,
     },
     {
       title: t('merchant.home.quickRentals'),
