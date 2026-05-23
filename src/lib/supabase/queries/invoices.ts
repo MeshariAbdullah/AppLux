@@ -10,10 +10,16 @@ export type CreateInvoiceInput = {
   merchantId: string;
   branchId?: string | null;
   customerUserId: string;
+  /** Rental fee = daily_rate × rental_days. */
   subtotalAmount: number;
   taxAmount?: number;
+  /** Legacy column kept for back-compat; defaults to 0. */
   securityDeposit?: number;
+  /** Rental fee charge — total customer pays for the rental period. */
   totalAmount: number;
+  /** Required. The underlying value of the rented item — drives
+   *  eligibility holds and the promissory note principal. */
+  originalItemValue: number;
   notes?: string | null;
   expiresAt?: string | null;
   items: Array<Omit<RentalInvoiceItemInsert, 'invoice_id'>>;
@@ -51,6 +57,7 @@ export async function createInvoiceWithItems(
       tax_amount: input.taxAmount ?? 0,
       security_deposit: input.securityDeposit ?? 0,
       total_amount: input.totalAmount,
+      original_item_value: input.originalItemValue,
       status: 'issued' satisfies InvoiceStatus,
       issued_at: new Date().toISOString(),
       expires_at: input.expiresAt ?? null,

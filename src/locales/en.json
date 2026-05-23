@@ -712,21 +712,29 @@
       },
       "operation": {
         "title": "Set up the operation",
-        "hint": "Item, period and amount define the rental before we check eligibility.",
+        "hint": "Item, period and original value define the rental before we check eligibility.",
         "itemLabel": "Rented item",
         "itemPlaceholder": "e.g. Lavandière evening gown — size 40",
         "categoryLabel": "Category",
         "categoryHint": "This differs from the boutique's primary category.",
         "daysLabel": "Rental days",
         "rateLabel": "Daily rate",
-        "depositLabel": "Security deposit",
-        "amountLabel": "Operation amount",
+        "itemValueLabel": "Original item value",
+        "itemValueHint": "The piece's underlying value. Drives the eligibility check and the promissory note principal.",
+        "rentalAmountLabel": "Rental amount",
+        "rentalAmountHint": "Daily rate × days. What the renter pays for the rental.",
+        "itemValueTileLabel": "Original item value",
+        "itemValueTileHint": "Basis for eligibility + promissory note.",
+        "itemValueSummary": "Original item value · {value}",
         "continueCta": "Continue to eligibility check",
         "summary": "{days}-day rental at {rate} per day"
       },
       "eligibility": {
         "title": "Eligibility availability check",
-        "hint": "Checks the renter's existing limit against this operation amount. No new assessment.",
+        "hint": "Checks the renter's existing limit against the original item value. No new assessment.",
+        "checkingAgainst": "Checking against",
+        "originalItemValueLabel": "Original item value",
+        "checkingAgainstHint": "Eligibility holds the item value as collateral. The rental fee is paid separately.",
         "limit": "Limit",
         "used": "Used",
         "remaining": "Remaining",
@@ -734,15 +742,16 @@
           "approved": "Approved",
           "insufficient": "Insufficient remaining limit"
         },
-        "detailApproved": "Available to cover this operation of {amount}.",
-        "detailShort": "Short by {shortBy}. Reduce the operation amount or cancel.",
+        "detailApproved": "Available to cover an item value of {amount}.",
+        "detailShort": "Short by {shortBy}. Reduce the original item value or cancel.",
         "issuePackageCta": "Issue rental package · {amount}",
-        "issuePackageHint": "This prepares the rental for documentation. The renter then reviews and signs.",
-        "reduceCta": "Reduce operation amount",
+        "issuePackageHint": "Prepares the rental for documentation. The renter then reviews and signs.",
+        "reduceCta": "Reduce item value",
         "cancelCta": "Cancel session",
         "missing": "This renter has no eligibility profile yet. Ask an AppLux operator to assign one.",
         "errors": {
-          "fetch": "Could not load the renter's eligibility."
+          "fetch": "Could not load the renter's eligibility.",
+          "merchantLoading": "Your merchant profile is still loading. Wait a moment and try again."
         }
       },
       "handoff": {

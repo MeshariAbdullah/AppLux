@@ -136,6 +136,10 @@ export type RentalInvoiceRow = {
   tax_amount: number;
   security_deposit: number;
   total_amount: number;
+  /** The underlying value of the rented item. Drives eligibility holds
+   *  + the promissory note principal. Distinct from total_amount, which
+   *  is the rental fee charge. */
+  original_item_value: number;
   status: InvoiceStatus;
   issued_at: string | null;
   expires_at: string | null;
@@ -183,6 +187,9 @@ export type RentalContractRow = {
   rental_fee_amount: number;
   security_deposit: number;
   total_amount: number;
+  /** Mirrors rental_invoices.original_item_value at signing — drives
+   *  the eligibility decrement on close and the note principal. */
+  original_item_value: number;
   status: ContractStatusDB;
   signed_at: string | null;
   ended_at: string | null;

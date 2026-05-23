@@ -73,7 +73,7 @@ type OperationDraft = {
   category: RentalCategoryDB;
   rentalDays: string;     // strings for input ergonomics; coerced on use
   dailyRate: string;
-  securityDeposit: string;
+  originalItemValue: string;
 };
 
 type EligibilityState = {
@@ -115,7 +115,7 @@ const INITIAL_SESSION: SessionState = {
     category: 'dress',
     rentalDays: '1',
     dailyRate: '',
-    securityDeposit: '',
+    originalItemValue: '',
   },
   eligibility: { row: null, loading: false, error: null },
   issue: { invoice: null, submitting: false, error: null },
@@ -155,22 +155,32 @@ function maskMobile(raw: string): string {
   return `•••${digits.slice(-4)}`;
 }
 
-function computeOperationAmount(draft: OperationDraft): number {
+/** Rental fee — what the customer pays for the rental period. Separate
+ *  from the original item value, which represents the underlying value
+ *  of the rented piece. */
+function computeRentalAmount(draft: OperationDraft): number {
   const rate = Number(draft.dailyRate) || 0;
   const days = Math.max(Number(draft.rentalDays) || 1, 1);
-  const deposit = Number(draft.securityDeposit) || 0;
-  return rate * days + deposit;
+  return rate * days;
 }
 
+function readOriginalItemValue(draft: OperationDraft): number {
+  return Number(draft.originalItemValue) || 0;
+}
+
+/** Availability check against the renter's existing eligibility — NOT a
+ *  new risk score. Compares remaining limit against the ORIGINAL ITEM
+ *  VALUE, not the rental fee, because the eligibility hold mirrors
+ *  the promissory note principal. */
 function deriveVerdict(
   renterEligibility: RentalEligibilityRow | null,
-  operationAmount: number,
+  originalItemValue: number,
 ): EligibilityVerdict {
   if (!renterEligibility) return { status: 'missing' };
   const limit = Number(renterEligibility.limit_amount);
   const used = Number(renterEligibility.used_amount);
   const remaining = Math.max(limit - used, 0);
-  const required = Math.max(operationAmount, 0);
+  const required = Math.max(originalItemValue, 0);
   if (remaining >= required) return { status: 'approved', limit, used, remaining, required };
   return {
     status: 'insufficient',
@@ -227,13 +237,17 @@ export default function MerchantRentalSession() {
     };
   }, [supabaseAuth.configured, supabaseAuth.session?.user?.id]);
 
-  const operationAmount = useMemo(
-    () => computeOperationAmount(session.operation),
+  const rentalAmount = useMemo(
+    () => computeRentalAmount(session.operation),
+    [session.operation],
+  );
+  const originalItemValue = useMemo(
+    () => readOriginalItemValue(session.operation),
     [session.operation],
   );
   const verdict = useMemo(
-    () => deriveVerdict(session.eligibility.row, operationAmount),
-    [session.eligibility.row, operationAmount],
+    () => deriveVerdict(session.eligibility.row, originalItemValue),
+    [session.eligibility.row, originalItemValue],
   );
   const macroVerify = macroVerificationState(session.verify.status);
 
@@ -309,9 +323,13 @@ export default function MerchantRentalSession() {
 
   const handleOperationContinue = async () => {
     const op = session.operation;
+    // Mandatory fields — every operation must declare the item, period,
+    // daily rate, AND the original item value (basis for eligibility +
+    // promissory note).
     if (!op.itemName.trim()) return;
     if (Number(op.dailyRate) <= 0) return;
     if (Number(op.rentalDays) < 1) return;
+    if (!(Number(op.originalItemValue) > 0)) return;
 
     if (!supabaseAuth.configured || !session.verify.renter) {
       // Demo-safe verdict fixture so the flow stays clickable.
@@ -347,15 +365,67 @@ export default function MerchantRentalSession() {
   };
 
   const handleIssue = async () => {
-    if (verdict.status !== 'approved' || !session.verify.renter || !merchantId) return;
+    if (verdict.status !== 'approved' || !session.verify.renter) return;
+
+    const rate = Number(session.operation.dailyRate) || 0;
+    const days = Math.max(Number(session.operation.rentalDays) || 1, 1);
+    const rentalFee = rate * days;
+    const itemValue = Number(session.operation.originalItemValue) || 0;
+
+    // --- Demo-mode path -----------------------------------------------
+    // When env isn't configured the real RPC chain can't run; synthesize
+    // a fixture invoice + scan token so the handoff card still renders
+    // and the merchant can walk the rest of the flow.
+    if (!supabaseAuth.configured) {
+      updateIssue({ submitting: true, error: null });
+      await new Promise((r) => window.setTimeout(r, 400));
+      const token = `DEMO-${Math.random().toString(36).slice(2, 12).toUpperCase()}`;
+      const now = new Date().toISOString();
+      const fixture: RentalInvoiceRow = {
+        id: token,
+        invoice_number: `INV-DEMO-${Date.now().toString().slice(-6)}`,
+        merchant_id: 'demo-merchant',
+        branch_id: null,
+        customer_user_id: session.verify.renter.id,
+        subtotal_amount: rentalFee,
+        tax_amount: 0,
+        security_deposit: 0,
+        total_amount: rentalFee,
+        original_item_value: itemValue,
+        status: 'issued',
+        issued_at: now,
+        expires_at: null,
+        scan_token: token,
+        notes: null,
+        created_at: now,
+        updated_at: now,
+      };
+      updateIssue({ invoice: fixture, submitting: false, error: null });
+      setStep('issued');
+      return;
+    }
+
+    // --- Real backend path --------------------------------------------
+    // Guard explicitly so the merchant never taps a button that does
+    // nothing — surface a clear error instead.
+    if (!merchantId) {
+      updateIssue({
+        submitting: false,
+        error: t('merchant.session.eligibility.errors.merchantLoading'),
+      });
+      return;
+    }
+
     updateIssue({ submitting: true, error: null });
     try {
       const result = await createInvoiceWithItems({
         merchantId,
         customerUserId: session.verify.renter.id,
-        subtotalAmount: operationAmount - (Number(session.operation.securityDeposit) || 0),
-        totalAmount: operationAmount - (Number(session.operation.securityDeposit) || 0),
-        securityDeposit: Number(session.operation.securityDeposit) || 0,
+        // Rental fee = daily × days. The new original_item_value is a
+        // separate column that drives eligibility + note principal.
+        subtotalAmount: rentalFee,
+        totalAmount: rentalFee,
+        originalItemValue: itemValue,
         items: [
           {
             position: 0,
@@ -363,12 +433,10 @@ export default function MerchantRentalSession() {
             category: session.operation.category,
             size_label: null,
             color: null,
-            daily_rate: Number(session.operation.dailyRate) || 0,
-            rental_days: Math.max(Number(session.operation.rentalDays) || 1, 1),
-            subtotal:
-              (Number(session.operation.dailyRate) || 0) *
-              Math.max(Number(session.operation.rentalDays) || 1, 1),
-            replacement_value: null,
+            daily_rate: rate,
+            rental_days: days,
+            subtotal: rentalFee,
+            replacement_value: itemValue,
             notes: null,
           },
         ],
@@ -440,7 +508,8 @@ export default function MerchantRentalSession() {
               operation={session.operation}
               setOperation={updateOperation}
               merchantPrimaryCategory={merchantPrimaryCategory}
-              operationAmount={operationAmount}
+              rentalAmount={rentalAmount}
+              originalItemValue={originalItemValue}
               formatCurrency={formatCurrency}
               active={session.step === 'operation'}
               locked={session.step === 'eligibility' || session.step === 'issued'}
@@ -454,10 +523,12 @@ export default function MerchantRentalSession() {
             <EligibilityCard
               t={t}
               verdict={verdict}
-              operationAmount={operationAmount}
+              rentalAmount={rentalAmount}
+              originalItemValue={originalItemValue}
               formatCurrency={formatCurrency}
               issuing={session.issue.submitting}
               issueError={session.issue.error}
+              issueDisabled={supabaseAuth.configured && !merchantId}
               active={session.step === 'eligibility'}
               locked={session.step === 'issued'}
               onIssue={handleIssue}
@@ -863,7 +934,8 @@ function OperationCard({
   operation,
   setOperation,
   merchantPrimaryCategory,
-  operationAmount,
+  rentalAmount,
+  originalItemValue,
   formatCurrency,
   active,
   locked,
@@ -875,7 +947,8 @@ function OperationCard({
   operation: OperationDraft;
   setOperation: (patch: Partial<OperationDraft>) => void;
   merchantPrimaryCategory: RentalCategoryDB | null;
-  operationAmount: number;
+  rentalAmount: number;
+  originalItemValue: number;
   formatCurrency: (n: number) => string;
   active: boolean;
   locked: boolean;
@@ -896,13 +969,19 @@ function OperationCard({
           <div className="flex items-center justify-between gap-3">
             <span className="text-ink-500 truncate">{operation.itemName}</span>
             <span className="font-semibold text-ink-900 num">
-              {formatCurrency(operationAmount)}
+              {formatCurrency(rentalAmount)}
             </span>
           </div>
           <div className="text-[11.5px] text-ink-400 num">
             {t('merchant.session.operation.summary')
               .replace('{days}', String(Math.max(Number(operation.rentalDays) || 1, 1)))
               .replace('{rate}', formatCurrency(Number(operation.dailyRate) || 0))}
+          </div>
+          <div className="text-[11.5px] text-ink-500 num pt-1">
+            {t('merchant.session.operation.itemValueSummary').replace(
+              '{value}',
+              formatCurrency(originalItemValue),
+            )}
           </div>
         </div>
       )}
@@ -961,12 +1040,17 @@ function OperationCard({
                 }
               />
             </FormField>
-            <FormField label={t('merchant.session.operation.depositLabel')}>
+            <FormField
+              label={t('merchant.session.operation.itemValueLabel')}
+              required
+              hint={t('merchant.session.operation.itemValueHint')}
+            >
               <Input
                 inputMode="decimal"
-                value={operation.securityDeposit}
-                onChange={(e) => setOperation({ securityDeposit: e.target.value })}
+                value={operation.originalItemValue}
+                onChange={(e) => setOperation({ originalItemValue: e.target.value })}
                 className="num"
+                placeholder="0"
                 trailing={
                   <span className="text-ink-400 text-[12px] font-medium">
                     {t('common.sar')}
@@ -976,16 +1060,31 @@ function OperationCard({
             </FormField>
           </div>
 
-          <div className="rounded-xl2 bg-lavender-50/60 ring-1 ring-lavender-200/60 px-4 py-3 flex items-center justify-between gap-3">
-            <div className="min-w-0">
-              <div className="text-[10.5px] font-semibold uppercase tracking-[0.12em] text-lavender-700">
-                {t('merchant.session.operation.amountLabel')}
+          {/* Two amounts — kept visually distinct so the merchant sees
+              the rental fee separate from the original item value. */}
+          <div className="grid grid-cols-2 gap-2.5">
+            <div className="rounded-xl2 bg-canvas-100 ring-1 ring-canvas-200 px-4 py-3">
+              <div className="text-[10px] font-semibold uppercase tracking-[0.12em] text-ink-500">
+                {t('merchant.session.operation.rentalAmountLabel')}
               </div>
-              <div className="mt-0.5 editorial-title text-[20px] num text-ink-900 leading-none">
-                {formatCurrency(operationAmount)}
+              <div className="mt-0.5 editorial-title text-[18px] num text-ink-900 leading-none">
+                {formatCurrency(rentalAmount)}
+              </div>
+              <div className="mt-1 text-[10.5px] text-ink-400">
+                {t('merchant.session.operation.rentalAmountHint')}
               </div>
             </div>
-            <ReceiptIcon size={18} className="text-lavender-600 shrink-0" />
+            <div className="rounded-xl2 bg-lavender-50/60 ring-1 ring-lavender-200/60 px-4 py-3">
+              <div className="text-[10px] font-semibold uppercase tracking-[0.12em] text-lavender-700">
+                {t('merchant.session.operation.itemValueTileLabel')}
+              </div>
+              <div className="mt-0.5 editorial-title text-[18px] num text-ink-900 leading-none">
+                {formatCurrency(originalItemValue)}
+              </div>
+              <div className="mt-1 text-[10.5px] text-lavender-700/80">
+                {t('merchant.session.operation.itemValueTileHint')}
+              </div>
+            </div>
           </div>
 
           {error && (
@@ -1003,7 +1102,8 @@ function OperationCard({
             disabled={
               !operation.itemName.trim() ||
               !(Number(operation.dailyRate) > 0) ||
-              !(Number(operation.rentalDays) >= 1)
+              !(Number(operation.rentalDays) >= 1) ||
+              !(Number(operation.originalItemValue) > 0)
             }
           >
             {t('merchant.session.operation.continueCta')}
@@ -1019,10 +1119,12 @@ function OperationCard({
 function EligibilityCard({
   t,
   verdict,
-  operationAmount,
+  rentalAmount,
+  originalItemValue,
   formatCurrency,
   issuing,
   issueError,
+  issueDisabled,
   active,
   locked,
   onIssue,
@@ -1031,10 +1133,12 @@ function EligibilityCard({
 }: {
   t: (k: string) => string;
   verdict: EligibilityVerdict;
-  operationAmount: number;
+  rentalAmount: number;
+  originalItemValue: number;
   formatCurrency: (n: number) => string;
   issuing: boolean;
   issueError: string | null;
+  issueDisabled: boolean;
   active: boolean;
   locked: boolean;
   onIssue: () => void;
@@ -1058,6 +1162,26 @@ function EligibilityCard({
     >
       {(active || locked) && verdict.status !== 'missing' && (
         <div className="space-y-3">
+          {/* What we're evaluating — named explicitly so the merchant
+              understands eligibility is being checked against the
+              original item value, not the rental fee. */}
+          <div className="rounded-xl2 bg-canvas-100/70 ring-1 ring-canvas-200 px-3.5 py-2.5">
+            <div className="text-[10px] font-semibold uppercase tracking-[0.12em] text-ink-500">
+              {t('merchant.session.eligibility.checkingAgainst')}
+            </div>
+            <div className="mt-1 flex items-baseline justify-between gap-3">
+              <div className="text-[13px] text-ink-900">
+                {t('merchant.session.eligibility.originalItemValueLabel')}
+              </div>
+              <div className="num font-bold text-ink-900 text-[14px]">
+                {formatCurrency(originalItemValue)}
+              </div>
+            </div>
+            <div className="text-[10.5px] text-ink-400 leading-relaxed mt-0.5">
+              {t('merchant.session.eligibility.checkingAgainstHint')}
+            </div>
+          </div>
+
           <div className="grid grid-cols-3 gap-2.5">
             <EligibilityFigure
               label={t('merchant.session.eligibility.limit')}
@@ -1116,10 +1240,11 @@ function EligibilityCard({
                 block
                 onClick={onIssue}
                 loading={issuing}
+                disabled={issuing || issueDisabled}
                 leading={<DocIcon size={16} />}
               >
                 {t('merchant.session.eligibility.issuePackageCta')
-                  .replace('{amount}', formatCurrency(operationAmount))}
+                  .replace('{amount}', formatCurrency(rentalAmount))}
               </Button>
               <p className="text-center text-[11.5px] text-ink-400 leading-relaxed px-2">
                 {t('merchant.session.eligibility.issuePackageHint')}

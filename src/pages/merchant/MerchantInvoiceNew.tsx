@@ -449,7 +449,10 @@ export default function MerchantInvoiceNew() {
           customerUserId: customerProfile.id,
           subtotalAmount: subtotal,
           totalAmount: subtotal,
-          securityDeposit: liability,
+          // The legacy form's "liability" column maps onto the new
+          // original_item_value semantic: underlying value of the
+          // rented pieces. Eligibility + note principal hinge on this.
+          originalItemValue: liability,
           items: values.items.map((it, i) => ({
             position: i,
             item_name: it.name,
