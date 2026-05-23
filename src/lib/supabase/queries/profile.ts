@@ -1,5 +1,6 @@
 import { requireSupabase } from '../client';
 import type { AppRole, ProfileRow, ProfileUpdate } from '../types';
+import { normalizeMobile } from '@/lib/mobile';
 
 export async function fetchProfile(userId: string): Promise<ProfileRow | null> {
   const sb = requireSupabase();
@@ -48,26 +49,24 @@ export async function fetchProfilesByIds(
 }
 
 /**
- * Look up a single profile by mobile number. Used by the merchant
- * rental session flow to verify a renter before starting operation
- * setup. Returns null when no match is found (callers should branch
- * into a "renter must complete account first" UX).
+ * Privileged lookup of a profile by mobile number. The merchant
+ * rental session flow does NOT call this directly — it goes through
+ * lookup_renter_by_mobile RPC (existence-only) and otp-verify edge
+ * function (full identity, only after OTP succeeds).
  *
- * Matching is case-insensitive at the DB level via citext-free `mobile`
- * comparison; we trim + collapse the value client-side to a canonical
- * `5XXXXXXXX` shape so leading-zero or country-code variants land on
- * the same row.
+ * Reserved for admin / server contexts that already have permission
+ * to read the row under RLS.
  */
 export async function fetchProfileByMobile(
   mobile: string,
 ): Promise<ProfileRow | null> {
-  const normalized = mobile.replace(/\D/g, '').replace(/^966/, '').replace(/^0/, '');
-  if (!normalized) return null;
+  const n = normalizeMobile(mobile);
+  if (!n) return null;
   const sb = requireSupabase();
   const { data, error } = await sb
     .from('profiles')
     .select('*')
-    .eq('mobile', normalized)
+    .eq('mobile', n.canonical)
     .limit(1)
     .maybeSingle();
   if (error) throw error;

@@ -53,6 +53,7 @@
     "registerEntryTitle": "Start with AppLux",
     "registerEntrySubtitle": "Create a merchant account in minutes.",
     "mobile": "Mobile number",
+    "mobileAccepted": "Number accepted · {e164}",
     "email": "Email",
     "emailPh": "name@example.com",
     "password": "Password",
@@ -108,7 +109,10 @@
     },
     "errors": {
       "mobileRequired": "Enter your mobile number to continue.",
-      "mobileFormat": "Mobile must start with 5 and contain 9 digits.",
+      "mobileIncomplete": "That number isn't finished yet — Saudi mobiles are 9 digits starting with 5.",
+      "mobileFormat": "Doesn't look like a Saudi mobile. It must start with 5 and be 9 digits.",
+      "mobileUnsupportedCountry": "Only Saudi mobile numbers (+966) are supported here.",
+      "mobileVerifyFailed": "We couldn't verify this number right now. Please try again.",
       "emailRequired": "Enter your email to continue.",
       "emailFormat": "That email doesn't look right.",
       "passwordRequired": "Enter your password to continue.",
@@ -688,6 +692,7 @@
         "hint": "Look up the renter by Saudi mobile number, then confirm a short code to authorise this session.",
         "mobileLabel": "Renter mobile",
         "mobileHint": "9 digits, starts with 5. We'll send a one-time code.",
+        "mobileAccepted": "Number accepted · {e164}",
         "lookupCta": "Look up renter",
         "sendCodeCta": "Send code to {mask}",
         "codeLabel": "Verification code",
@@ -699,15 +704,25 @@
           "pending":  { "label": "Verification in progress" },
           "not_found": { "label": "Renter not registered" }
         },
+        "privacy": {
+          "title": "Renter is registered",
+          "body": "We'll send a one-time code to {mask}. The renter's details will only appear here after the code is confirmed."
+        },
         "notFound": {
           "body": "No AppLux account is linked to this mobile. The renter must complete their account before you can open a rental session for them.",
           "copyLink": "Copy onboarding link",
           "tryDifferent": "Try a different number"
         },
         "errors": {
-          "mobileFormat": "Enter a Saudi mobile starting with 5 (9 digits).",
+          "mobileFormat": "Doesn't look like a Saudi mobile. It must start with 5 and be 9 digits.",
+          "mobileIncomplete": "That number isn't finished yet — Saudi mobiles are 9 digits starting with 5.",
+          "mobileUnsupportedCountry": "Only Saudi mobile numbers (+966) are supported here.",
+          "mobileVerifyFailed": "We couldn't verify this number right now. Please try again.",
           "codeShort": "Enter the 4–6 digit code.",
-          "codeFailed": "That code did not match. Please try again."
+          "codeFailed": "That code did not match. Please try again.",
+          "backendRequired": "Live backend is required to verify renters. Connect Supabase and try again.",
+          "providerOffline": "The verification provider is not configured. Contact AppLux support.",
+          "sendFailed": "Could not send the verification code. Please try again."
         }
       },
       "operation": {

@@ -372,6 +372,13 @@ export type Database = {
         Args: { p_contract_id: string };
         Returns: void;
       };
+      lookup_renter_by_mobile: {
+        Args: { p_mobile: string };
+        Returns: Array<{
+          id: string;
+          has_nafath: boolean;
+        }>;
+      };
       next_invoice_number: { Args: Record<string, never>; Returns: string };
       next_contract_number: { Args: Record<string, never>; Returns: string };
       next_note_number: { Args: Record<string, never>; Returns: string };

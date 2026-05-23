@@ -5,6 +5,10 @@ export type SignUpInput = {
   email: string;
   password: string;
   fullName: string;
+  /** Canonical Saudi mobile (5XXXXXXXX). Required for renter lookups
+   *  from the merchant session flow; the DB CHECK constraint enforces
+   *  the canonical shape. */
+  mobile: string;
 };
 
 export type SignInInput = {
@@ -16,13 +20,14 @@ export async function signUpWithPassword({
   email,
   password,
   fullName,
+  mobile,
 }: SignUpInput): Promise<{ user: User | null; session: Session | null }> {
   const sb = requireSupabase();
   const { data, error } = await sb.auth.signUp({
     email,
     password,
     options: {
-      data: { full_name: fullName },
+      data: { full_name: fullName, mobile },
     },
   });
   if (error) throw error;

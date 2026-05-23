@@ -5,8 +5,9 @@ import { Button, FormField, Input, Select, Textarea } from '@/components/ui';
 import { useI18n, useT } from '@/lib/i18n';
 import { useStore, emptyRegistration, type RegistrationDraft } from '@/lib/store';
 import { useSupabaseAuth } from '@/lib/supabase';
+import { classifyMobile, type MobileIssue } from '@/lib/mobile';
 import { cn } from '@/lib/cn';
-import { ArrowIcon, ShieldIcon } from '@/components/icons';
+import { ArrowIcon, BadgeCheckIcon, ShieldIcon } from '@/components/icons';
 
 const CITY_KEYS = [
   'riyadh', 'jeddah', 'makkah', 'madinah', 'dammam', 'khobar', 'tabuk',
@@ -313,28 +314,69 @@ export default function Register() {
   );
 }
 
+/**
+ * Maps a mobile classification issue to a user-facing message. Every
+ * caller renders the same wording — we never fall back to a generic
+ * "invalid number" string.
+ */
+function mobileIssueToMessage(
+  issue: MobileIssue,
+  t: (k: string, v?: Record<string, string | number>) => string,
+): string {
+  switch (issue) {
+    case 'empty':
+      return t('auth.errors.mobileRequired');
+    case 'incomplete':
+      return t('auth.errors.mobileIncomplete');
+    case 'unsupported_country':
+      return t('auth.errors.mobileUnsupportedCountry');
+    case 'invalid_format':
+    default:
+      return t('auth.errors.mobileFormat');
+  }
+}
+
 function SupabaseRegister() {
   const t = useT();
   const navigate = useNavigate();
   const { signUp } = useSupabaseAuth();
 
   const [fullName, setFullName] = useState('');
+  const [mobile, setMobile] = useState('');
+  const [mobileTouched, setMobileTouched] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [errors, setErrors] = useState<{
     fullName?: string;
+    mobile?: string;
     email?: string;
     password?: string;
     confirmPassword?: string;
     form?: string;
   }>({});
 
+  // Live validation — the user sees an inline error the moment they
+  // blur an unsupported number, and a confirmation chip with the
+  // canonical E.164 form once the input parses cleanly. The DB CHECK
+  // constraint on profiles.mobile remains the single source of truth.
+  const mobileClassification = classifyMobile(mobile);
+  const normalizedMobile =
+    mobileClassification.kind === 'valid' ? mobileClassification : null;
+  const liveMobileError =
+    mobileTouched && mobile.trim().length > 0 && mobileClassification.kind === 'invalid'
+      ? mobileIssueToMessage(mobileClassification.issue, t)
+      : undefined;
+  const mobileError = errors.mobile ?? liveMobileError;
+
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const next: typeof errors = {};
     if (!fullName.trim()) next.fullName = t('auth.errors.fullNameRequired');
+    if (!mobile.trim()) next.mobile = t('auth.errors.mobileRequired');
+    else if (mobileClassification.kind === 'invalid')
+      next.mobile = mobileIssueToMessage(mobileClassification.issue, t);
     if (!email.trim()) next.email = t('auth.errors.emailRequired');
     else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
       next.email = t('auth.errors.emailFormat');
@@ -349,7 +391,12 @@ function SupabaseRegister() {
 
     setSubmitting(true);
     try {
-      await signUp({ email: email.trim(), password, fullName: fullName.trim() });
+      await signUp({
+        email: email.trim(),
+        password,
+        fullName: fullName.trim(),
+        mobile: normalizedMobile!.canonical,
+      });
       navigate('/', { replace: true });
     } catch (err) {
       const message = err instanceof Error ? err.message : t('auth.errors.signUpFailed');
@@ -381,6 +428,40 @@ function SupabaseRegister() {
               autoComplete="name"
             />
           </FormField>
+          <FormField
+            label={t('auth.mobile')}
+            required
+            error={mobileError}
+            hint={!mobileError ? t('auth.login.mobileHint') : undefined}
+          >
+            <Input
+              inputMode="tel"
+              placeholder="5XXXXXXXX"
+              value={mobile}
+              onChange={(e) => {
+                setMobile(e.target.value);
+                if (errors.mobile) setErrors((p) => ({ ...p, mobile: undefined }));
+              }}
+              onBlur={() => setMobileTouched(true)}
+              leading={
+                <span className="text-ink-500 text-[13px] font-medium num">+966</span>
+              }
+              invalid={Boolean(mobileError)}
+              autoComplete="tel"
+              maxLength={14}
+            />
+          </FormField>
+          {normalizedMobile && (
+            <div
+              className="-mt-2 rounded-xl2 bg-canvas-100/70 ring-1 ring-canvas-200 px-3.5 py-2 text-[11.5px] text-ink-500 flex items-center gap-2"
+              aria-live="polite"
+            >
+              <BadgeCheckIcon size={12} className="text-lavender-600 shrink-0" />
+              <span className="num">
+                {t('auth.mobileAccepted', { e164: normalizedMobile.e164 })}
+              </span>
+            </div>
+          )}
           <FormField label={t('auth.email')} required error={errors.email}>
             <Input
               type="email"

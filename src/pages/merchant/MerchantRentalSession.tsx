@@ -22,16 +22,51 @@ import {
   createInvoiceWithItems,
   fetchEligibility,
   fetchMyMerchant,
-  fetchProfileByMobile,
   useSupabaseAuth,
   type ProfileRow,
   type RentalCategoryDB,
   type RentalEligibilityRow,
   type RentalInvoiceRow,
 } from '@/lib/supabase';
+import { lookupRenterByMobile, sendOtp, verifyOtp, OtpError } from '@/lib/otp';
+import {
+  classifyMobile,
+  maskMobile,
+  normalizeMobile,
+  type MobileIssue,
+} from '@/lib/mobile';
 import { RentalJourneyTimeline } from '@/components/rental/RentalJourneyTimeline';
 import { deriveJourneyFromInvoice } from '@/lib/rentalJourney';
 import { cn } from '@/lib/cn';
+
+// =====================================================================
+// Dev-only demo fallback. Production builds (`vite build`) set
+// import.meta.env.DEV to false, which lets Vite tree-shake every branch
+// gated on this flag. In configured live mode this is never reached.
+// =====================================================================
+const DEV_DEMO_FALLBACK = import.meta.env.DEV;
+
+/**
+ * Maps a mobile classification issue to the merchant-flow message. We
+ * never show a vague "invalid" string — every issue has a specific
+ * reason the renter can act on.
+ */
+function verifyMobileIssueMessage(
+  issue: MobileIssue,
+  t: (k: string, v?: Record<string, string | number>) => string,
+): string {
+  switch (issue) {
+    case 'empty':
+      return t('merchant.session.verify.errors.mobileFormat');
+    case 'incomplete':
+      return t('merchant.session.verify.errors.mobileIncomplete');
+    case 'unsupported_country':
+      return t('merchant.session.verify.errors.mobileUnsupportedCountry');
+    case 'invalid_format':
+    default:
+      return t('merchant.session.verify.errors.mobileFormat');
+  }
+}
 
 // =====================================================================
 // Typed session state — keeps the in-store rental session legible in
@@ -125,34 +160,12 @@ const CATEGORIES: RentalCategoryDB[] = ['dress', 'bag', 'watch', 'bisht'];
 const STEPS: SessionStep[] = ['start', 'verify', 'operation', 'eligibility', 'issued'];
 
 // ---------------------------------------------------------------------
-// Placeholder OTP — swap these two functions for real SMS provider
-// calls later (Twilio / Unifonic / Vonage). The session state machine
-// above does not change.
-// ---------------------------------------------------------------------
-
-async function sendRenterCode(_mobile: string): Promise<void> {
-  await new Promise((r) => window.setTimeout(r, 350));
-}
-
-async function verifyRenterCode(_mobile: string, _code: string): Promise<boolean> {
-  // For staging any 4+ digit code passes.
-  await new Promise((r) => window.setTimeout(r, 350));
-  return true;
-}
-
-// ---------------------------------------------------------------------
 
 function macroVerificationState(s: VerificationStatus): MacroVerification {
   if (s === 'verified') return 'verified';
   if (s === 'not_found') return 'not_found';
   if (s === 'found' || s === 'otp_sent' || s === 'looking_up') return 'pending';
   return 'idle';
-}
-
-function maskMobile(raw: string): string {
-  const digits = raw.replace(/\D/g, '');
-  if (digits.length < 4) return raw;
-  return `•••${digits.slice(-4)}`;
 }
 
 /** Rental fee — what the customer pays for the rental period. Separate
@@ -257,68 +270,193 @@ export default function MerchantRentalSession() {
 
   const handleLookupRenter = async () => {
     updateVerify({ error: null });
-    const digits = session.verify.mobile.replace(/\D/g, '');
-    if (!/^5\d{8}$/.test(digits)) {
-      updateVerify({ error: t('merchant.session.verify.errors.mobileFormat') });
+    // Hard-block: lookup never fires unless the number normalizes to the
+    // canonical Saudi shape. Use the classifier (single source of truth)
+    // so the user sees a precise message for whatever's wrong.
+    const classification = classifyMobile(session.verify.mobile);
+    if (classification.kind !== 'valid') {
+      updateVerify({ error: verifyMobileIssueMessage(classification.issue, t) });
       return;
     }
+    const normalized = classification;
+
     if (!supabaseAuth.configured) {
-      // Demo-safe path: simulate a found renter so the flow stays clickable
-      // even without a backend.
+      // Production path requires the live backend. The dev fallback below
+      // is intentionally minimal and is tree-shaken out of production builds.
+      if (DEV_DEMO_FALLBACK) {
+        updateVerify({
+          status: 'found',
+          renter: {
+            id: 'dev-renter',
+            full_name: '[dev] Renter',
+            mobile: normalized.canonical,
+            email: null,
+            national_id: null,
+            city: 'riyadh',
+            role: 'customer',
+            account_status: 'active',
+            nafath_verified_at: null,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          } as ProfileRow,
+        });
+        return;
+      }
       updateVerify({
-        status: 'found',
-        renter: {
-          id: 'demo-renter',
-          full_name: 'Demo Renter',
-          mobile: digits,
-          email: 'demo.renter@applux.test',
-          national_id: null,
-          city: 'riyadh',
-          role: 'customer',
-          account_status: 'active',
-          nafath_verified_at: null,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        } as ProfileRow,
+        status: 'unverified',
+        error: t('merchant.session.verify.errors.backendRequired'),
       });
       return;
     }
+
     updateVerify({ status: 'looking_up' });
     try {
-      const profile = await fetchProfileByMobile(digits);
-      if (!profile) {
+      const existence = await lookupRenterByMobile(normalized.canonical);
+      if (!existence) {
         updateVerify({ status: 'not_found', renter: null });
         return;
       }
-      updateVerify({ status: 'found', renter: profile });
+      // EXISTENCE-ONLY at this point — by policy we do NOT surface the
+      // renter's name, city, or other details to the merchant until the
+      // OTP succeeds. The renter object stays null; the verify card
+      // shows a generic "Renter is registered" panel.
+      updateVerify({ status: 'found', renter: null });
     } catch (err) {
+      // Backend or network error — don't surface the raw provider message;
+      // give the merchant a calm, actionable line.
+      console.error('[verify] lookupRenterByMobile failed', err);
       updateVerify({
         status: 'unverified',
-        error: err instanceof Error ? err.message : 'Lookup failed.',
+        error: t('merchant.session.verify.errors.mobileVerifyFailed'),
       });
     }
   };
 
   const handleSendCode = async () => {
-    if (!session.verify.renter) return;
+    // We only need the existence check to have succeeded — the renter
+    // object stays null until OTP verification. Send to the typed
+    // mobile (already canonicalized by the lookup step).
+    if (session.verify.status !== 'found' && session.verify.status !== 'otp_sent') return;
     updateVerify({ error: null });
-    await sendRenterCode(session.verify.renter.mobile ?? session.verify.mobile);
-    updateVerify({ status: 'otp_sent' });
+    // Defense-in-depth: even though the lookup step already canonicalized
+    // the number, re-classify here so a tampered field cannot trigger an
+    // SMS send for a malformed number.
+    const classification = classifyMobile(session.verify.mobile);
+    if (classification.kind !== 'valid') {
+      updateVerify({ error: verifyMobileIssueMessage(classification.issue, t) });
+      return;
+    }
+
+    if (!supabaseAuth.configured) {
+      if (DEV_DEMO_FALLBACK) {
+        await new Promise((r) => window.setTimeout(r, 300));
+        updateVerify({ status: 'otp_sent' });
+        return;
+      }
+      updateVerify({ error: t('merchant.session.verify.errors.backendRequired') });
+      return;
+    }
+
+    try {
+      await sendOtp(session.verify.mobile);
+      updateVerify({ status: 'otp_sent' });
+    } catch (err) {
+      const message =
+        err instanceof OtpError && err.code === 'twilio_not_configured'
+          ? t('merchant.session.verify.errors.providerOffline')
+          : err instanceof Error
+            ? err.message
+            : t('merchant.session.verify.errors.sendFailed');
+      updateVerify({ error: message });
+    }
   };
 
   const handleConfirmCode = async () => {
+    // The OTP verify endpoint is itself the renter-identity gate. Still,
+    // we re-classify the mobile here so a malformed value never reaches
+    // the SMS provider (defense-in-depth — the lookup step normally
+    // catches this first).
+    const classification = classifyMobile(session.verify.mobile);
+    if (classification.kind !== 'valid') {
+      updateVerify({ error: verifyMobileIssueMessage(classification.issue, t) });
+      return;
+    }
     const trimmed = session.verify.otp.replace(/\D/g, '');
     if (trimmed.length < 4) {
       updateVerify({ error: t('merchant.session.verify.errors.codeShort') });
       return;
     }
-    const ok = await verifyRenterCode(session.verify.mobile, trimmed);
-    if (!ok) {
-      updateVerify({ error: t('merchant.session.verify.errors.codeFailed') });
+
+    if (!supabaseAuth.configured) {
+      if (DEV_DEMO_FALLBACK) {
+        // Synthesize a renter only at verification time, mirroring the
+        // production flow where renter details are exclusively revealed
+        // after a successful OTP check.
+        updateVerify({
+          status: 'verified',
+          error: null,
+          renter: {
+            id: 'dev-renter',
+            full_name: '[dev] Renter',
+            mobile: normalizeMobile(session.verify.mobile)?.canonical ?? null,
+            email: null,
+            national_id: null,
+            city: 'riyadh',
+            role: 'customer',
+            account_status: 'active',
+            nafath_verified_at: null,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          } as ProfileRow,
+        });
+        setStep('operation');
+        return;
+      }
+      updateVerify({ error: t('merchant.session.verify.errors.backendRequired') });
       return;
     }
-    updateVerify({ status: 'verified', error: null });
-    setStep('operation');
+
+    try {
+      const result = await verifyOtp(session.verify.mobile, trimmed);
+      if (!result.verified) {
+        updateVerify({ error: t('merchant.session.verify.errors.codeFailed') });
+        return;
+      }
+      // The verify endpoint is authoritative for the renter identity —
+      // overwrite the lookup-RPC snapshot with what Twilio + the
+      // service-role-keyed fetch returned (mobile is guaranteed canonical
+      // server-side; this is the renter we just confirmed by OTP).
+      if (result.renter) {
+        updateVerify({
+          status: 'verified',
+          error: null,
+          renter: {
+            id: result.renter.id,
+            full_name: result.renter.full_name,
+            mobile: result.renter.mobile,
+            email: null,
+            national_id: null,
+            city: result.renter.city,
+            role: 'customer',
+            account_status: 'active',
+            nafath_verified_at: result.renter.has_nafath ? new Date(0).toISOString() : null,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          } as ProfileRow,
+        });
+      } else {
+        updateVerify({ status: 'verified', error: null });
+      }
+      setStep('operation');
+    } catch (err) {
+      const message =
+        err instanceof OtpError && err.code === 'twilio_not_configured'
+          ? t('merchant.session.verify.errors.providerOffline')
+          : err instanceof Error
+            ? err.message
+            : t('merchant.session.verify.errors.codeFailed');
+      updateVerify({ error: message });
+    }
   };
 
   const handleOperationContinue = async () => {
@@ -331,25 +469,33 @@ export default function MerchantRentalSession() {
     if (Number(op.rentalDays) < 1) return;
     if (!(Number(op.originalItemValue) > 0)) return;
 
-    if (!supabaseAuth.configured || !session.verify.renter) {
-      // Demo-safe verdict fixture so the flow stays clickable.
+    if (!supabaseAuth.configured) {
+      if (DEV_DEMO_FALLBACK && session.verify.renter) {
+        updateEligibility({
+          row: {
+            user_id: session.verify.renter.id,
+            limit_amount: 50000,
+            used_amount: 18500,
+            tier: 'premium',
+            assigned_by: null,
+            assigned_at: new Date().toISOString(),
+            notes: null,
+            updated_at: new Date().toISOString(),
+          },
+          loading: false,
+          error: null,
+        });
+        setStep('eligibility');
+        return;
+      }
       updateEligibility({
-        row: {
-          user_id: session.verify.renter?.id ?? 'demo-renter',
-          limit_amount: 50000,
-          used_amount: 18500,
-          tier: 'premium',
-          assigned_by: null,
-          assigned_at: new Date().toISOString(),
-          notes: null,
-          updated_at: new Date().toISOString(),
-        },
         loading: false,
-        error: null,
+        error: t('merchant.session.verify.errors.backendRequired'),
       });
-      setStep('eligibility');
       return;
     }
+
+    if (!session.verify.renter) return;
 
     updateEligibility({ loading: true, error: null });
     try {
@@ -372,40 +518,46 @@ export default function MerchantRentalSession() {
     const rentalFee = rate * days;
     const itemValue = Number(session.operation.originalItemValue) || 0;
 
-    // --- Demo-mode path -----------------------------------------------
-    // When env isn't configured the real RPC chain can't run; synthesize
-    // a fixture invoice + scan token so the handoff card still renders
-    // and the merchant can walk the rest of the flow.
+    // --- Dev-only synthetic issuance ----------------------------------
+    // Production builds tree-shake this branch (DEV_DEMO_FALLBACK = false).
+    // The real path begins at the merchantId guard below.
     if (!supabaseAuth.configured) {
-      updateIssue({ submitting: true, error: null });
-      await new Promise((r) => window.setTimeout(r, 400));
-      const token = `DEMO-${Math.random().toString(36).slice(2, 12).toUpperCase()}`;
-      const now = new Date().toISOString();
-      const fixture: RentalInvoiceRow = {
-        id: token,
-        invoice_number: `INV-DEMO-${Date.now().toString().slice(-6)}`,
-        merchant_id: 'demo-merchant',
-        branch_id: null,
-        customer_user_id: session.verify.renter.id,
-        subtotal_amount: rentalFee,
-        tax_amount: 0,
-        security_deposit: 0,
-        total_amount: rentalFee,
-        original_item_value: itemValue,
-        status: 'issued',
-        issued_at: now,
-        expires_at: null,
-        scan_token: token,
-        notes: null,
-        created_at: now,
-        updated_at: now,
-      };
-      updateIssue({ invoice: fixture, submitting: false, error: null });
-      setStep('issued');
+      if (DEV_DEMO_FALLBACK) {
+        updateIssue({ submitting: true, error: null });
+        await new Promise((r) => window.setTimeout(r, 400));
+        const token = `DEV-${Math.random().toString(36).slice(2, 12).toUpperCase()}`;
+        const now = new Date().toISOString();
+        const fixture: RentalInvoiceRow = {
+          id: token,
+          invoice_number: `INV-DEV-${Date.now().toString().slice(-6)}`,
+          merchant_id: 'dev-merchant',
+          branch_id: null,
+          customer_user_id: session.verify.renter.id,
+          subtotal_amount: rentalFee,
+          tax_amount: 0,
+          security_deposit: 0,
+          total_amount: rentalFee,
+          original_item_value: itemValue,
+          status: 'issued',
+          issued_at: now,
+          expires_at: null,
+          scan_token: token,
+          notes: null,
+          created_at: now,
+          updated_at: now,
+        };
+        updateIssue({ invoice: fixture, submitting: false, error: null });
+        setStep('issued');
+        return;
+      }
+      updateIssue({
+        submitting: false,
+        error: t('merchant.session.verify.errors.backendRequired'),
+      });
       return;
     }
 
-    // --- Real backend path --------------------------------------------
+    // --- Real live issuance -------------------------------------------
     // Guard explicitly so the merchant never taps a button that does
     // nothing — surface a clear error instead.
     if (!merchantId) {
@@ -718,6 +870,22 @@ function VerifyCard({
   active: boolean;
   locked: boolean;
 }) {
+  // Live validation — the user sees whether their number is accepted
+  // BEFORE they tap Look up, and gets a precise message for whatever's
+  // wrong (incomplete, foreign country, malformed). The DB CHECK on
+  // profiles.mobile remains the single source of truth for storage.
+  const [mobileTouched, setMobileTouched] = useState(false);
+  const mobileClassification = classifyMobile(mobile);
+  const normalizedMobile =
+    mobileClassification.kind === 'valid' ? mobileClassification : null;
+  const mobileError =
+    mobileTouched &&
+    mobile.trim().length > 0 &&
+    mobileClassification.kind === 'invalid'
+      ? verifyMobileIssueMessage(mobileClassification.issue, t)
+      : undefined;
+  // Hard block — lookup button is disabled unless the number is valid.
+  const canSubmitLookup = normalizedMobile !== null && status !== 'looking_up';
   return (
     <StepShell
       number={1}
@@ -741,17 +909,39 @@ function VerifyCard({
             <>
               <FormField
                 label={t('merchant.session.verify.mobileLabel')}
-                hint={t('merchant.session.verify.mobileHint')}
+                hint={
+                  !mobileError
+                    ? t('merchant.session.verify.mobileHint')
+                    : undefined
+                }
+                error={mobileError}
               >
                 <Input
                   inputMode="tel"
                   placeholder="5XXXXXXXX"
                   value={mobile}
                   onChange={(e) => setMobile(e.target.value)}
-                  leading={<PhoneIcon size={14} className="text-ink-400" />}
-                  maxLength={12}
+                  onBlur={() => setMobileTouched(true)}
+                  leading={
+                    <span className="text-ink-500 text-[13px] font-medium num">+966</span>
+                  }
+                  invalid={Boolean(mobileError)}
+                  maxLength={14}
                 />
               </FormField>
+              {normalizedMobile && (
+                <div
+                  className="rounded-xl2 bg-canvas-100/70 ring-1 ring-canvas-200 px-3.5 py-2 text-[11.5px] text-ink-500 flex items-center gap-2"
+                  aria-live="polite"
+                >
+                  <BadgeCheckIcon size={12} className="text-lavender-600 shrink-0" />
+                  <span className="num">
+                    {t('merchant.session.verify.mobileAccepted', {
+                      e164: normalizedMobile.e164,
+                    })}
+                  </span>
+                </div>
+              )}
               {verifyError && (
                 <div className="rounded-xl2 bg-danger-50 ring-1 ring-danger-500/25 px-3.5 py-2.5 text-[12.5px] text-danger-700">
                   {verifyError}
@@ -763,28 +953,56 @@ function VerifyCard({
                 block
                 onClick={onLookup}
                 loading={status === 'looking_up'}
+                disabled={!canSubmitLookup}
               >
                 {t('merchant.session.verify.lookupCta')}
               </Button>
             </>
           )}
 
-          {/* Pending — renter exists, verification in progress */}
-          {(status === 'found' || status === 'otp_sent') && renter && (
+          {/* Pending — renter exists, verification in progress.
+              By policy, renter identity is NOT shown to the merchant
+              at this stage. Only after OTP confirmation does the
+              name surface. */}
+          {(status === 'found' || status === 'otp_sent') && (
             <>
               <VerificationBanner macro="pending" t={t}>
-                <RenterSummary renter={renter} t={t} />
+                <div className="rounded-xl2 bg-white ring-1 ring-canvas-200 p-3 flex items-start gap-3">
+                  <span className="h-10 w-10 shrink-0 rounded-2xl bg-canvas-100 ring-1 ring-lavender-200 text-lavender-700 grid place-items-center">
+                    <ShieldIcon size={18} />
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <div className="text-[13px] font-semibold text-ink-900">
+                      {t('merchant.session.verify.privacy.title')}
+                    </div>
+                    <div className="mt-0.5 text-[11.5px] text-ink-500 leading-relaxed num">
+                      {t('merchant.session.verify.privacy.body', {
+                        mask: maskMobile(
+                          normalizeMobile(mobile)?.canonical ?? mobile,
+                        ),
+                      })}
+                    </div>
+                  </div>
+                </div>
               </VerificationBanner>
               {status === 'found' && (
                 <Button variant="primary" size="lg" block onClick={onSendCode}>
-                  {t('merchant.session.verify.sendCodeCta', { mask: maskMobile(mobile) })}
+                  {t('merchant.session.verify.sendCodeCta', {
+                    mask: maskMobile(
+                      normalizeMobile(mobile)?.canonical ?? mobile,
+                    ),
+                  })}
                 </Button>
               )}
               {status === 'otp_sent' && (
                 <>
                   <FormField
                     label={t('merchant.session.verify.codeLabel')}
-                    hint={t('merchant.session.verify.codeHint', { mask: maskMobile(mobile) })}
+                    hint={t('merchant.session.verify.codeHint', {
+                      mask: maskMobile(
+                        normalizeMobile(mobile)?.canonical ?? mobile,
+                      ),
+                    })}
                   >
                     <Input
                       inputMode="numeric"
