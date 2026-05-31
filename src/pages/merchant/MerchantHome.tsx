@@ -396,7 +396,19 @@ export default function MerchantHome() {
             <Button
               variant="secondary"
               block
-              onClick={() => {
+              onClick={async () => {
+                // When Supabase is configured, the real session is the
+                // authoritative one — clear it FIRST so a refresh
+                // doesn't hydrate the user straight back into the
+                // merchant area. Then clean up the demo merchant state.
+                if (supabaseAuth.configured) {
+                  try {
+                    await supabaseAuth.signOut();
+                  } catch (err) {
+                    // eslint-disable-next-line no-console
+                    console.error('[applux] merchant signOut failed', err);
+                  }
+                }
                 signOutMerchant();
                 navigate('/merchant/welcome', { replace: true });
               }}

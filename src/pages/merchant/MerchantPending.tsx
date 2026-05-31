@@ -20,6 +20,7 @@ import {
 } from '@/components/icons';
 import { useI18n, useT } from '@/lib/i18n';
 import { useStore, type MerchantStatus } from '@/lib/store';
+import { useSupabaseAuth } from '@/lib/supabase';
 
 type StateVisual = {
   badgeTone: StatusTone;
@@ -73,6 +74,23 @@ export default function MerchantPending() {
     resubmitMerchantRequest,
     signOutMerchant,
   } = useStore();
+  const supabaseAuth = useSupabaseAuth();
+
+  // Shared logout — when Supabase is configured, sign out of the real
+  // session first so a refresh doesn't hydrate the user straight back
+  // into the merchant area. Then clean up the demo merchant state.
+  const handleSignOut = async () => {
+    if (supabaseAuth.configured) {
+      try {
+        await supabaseAuth.signOut();
+      } catch (err) {
+        // eslint-disable-next-line no-console
+        console.error('[applux] merchant signOut failed', err);
+      }
+    }
+    signOutMerchant();
+    navigate('/merchant/welcome', { replace: true });
+  };
 
   useEffect(() => {
     if (!merchant) {
@@ -283,8 +301,7 @@ export default function MerchantPending() {
                   variant="ghost"
                   block
                   onClick={() => {
-                    signOutMerchant();
-                    navigate('/merchant/welcome', { replace: true });
+                    void handleSignOut();
                   }}
                 >
                   {t('merchant.pending.signOut')}
@@ -307,8 +324,7 @@ export default function MerchantPending() {
                   variant="ghost"
                   block
                   onClick={() => {
-                    signOutMerchant();
-                    navigate('/merchant/welcome', { replace: true });
+                    void handleSignOut();
                   }}
                 >
                   {t('merchant.pending.signOut')}
@@ -330,8 +346,7 @@ export default function MerchantPending() {
                   variant="ghost"
                   block
                   onClick={() => {
-                    signOutMerchant();
-                    navigate('/merchant/welcome', { replace: true });
+                    void handleSignOut();
                   }}
                 >
                   {t('merchant.pending.signOut')}

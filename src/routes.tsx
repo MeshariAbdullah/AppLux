@@ -61,13 +61,22 @@ function RequireCustomer({ children }: { children: ReactElement }) {
 /**
  * Single role-routing decision point for the whole app.
  *
- * Driven entirely by provider state (`useSupabaseAuth().status` + `.role`).
- * Login pages do NOT duplicate this logic — once their post-auth effect
- * sees `status === 'authenticated'`, they navigate to '/' and hand off
- * to this component, which is the only place that maps role → home.
+ * Driven entirely by provider state (`useSupabaseAuth().status` +
+ * `.role`). Login / sign-up pages do NOT duplicate this logic — once
+ * their post-auth effect sees `status === 'authenticated'`, they
+ * navigate to '/' and hand off to this component, which is the only
+ * place that maps role → home.
+ *
+ * Failure branches:
+ *   - configured but profile fetch errored → render a recoverable error
+ *     view with Retry. Without this, the user would silently land on
+ *     /welcome because role is null, looking like a login loop.
+ *   - configured, authenticated, no profile, no error → genuine
+ *     "this user has no profile row" — go to /welcome.
  */
 function RootRedirect() {
-  const { configured, status, role } = useSupabaseAuth();
+  const { configured, status, role, profile, profileError, refresh, signOut } =
+    useSupabaseAuth();
   const { session: demoSession } = useStore();
 
   if (!configured) {
@@ -75,9 +84,55 @@ function RootRedirect() {
   }
   if (status === 'loading') return null;
   if (status !== 'authenticated') return <Navigate to="/welcome" replace />;
+  if (profileError) {
+    return <ProfileLoadError onRetry={refresh} onSignOut={signOut} />;
+  }
+  if (!profile) {
+    // Authenticated but profile row missing entirely — push back to
+    // /welcome rather than loop.
+    return <Navigate to="/welcome" replace />;
+  }
   if (role === 'merchant') return <Navigate to="/merchant/home" replace />;
   if (role === 'admin') return <Navigate to="/admin/home" replace />;
   return <Navigate to="/home" replace />;
+}
+
+function ProfileLoadError({
+  onRetry,
+  onSignOut,
+}: {
+  onRetry: () => Promise<void>;
+  onSignOut: () => Promise<void>;
+}) {
+  return (
+    <div className="min-h-screen grid place-items-center px-6 py-10 bg-canvas">
+      <div className="max-w-sm w-full rounded-xl3 bg-white ring-1 ring-canvas-200 p-6 shadow-soft text-center space-y-3">
+        <h1 className="editorial-title text-[20px] text-ink-900">
+          We couldn't load your profile
+        </h1>
+        <p className="text-[13px] text-ink-500 leading-relaxed">
+          Your session is active, but a profile fetch failed. Check your
+          connection and try again.
+        </p>
+        <div className="flex flex-col gap-2 pt-2">
+          <button
+            type="button"
+            onClick={() => void onRetry()}
+            className="w-full rounded-xl2 bg-lavender-600 text-white text-[13.5px] font-semibold py-2.5 hover:bg-lavender-700"
+          >
+            Try again
+          </button>
+          <button
+            type="button"
+            onClick={() => void onSignOut()}
+            className="w-full text-[12.5px] text-ink-500 underline underline-offset-4 decoration-canvas-300"
+          >
+            Sign out
+          </button>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 export function AppRoutes() {

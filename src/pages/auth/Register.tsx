@@ -1,4 +1,4 @@
-import { useMemo, useState, type ChangeEvent } from 'react';
+import { useEffect, useMemo, useState, type ChangeEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Header, Screen } from '@/components/layout';
 import { Button, FormField, Input, Select, Textarea } from '@/components/ui';
@@ -339,7 +339,7 @@ function mobileIssueToMessage(
 function SupabaseRegister() {
   const t = useT();
   const navigate = useNavigate();
-  const { signUp } = useSupabaseAuth();
+  const { signUp, configured, status } = useSupabaseAuth();
 
   const [fullName, setFullName] = useState('');
   const [mobile, setMobile] = useState('');
@@ -348,6 +348,15 @@ function SupabaseRegister() {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  /**
+   * When Supabase has email-confirmation enabled, signUp resolves with
+   * { user, session: null } — the new user is registered but NOT logged
+   * in. We must NOT navigate to '/' in that case (RootRedirect would
+   * see status='anonymous' and bounce to /welcome, looking like signup
+   * failed). Instead we render a "check your email" panel until the
+   * user clicks the confirmation link and signs in manually.
+   */
+  const [pendingEmailConfirmation, setPendingEmailConfirmation] = useState(false);
   const [errors, setErrors] = useState<{
     fullName?: string;
     mobile?: string;
@@ -356,6 +365,18 @@ function SupabaseRegister() {
     confirmPassword?: string;
     form?: string;
   }>({});
+
+  // Post-auth handoff — same pattern as Login / MerchantLogin (commit
+  // 566be09). signUp's session, when it returns one, propagates through
+  // onAuthStateChange → loadUserContext → setStatus('authenticated')
+  // asynchronously. Navigating synchronously after `await signUp` would
+  // race that update and bounce to /welcome. Observing `status` removes
+  // the race. RootRedirect (routes.tsx) owns role routing from '/'.
+  useEffect(() => {
+    if (configured && status === 'authenticated') {
+      navigate('/', { replace: true });
+    }
+  }, [configured, status, navigate]);
 
   // Live validation — the user sees an inline error the moment they
   // blur an unsupported number, and a confirmation chip with the
@@ -391,19 +412,59 @@ function SupabaseRegister() {
 
     setSubmitting(true);
     try {
-      await signUp({
+      const result = await signUp({
         email: email.trim(),
         password,
         fullName: fullName.trim(),
         mobile: normalizedMobile!.canonical,
       });
-      navigate('/', { replace: true });
+      // Two outcomes from Supabase signUp:
+      //  (a) project has email-confirmation enabled → result.session is
+      //      null and the user must confirm via email before logging in.
+      //      Show a clear "check your email" panel; do NOT navigate.
+      //  (b) email-confirmation disabled → result.session is populated,
+      //      Supabase fires onAuthStateChange, provider hydrates, the
+      //      useEffect above navigates to '/'. Nothing to do here.
+      if (!result.session) {
+        setPendingEmailConfirmation(true);
+        setSubmitting(false);
+      }
     } catch (err) {
       const message = err instanceof Error ? err.message : t('auth.errors.signUpFailed');
       setErrors({ form: message });
       setSubmitting(false);
     }
   };
+
+  if (pendingEmailConfirmation) {
+    // signUp succeeded but session is null → Supabase project has
+    // email-confirmation enabled. Render a clear "check your email"
+    // state instead of bouncing through RootRedirect / /welcome.
+    return (
+      <>
+        <Header title={t('register.title')} showBack />
+        <Screen className="bg-canvas">
+          <div className="rounded-xl3 bg-white ring-1 ring-canvas-200 p-5 shadow-soft space-y-3">
+            <div className="h-11 w-11 rounded-2xl bg-gold-50 text-gold-700 grid place-items-center">
+              <BadgeCheckIcon size={20} />
+            </div>
+            <h1 className="editorial-title text-[20px] text-ink-900 leading-tight">
+              {t('register.emailConfirm.title')}
+            </h1>
+            <p className="text-[13px] text-ink-500 leading-relaxed">
+              {t('register.emailConfirm.body', { email: email.trim() })}
+            </p>
+          </div>
+          <Link
+            to="/auth/login"
+            className="block text-center text-[13px] text-lavender-700 font-semibold pt-2"
+          >
+            {t('register.emailConfirm.goToLogin')}
+          </Link>
+        </Screen>
+      </>
+    );
+  }
 
   return (
     <>

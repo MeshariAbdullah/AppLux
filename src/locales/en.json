@@ -154,6 +154,11 @@
     "income": "Monthly income",
     "incomePh": "0",
     "submit": "Create account",
+    "emailConfirm": {
+      "title": "Check your email",
+      "body": "We sent a confirmation link to {email}. Click the link to activate your account, then sign in.",
+      "goToLogin": "Go to sign in"
+    },
     "professions": {
       "private": "Private sector",
       "government": "Government",

@@ -25,6 +25,29 @@ import {
   type SignUpInput,
 } from './auth';
 
+// =====================================================================
+// AppLux auth provider — single source of truth for: auth session,
+// profile / role, and the boolean RootRedirect uses to route post-login.
+//
+// Routing contract: RootRedirect (src/routes.tsx) is the ONLY place
+// that maps role → home. Login pages observe `status === 'authenticated'`,
+// navigate to '/', and let RootRedirect decide. Nothing else should
+// duplicate the role → path map.
+//
+// Status transitions:
+//   loading   → initial bootstrap (getSession + profile fetch in-flight)
+//   anonymous → no Supabase session
+//   authenticated → session + profile present (or profile fetch errored,
+//                   in which case `profileError` is set and the role is
+//                   null — RootRedirect surfaces a clear failure UI)
+//   disabled  → env vars not inlined; the provider returns DEFAULT
+//
+// Eligibility is intentionally NOT on the critical path. Merchants and
+// admins have no eligibility row at all, and customers don't need it
+// for routing — we load it in the background after status flips and
+// expose it as `eligibility` / `eligibilityLoading`.
+// =====================================================================
+
 type AuthStatus = 'loading' | 'authenticated' | 'anonymous' | 'disabled';
 
 type SupabaseAuthValue = {
@@ -33,19 +56,34 @@ type SupabaseAuthValue = {
   configured: boolean;
   session: Session | null;
   profile: ProfileRow | null;
+  /**
+   * Set when the post-auth profile fetch failed (network, RLS, missing
+   * row). Lets RootRedirect distinguish a real role=null from a
+   * profile-load failure. When set, never silently routes the user;
+   * the UI shows a recoverable error with a retry path.
+   */
+  profileError: Error | null;
   eligibility: RentalEligibilityRow | null;
+  eligibilityLoading: boolean;
   role: AppRole | null;
   isAdmin: boolean;
   isMerchant: boolean;
   isCustomer: boolean;
-  signUp: (input: SignUpInput) => Promise<void>;
+  /**
+   * Sign up a new user. Returns the auth payload so the caller can
+   * detect email-confirmation flows (Supabase returns `session: null`
+   * when the project requires email confirmation — the user is created
+   * but NOT logged in, so the caller must render a "check your email"
+   * state instead of redirecting).
+   */
+  signUp: (input: SignUpInput) => Promise<{ session: Session | null }>;
   signIn: (input: SignInInput) => Promise<void>;
   signOut: () => Promise<void>;
   /** Re-fetch profile + eligibility for the current user. */
   refresh: () => Promise<void>;
 };
 
-const noop = async () => {
+const noop = async (): Promise<never> => {
   throw new Error('Supabase auth is disabled — set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY.');
 };
 
@@ -54,7 +92,9 @@ const DEFAULT: SupabaseAuthValue = {
   configured: false,
   session: null,
   profile: null,
+  profileError: null,
   eligibility: null,
+  eligibilityLoading: false,
   role: null,
   isAdmin: false,
   isMerchant: false,
@@ -85,37 +125,79 @@ function ConfiguredProvider({ children }: { children: ReactNode }) {
   const [status, setStatus] = useState<AuthStatus>('loading');
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<ProfileRow | null>(null);
+  const [profileError, setProfileError] = useState<Error | null>(null);
   const [eligibility, setEligibility] = useState<RentalEligibilityRow | null>(null);
+  const [eligibilityLoading, setEligibilityLoading] = useState(false);
 
-  // Track in-flight loads so a stale response from a previous user can't
-  // overwrite the current user's data.
+  // Track in-flight loads so a stale response from a previous user
+  // (rapid logout/login, token refresh, multi-tab) can't overwrite the
+  // current user's data.
   const loadIdRef = useRef(0);
 
+  /**
+   * Fetch the profile — REQUIRED for role-based routing. Returns the
+   * loaded row (or null) so the caller can decide whether to gate
+   * status='authenticated' on success.
+   */
+  const loadProfile = useCallback(async (userId: string, loadId: number) => {
+    try {
+      const p = await fetchProfile(userId);
+      if (loadIdRef.current !== loadId) return null; // superseded
+      setProfile(p);
+      setProfileError(null);
+      return p;
+    } catch (err) {
+      if (loadIdRef.current !== loadId) return null;
+      // eslint-disable-next-line no-console
+      console.error('[applux] failed to load profile', err);
+      setProfile(null);
+      setProfileError(err instanceof Error ? err : new Error('Profile load failed'));
+      return null;
+    }
+  }, []);
+
+  /**
+   * Fetch eligibility — OPTIONAL. Customers may or may not have a row,
+   * merchants and admins never do. We do not block status='authenticated'
+   * on this. Errors here are logged but do NOT pollute profileError.
+   */
+  const loadEligibility = useCallback(async (userId: string, loadId: number) => {
+    setEligibilityLoading(true);
+    try {
+      const e = await fetchEligibility(userId);
+      if (loadIdRef.current !== loadId) return;
+      setEligibility(e);
+    } catch (err) {
+      if (loadIdRef.current !== loadId) return;
+      // eslint-disable-next-line no-console
+      console.error('[applux] failed to load eligibility (non-fatal)', err);
+      setEligibility(null);
+    } finally {
+      if (loadIdRef.current === loadId) setEligibilityLoading(false);
+    }
+  }, []);
+
+  /**
+   * Bootstrap the user context for a given userId. Profile is awaited
+   * (it gates the routing decision); eligibility is dispatched in the
+   * background (don't block the redirect on a non-critical row).
+   */
   const loadUserContext = useCallback(
     async (userId: string | null) => {
       const myLoad = ++loadIdRef.current;
       if (!userId) {
         setProfile(null);
+        setProfileError(null);
         setEligibility(null);
+        setEligibilityLoading(false);
         return;
       }
-      try {
-        const [p, e] = await Promise.all([
-          fetchProfile(userId),
-          fetchEligibility(userId),
-        ]);
-        if (loadIdRef.current !== myLoad) return; // superseded
-        setProfile(p);
-        setEligibility(e);
-      } catch (err) {
-        if (loadIdRef.current !== myLoad) return;
-        // eslint-disable-next-line no-console
-        console.error('[applux] failed to load profile/eligibility', err);
-        setProfile(null);
-        setEligibility(null);
-      }
+      await loadProfile(userId, myLoad);
+      // Fire-and-forget — never blocks the caller. Internal staleness
+      // check guards against late writes from a superseded session.
+      void loadEligibility(userId, myLoad);
     },
-    [],
+    [loadProfile, loadEligibility],
   );
 
   useEffect(() => {
@@ -148,7 +230,9 @@ function ConfiguredProvider({ children }: { children: ReactNode }) {
       } else {
         loadIdRef.current += 1;
         setProfile(null);
+        setProfileError(null);
         setEligibility(null);
+        setEligibilityLoading(false);
         setStatus('anonymous');
       }
     });
@@ -160,7 +244,8 @@ function ConfiguredProvider({ children }: { children: ReactNode }) {
   }, [supabase, loadUserContext]);
 
   const signUp = useCallback(async (input: SignUpInput) => {
-    await authSignUp(input);
+    const { session: s } = await authSignUp(input);
+    return { session: s };
   }, []);
 
   const signIn = useCallback(async (input: SignInInput) => {
@@ -182,7 +267,9 @@ function ConfiguredProvider({ children }: { children: ReactNode }) {
       configured: true,
       session,
       profile,
+      profileError,
       eligibility,
+      eligibilityLoading,
       role,
       isAdmin: role === 'admin',
       isMerchant: role === 'merchant',
@@ -192,7 +279,18 @@ function ConfiguredProvider({ children }: { children: ReactNode }) {
       signOut,
       refresh,
     };
-  }, [status, session, profile, eligibility, signUp, signIn, signOut, refresh]);
+  }, [
+    status,
+    session,
+    profile,
+    profileError,
+    eligibility,
+    eligibilityLoading,
+    signUp,
+    signIn,
+    signOut,
+    refresh,
+  ]);
 
   return (
     <SupabaseAuthContext.Provider value={value}>
