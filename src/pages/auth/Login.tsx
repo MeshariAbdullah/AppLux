@@ -14,6 +14,10 @@ import { useT } from '@/lib/i18n';
 import { useStore } from '@/lib/store';
 import { emptyRegistration } from '@/lib/store';
 import { useSupabaseAuth } from '@/lib/supabase';
+import {
+  isMisconfiguredProduction,
+  ProductionConfigError,
+} from '@/components/auth/ProductionConfigGuard';
 
 type FieldErrors = {
   mobile?: string;
@@ -152,6 +156,13 @@ export default function Login() {
     setTouched({});
   };
 
+  // In production without Supabase env, refuse to render the demo
+  // login (otherwise the user "signs in" via setTimeout + navigate
+  // with no Supabase session). In dev the demo path stays available.
+  if (isMisconfiguredProduction(configured)) {
+    return <ProductionConfigError />;
+  }
+
   return (
     <>
       <Header title={t('auth.loginTitle')} showBack />
@@ -288,23 +299,30 @@ export default function Login() {
               {submitting ? t('auth.login.submitting') : t('auth.login')}
             </Button>
 
-            <div className="flex items-center gap-3 text-[11px] text-ink-400">
-              <span className="h-px flex-1 bg-canvas-200" />
-              <span className="tracking-tight">{t('auth.login.or')}</span>
-              <span className="h-px flex-1 bg-canvas-200" />
-            </div>
-
-            <Link to="/auth/nafath" className="block">
-              <Button
-                type="button"
-                size="lg"
-                variant="secondary"
-                block
-                leading={<ShieldIcon size={16} />}
-              >
-                {t('auth.login.continueNafath')}
-              </Button>
-            </Link>
+            {/* Nafath is a demo-only flow — it updates the demo store and
+                does not touch Supabase. Hide it entirely in configured
+                mode so a real user can't accidentally take a path that
+                won't produce a Supabase session. */}
+            {!configured && (
+              <>
+                <div className="flex items-center gap-3 text-[11px] text-ink-400">
+                  <span className="h-px flex-1 bg-canvas-200" />
+                  <span className="tracking-tight">{t('auth.login.or')}</span>
+                  <span className="h-px flex-1 bg-canvas-200" />
+                </div>
+                <Link to="/auth/nafath" className="block">
+                  <Button
+                    type="button"
+                    size="lg"
+                    variant="secondary"
+                    block
+                    leading={<ShieldIcon size={16} />}
+                  >
+                    {t('auth.login.continueNafath')}
+                  </Button>
+                </Link>
+              </>
+            )}
 
             <Card padded className="flex items-start gap-3.5">
               <span className="h-10 w-10 shrink-0 rounded-2xl bg-gold-50 text-gold-700 grid place-items-center">

@@ -14,6 +14,10 @@ import {
 import { useT } from '@/lib/i18n';
 import { useStore } from '@/lib/store';
 import { useSupabaseAuth } from '@/lib/supabase';
+import {
+  isMisconfiguredProduction,
+  ProductionConfigError,
+} from '@/components/auth/ProductionConfigGuard';
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -138,6 +142,10 @@ export default function MerchantLogin() {
     setErrors({});
     setTouched({});
   };
+
+  if (isMisconfiguredProduction(configured)) {
+    return <ProductionConfigError />;
+  }
 
   return (
     <>

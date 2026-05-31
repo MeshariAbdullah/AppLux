@@ -8,6 +8,10 @@ import { useSupabaseAuth } from '@/lib/supabase';
 import { classifyMobile, type MobileIssue } from '@/lib/mobile';
 import { cn } from '@/lib/cn';
 import { ArrowIcon, BadgeCheckIcon, ShieldIcon } from '@/components/icons';
+import {
+  isMisconfiguredProduction,
+  ProductionConfigError,
+} from '@/components/auth/ProductionConfigGuard';
 
 const CITY_KEYS = [
   'riyadh', 'jeddah', 'makkah', 'madinah', 'dammam', 'khobar', 'tabuk',
@@ -33,6 +37,14 @@ export default function Register() {
   const navigate = useNavigate();
   const { draft, updateDraft, resetDraft } = useStore();
   const { configured } = useSupabaseAuth();
+
+  // In production without Supabase env, refuse to render the demo
+  // multi-step register (otherwise the user completes a fake form
+  // that never creates an account). In dev the demo flow stays
+  // available for local exploration.
+  if (isMisconfiguredProduction(configured)) {
+    return <ProductionConfigError />;
+  }
 
   // When the Supabase env is wired, the heavy 3-step demo registration is
   // replaced by a minimal email/password sign-up. The demo flow stays as-is.

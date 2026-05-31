@@ -3,6 +3,14 @@ import { Navigate } from 'react-router-dom';
 import { useStore } from '@/lib/store';
 import { useSupabaseAuth, type AppRole } from '@/lib/supabase';
 
+function RouteLoadingFallback() {
+  return (
+    <div className="min-h-[40vh] grid place-items-center">
+      <div className="h-8 w-8 rounded-full border-2 border-canvas-200 border-t-lavender-600 animate-spin" />
+    </div>
+  );
+}
+
 type RequireRoleProps = {
   /** Single role or any-of list. Omit to require any authenticated role. */
   role?: AppRole | AppRole[];
@@ -48,8 +56,9 @@ export function RequireRole({
 
   // Real mode
   if (status === 'loading') {
-    // Avoid flashing a redirect while the session is hydrating.
-    return null;
+    // Render a tiny spinner instead of a blank screen — long boots
+    // (e.g. cold Supabase regions) otherwise look like the app froze.
+    return <RouteLoadingFallback />;
   }
   if (status !== 'authenticated') {
     return <Navigate to={fallback} replace />;
