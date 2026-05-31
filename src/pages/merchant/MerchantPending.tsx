@@ -93,10 +93,17 @@ export default function MerchantPending() {
   };
 
   useEffect(() => {
+    // Demo mode only — gate on the demo store's merchant. In configured
+    // mode the user reaches this page via explicit navigation from
+    // MerchantRegister after submitting their application, before
+    // their role is promoted from 'customer' to 'merchant'. Bouncing
+    // on the empty demo store would dump them on /merchant/welcome
+    // and they'd never see their pending status.
+    if (supabaseAuth.configured) return;
     if (!merchant) {
       navigate('/merchant/welcome', { replace: true });
     }
-  }, [merchant, navigate]);
+  }, [supabaseAuth.configured, merchant, navigate]);
 
   // Source of truth: the admin's decision in the store (same map the admin
   // writes to via approveMerchantRequest / rejectMerchantRequest). Falls back

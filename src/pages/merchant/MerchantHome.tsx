@@ -101,6 +101,13 @@ export default function MerchantHome() {
   const merchantRentals = liveRentals ?? demoRentals;
 
   useEffect(() => {
+    // Demo mode — gate on the demo store's merchant. In configured
+    // mode RequireRole (role="merchant") has already verified the
+    // visitor is a real merchant, so the demo-store check is
+    // meaningless and would incorrectly bounce them to
+    // /merchant/welcome (whose primary CTA is "Apply as a merchant",
+    // hence the "after merchant login I'm sent to registration" bug).
+    if (supabaseAuth.configured) return;
     if (!merchant) {
       navigate('/merchant/welcome', { replace: true });
       return;
@@ -108,7 +115,7 @@ export default function MerchantHome() {
     if (merchant.status === 'pending') {
       navigate('/merchant/pending', { replace: true });
     }
-  }, [merchant, navigate]);
+  }, [supabaseAuth.configured, merchant, navigate]);
 
   const overdueCount = useMemo(
     () => merchantRentals.filter((r) => r.status === 'overdue').length,

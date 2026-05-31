@@ -1,4 +1,5 @@
-import { Link } from 'react-router-dom';
+import { useEffect } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui';
 import { LangToggle } from '@/components/auth/LangToggle';
 import {
@@ -9,9 +10,24 @@ import {
   WalletIcon,
 } from '@/components/icons';
 import { useT } from '@/lib/i18n';
+import { useSupabaseAuth } from '@/lib/supabase';
 
 export default function MerchantWelcome() {
   const t = useT();
+  const navigate = useNavigate();
+  const { configured, status, role } = useSupabaseAuth();
+
+  // If the visitor is already an authenticated merchant, skip the
+  // entry-point copy and send them straight to their dashboard. This
+  // prevents the loop where someone signed-in-as-merchant lands here
+  // by clicking a stale link and sees "Apply as a merchant" as the
+  // primary CTA. Customers and admins are allowed to browse this page
+  // (a customer might be evaluating becoming a merchant).
+  useEffect(() => {
+    if (configured && status === 'authenticated' && role === 'merchant') {
+      navigate('/merchant/home', { replace: true });
+    }
+  }, [configured, status, role, navigate]);
 
   const features = [
     { icon: <BadgeCheckIcon size={18} />, label: t('merchant.entry.feature1') },

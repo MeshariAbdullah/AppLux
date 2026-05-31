@@ -1,4 +1,4 @@
-import { useMemo, useState, type ChangeEvent } from 'react';
+import { useEffect, useMemo, useState, type ChangeEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Header, Screen } from '@/components/layout';
 import {
@@ -103,7 +103,16 @@ export default function MerchantRegister() {
     resetMerchantDraft,
     submitMerchantApproval,
   } = useStore();
-  const { configured, session } = useSupabaseAuth();
+  const { configured, session, role, status } = useSupabaseAuth();
+
+  // Already-merchant guard. If a merchant tries to "apply" again, send
+  // them to their dashboard. This is a no-op for customers and admins
+  // (a customer might legitimately be onboarding as a merchant).
+  useEffect(() => {
+    if (configured && status === 'authenticated' && role === 'merchant') {
+      navigate('/merchant/home', { replace: true });
+    }
+  }, [configured, status, role, navigate]);
 
   const [values, setValues] = useState<MerchantDraft>(() =>
     merchantDraft.companyName ? merchantDraft : emptyMerchantDraft,
