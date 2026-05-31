@@ -10,11 +10,13 @@ import {
   UserIcon,
 } from '@/components/icons';
 import { useI18n, useT } from '@/lib/i18n';
+import { useSupabaseAuth } from '@/lib/supabase';
 import { cn } from '@/lib/cn';
 
 export default function AuthEntry() {
   const t = useT();
   const { dir } = useI18n();
+  const { configured } = useSupabaseAuth();
   return (
     <>
       <Header title={t('welcome.eyebrow')} showBack />
@@ -50,16 +52,21 @@ export default function AuthEntry() {
               description={t('auth.entry.role.merchant.desc')}
               dir={dir}
             />
-            <RoleCard
-              to="/admin/home"
-              tone="muted"
-              icon={<ShieldIcon size={20} />}
-              title={t('auth.entry.role.admin.title')}
-              description={t('auth.entry.role.admin.desc')}
-              demo
-              demoLabel={t('auth.entry.role.admin.demoPill')}
-              dir={dir}
-            />
+            {/* Demo-only entrypoint. In configured mode RequireRole
+                would just bounce non-admin visitors back to /welcome,
+                so we hide the card to avoid the confusing round-trip. */}
+            {!configured && (
+              <RoleCard
+                to="/admin/home"
+                tone="muted"
+                icon={<ShieldIcon size={20} />}
+                title={t('auth.entry.role.admin.title')}
+                description={t('auth.entry.role.admin.desc')}
+                demo
+                demoLabel={t('auth.entry.role.admin.demoPill')}
+                dir={dir}
+              />
+            )}
           </div>
 
           <div className="flex items-center gap-3 text-[11px] text-ink-400">

@@ -8,9 +8,11 @@ import {
   WalletIcon,
 } from '@/components/icons';
 import { useT } from '@/lib/i18n';
+import { useSupabaseAuth } from '@/lib/supabase';
 
 export default function Welcome() {
   const t = useT();
+  const { configured } = useSupabaseAuth();
 
   const features = [
     { icon: <ShieldIcon size={16} />, label: t('welcome.feature1') },
@@ -90,16 +92,21 @@ export default function Welcome() {
           >
             {t('merchant.switchToMerchant')} — {t('merchant.openMerchantPortal')}
           </Link>
-          <Link
-            to="/admin/home"
-            className="mt-0.5 flex items-center justify-center gap-1.5 text-[11.5px] text-ink-400 hover:text-ink-700"
-          >
-            <ShieldIcon size={11} />
-            {t('welcome.adminDemo.label')}
-            <span className="text-[9.5px] font-bold tracking-wide uppercase bg-lavender-50 text-lavender-700 rounded-full px-1.5 py-0.5">
-              {t('welcome.adminDemo.pill')}
-            </span>
-          </Link>
+          {/* Demo-only shortcut to the admin area. In configured mode
+              RequireRole would just bounce non-admins back to /welcome,
+              so we hide it entirely to avoid the confusing round-trip. */}
+          {!configured && (
+            <Link
+              to="/admin/home"
+              className="mt-0.5 flex items-center justify-center gap-1.5 text-[11.5px] text-ink-400 hover:text-ink-700"
+            >
+              <ShieldIcon size={11} />
+              {t('welcome.adminDemo.label')}
+              <span className="text-[9.5px] font-bold tracking-wide uppercase bg-lavender-50 text-lavender-700 rounded-full px-1.5 py-0.5">
+                {t('welcome.adminDemo.pill')}
+              </span>
+            </Link>
+          )}
           <p className="text-center text-[11px] text-ink-400 leading-relaxed px-6 pt-2">
             {t('welcome.terms')}
           </p>
