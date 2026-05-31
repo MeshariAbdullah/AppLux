@@ -921,6 +921,7 @@
     "home": {
       "title": "لوحة التاجر",
       "welcome": "أهلاً {name}",
+      "unknownMerchant": "تاجر",
       "subtitle": "إليك ملخّص نشاطك التجاري اليوم.",
       "operationsEyebrow": "إدارة عمليات الإيجار",
       "operationsSubtitle": "أنت تشرف على السجلات الفعّالة لإيجارات بوتيكك.",

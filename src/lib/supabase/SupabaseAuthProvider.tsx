@@ -24,6 +24,7 @@ import {
   type SignInInput,
   type SignUpInput,
 } from './auth';
+import { withTimeout } from '@/lib/withTimeout';
 
 // =====================================================================
 // AppLux auth provider — single source of truth for: auth session,
@@ -120,29 +121,6 @@ const DEFAULT: SupabaseAuthValue = {
   signOut: noop,
   refresh: async () => {},
 };
-
-/**
- * Wrap a promise with a hard timeout. Used on profile fetches so a
- * hung Supabase request can't permanently park the UI on a spinner.
- */
-function withTimeout<T>(p: Promise<T>, ms: number, label: string): Promise<T> {
-  return new Promise<T>((resolve, reject) => {
-    const id = setTimeout(
-      () => reject(new Error(`${label} timed out after ${ms}ms`)),
-      ms,
-    );
-    p.then(
-      (v) => {
-        clearTimeout(id);
-        resolve(v);
-      },
-      (e) => {
-        clearTimeout(id);
-        reject(e);
-      },
-    );
-  });
-}
 
 const PROFILE_LOAD_TIMEOUT_MS = 10_000;
 

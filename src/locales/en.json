@@ -921,6 +921,7 @@
     "home": {
       "title": "Merchant dashboard",
       "welcome": "Hello, {name}",
+      "unknownMerchant": "merchant",
       "subtitle": "Here's a quick snapshot of your business today.",
       "operationsEyebrow": "Rental operations",
       "operationsSubtitle": "You're overseeing your boutique's active rental records.",

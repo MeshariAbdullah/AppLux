@@ -35,7 +35,16 @@ import {
   listMerchantContracts,
   listMerchantInvoices,
   useSupabaseAuth,
+  type MerchantRow,
 } from '@/lib/supabase';
+import { withTimeout } from '@/lib/withTimeout';
+
+// Per-query timeouts so a single slow Supabase round-trip can't park
+// the dashboard on a spinner indefinitely. Identity is loaded first
+// (gates the hero) so it gets a tighter budget; the heavier rentals /
+// invoices / customer-profiles queries get more room.
+const MERCHANT_IDENTITY_TIMEOUT_MS = 8_000;
+const MERCHANT_DATA_TIMEOUT_MS = 12_000;
 
 export default function MerchantHome() {
   const t = useT();
@@ -49,28 +58,102 @@ export default function MerchantHome() {
     merchantDamages,
   } = useStore();
   const supabaseAuth = useSupabaseAuth();
+
+  // Split the dashboard's data fetching into two independent stages so
+  // the shell can render before any data arrives, and a slow / failed
+  // secondary query never blanks the entire screen:
+  //
+  //   STAGE 1 — merchant identity (`fetchMyMerchant`). This is what
+  //   the hero name binds to. Until it resolves we render a "…"
+  //   placeholder in the name slot; the rest of the page still shows.
+  //
+  //   STAGE 2 — dashboard data (contracts + invoices + customer
+  //   profiles). Triggered once identity is known. Each query has a
+  //   timeout; failures are logged and become empty results.
+  const [liveMerchant, setLiveMerchant] = useState<MerchantRow | null>(null);
+  const [merchantLoading, setMerchantLoading] = useState(false);
+  const [merchantError, setMerchantError] = useState<Error | null>(null);
   const [liveRentals, setLiveRentals] = useState<MerchantRental[] | null>(null);
   const [livePendingInvoices, setLivePendingInvoices] = useState<number | null>(null);
 
+  // Stage 1 — identity. Renders the hero name and unlocks Stage 2.
   useEffect(() => {
     const userId = supabaseAuth.session?.user?.id;
     if (!supabaseAuth.configured || !userId) {
-      setLiveRentals(null);
-      setLivePendingInvoices(null);
+      setLiveMerchant(null);
+      setMerchantLoading(false);
+      setMerchantError(null);
       return;
     }
     let cancelled = false;
+    setMerchantLoading(true);
+    setMerchantError(null);
+    withTimeout(
+      fetchMyMerchant(userId),
+      MERCHANT_IDENTITY_TIMEOUT_MS,
+      'fetchMyMerchant',
+    )
+      .then((m) => {
+        if (cancelled) return;
+        setLiveMerchant(m);
+        setMerchantError(null);
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        // eslint-disable-next-line no-console
+        console.error('[applux] fetchMyMerchant failed', err);
+        setLiveMerchant(null);
+        setMerchantError(err instanceof Error ? err : new Error('fetchMyMerchant failed'));
+      })
+      .finally(() => {
+        if (!cancelled) setMerchantLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [supabaseAuth.configured, supabaseAuth.session?.user?.id]);
+
+  // Stage 2 — dashboard data. Only kicks off once identity is known.
+  // Each branch is independently catch-protected, so contracts can
+  // render even if invoices time out (or vice-versa).
+  useEffect(() => {
+    if (!supabaseAuth.configured) return;
+    if (!liveMerchant) return;
+    let cancelled = false;
     (async () => {
-      const myMerchant = await fetchMyMerchant(userId).catch(() => null);
-      if (cancelled || !myMerchant) return;
       const [contractRows, pendingInvoices] = await Promise.all([
-        listMerchantContracts(myMerchant.id).catch(() => []),
-        listMerchantInvoices(myMerchant.id, { status: 'issued' }).catch(() => []),
+        withTimeout(
+          listMerchantContracts(liveMerchant.id),
+          MERCHANT_DATA_TIMEOUT_MS,
+          'listMerchantContracts',
+        ).catch((err) => {
+          // eslint-disable-next-line no-console
+          console.error('[applux] listMerchantContracts failed', err);
+          return [];
+        }),
+        withTimeout(
+          listMerchantInvoices(liveMerchant.id, { status: 'issued' }),
+          MERCHANT_DATA_TIMEOUT_MS,
+          'listMerchantInvoices',
+        ).catch((err) => {
+          // eslint-disable-next-line no-console
+          console.error('[applux] listMerchantInvoices failed', err);
+          return [];
+        }),
       ]);
       if (cancelled) return;
-      const profileMap = await fetchProfilesByIds(
-        contractRows.map((c) => c.customer_user_id),
-      ).catch(() => new Map<string, never>());
+      // Update what we can NOW so a slow customer-profiles fetch
+      // doesn't hold back the rentals + invoices counts.
+      setLivePendingInvoices(pendingInvoices.length);
+      const profileMap = await withTimeout(
+        fetchProfilesByIds(contractRows.map((c) => c.customer_user_id)),
+        MERCHANT_DATA_TIMEOUT_MS,
+        'fetchProfilesByIds',
+      ).catch((err) => {
+        // eslint-disable-next-line no-console
+        console.error('[applux] fetchProfilesByIds failed', err);
+        return new Map<string, never>();
+      });
       if (cancelled) return;
       setLiveRentals(
         contractRows.map((r) => {
@@ -81,7 +164,7 @@ export default function MerchantHome() {
               .map((p) => p[0]?.toUpperCase() ?? '')
               .join('') || '—';
           return adaptContractToMerchantRental(r, {
-            category: myMerchant.primary_category,
+            category: liveMerchant.primary_category,
             customerName: name,
             customerInitials: initials,
             customerCity: customer?.city ?? '',
@@ -91,12 +174,11 @@ export default function MerchantHome() {
           });
         }),
       );
-      setLivePendingInvoices(pendingInvoices.length);
     })();
     return () => {
       cancelled = true;
     };
-  }, [supabaseAuth.configured, supabaseAuth.session?.user?.id]);
+  }, [supabaseAuth.configured, liveMerchant]);
 
   const merchantRentals = liveRentals ?? demoRentals;
 
@@ -147,7 +229,21 @@ export default function MerchantHome() {
     [merchantRentals],
   );
 
-  if (!merchant) return null;
+  // The page used to render `null` when the demo store's `merchant`
+  // was missing. For a real Supabase merchant, the demo row is always
+  // null, which produced the "/merchant/home hangs with no content"
+  // bug. We now render the shell unconditionally in configured mode
+  // and use the live `merchants` row for the name; in demo mode the
+  // old gate is preserved.
+  if (!supabaseAuth.configured && !merchant) return null;
+
+  // Single source of truth for the hero name. Falls back to "…" while
+  // identity is still loading so the shell stays visible — never
+  // blank, never crashes on `merchant.companyName` when merchant is
+  // null.
+  const companyName = supabaseAuth.configured
+    ? liveMerchant?.company_name ?? (merchantLoading ? '…' : t('merchant.home.unknownMerchant'))
+    : merchant?.companyName ?? '';
 
   const quickActions: QuickAction[] = [
     {
@@ -219,7 +315,7 @@ export default function MerchantHome() {
                   {t('merchant.home.operationsEyebrow')}
                 </span>
                 <h1 className="mt-4 editorial-title text-[24px] leading-tight truncate text-white">
-                  {t('merchant.home.welcome', { name: merchant.companyName })}
+                  {t('merchant.home.welcome', { name: companyName })}
                 </h1>
                 <p className="mt-2 text-[13px] text-white/65 leading-relaxed max-w-[36ch]">
                   {t('merchant.home.operationsSubtitle')}
