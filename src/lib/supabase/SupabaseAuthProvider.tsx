@@ -35,12 +35,21 @@ import {
 // duplicate the role → path map.
 //
 // Status transitions:
-//   loading   → initial bootstrap (getSession + profile fetch in-flight)
+//   loading   → initial bootstrap (getSession in-flight)
 //   anonymous → no Supabase session
-//   authenticated → session + profile present (or profile fetch errored,
-//                   in which case `profileError` is set and the role is
-//                   null — RootRedirect surfaces a clear failure UI)
+//   authenticated → session present. Profile may still be loading;
+//                   `profileLoading` indicates the brief window after
+//                   sign-in where the session is known but the profile
+//                   row hasn't been fetched yet. `RootRedirect` /
+//                   `RequireRole` wait on `profileLoading === false`
+//                   before doing role-based routing.
 //   disabled  → env vars not inlined; the provider returns DEFAULT
+//
+// Why the split: previously `setStatus('authenticated')` was gated on
+// `await fetchProfile`. A slow or hung profile request held the Login
+// button on its "Verifying…" spinner indefinitely with no error path.
+// Decoupling moves the spinner from the login page to `/`, where a
+// 10s timeout converts a hung profile load into a visible error.
 //
 // Eligibility is intentionally NOT on the critical path. Merchants and
 // admins have no eligibility row at all, and customers don't need it
@@ -58,11 +67,17 @@ type SupabaseAuthValue = {
   profile: ProfileRow | null;
   /**
    * Set when the post-auth profile fetch failed (network, RLS, missing
-   * row). Lets RootRedirect distinguish a real role=null from a
-   * profile-load failure. When set, never silently routes the user;
-   * the UI shows a recoverable error with a retry path.
+   * row, timeout). Lets RootRedirect distinguish a real role=null from
+   * a profile-load failure. When set, the user sees a clear recoverable
+   * error UI with Retry / Sign out — never a silent /welcome bounce.
    */
   profileError: Error | null;
+  /**
+   * True between "we know a session exists" and "the profile row has
+   * been fetched". RootRedirect and RequireRole wait on this so role
+   * routing only fires once `role` is meaningful.
+   */
+  profileLoading: boolean;
   eligibility: RentalEligibilityRow | null;
   eligibilityLoading: boolean;
   role: AppRole | null;
@@ -93,6 +108,7 @@ const DEFAULT: SupabaseAuthValue = {
   session: null,
   profile: null,
   profileError: null,
+  profileLoading: false,
   eligibility: null,
   eligibilityLoading: false,
   role: null,
@@ -104,6 +120,31 @@ const DEFAULT: SupabaseAuthValue = {
   signOut: noop,
   refresh: async () => {},
 };
+
+/**
+ * Wrap a promise with a hard timeout. Used on profile fetches so a
+ * hung Supabase request can't permanently park the UI on a spinner.
+ */
+function withTimeout<T>(p: Promise<T>, ms: number, label: string): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const id = setTimeout(
+      () => reject(new Error(`${label} timed out after ${ms}ms`)),
+      ms,
+    );
+    p.then(
+      (v) => {
+        clearTimeout(id);
+        resolve(v);
+      },
+      (e) => {
+        clearTimeout(id);
+        reject(e);
+      },
+    );
+  });
+}
+
+const PROFILE_LOAD_TIMEOUT_MS = 10_000;
 
 const SupabaseAuthContext = createContext<SupabaseAuthValue>(DEFAULT);
 
@@ -126,6 +167,7 @@ function ConfiguredProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<ProfileRow | null>(null);
   const [profileError, setProfileError] = useState<Error | null>(null);
+  const [profileLoading, setProfileLoading] = useState(false);
   const [eligibility, setEligibility] = useState<RentalEligibilityRow | null>(null);
   const [eligibilityLoading, setEligibilityLoading] = useState(false);
 
@@ -135,13 +177,20 @@ function ConfiguredProvider({ children }: { children: ReactNode }) {
   const loadIdRef = useRef(0);
 
   /**
-   * Fetch the profile — REQUIRED for role-based routing. Returns the
-   * loaded row (or null) so the caller can decide whether to gate
-   * status='authenticated' on success.
+   * Fetch the profile — required for role-based routing. NOT awaited
+   * inline by the auth listener; runs in the background so the session
+   * transition is visible to the rest of the app immediately. The
+   * 10s timeout converts a hung Supabase request into a visible error
+   * (caught here, surfaced by RootRedirect via `profileError`).
    */
   const loadProfile = useCallback(async (userId: string, loadId: number) => {
+    setProfileLoading(true);
     try {
-      const p = await fetchProfile(userId);
+      const p = await withTimeout(
+        fetchProfile(userId),
+        PROFILE_LOAD_TIMEOUT_MS,
+        'profile fetch',
+      );
       if (loadIdRef.current !== loadId) return null; // superseded
       setProfile(p);
       setProfileError(null);
@@ -153,6 +202,8 @@ function ConfiguredProvider({ children }: { children: ReactNode }) {
       setProfile(null);
       setProfileError(err instanceof Error ? err : new Error('Profile load failed'));
       return null;
+    } finally {
+      if (loadIdRef.current === loadId) setProfileLoading(false);
     }
   }, []);
 
@@ -178,23 +229,24 @@ function ConfiguredProvider({ children }: { children: ReactNode }) {
   }, []);
 
   /**
-   * Bootstrap the user context for a given userId. Profile is awaited
-   * (it gates the routing decision); eligibility is dispatched in the
-   * background (don't block the redirect on a non-critical row).
+   * Dispatch the user-context fetches in the background. Returns
+   * immediately so the caller can flip status='authenticated' without
+   * waiting on the network. The internal staleness check
+   * (loadIdRef.current === loadId) ensures late writes from a
+   * superseded session are discarded.
    */
-  const loadUserContext = useCallback(
-    async (userId: string | null) => {
+  const startUserContextLoad = useCallback(
+    (userId: string | null) => {
       const myLoad = ++loadIdRef.current;
       if (!userId) {
         setProfile(null);
         setProfileError(null);
+        setProfileLoading(false);
         setEligibility(null);
         setEligibilityLoading(false);
         return;
       }
-      await loadProfile(userId, myLoad);
-      // Fire-and-forget — never blocks the caller. Internal staleness
-      // check guards against late writes from a superseded session.
+      void loadProfile(userId, myLoad);
       void loadEligibility(userId, myLoad);
     },
     [loadProfile, loadEligibility],
@@ -203,8 +255,9 @@ function ConfiguredProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     let cancelled = false;
 
-    // Initial session bootstrap
-    supabase.auth.getSession().then(async ({ data, error }) => {
+    // Initial session bootstrap. Flip status as soon as we know whether
+    // a session exists; profile + eligibility load in the background.
+    supabase.auth.getSession().then(({ data, error }) => {
       if (cancelled) return;
       if (error) {
         // eslint-disable-next-line no-console
@@ -215,22 +268,23 @@ function ConfiguredProvider({ children }: { children: ReactNode }) {
       const s = data.session;
       setSession(s);
       if (s?.user) {
-        await loadUserContext(s.user.id);
-        if (!cancelled) setStatus('authenticated');
+        startUserContextLoad(s.user.id);
+        setStatus('authenticated');
       } else {
         setStatus('anonymous');
       }
     });
 
-    const { data: sub } = supabase.auth.onAuthStateChange(async (_event, s) => {
+    const { data: sub } = supabase.auth.onAuthStateChange((_event, s) => {
       setSession(s);
       if (s?.user) {
-        await loadUserContext(s.user.id);
+        startUserContextLoad(s.user.id);
         setStatus('authenticated');
       } else {
         loadIdRef.current += 1;
         setProfile(null);
         setProfileError(null);
+        setProfileLoading(false);
         setEligibility(null);
         setEligibilityLoading(false);
         setStatus('anonymous');
@@ -241,7 +295,7 @@ function ConfiguredProvider({ children }: { children: ReactNode }) {
       cancelled = true;
       sub.subscription.unsubscribe();
     };
-  }, [supabase, loadUserContext]);
+  }, [supabase, startUserContextLoad]);
 
   const signUp = useCallback(async (input: SignUpInput) => {
     const { session: s } = await authSignUp(input);
@@ -257,8 +311,22 @@ function ConfiguredProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const refresh = useCallback(async () => {
-    await loadUserContext(session?.user.id ?? null);
-  }, [loadUserContext, session]);
+    // Re-runs the same background dispatcher used at boot — clears
+    // profileError, sets profileLoading, then re-fetches profile and
+    // eligibility under a fresh loadId so stale responses are discarded.
+    const userId = session?.user.id ?? null;
+    const myLoad = ++loadIdRef.current;
+    if (!userId) {
+      setProfile(null);
+      setProfileError(null);
+      setProfileLoading(false);
+      setEligibility(null);
+      setEligibilityLoading(false);
+      return;
+    }
+    await loadProfile(userId, myLoad);
+    void loadEligibility(userId, myLoad);
+  }, [loadProfile, loadEligibility, session]);
 
   const value = useMemo<SupabaseAuthValue>(() => {
     const role = profile?.role ?? null;
@@ -268,6 +336,7 @@ function ConfiguredProvider({ children }: { children: ReactNode }) {
       session,
       profile,
       profileError,
+      profileLoading,
       eligibility,
       eligibilityLoading,
       role,
@@ -284,6 +353,7 @@ function ConfiguredProvider({ children }: { children: ReactNode }) {
     session,
     profile,
     profileError,
+    profileLoading,
     eligibility,
     eligibilityLoading,
     signUp,

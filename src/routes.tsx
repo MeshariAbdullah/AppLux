@@ -67,23 +67,36 @@ function RequireCustomer({ children }: { children: ReactElement }) {
  * navigate to '/' and hand off to this component, which is the only
  * place that maps role → home.
  *
+ * Loading window: `status` flips to 'authenticated' as soon as the
+ * session is known, but `profileLoading` is still true while the
+ * profile row is being fetched. We render a brief spinner in that
+ * window instead of falling through to "no profile → /welcome".
+ *
  * Failure branches:
- *   - configured but profile fetch errored → render a recoverable error
- *     view with Retry. Without this, the user would silently land on
- *     /welcome because role is null, looking like a login loop.
- *   - configured, authenticated, no profile, no error → genuine
- *     "this user has no profile row" — go to /welcome.
+ *   - configured, authenticated, profile fetch errored (incl. timeout)
+ *     → render a recoverable error view with Retry / Sign out.
+ *   - configured, authenticated, profile load finished, profile null
+ *     → genuine "this user has no profile row" — go to /welcome.
  */
 function RootRedirect() {
-  const { configured, status, role, profile, profileError, refresh, signOut } =
-    useSupabaseAuth();
+  const {
+    configured,
+    status,
+    role,
+    profile,
+    profileError,
+    profileLoading,
+    refresh,
+    signOut,
+  } = useSupabaseAuth();
   const { session: demoSession } = useStore();
 
   if (!configured) {
     return <Navigate to={demoSession ? '/home' : '/welcome'} replace />;
   }
-  if (status === 'loading') return null;
+  if (status === 'loading') return <RouteSpinner />;
   if (status !== 'authenticated') return <Navigate to="/welcome" replace />;
+  if (profileLoading) return <RouteSpinner />;
   if (profileError) {
     return <ProfileLoadError onRetry={refresh} onSignOut={signOut} />;
   }
@@ -95,6 +108,14 @@ function RootRedirect() {
   if (role === 'merchant') return <Navigate to="/merchant/home" replace />;
   if (role === 'admin') return <Navigate to="/admin/home" replace />;
   return <Navigate to="/home" replace />;
+}
+
+function RouteSpinner() {
+  return (
+    <div className="min-h-[60vh] grid place-items-center">
+      <div className="h-8 w-8 rounded-full border-2 border-canvas-200 border-t-lavender-600 animate-spin" />
+    </div>
+  );
 }
 
 function ProfileLoadError({

@@ -41,7 +41,13 @@ export function RequireRole({
   fallback = '/welcome',
   children,
 }: RequireRoleProps) {
-  const { configured, status, role: actualRole } = useSupabaseAuth();
+  const {
+    configured,
+    status,
+    role: actualRole,
+    profileLoading,
+    profileError,
+  } = useSupabaseAuth();
   const { session: demoSession } = useStore();
 
   // Demo mode: the existing useStore session is the only gate.
@@ -62,6 +68,17 @@ export function RequireRole({
   }
   if (status !== 'authenticated') {
     return <Navigate to={fallback} replace />;
+  }
+  // Profile is loaded in the background after status flips to
+  // 'authenticated'. Wait for it before evaluating the role — otherwise
+  // `actualRole` is null and the role check would falsely fail.
+  if (profileLoading) {
+    return <RouteLoadingFallback />;
+  }
+  // Profile fetch failed (network, RLS, timeout). Hand off to RootRedirect
+  // ('/'), which has the dedicated Retry / Sign-out UI for this state.
+  if (profileError) {
+    return <Navigate to="/" replace />;
   }
   if (role) {
     const allowed = Array.isArray(role) ? role.includes(actualRole!) : actualRole === role;
