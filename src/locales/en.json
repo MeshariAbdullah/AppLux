@@ -1981,6 +1981,10 @@
           "title": "Couldn't update the account",
           "hint": "The status change didn't reach the server. Please try again."
         },
+        "limitFailed": {
+          "title": "Couldn't save the limit",
+          "hint": "The new limit didn't reach the server. Please try again."
+        },
         "reset": {
           "title": "Reset applied",
           "hint": "Account returned to its original seeded state."

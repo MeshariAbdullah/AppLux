@@ -114,6 +114,7 @@ export default function MerchantDamageNew() {
   // upload to Storage when configured. Index-aligned with `evidence`.
   const [evidenceFiles, setEvidenceFiles] = useState<File[]>([]);
   const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
 
@@ -185,6 +186,7 @@ export default function MerchantDamageNew() {
   const handleConfirmedReport = async () => {
     if (!canSubmit || submitting || !severity) return;
     setSubmitting(true);
+    setSubmitError(null);
 
     // Real path: create the damage_cases row + upload evidence to the
     // `damage-evidence` Storage bucket. The rental.id is the contract id
@@ -226,11 +228,25 @@ export default function MerchantDamageNew() {
         navigate(`/merchant/damages/${created.id}`, { replace: true });
         return;
       } catch (err) {
+        // In configured mode the real path is authoritative — a failure
+        // must NOT silently fall through to the demo store (that would
+        // park a fake case id in local state while nothing exists on
+        // the server). Surface the error, keep the form intact, let
+        // the merchant retry.
         // eslint-disable-next-line no-console
-        console.error('[applux] createDamageCase failed; falling back to demo', err);
+        console.error('[applux] createDamageCase failed', err);
+        setSubmitError(
+          err instanceof Error
+            ? err.message
+            : 'Could not submit the damage report. Please try again.',
+        );
+        setSubmitting(false);
+        setConfirmOpen(false);
+        return;
       }
     }
 
+    // Demo mode only.
     const created = reportDamage(rental.id, {
       severity,
       claimAmount: claimValue,
@@ -589,6 +605,15 @@ export default function MerchantDamageNew() {
                 <div>{t('merchant.damage.new.warn.hint')}</div>
               </div>
             </div>
+
+            {submitError && (
+              <div
+                role="alert"
+                className="rounded-xl2 bg-danger-50 ring-1 ring-danger-500/25 px-3.5 py-2.5 text-[12.5px] text-danger-700 leading-relaxed"
+              >
+                {submitError}
+              </div>
+            )}
 
             <Button
               type="submit"

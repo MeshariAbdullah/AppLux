@@ -39,6 +39,7 @@ import {
   fetchEligibility,
   fetchProfile,
   updateProfile,
+  upsertEligibility,
   useSupabaseAuth,
 } from '@/lib/supabase';
 import type { AdminUserRecord } from '@/lib/data';
@@ -151,6 +152,7 @@ export default function AdminUserDetails() {
   } | null>(null);
   const [suspendConfirmOpen, setSuspendConfirmOpen] = useState(false);
   const [statusUpdating, setStatusUpdating] = useState(false);
+  const [limitSaving, setLimitSaving] = useState(false);
 
   useEffect(() => {
     if (user) setLimitDraft(String(user.eligibilityLimit));
@@ -194,16 +196,45 @@ export default function AdminUserDetails() {
   const limitInvalid = parsed < user.usedAmount;
   const canSaveLimit = limitChanged && !limitInvalid;
 
-  const handleSaveLimit = () => {
-    if (!canSaveLimit) return;
-    setAdminUserLimit(user.id, parsed);
-    setToast({
-      tone: 'success',
-      title: t('admin.user.toast.limitSaved.title'),
-      hint: t('admin.user.toast.limitSaved.hint', {
-        amount: formatCurrency(parsed),
-      }),
-    });
+  const handleSaveLimit = async () => {
+    if (!canSaveLimit || limitSaving) return;
+    setLimitSaving(true);
+    try {
+      if (configured) {
+        // Real write: upsert rental_eligibility (admin policy
+        // `rental_eligibility_admin_all` allows this). After the row
+        // returns, replace liveUser so the limit chip refreshes from
+        // the authoritative server state.
+        const updated = await upsertEligibility({
+          user_id: user.id,
+          limit_amount: parsed,
+        });
+        const profile = await fetchProfile(user.id).catch(() => null);
+        if (profile) setLiveUser(adaptUserRecord(profile, updated));
+      } else {
+        setAdminUserLimit(user.id, parsed);
+      }
+      setToast({
+        tone: 'success',
+        title: t('admin.user.toast.limitSaved.title'),
+        hint: t('admin.user.toast.limitSaved.hint', {
+          amount: formatCurrency(parsed),
+        }),
+      });
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error('[applux] upsertEligibility failed', err);
+      setToast({
+        tone: 'danger',
+        title: t('admin.user.toast.limitFailed.title'),
+        hint:
+          err instanceof Error
+            ? err.message
+            : t('admin.user.toast.limitFailed.hint'),
+      });
+    } finally {
+      setLimitSaving(false);
+    }
   };
 
   /**
@@ -518,8 +549,9 @@ export default function AdminUserDetails() {
                 size="lg"
                 block
                 leading={<CheckIcon size={16} />}
-                onClick={handleSaveLimit}
-                disabled={!canSaveLimit}
+                onClick={() => void handleSaveLimit()}
+                disabled={!canSaveLimit || limitSaving}
+                loading={limitSaving}
               >
                 {t('admin.user.eligibility.save')}
               </Button>

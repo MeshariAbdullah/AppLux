@@ -481,16 +481,28 @@ export default function MerchantInvoiceNew() {
             new Date(Date.now() + 30 * 86_400_000).toISOString(),
         });
       } catch (caught) {
+        // In configured (production) mode a real-path failure must NOT
+        // fall back to demo issuance. Doing so would surface a token
+        // the merchant believes is valid even though no rental_invoices
+        // row exists, and a customer scan of that token would 404.
+        // Show the error, keep the form intact, and let the merchant
+        // retry. The previous demo-fallback behaviour was a silent
+        // success masquerading as a real one.
+        // eslint-disable-next-line no-console
+        console.error('[applux] createInvoiceWithItems failed', caught);
         const message =
           caught instanceof Error ? caught.message : 'Failed to issue invoice.';
-        setSubmitWarning(`${message} (Falling back to demo issuance.)`);
-        setIssuance(generateIssuance());
+        setSubmitWarning(message);
       } finally {
         setSubmitting(false);
       }
       return;
     }
 
+    // Demo mode only (env not configured): synthesise a demo issuance
+    // so local exploration without a backend still terminates the
+    // happy-path form. Production builds with valid env vars never
+    // reach this branch.
     setIssuance(generateIssuance());
   };
 
