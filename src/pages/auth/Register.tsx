@@ -4,7 +4,7 @@ import { Header, Screen } from '@/components/layout';
 import { Button, FormField, Input, Select, Textarea } from '@/components/ui';
 import { useI18n, useT } from '@/lib/i18n';
 import { useStore, emptyRegistration, type RegistrationDraft } from '@/lib/store';
-import { useSupabaseAuth } from '@/lib/supabase';
+import { useSupabaseAuth, updateProfile } from '@/lib/supabase';
 import { classifyMobile, type MobileIssue } from '@/lib/mobile';
 import { cn } from '@/lib/cn';
 import { ArrowIcon, BadgeCheckIcon, ShieldIcon } from '@/components/icons';
@@ -437,7 +437,29 @@ function SupabaseRegister() {
       //  (b) email-confirmation disabled → result.session is populated,
       //      Supabase fires onAuthStateChange, provider hydrates, the
       //      useEffect above navigates to '/'. Nothing to do here.
-      if (!result.session) {
+      //
+      // Belt-and-suspenders mobile persistence (case b only):
+      // The mobile is sent via signUp's auth metadata and the
+      // handle_new_auth_user trigger should copy it onto profiles.mobile.
+      // If a project is still running the old trigger (the one that
+      // pre-dates 20260502120600 / 20260502120800), profile.mobile
+      // would be NULL. The new session lets us write our own row via
+      // the profiles_self_update RLS policy, so do a defensive UPDATE
+      // here. Errors are non-fatal — the trigger is the primary path
+      // and is now defensive on the DB side too.
+      if (result.session?.user) {
+        try {
+          await updateProfile(result.session.user.id, {
+            mobile: normalizedMobile!.canonical,
+          });
+        } catch (err) {
+          // eslint-disable-next-line no-console
+          console.error(
+            '[applux] post-signUp mobile persist failed (trigger should have set it)',
+            err,
+          );
+        }
+      } else {
         setPendingEmailConfirmation(true);
         setSubmitting(false);
       }
