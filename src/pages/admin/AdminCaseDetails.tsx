@@ -38,6 +38,7 @@ import {
 import { cn } from '@/lib/cn';
 import { useI18n, useT } from '@/lib/i18n';
 import { useStore } from '@/lib/store';
+import { useSupabaseAuth } from '@/lib/supabase';
 import {
   SEED_ADMIN_ACTIVE_CASES,
   SEED_ADMIN_OVERDUE,
@@ -313,6 +314,7 @@ export default function AdminCaseDetails() {
   const detailKey = kind === 'overdue' ? `${id}-OD` : id;
 
   const { adminCases, addCaseNote, escalateCase } = useStore();
+  const { configured } = useSupabaseAuth();
 
   const detail = useMemo(
     () => adminCases.find((c) => c.id === detailKey) ?? null,
@@ -735,16 +737,21 @@ export default function AdminCaseDetails() {
                 </div>
               )}
 
-              <Button
-                onClick={() =>
-                  escalation.nextStage && setEscalateConfirmOpen(true)
-                }
-                disabled={!escalation.nextStage}
-                variant={escalation.nextStage ? 'primary' : 'ghost'}
-                className="w-full"
-              >
-                {t(`admin.case.escalation.action.${escalation.nextActionKey}`)}
-              </Button>
+              {/* Escalation is demo-only — `escalateCase` mutates only
+                  the in-memory store. No real escalation RPC exists.
+                  Hidden when configured. */}
+              {!configured && (
+                <Button
+                  onClick={() =>
+                    escalation.nextStage && setEscalateConfirmOpen(true)
+                  }
+                  disabled={!escalation.nextStage}
+                  variant={escalation.nextStage ? 'primary' : 'ghost'}
+                  className="w-full"
+                >
+                  {t(`admin.case.escalation.action.${escalation.nextActionKey}`)}
+                </Button>
+              )}
             </Card>
           </Section>
 
@@ -780,34 +787,43 @@ export default function AdminCaseDetails() {
                 </ul>
               )}
 
-              <CardDivider />
+              {/* Notes are a demo-only feature today — `addCaseNote`
+                  mutates the in-memory store and there is no real
+                  damage_cases.notes column. Hidden when configured to
+                  avoid a write that looks real but isn't. The existing
+                  notes (above) still display as read-only history. */}
+              {!configured && (
+                <>
+                  <CardDivider />
 
-              <FormField
-                label={t('admin.case.notes.addLabel')}
-                hint={t('admin.case.notes.addHint')}
-              >
-                <Textarea
-                  value={noteDraft}
-                  onChange={(e) => setNoteDraft(e.target.value)}
-                  placeholder={t('admin.case.notes.addPlaceholder')}
-                  rows={3}
-                />
-              </FormField>
+                  <FormField
+                    label={t('admin.case.notes.addLabel')}
+                    hint={t('admin.case.notes.addHint')}
+                  >
+                    <Textarea
+                      value={noteDraft}
+                      onChange={(e) => setNoteDraft(e.target.value)}
+                      placeholder={t('admin.case.notes.addPlaceholder')}
+                      rows={3}
+                    />
+                  </FormField>
 
-              {noteFlash && (
-                <div className="rounded-xl bg-success-50 ring-1 ring-inset ring-success-500/25 px-3 py-2 flex items-center gap-2 text-[12px] font-semibold text-success-700">
-                  <CheckIcon size={14} />
-                  {t('admin.case.notes.flash')}
-                </div>
+                  {noteFlash && (
+                    <div className="rounded-xl bg-success-50 ring-1 ring-inset ring-success-500/25 px-3 py-2 flex items-center gap-2 text-[12px] font-semibold text-success-700">
+                      <CheckIcon size={14} />
+                      {t('admin.case.notes.flash')}
+                    </div>
+                  )}
+
+                  <Button
+                    onClick={handleAddNote}
+                    disabled={noteDraft.trim().length === 0}
+                    className="w-full"
+                  >
+                    {t('admin.case.notes.submit')}
+                  </Button>
+                </>
               )}
-
-              <Button
-                onClick={handleAddNote}
-                disabled={noteDraft.trim().length === 0}
-                className="w-full"
-              >
-                {t('admin.case.notes.submit')}
-              </Button>
             </Card>
           </Section>
 

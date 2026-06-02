@@ -618,13 +618,20 @@ export default function AdminUserDetails() {
                   )}
                 </Button>
               )}
-              <button
-                type="button"
-                onClick={handleReset}
-                className="block w-full text-center text-[12px] text-ink-500 hover:text-ink-700"
-              >
-                {t('admin.user.actions.reset')}
-              </button>
+              {/* Reset is a demo-only convenience — it restores the
+                  store's original seeded values for this user. In
+                  configured mode there is nothing for it to write
+                  back to (the real row was never seeded by us), so
+                  the link is hidden to avoid a confusing no-op. */}
+              {!configured && (
+                <button
+                  type="button"
+                  onClick={handleReset}
+                  className="block w-full text-center text-[12px] text-ink-500 hover:text-ink-700"
+                >
+                  {t('admin.user.actions.reset')}
+                </button>
+              )}
             </Card>
           </Section>
 

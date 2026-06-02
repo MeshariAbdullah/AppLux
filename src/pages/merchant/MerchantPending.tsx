@@ -285,25 +285,34 @@ export default function MerchantPending() {
           <div className="space-y-2.5">
             {effectiveStatus === 'pending' && (
               <>
-                <Button
-                  variant="primary"
-                  size="lg"
-                  block
-                  leading={<CheckIcon size={18} />}
-                  onClick={() => approveMerchant()}
-                >
-                  {t('merchant.pending.simulateApproval')}
-                </Button>
-                <Button
-                  variant="ghost"
-                  block
-                  leading={<AlertIcon size={16} />}
-                  onClick={() =>
-                    rejectMerchant(t('merchant.pending.rejection.demoReason'))
-                  }
-                >
-                  {t('merchant.pending.simulateRejection')}
-                </Button>
+                {/* Self-approve / self-reject simulators are DEMO ONLY
+                    — they mutate the in-memory store and would let a
+                    real pending merchant appear to approve their own
+                    application. Hidden when Supabase is configured;
+                    real approvals only happen from the admin console. */}
+                {!supabaseAuth.configured && (
+                  <>
+                    <Button
+                      variant="primary"
+                      size="lg"
+                      block
+                      leading={<CheckIcon size={18} />}
+                      onClick={() => approveMerchant()}
+                    >
+                      {t('merchant.pending.simulateApproval')}
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      block
+                      leading={<AlertIcon size={16} />}
+                      onClick={() =>
+                        rejectMerchant(t('merchant.pending.rejection.demoReason'))
+                      }
+                    >
+                      {t('merchant.pending.simulateRejection')}
+                    </Button>
+                  </>
+                )}
                 <Button
                   variant="ghost"
                   block
@@ -341,14 +350,19 @@ export default function MerchantPending() {
 
             {effectiveStatus === 'rejected' && (
               <>
-                <Button
-                  variant="primary"
-                  size="lg"
-                  block
-                  onClick={() => resubmitMerchantRequest()}
-                >
-                  {t('merchant.pending.resubmit')}
-                </Button>
+                {/* Resubmit is demo-only — there is no real "resubmit"
+                    RPC. A real rejected merchant has to start a new
+                    application from /merchant/register. */}
+                {!supabaseAuth.configured && (
+                  <Button
+                    variant="primary"
+                    size="lg"
+                    block
+                    onClick={() => resubmitMerchantRequest()}
+                  >
+                    {t('merchant.pending.resubmit')}
+                  </Button>
+                )}
                 <Button
                   variant="ghost"
                   block
