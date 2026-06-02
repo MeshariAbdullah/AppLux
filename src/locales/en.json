@@ -1522,7 +1522,9 @@
       "footerNote": {
         "title": "Operations only",
         "hint": "This console is restricted to AppLux operators and auditors."
-      }
+      },
+      "signOut": "Sign out",
+      "signOutFailed": "Sign out failed. Please try again."
     },
     "modules": {
       "generic": {

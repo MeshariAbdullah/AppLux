@@ -1,7 +1,8 @@
-import { useMemo, type ReactNode } from 'react';
-import { Link } from 'react-router-dom';
+import { useMemo, useState, type ReactNode } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { Header, Screen } from '@/components/layout';
 import {
+  Button,
   Card,
   ProgressBar,
   SectionHeader,
@@ -9,6 +10,7 @@ import {
   type StatusTone,
 } from '@/components/ui';
 import { LangToggle } from '@/components/auth/LangToggle';
+import { useSupabaseAuth } from '@/lib/supabase';
 import {
   AlertIcon,
   BadgeCheckIcon,
@@ -66,6 +68,34 @@ function bucketTone(b: AdminOverdueBucket): StatusTone {
 export default function AdminHome() {
   const t = useT();
   const { formatCurrency, formatDate, formatNumber, dir } = useI18n();
+  const navigate = useNavigate();
+  const { configured, signOut } = useSupabaseAuth();
+  const [signingOut, setSigningOut] = useState(false);
+  const [signOutError, setSignOutError] = useState<string | null>(null);
+
+  /**
+   * Admin sign-out — mirrors the customer (Profile.tsx) and merchant
+   * (MerchantHome.tsx) patterns. Clears the Supabase session first
+   * when configured so a refresh after logout does NOT re-hydrate the
+   * admin straight back into /admin/home. In demo mode the navigate
+   * is enough on its own (no Supabase session existed).
+   */
+  const handleSignOut = async () => {
+    if (signingOut) return;
+    setSigningOut(true);
+    setSignOutError(null);
+    try {
+      if (configured) {
+        await signOut();
+      }
+      navigate('/welcome', { replace: true });
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error('[applux] admin signOut failed', err);
+      setSignOutError(t('admin.home.signOutFailed'));
+      setSigningOut(false);
+    }
+  };
 
   const pendingMerchants = SEED_ADMIN_PENDING_MERCHANTS;
   const users = SEED_ADMIN_USERS;
@@ -582,6 +612,30 @@ export default function AdminHome() {
               </div>
               <div>{t('admin.home.footerNote.hint')}</div>
             </div>
+          </div>
+
+          {/* Sign out — consistent with Profile.tsx and MerchantHome.tsx.
+              In configured mode the Supabase session is cleared first
+              so a refresh stays on /welcome and doesn't re-hydrate
+              back into /admin/home. */}
+          <div className="pt-2 space-y-2">
+            <Button
+              variant="secondary"
+              block
+              onClick={() => void handleSignOut()}
+              loading={signingOut}
+              disabled={signingOut}
+            >
+              {t('admin.home.signOut')}
+            </Button>
+            {signOutError && (
+              <div
+                role="alert"
+                className="rounded-xl2 bg-danger-50 ring-1 ring-danger-500/25 px-3.5 py-2 text-[12.5px] text-danger-700"
+              >
+                {signOutError}
+              </div>
+            )}
           </div>
         </div>
       </Screen>
