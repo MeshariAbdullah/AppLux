@@ -38,6 +38,7 @@ import {
   adaptUserRecord,
   fetchEligibility,
   fetchProfile,
+  updateProfile,
   useSupabaseAuth,
 } from '@/lib/supabase';
 import type { AdminUserRecord } from '@/lib/data';
@@ -149,6 +150,7 @@ export default function AdminUserDetails() {
     hint?: string;
   } | null>(null);
   const [suspendConfirmOpen, setSuspendConfirmOpen] = useState(false);
+  const [statusUpdating, setStatusUpdating] = useState(false);
 
   useEffect(() => {
     if (user) setLimitDraft(String(user.eligibilityLimit));
@@ -204,22 +206,68 @@ export default function AdminUserDetails() {
     });
   };
 
+  /**
+   * Write the new account_status to the right place.
+   * - Configured mode: updates `profiles.account_status` via the real
+   *   Supabase mutation (RLS policy `profiles_admin_update` allows
+   *   admins to do this). On success the live state is replaced from
+   *   the update's returning row + a fresh eligibility fetch, so the
+   *   status chip flips immediately without a manual refresh.
+   * - Demo mode: same in-memory store call as before.
+   * Failures show a danger toast instead of silently appearing to
+   * succeed.
+   */
+  const applyStatus = async (
+    next: AdminUserStatus,
+    successToast: { tone: 'success' | 'danger'; titleKey: string; hintKey: string },
+  ) => {
+    if (statusUpdating) return;
+    setStatusUpdating(true);
+    try {
+      if (configured) {
+        const updated = await updateProfile(user.id, { account_status: next });
+        // Refetch eligibility in case the limit panel needs to refresh
+        // alongside the status change.
+        const eligibility = await fetchEligibility(user.id).catch(() => null);
+        setLiveUser(adaptUserRecord(updated, eligibility));
+      } else {
+        setAdminUserStatus(user.id, next);
+      }
+      setToast({
+        tone: successToast.tone,
+        title: t(successToast.titleKey),
+        hint: t(successToast.hintKey),
+      });
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error('[applux] admin status update failed', err);
+      setToast({
+        tone: 'danger',
+        title: t('admin.user.toast.statusFailed.title'),
+        hint:
+          err instanceof Error
+            ? err.message
+            : t('admin.user.toast.statusFailed.hint'),
+      });
+    } finally {
+      setStatusUpdating(false);
+    }
+  };
+
   const handleToggleStatus = () => {
     if (user.status === 'pending') {
-      setAdminUserStatus(user.id, 'active');
-      setToast({
+      void applyStatus('active', {
         tone: 'success',
-        title: t('admin.user.toast.activated.title'),
-        hint: t('admin.user.toast.activated.hint'),
+        titleKey: 'admin.user.toast.activated.title',
+        hintKey: 'admin.user.toast.activated.hint',
       });
       return;
     }
     if (user.status === 'suspended') {
-      setAdminUserStatus(user.id, 'active');
-      setToast({
+      void applyStatus('active', {
         tone: 'success',
-        title: t('admin.user.toast.reactivated.title'),
-        hint: t('admin.user.toast.reactivated.hint'),
+        titleKey: 'admin.user.toast.reactivated.title',
+        hintKey: 'admin.user.toast.reactivated.hint',
       });
       return;
     }
@@ -228,12 +276,11 @@ export default function AdminUserDetails() {
   };
 
   const handleConfirmedSuspend = () => {
-    setAdminUserStatus(user.id, 'suspended');
     setSuspendConfirmOpen(false);
-    setToast({
+    void applyStatus('suspended', {
       tone: 'danger',
-      title: t('admin.user.toast.suspended.title'),
-      hint: t('admin.user.toast.suspended.hint'),
+      titleKey: 'admin.user.toast.suspended.title',
+      hintKey: 'admin.user.toast.suspended.hint',
     });
   };
 
@@ -520,6 +567,7 @@ export default function AdminUserDetails() {
                   block
                   leading={<AlertIcon size={16} />}
                   onClick={handleToggleStatus}
+                  loading={statusUpdating}
                 >
                   {t('admin.user.actions.suspend')}
                 </Button>
@@ -529,6 +577,7 @@ export default function AdminUserDetails() {
                   block
                   leading={<CheckIcon size={16} />}
                   onClick={handleToggleStatus}
+                  loading={statusUpdating}
                 >
                   {t(
                     user.status === 'pending'
