@@ -389,6 +389,15 @@ export type Database = {
           has_nafath: boolean;
         }>;
       };
+      get_renter_eligibility: {
+        Args: { p_renter_id: string };
+        Returns: Array<{
+          user_id: string;
+          limit_amount: number;
+          used_amount: number;
+          tier: EligibilityTier;
+        }>;
+      };
       next_invoice_number: { Args: Record<string, never>; Returns: string };
       next_contract_number: { Args: Record<string, never>; Returns: string };
       next_note_number: { Args: Record<string, never>; Returns: string };

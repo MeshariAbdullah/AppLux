@@ -35,6 +35,48 @@ export async function fetchEligibilityByUserIds(
 }
 
 /**
+ * Merchant-context read of a renter's eligibility. RLS on
+ * `rental_eligibility` blocks merchants from reading other users'
+ * rows directly; this RPC is SECURITY DEFINER and gated on the
+ * caller's role being merchant or admin, returning only the fields
+ * the rental-session UI needs (no `notes`, `assigned_by`, or
+ * `updated_at`). Returns null when there is no eligibility row for
+ * the given renter.
+ *
+ * Used by `MerchantRentalSession.handleOperationContinue` after the
+ * renter has been verified through `confirm_renter_presence`. For
+ * self-loads (customer reading their own row) and admin loads use
+ * `fetchEligibility` instead — both have direct table policies that
+ * cover them.
+ */
+export async function fetchRenterEligibility(
+  renterId: string,
+): Promise<RentalEligibilityRow | null> {
+  const sb = requireSupabase();
+  const { data, error } = await sb.rpc('get_renter_eligibility', {
+    p_renter_id: renterId,
+  });
+  if (error) throw error;
+  const row = Array.isArray(data) ? data[0] : null;
+  if (!row) return null;
+  // The RPC returns a subset of the full RentalEligibilityRow shape.
+  // Pad the rest with sentinel values so the rest of the app (which
+  // types against the table row) doesn't crash on missing keys.
+  // These fields are admin-only and aren't surfaced anywhere in the
+  // merchant session UI.
+  return {
+    user_id: row.user_id,
+    limit_amount: Number(row.limit_amount),
+    used_amount: Number(row.used_amount),
+    tier: row.tier,
+    assigned_by: null,
+    assigned_at: new Date(0).toISOString(),
+    notes: null,
+    updated_at: new Date(0).toISOString(),
+  };
+}
+
+/**
  * Admin: set / update a customer's eligibility (limit_amount + optional
  * tier / notes). Backed by an upsert keyed on user_id so the same call
  * handles both "first time we set a limit" and "admin is adjusting an

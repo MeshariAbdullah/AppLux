@@ -20,7 +20,7 @@ import {
 import { useI18n, useT } from '@/lib/i18n';
 import {
   createInvoiceWithItems,
-  fetchEligibility,
+  fetchRenterEligibility,
   fetchMyMerchant,
   useSupabaseAuth,
   type ProfileRow,
@@ -475,7 +475,11 @@ export default function MerchantRentalSession() {
 
     updateEligibility({ loading: true, error: null });
     try {
-      const row = await fetchEligibility(session.verify.renter.id);
+      // SECURITY DEFINER RPC — the table's RLS does not grant
+      // merchants direct SELECT on other users' eligibility rows.
+      // `fetchEligibility` here would silently return null even when
+      // the row exists, and the verdict would render as "missing".
+      const row = await fetchRenterEligibility(session.verify.renter.id);
       updateEligibility({ row, loading: false, error: null });
       setStep('eligibility');
     } catch (err) {

@@ -68,6 +68,7 @@ export {
 export {
   fetchEligibility,
   fetchEligibilityByUserIds,
+  fetchRenterEligibility,
   upsertEligibility,
 } from './queries/eligibility';
 export type { UpsertEligibilityInput } from './queries/eligibility';
