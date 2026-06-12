@@ -250,13 +250,22 @@ export default function MerchantLogin() {
               />
             </FormField>
 
-            <div className="flex justify-end">
+            {/* See Login.tsx — forgot-password isn't implemented yet,
+                so render an explicit "not available" treatment instead
+                of a button that silently does nothing. */}
+            <div className="flex flex-col items-end gap-1">
               <button
                 type="button"
-                className="text-[12.5px] font-medium text-gold-700 hover:text-gold-700"
+                disabled
+                aria-disabled="true"
+                className="text-[12.5px] font-medium text-ink-300 cursor-not-allowed"
+                title={t('auth.forgotComingSoon')}
               >
                 {t('auth.forgot')}
               </button>
+              <span className="text-[11px] text-ink-400 leading-snug text-end max-w-[28ch]">
+                {t('auth.forgotComingSoon')}
+              </span>
             </div>
 
             {errors.form && (

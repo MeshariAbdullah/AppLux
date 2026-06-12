@@ -280,13 +280,23 @@ export default function Login() {
               />
             </FormField>
 
-            <div className="flex justify-end">
+            {/* Forgot-password is intentionally not a clickable action
+                yet — the reset flow isn't implemented. A real button
+                here would silently do nothing. Render the same label
+                disabled with a tooltip so the user understands. */}
+            <div className="flex flex-col items-end gap-1">
               <button
                 type="button"
-                className="text-[12.5px] font-medium text-gold-700 hover:text-gold-600"
+                disabled
+                aria-disabled="true"
+                className="text-[12.5px] font-medium text-ink-300 cursor-not-allowed"
+                title={t('auth.forgotComingSoon')}
               >
                 {t('auth.forgot')}
               </button>
+              <span className="text-[11px] text-ink-400 leading-snug text-end max-w-[28ch]">
+                {t('auth.forgotComingSoon')}
+              </span>
             </div>
 
             {errors.form && (
@@ -296,7 +306,7 @@ export default function Login() {
             )}
 
             <Button type="submit" size="lg" block loading={submitting}>
-              {submitting ? t('auth.login.submitting') : t('auth.login')}
+              {submitting ? t('auth.login.submitting') : t('auth.signIn')}
             </Button>
 
             {/* Nafath is a demo-only flow — it updates the demo store and

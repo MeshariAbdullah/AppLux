@@ -315,7 +315,7 @@ export default function Register() {
               <div className="text-center text-[13px] text-ink-500">
                 {t('auth.haveAccount')}{' '}
                 <Link to="/auth/login" className="text-gold-700 font-semibold">
-                  {t('auth.login')}
+                  {t('auth.signIn')}
                 </Link>
               </div>
             )}
@@ -611,7 +611,7 @@ function SupabaseRegister() {
                 to="/auth/login"
                 className="text-lavender-600 font-semibold hover:text-lavender-700"
               >
-                {t('auth.login')}
+                {t('auth.signIn')}
               </Link>
             </div>
           </div>

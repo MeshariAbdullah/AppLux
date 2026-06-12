@@ -1,7 +1,7 @@
 {
   "app": {
-    "name": "AppLux",
-    "tagline": "Rental contracts & promissory notes"
+    "name": "Lend",
+    "tagline": "Rent what you need, contract it properly"
   },
   "nav": {
     "home": "Home",
@@ -33,15 +33,24 @@
     "clear": "Clear"
   },
   "welcome": {
-    "eyebrow": "AppLux",
-    "title": "Occasion-wear rental, done right — dresses, bags, watches, bishts",
-    "subtitle": "The Saudi platform for boutiques and ateliers renting premium occasion pieces with authenticated contracts and promissory notes.",
-    "feature1": "Verified occasion-wear boutiques",
-    "feature2": "Contract & promissory note per piece",
-    "feature3": "Piece-value protection via Nafith",
+    "eyebrow": "Lend",
+    "title": "Rent it. Contract it. Return it.",
+    "subtitle": "Lend connects you with verified partners across multiple sectors so you can rent what you need — with proper contracts and protected value.",
+    "feature1": "Verified partner businesses",
+    "feature2": "Contract & promissory note per rental",
+    "feature3": "Underlying-value protection via Nafith",
     "signIn": "Sign in",
     "createAccount": "Create account",
     "terms": "By continuing you agree to the Terms and Privacy Policy",
+    "sectors": {
+      "title": "Sectors we cover",
+      "subtitle": "Each sector groups partner businesses by what they rent.",
+      "fashion": {
+        "name": "Fashion",
+        "sub": "Dresses · Bags · Watches · Bishts"
+      },
+      "comingSoon": "More sectors coming soon"
+    },
     "adminDemo": {
       "label": "Open operations console",
       "pill": "Demo"
@@ -50,7 +59,7 @@
   "auth": {
     "loginTitle": "Welcome back",
     "loginSubtitle": "Sign in to continue managing your contracts.",
-    "registerEntryTitle": "Start with AppLux",
+    "registerEntryTitle": "Start with Lend",
     "registerEntrySubtitle": "Create a merchant account in minutes.",
     "mobile": "Mobile number",
     "mobileAccepted": "Number accepted · {e164}",
@@ -60,15 +69,16 @@
     "passwordHint": "Use at least 6 characters.",
     "confirmPassword": "Confirm password",
     "forgot": "Forgot password?",
+    "forgotComingSoon": "Password reset isn't ready yet — please ask Lend support if you can't sign in.",
     "noAccount": "Don't have an account?",
     "haveAccount": "Already have an account?",
     "register": "Register",
-    "login": "Sign in",
+    "signIn": "Sign in",
     "orContinueWith": "Or continue with",
     "entry": {
       "eyebrow": "Get started",
-      "title": "Choose how you'd like to use AppLux",
-      "subtitle": "AppLux supports both customers and businesses — pick the experience that fits you.",
+      "title": "Choose how you'd like to use Lend",
+      "subtitle": "Lend supports both customers and businesses — pick the experience that fits you.",
       "haveAccount": "Or sign in instead",
       "encrypted": "Secure connection — all data is encrypted in transit.",
       "trust": {
@@ -85,7 +95,7 @@
           "desc": "For companies issuing rental contracts and promissory notes to customers."
         },
         "admin": {
-          "title": "AppLux operations console",
+          "title": "Lend operations console",
           "desc": "For the review team to manage merchants, users and cases.",
           "demoPill": "Demo"
         }
@@ -103,8 +113,8 @@
       "or": "OR",
       "continueNafath": "Continue with Nafath",
       "security": {
-        "title": "Protected by encryption",
-        "hint": "Credentials aren't stored in this demo and are cleared as soon as you sign out."
+        "title": "Your sign-in is protected",
+        "hint": "Your password is encrypted end-to-end. Lend never sees it in plain text."
       }
     },
     "errors": {
@@ -207,7 +217,7 @@
   },
   "success": {
     "title": "Account created",
-    "subtitle": "Welcome to AppLux — your account is ready to manage contracts and collections.",
+    "subtitle": "Welcome to Lend — your account is ready to manage contracts and collections.",
     "continue": "Go to home"
   },
   "home": {
@@ -326,7 +336,7 @@
     "usageOfLimit": "Used of total",
     "assignedBy": "Assigned by",
     "assignedOn": "Assigned on",
-    "adminNotice": "Eligibility is assigned manually by the AppLux team based on your profile and history.",
+    "adminNotice": "Eligibility is assigned manually by the Lend team based on your profile and history.",
     "breakdown": "Usage breakdown",
     "contractsShare": "Active contract commitments",
     "invoicesShare": "Outstanding invoices",
@@ -543,7 +553,7 @@
     },
     "contact": {
       "title": "Need a hand?",
-      "hint": "AppLux support is available for anything related to your contract or note.",
+      "hint": "Lend support is available for anything related to your contract or note.",
       "cta": "Open support"
     },
     "invalid": {
@@ -670,7 +680,7 @@
   },
   "merchant": {
     "entry": {
-      "eyebrow": "AppLux for merchants",
+      "eyebrow": "Lend for merchants",
       "title": "Grow your business with digital rental",
       "subtitle": "Join as a verified merchant and issue rental contracts and digital promissory notes with ease.",
       "feature1": "Instantly attested digital contracts",
@@ -713,7 +723,7 @@
           "body": "We'll send a one-time code to {mask}. The renter's details will only appear here after the code is confirmed."
         },
         "notFound": {
-          "body": "No AppLux account is linked to this mobile. The renter must complete their account before you can open a rental session for them.",
+          "body": "No Lend account is linked to this mobile. The renter must complete their account before you can open a rental session for them.",
           "copyLink": "Copy onboarding link",
           "tryDifferent": "Try a different number"
         },
@@ -724,7 +734,7 @@
           "mobileVerifyFailed": "We couldn't verify this number right now. Please try again.",
           "idLast4Length": "Enter exactly the last 4 digits of the renter's National ID.",
           "idLast4Failed": "Those digits did not match the renter's National ID. Re-check the physical card and try again.",
-          "forbidden": "Your account isn't authorised to verify renters. Contact AppLux support.",
+          "forbidden": "Your account isn't authorised to verify renters. Contact Lend support.",
           "backendRequired": "Live backend is required to verify renters. Connect Supabase and try again."
         }
       },
@@ -766,7 +776,7 @@
         "issuePackageHint": "Prepares the rental for documentation. The renter then reviews and signs.",
         "reduceCta": "Reduce item value",
         "cancelCta": "Cancel session",
-        "missing": "This renter has no eligibility profile yet. Ask an AppLux operator to assign one.",
+        "missing": "This renter has no eligibility profile yet. Ask an Lend operator to assign one.",
         "errors": {
           "fetch": "Could not load the renter's eligibility.",
           "merchantLoading": "Your merchant profile is still loading. Wait a moment and try again."
@@ -827,7 +837,7 @@
         "contact": "Contact details",
         "contactSub": "Used by our approvals team to coordinate with you.",
         "branches": "Branches",
-        "branchesSub": "Add branches that will serve customers via AppLux."
+        "branchesSub": "Add branches that will serve customers via Lend."
       },
       "companyName": "Company name",
       "companyNamePh": "Trade name as registered",
@@ -870,7 +880,7 @@
     },
     "pending": {
       "title": "Application under review",
-      "subtitle": "We received your request. The AppLux team will review it and get back to you within 1-3 business days.",
+      "subtitle": "We received your request. The Lend team will review it and get back to you within 1-3 business days.",
       "badge": "Under review",
       "submittedAt": "Submitted on",
       "requestId": "Request ID",
@@ -883,7 +893,7 @@
         "pending": {
           "badge": "Under review",
           "title": "Application under review",
-          "subtitle": "We received your request. The AppLux team will review it and get back to you within 1-3 business days."
+          "subtitle": "We received your request. The Lend team will review it and get back to you within 1-3 business days."
         },
         "approved": {
           "badge": "Approved",
@@ -1406,7 +1416,7 @@
       },
       "qr": {
         "title": "Contract ready",
-        "subtitle": "Share this QR with the customer — they'll scan it from the AppLux app to review and sign.",
+        "subtitle": "Share this QR with the customer — they'll scan it from the Lend app to review and sign.",
         "tokenLabel": "Reference code",
         "copy": "Copy code",
         "copied": "Copied!",
@@ -1433,7 +1443,7 @@
   "admin": {
     "home": {
       "title": "Admin console",
-      "eyebrow": "AppLux control center",
+      "eyebrow": "Lend control center",
       "welcome": "Platform overview",
       "subtitle": "Operational status across merchants, users, limits and risk.",
       "hero": {
@@ -1521,7 +1531,7 @@
       },
       "footerNote": {
         "title": "Operations only",
-        "hint": "This console is restricted to AppLux operators and auditors."
+        "hint": "This console is restricted to Lend operators and auditors."
       },
       "signOut": "Sign out",
       "signOutFailed": "Sign out failed. Please try again."
@@ -1652,7 +1662,7 @@
       "banner": {
         "approved": {
           "title": "Merchant approved",
-          "subtitle": "The merchant has been granted access to the AppLux network."
+          "subtitle": "The merchant has been granted access to the Lend network."
         },
         "rejected": {
           "title": "Request rejected",
@@ -1661,7 +1671,7 @@
         "decidedAt": "Decided at",
         "reviewer": "Reviewer",
         "notes": "Reviewer notes",
-        "unknownReviewer": "AppLux operator"
+        "unknownReviewer": "Lend operator"
       },
       "notFound": {
         "title": "Request not found",
@@ -1828,7 +1838,7 @@
         "source": {
           "merchant": "Merchant",
           "customer": "Customer",
-          "operator": "AppLux"
+          "operator": "Lend"
         },
         "empty": {
           "title": "No evidence uploaded",

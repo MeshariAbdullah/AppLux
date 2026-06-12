@@ -47,9 +47,26 @@ export default function Home() {
   const { configured, eligibility: dbEligibility, profile, session: realSession } = useSupabaseAuth();
   const navigate = useNavigate();
 
-  // Real eligibility from Supabase when configured + present; otherwise demo seed.
-  const eligibility =
-    configured && dbEligibility ? adaptEligibility(dbEligibility) : demoEligibility;
+  // Eligibility source rules:
+  //   - configured + DB row present  → real adapted row
+  //   - configured + DB row missing  → EMPTY (limit=0, used=0). Never
+  //     show the demo seed (18,500 / 50,000) in production — that was
+  //     the SCRUM-41 Bug 4 symptom: a customer with no eligibility row
+  //     was seeing the demo numbers as if they had a real limit.
+  //   - !configured                  → demo seed (local-only)
+  const emptyEligibility = {
+    limit: 0,
+    used: 0,
+    remaining: 0,
+    tier: 'standard' as const,
+    assignedBy: '',
+    assignedAt: new Date(0).toISOString(),
+  };
+  const eligibility = configured
+    ? dbEligibility
+      ? adaptEligibility(dbEligibility)
+      : emptyEligibility
+    : demoEligibility;
 
   const fullName = profile?.full_name ?? session?.fullName ?? '';
   const firstName = fullName.split(' ')[0] ?? '';
