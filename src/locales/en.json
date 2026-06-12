@@ -353,7 +353,23 @@
   },
   "contracts": {
     "title": "Contracts",
-    "searchPlaceholder": "Search by name or contract ID"
+    "searchPlaceholder": "Search by name or contract ID",
+    "sections": {
+      "newContracts": "New contracts",
+      "notes": "Promissory notes",
+      "noContracts": "No active contracts yet",
+      "noNotes": "No promissory notes yet"
+    },
+    "handover": {
+      "title": "Required: photo of the product",
+      "hint": "Before you receive the item from the merchant, capture a photo. This documents the item's condition at handover for both sides.",
+      "capture": "Take handover photo",
+      "retake": "Retake photo",
+      "done": "Handover photo captured",
+      "captureFor": "Capture handover photo for {ref}",
+      "uploading": "Uploading…",
+      "uploadFailed": "Upload failed — the photo was saved locally. Try again when you have a connection."
+    }
   },
   "notifications": {
     "title": "Notifications",
