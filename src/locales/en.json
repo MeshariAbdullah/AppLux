@@ -160,6 +160,7 @@
       "mobileFormat": "Doesn't look like a Saudi mobile. It must start with 5 and be 9 digits.",
       "mobileUnsupportedCountry": "Only Saudi mobile numbers (+966) are supported here.",
       "mobileVerifyFailed": "We couldn't verify this number right now. Please try again.",
+      "mobileTaken": "This mobile is already registered. Sign in instead, or use a different number.",
       "emailRequired": "Enter your email to continue.",
       "emailFormat": "That email doesn't look right.",
       "passwordRequired": "Enter your password to continue.",

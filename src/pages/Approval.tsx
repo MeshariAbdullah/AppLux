@@ -37,11 +37,17 @@ export default function Approval() {
   const { formatDate, formatNumber } = useI18n();
 
   const [livePkg, setLivePkg] = useState<ScannedPackage | null>(null);
+  // Bug 14: capture the live invoice id so the "Continue contract"
+  // CTA can navigate to /track/invoice/<id> (a configured-mode page
+  // backed by Supabase) instead of /tracking/<token> (a demo-only
+  // page that silently dead-ends configured customers).
+  const [liveInvoiceId, setLiveInvoiceId] = useState<string | null>(null);
   const [resolving, setResolving] = useState(false);
 
   useEffect(() => {
     if (!configured || !token || demoPkg) {
       setLivePkg(null);
+      setLiveInvoiceId(null);
       return;
     }
     let cancelled = false;
@@ -49,6 +55,7 @@ export default function Approval() {
     fetchInvoiceByToken(token)
       .then(async (res) => {
         if (cancelled || !res) return;
+        setLiveInvoiceId(res.invoice.id);
         const merchant = await fetchMerchant(res.invoice.merchant_id).catch(() => null);
         if (cancelled) return;
         setLivePkg(synthesizePackageFromInvoice(res.invoice, res.items, merchant));
@@ -216,7 +223,23 @@ export default function Approval() {
               variant="primary"
               size="lg"
               block
-              onClick={() => navigate(`/tracking/${token}`, { replace: true })}
+              onClick={() => {
+                // SCRUM-42 Bug 14: route to the right tracking page.
+                // configured + we know the live invoice id → real
+                // /track/invoice/<id> (InvoiceTracking.tsx, backed by
+                // Supabase). Otherwise (demo mode) keep the old
+                // /tracking/<token> shape so the demo flow still
+                // terminates somewhere meaningful. The previous
+                // unconditional /tracking/<token> dead-ended a
+                // configured customer on the demo-only Tracking page
+                // because the demo store has no scan record for
+                // their live token.
+                if (configured && liveInvoiceId) {
+                  navigate(`/track/invoice/${liveInvoiceId}`, { replace: true });
+                } else {
+                  navigate(`/tracking/${token}`, { replace: true });
+                }
+              }}
             >
               {t('approval.viewTracking')}
             </Button>

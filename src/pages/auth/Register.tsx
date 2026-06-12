@@ -348,6 +348,28 @@ function mobileIssueToMessage(
   }
 }
 
+/**
+ * Best-effort detector for a unique-violation on profiles.mobile
+ * (the partial unique index installed in
+ * 20260502121200_profiles_mobile_customer_unique.sql). Supabase Auth
+ * doesn't expose the underlying Postgres code reliably through
+ * signUp's error, so we sniff a few plausible signals: 23505 code,
+ * the constraint name, and the column/table name in the message.
+ * Conservative on purpose — if we're not sure, we DON'T claim it's a
+ * duplicate (the caller falls back to the generic error path).
+ */
+function isMobileUniqueViolation(err: unknown): boolean {
+  if (!err) return false;
+  const anyErr = err as { code?: string; message?: string };
+  if (anyErr.code === '23505') return true;
+  const msg = (anyErr.message ?? '').toLowerCase();
+  return (
+    msg.includes('profiles_mobile_customer_unique') ||
+    (msg.includes('duplicate') && msg.includes('mobile')) ||
+    (msg.includes('already exists') && msg.includes('mobile'))
+  );
+}
+
 function SupabaseRegister() {
   const t = useT();
   const navigate = useNavigate();
@@ -453,9 +475,22 @@ function SupabaseRegister() {
             mobile: normalizedMobile!.canonical,
           });
         } catch (err) {
+          // SCRUM-42 Bug 15: a unique-violation on profiles.mobile
+          // means another customer already registered with this
+          // number (partial unique index
+          // `profiles_mobile_customer_unique`). Surface a clean
+          // "already registered" error on the mobile field instead
+          // of silently swallowing — the trigger should have written
+          // it on signup, so if the post-signUp UPDATE fails on
+          // 23505 there's nothing we can do client-side to recover.
+          if (isMobileUniqueViolation(err)) {
+            setErrors({ mobile: t('auth.errors.mobileTaken') });
+            setSubmitting(false);
+            return;
+          }
           // eslint-disable-next-line no-console
           console.error(
-            '[applux] post-signUp mobile persist failed (trigger should have set it)',
+            '[lend] post-signUp mobile persist failed (trigger should have set it)',
             err,
           );
         }
@@ -464,6 +499,17 @@ function SupabaseRegister() {
         setSubmitting(false);
       }
     } catch (err) {
+      // The handle_new_auth_user trigger ALSO writes profiles.mobile.
+      // If the live data already contains another customer with this
+      // number, the trigger's INSERT will fail with a 23505 unique
+      // violation, which Supabase Auth surfaces as a sign-up error.
+      // Translate that into the same clean "already registered"
+      // message on the mobile field.
+      if (isMobileUniqueViolation(err)) {
+        setErrors({ mobile: t('auth.errors.mobileTaken') });
+        setSubmitting(false);
+        return;
+      }
       const message = err instanceof Error ? err.message : t('auth.errors.signUpFailed');
       setErrors({ form: message });
       setSubmitting(false);
