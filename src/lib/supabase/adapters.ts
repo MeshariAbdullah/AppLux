@@ -57,7 +57,7 @@ export function adaptEligibility(row: RentalEligibilityRow): RentalEligibility {
     used,
     remaining: Math.max(limit - used, 0),
     tier: row.tier,
-    assignedBy: 'AppLux',
+    assignedBy: 'Lend',
     assignedAt: row.assigned_at,
   };
 }
@@ -306,7 +306,7 @@ export function synthesizePackageFromInvoice(
   const returnDate = invoice.expires_at ?? dur(issuedAt, durationDays);
   const beneficiary = merchant
     ? localized(merchant.display_name)
-    : { ar: 'AppLux Partner', en: 'AppLux Partner' };
+    : { ar: 'Lend Partner', en: 'Lend Partner' };
   const cityLocalized = merchant
     ? { ar: merchant.city, en: merchant.city }
     : { ar: '—', en: '—' };

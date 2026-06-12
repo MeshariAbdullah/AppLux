@@ -214,25 +214,12 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Scan CTA — editorial dark band */}
-        <button
-          type="button"
-          onClick={() => navigate('/scan')}
-          className="group relative overflow-hidden rounded-xl3 bg-gradient-to-br from-ink-900 via-ink-800 to-ink-900 text-white px-5 py-4 text-start flex items-center gap-4 shadow-card hover:shadow-plush transition-shadow"
-        >
-          <span aria-hidden className="pointer-events-none absolute inset-0 pattern-dots opacity-20" />
-          <span aria-hidden className="pointer-events-none absolute -top-8 end-[-10%] h-32 w-32 rounded-full bg-gold-400/15 blur-3xl" />
-          <span className="relative h-12 w-12 rounded-2xl bg-white/8 ring-1 ring-white/12 grid place-items-center shrink-0 text-gold-300">
-            <QrIcon size={20} />
-          </span>
-          <span className="relative min-w-0 flex-1">
-            <span className="block text-[15px] font-semibold truncate tracking-tight">{t('qr.title')}</span>
-            <span className="block mt-1 text-[12.5px] text-white/65 truncate">
-              {t('qr.subtitle')}
-            </span>
-          </span>
-          <ArrowIcon size={18} className={cn('relative text-white/60', dir === 'rtl' ? 'rotate-180' : '')} />
-        </button>
+        {/* SCRUM-42 Bug 8: the rental session is now merchant-initiated and
+            renter-verified by mobile, so scan is no longer the customer's
+            primary entry. The prominent dark scan CTA that used to live
+            here is removed. The small QR icon in the header still routes
+            to /scan as a secondary tool for retrieving an invoice
+            handed off out-of-band. */}
 
         {/* Summary chips */}
         <div className="grid grid-cols-3 gap-2.5">

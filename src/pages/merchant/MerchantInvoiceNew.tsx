@@ -411,7 +411,7 @@ export default function MerchantInvoiceNew() {
           );
         }
 
-        // Customer linkage requires the customer to already have an AppLux
+        // Customer linkage requires the customer to already have an Lend
         // account. Look them up by email.
         const customerEmail =
           values.customerMode === 'existing'

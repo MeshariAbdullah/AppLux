@@ -27,7 +27,7 @@ import {
 import { withTimeout } from '@/lib/withTimeout';
 
 // =====================================================================
-// AppLux auth provider — single source of truth for: auth session,
+// Lend auth provider — single source of truth for: auth session,
 // profile / role, and the boolean RootRedirect uses to route post-login.
 //
 // Routing contract: RootRedirect (src/routes.tsx) is the ONLY place

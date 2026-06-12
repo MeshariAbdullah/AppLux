@@ -413,14 +413,17 @@
     "empty": "No notifications yet"
   },
   "profile": {
-    "title": "Profile",
+    "title": "My account",
+    "accountSection": "Account",
+    "accountEntry": "My information",
+    "historyEntry": "Rental history",
     "language": "Language",
     "arabic": "العربية",
     "english": "English",
-    "appearance": "Appearance",
-    "security": "Security & privacy",
+    "appearance": "Settings",
+    "security": "Privacy & security",
     "support": "Help & support",
-    "about": "About",
+    "about": "About Lend",
     "version": "Version",
     "signOut": "Sign out"
   },
@@ -429,9 +432,9 @@
     "optional": "Optional"
   },
   "qr": {
-    "entry": "Scan code",
-    "title": "Scan rental QR",
-    "subtitle": "Point your camera at the partner's QR code to start reviewing the rental contract and promissory note.",
+    "entry": "Open invoice via QR",
+    "title": "Open a rental invoice",
+    "subtitle": "Most rentals are started by your merchant from their side. Use this only to open a specific invoice they shared with you out of band.",
     "frameHint": "Align the code inside the frame",
     "scanning": "Scanning…",
     "matched": "Code recognized",
@@ -508,7 +511,7 @@
       "place": "Place of issue",
       "purpose": "Purpose",
       "summary": "Note summary",
-      "disclaimer": "This note will be digitally attested via Nafith upon final approval."
+      "disclaimer": "The note is attested inside the Lend app on final approval. Official Nafith integration will arrive in a later release."
     },
     "confirm": {
       "title": "Confirm approval",
@@ -518,9 +521,9 @@
       "commitmentBody": "This is the decision that documents the rental. Once you sign, the contract and promissory note become part of your official rental record under our care.",
       "consent1": "I confirm I have reviewed the invoice, contract and promissory note",
       "consent2": "I accept the damage liabilities outlined above",
-      "consent3": "I agree to digitally sign the promissory note via Nafith",
-      "nafith": "Nafith — digital promissory note platform",
-      "nafithNote": "You will be redirected to Nafith to complete the electronic signature.",
+      "consent3": "I agree to have the promissory note attested digitally inside the Lend app",
+      "nafith": "Lend in-app note attestation",
+      "nafithNote": "The note is recorded inside the Lend app now. Official Nafith integration will be wired in later when ready.",
       "approve": "Approve & sign",
       "commitAction": "Sign and document the rental",
       "afterHint": "After signing, the rental becomes officially recorded — you can return to this record any time.",
@@ -539,21 +542,21 @@
     "step": "Step {current} of {total}",
     "stages": {
       "request": "Rental Request",
-      "review": "Store Review",
-      "agreement": "Agreement Documented",
+      "review": "Customer Review",
+      "agreement": "Contract Signed",
       "started": "Rental Started",
       "tracking": "Active Tracking",
       "return": "Return",
-      "closed": "Closed"
+      "closed": "Contract & Note Closed"
     },
     "descriptions": {
-      "request": "The boutique has issued the rental request to you.",
-      "review": "You're reviewing the contract and promissory note before signing.",
-      "agreement": "Contract signed and promissory note attested digitally.",
+      "request": "The merchant has issued the rental request to you.",
+      "review": "Review the contract and promissory note before signing — you are the one acknowledging and signing.",
+      "agreement": "The contract is signed and the promissory note is attested inside the app.",
       "started": "The agreed rental period has officially begun.",
       "tracking": "The contract is active — the remaining period is being tracked.",
       "return": "The rental period is closing — it's time to return the piece.",
-      "closed": "The contract has been closed and the journey is complete."
+      "closed": "The contract is closed and the promissory note is officially released."
     },
     "status": {
       "pending": "Upcoming",

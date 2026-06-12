@@ -61,7 +61,7 @@ export const DEFAULT_ELIGIBILITY: RentalEligibility = {
   used: 18500,
   remaining: 31500,
   tier: 'premium',
-  assignedBy: 'AppLux',
+  assignedBy: 'Lend',
   assignedAt: '2026-03-14',
 };
 

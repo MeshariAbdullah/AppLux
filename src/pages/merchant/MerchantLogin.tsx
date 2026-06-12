@@ -110,7 +110,7 @@ export default function MerchantLogin() {
 
     // Demo path
     updateMerchantDraft({
-      companyName: 'AppLux Demo Partner',
+      companyName: 'Lend Demo Partner',
       commercialReg: '1010123456',
       authorizedName: 'Demo Merchant',
       authorizedId: '1012345678',

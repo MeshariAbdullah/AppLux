@@ -454,7 +454,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           status: 'approved',
           decidedAt: at,
           notes: prev[m.id]?.notes,
-          reviewer: prev[m.id]?.reviewer ?? 'AppLux Operator',
+          reviewer: prev[m.id]?.reviewer ?? 'Lend Operator',
         },
       }));
       return {
@@ -478,7 +478,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           status: 'rejected',
           decidedAt: at,
           notes: trimmed ?? undefined,
-          reviewer: prev[m.id]?.reviewer ?? 'AppLux Operator',
+          reviewer: prev[m.id]?.reviewer ?? 'Lend Operator',
         },
       }));
       return {
@@ -606,7 +606,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         status: 'approved',
         decidedAt: new Date().toISOString(),
         notes: notes?.trim() || undefined,
-        reviewer: 'AppLux Operator',
+        reviewer: 'Lend Operator',
       };
       setMerchantDecisions((prev) => ({ ...prev, [id]: decision }));
       return decision;
@@ -622,7 +622,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         status: 'rejected',
         decidedAt: new Date().toISOString(),
         notes: notes?.trim() || undefined,
-        reviewer: 'AppLux Operator',
+        reviewer: 'Lend Operator',
       };
       setMerchantDecisions((prev) => ({ ...prev, [id]: decision }));
       return decision;
@@ -733,7 +733,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       const auditId = `AD-${caseId}-EX-${Date.now().toString().slice(-6)}`;
       const note: AdminCaseNote = {
         id: noteId,
-        author: 'AppLux Operator',
+        author: 'Lend Operator',
         role: 'operator',
         text: trimmed,
         at,
@@ -741,7 +741,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       const audit: AdminCaseAuditEntry = {
         id: auditId,
         action: 'note-added',
-        actor: 'AppLux Operator',
+        actor: 'Lend Operator',
         at,
       };
       setCaseOverrides((prev) => {
@@ -791,7 +791,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       const audit: AdminCaseAuditEntry = {
         id: auditId,
         action: auditActionForStage(next),
-        actor: 'AppLux Operator',
+        actor: 'Lend Operator',
         at,
       };
       setCaseOverrides((prev) => {

@@ -78,19 +78,19 @@ export default function Profile() {
 
         {/* Account list */}
         <div>
-          <SectionHeader title={t('nav.profile')} />
+          <SectionHeader title={t('profile.accountSection')} />
           <Card padded={false} className="overflow-hidden">
             <Row
               icon={<UserIcon size={18} />}
               tone="lavender"
-              label={t('profile.title')}
+              label={t('profile.accountEntry')}
               dir={dir}
             />
             <Divider />
             <Row
               icon={<HistoryIcon size={18} />}
               tone="canvas"
-              label={t('sections.history')}
+              label={t('profile.historyEntry')}
               dir={dir}
             />
           </Card>
@@ -135,7 +135,7 @@ export default function Profile() {
           <Card padded={false} className="overflow-hidden">
             <Row icon={<ShieldIcon size={18} />} tone="lavender" label={t('profile.security')} dir={dir} />
             <Divider />
-            <Row icon={<GlobeIcon size={18} />} tone="canvas" label={t('profile.appearance')} dir={dir} />
+            <Row icon={<GlobeIcon size={18} />} tone="canvas" label={t('profile.language')} dir={dir} />
           </Card>
         </div>
 
@@ -167,7 +167,7 @@ export default function Profile() {
         </button>
 
         <p className="text-center text-[11px] text-ink-400 num">
-          AppLux v0.1.0
+          Lend v0.1.0
         </p>
       </Screen>
     </>
