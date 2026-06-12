@@ -49,6 +49,18 @@
         "name": "Fashion",
         "sub": "Dresses · Bags · Watches · Bishts"
       },
+      "jewellery": {
+        "name": "Jewellery",
+        "sub": "Necklaces · Tiaras · Sets"
+      },
+      "vehicles": {
+        "name": "Vehicles",
+        "sub": "Luxury cars · Classic cars · Limousines"
+      },
+      "events": {
+        "name": "Events & Receptions",
+        "sub": "Stage · Lounge furniture · Décor"
+      },
       "comingSoon": "More sectors coming soon"
     },
     "adminDemo": {

@@ -4,43 +4,26 @@ import { EmptyState, Skeleton } from '@/components/ui';
 import { BadgeCheckIcon, BuildingIcon } from '@/components/icons';
 import { useT } from '@/lib/i18n';
 import { useStore } from '@/lib/store';
-import type { PartnerStore, StoreCategory } from '@/lib/data';
+import type { PartnerStore } from '@/lib/data';
 import {
   adaptMerchantToStore,
   listMerchants,
   useSupabaseAuth,
 } from '@/lib/supabase';
+import { SECTORS } from '@/lib/sectors';
 
 // =====================================================================
-// Sectors-only view (SCRUM-41 Bug 5).
+// Sectors-only view (SCRUM-41 Bug 5 → follow-up #1).
 //
-// Customers now see only the top-level sectors with their sub-categories
-// and a partner count. Individual partner store cards (name, branches,
-// city, rating, contact) are intentionally hidden — the only signal a
-// customer needs at this stage is "this sector has partner businesses
-// you can rent from". Per-store details surface later in the flow
-// (after picking a category, scanning an invoice, etc.).
+// Customers see the top-level sectors with their sub-categories and a
+// real partner count. Sectors with no onboarded merchants (jewellery,
+// vehicles, events today) show "Partners coming soon" — the page
+// itself doesn't need to know which sectors are populated, that's
+// derived from listMerchants() against each sector's storeCategories.
 //
-// Sector taxonomy is defined locally because we don't have a sectors
-// table yet. When more sectors are added (homes, vehicles, equipment),
-// extend SECTORS below and add the matching i18n keys.
+// Taxonomy is centralised in src/lib/sectors.ts — used by both this
+// page and the Welcome landing.
 // =====================================================================
-
-type Sector = {
-  key: 'fashion';
-  i18nName: string; // welcome.sectors.<key>.name
-  i18nSub: string; // welcome.sectors.<key>.sub
-  categories: StoreCategory[];
-};
-
-const SECTORS: Sector[] = [
-  {
-    key: 'fashion',
-    i18nName: 'welcome.sectors.fashion.name',
-    i18nSub: 'welcome.sectors.fashion.sub',
-    categories: ['dresses', 'bags', 'watches', 'bishts'],
-  },
-];
 
 export default function Stores() {
   const t = useT();
@@ -80,7 +63,7 @@ export default function Stores() {
     const counts: Record<string, number> = {};
     for (const sector of SECTORS) {
       counts[sector.key] = stores.filter((s) =>
-        sector.categories.includes(s.category),
+        sector.storeCategories.includes(s.category),
       ).length;
     }
     return counts;

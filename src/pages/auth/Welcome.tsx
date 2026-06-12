@@ -9,6 +9,7 @@ import {
 } from '@/components/icons';
 import { useT } from '@/lib/i18n';
 import { useSupabaseAuth } from '@/lib/supabase';
+import { SECTORS } from '@/lib/sectors';
 
 export default function Welcome() {
   const t = useT();
@@ -87,22 +88,24 @@ export default function Welcome() {
             </p>
           </div>
           <div className="mt-5 space-y-2.5">
-            <div className="rounded-2xl bg-white ring-1 ring-lavender-100 shadow-soft p-4">
-              <div className="flex items-center gap-2.5">
-                <span className="h-8 w-8 rounded-xl bg-lavender-50 text-lavender-700 grid place-items-center text-[13px] font-bold">
-                  1
-                </span>
-                <div className="text-[14px] font-semibold text-ink-900">
-                  {t('welcome.sectors.fashion.name')}
+            {SECTORS.map((sector, i) => (
+              <div
+                key={sector.key}
+                className="rounded-2xl bg-white ring-1 ring-lavender-100 shadow-soft p-4"
+              >
+                <div className="flex items-center gap-2.5">
+                  <span className="h-8 w-8 rounded-xl bg-lavender-50 text-lavender-700 grid place-items-center text-[13px] font-bold">
+                    {i + 1}
+                  </span>
+                  <div className="text-[14px] font-semibold text-ink-900">
+                    {t(sector.i18nName)}
+                  </div>
+                </div>
+                <div className="mt-2.5 ps-10 text-[12px] text-ink-500 leading-relaxed">
+                  {t(sector.i18nSub)}
                 </div>
               </div>
-              <div className="mt-2.5 ps-10 text-[12px] text-ink-500 leading-relaxed">
-                {t('welcome.sectors.fashion.sub')}
-              </div>
-            </div>
-            <div className="rounded-2xl bg-canvas-100/60 ring-1 ring-canvas-200 px-4 py-3 text-center text-[11.5px] font-medium text-ink-500">
-              {t('welcome.sectors.comingSoon')}
-            </div>
+            ))}
           </div>
         </section>
 
