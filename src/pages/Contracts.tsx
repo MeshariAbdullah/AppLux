@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Header, Screen } from '@/components/layout';
 import { Card, EmptyState, SectionHeader } from '@/components/ui';
 import { CameraIcon, CheckIcon, DocIcon, WalletIcon } from '@/components/icons';
@@ -7,8 +7,10 @@ import { useStore } from '@/lib/store';
 import {
   adaptContract,
   adaptNote,
+  getHandoverPhotoUrl,
   listCustomerContracts,
   listCustomerNotes,
+  uploadAndRecordHandover,
   useSupabaseAuth,
 } from '@/lib/supabase';
 import type { Contract, PromissoryNote } from '@/lib/data';
@@ -89,10 +91,7 @@ export default function Contracts() {
               {contracts.map((c, i, arr) => (
                 <div key={c.id}>
                   <ContractRow contract={c} />
-                  <HandoverPhotoBanner
-                    contractId={c.id}
-                    contractRef={c.id}
-                  />
+                  <HandoverPhotoBanner contract={c} />
                   {i < arr.length - 1 && (
                     <div className="h-px bg-canvas-200/80 my-1" />
                   )}
@@ -131,73 +130,101 @@ export default function Contracts() {
 // =====================================================================
 // Handover photo banner.
 //
-// Shown directly under each active contract row. Required action for
-// the customer at the moment of physical handover from the merchant.
+// Required customer action: capture a photo of the rental item BEFORE
+// physically receiving it from the merchant. State now lives on the
+// rental_contracts row (handover_photo_path + handover_at, populated
+// via the record_contract_handover RPC) so a refresh, a different
+// browser, and a different device all read the same source of truth.
+// The merchant can also surface this state in their own flow because
+// the column is on the shared contract row.
 //
-// Client-side state model (intentionally minimal):
-//   localStorage key:  lend.handover.<contractId>.captured  = '1' | null
-//   localStorage key:  lend.handover.<contractId>.dataUrl   = <preview>
-//
-// We persist the dataUrl so the customer can re-see the photo they
-// captured if they reload the page; the file itself is also POSTed
-// to the existing damage-evidence Storage bucket under
-// handover/<contractId>/<timestamp>.jpg when configured. Upload
-// failure does NOT block the local "captured" flag — the photo is
-// still recorded locally, and the user is told to retry uploading
-// when they have a connection.
+// localStorage is used only as an OPTIMISTIC preview: the dataURL of
+// the just-picked file is shown immediately while the upload + RPC
+// are in flight. Once they succeed, the authoritative preview comes
+// from a short-lived signed URL against the storage path on the
+// contract. If the user is offline / not configured, we fall back to
+// localStorage as a transient cache and surface a clear error.
 // =====================================================================
 
-function HandoverPhotoBanner({
-  contractId,
-  contractRef,
-}: {
-  contractId: string;
-  contractRef: string;
-}) {
+function HandoverPhotoBanner({ contract }: { contract: Contract }) {
   const t = useT();
   const { configured } = useSupabaseAuth();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const capturedKey = `lend.handover.${contractId}.captured`;
-  const previewKey = `lend.handover.${contractId}.dataUrl`;
+  // Cache key for the optimistic preview only — NOT the source of
+  // truth. The real source is contract.handoverPhotoPath, populated
+  // by record_contract_handover.
+  const previewCacheKey = `lend.handover.${contract.id}.dataUrl`;
 
-  const [captured, setCaptured] = useState<boolean>(() => {
-    if (typeof window === 'undefined') return false;
-    return window.localStorage.getItem(capturedKey) === '1';
-  });
-  const [preview, setPreview] = useState<string | null>(() => {
-    if (typeof window === 'undefined') return null;
-    return window.localStorage.getItem(previewKey);
-  });
+  const [optimisticPreview, setOptimisticPreview] = useState<string | null>(
+    () => {
+      if (typeof window === 'undefined') return null;
+      return window.localStorage.getItem(previewCacheKey);
+    },
+  );
+  const [signedPreview, setSignedPreview] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
+  // Local "captured just now" flag so the banner flips to the green
+  // state immediately after a successful upload, without waiting for
+  // the parent's list refresh to bring back contract.handoverPhotoPath.
+  const [optimisticallyCaptured, setOptimisticallyCaptured] =
+    useState<boolean>(false);
+  const captured =
+    Boolean(contract.handoverPhotoPath) || optimisticallyCaptured;
+
+  // Resolve a signed URL for the persisted path. Re-runs whenever the
+  // backend path changes, so a freshly-uploaded photo replaces the
+  // optimistic dataURL preview as soon as the RPC commits.
+  useEffect(() => {
+    let cancelled = false;
+    if (!configured || !contract.handoverPhotoPath) {
+      setSignedPreview(null);
+      return;
+    }
+    getHandoverPhotoUrl(contract.handoverPhotoPath)
+      .then((url) => {
+        if (!cancelled) setSignedPreview(url);
+      })
+      .catch(() => {
+        if (!cancelled) setSignedPreview(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [configured, contract.handoverPhotoPath]);
+
+  const preview = signedPreview ?? optimisticPreview;
 
   const onFileSelected = async (file: File) => {
     setUploadError(null);
     setUploading(true);
     try {
+      // Optimistic preview from the picked file — lets the user see
+      // their photo immediately while the network operations run.
       const dataUrl = await readAsDataUrl(file);
-      // Persist client-side first so a failed upload still records
-      // the customer's action.
-      window.localStorage.setItem(capturedKey, '1');
-      window.localStorage.setItem(previewKey, dataUrl);
-      setCaptured(true);
-      setPreview(dataUrl);
+      window.localStorage.setItem(previewCacheKey, dataUrl);
+      setOptimisticPreview(dataUrl);
 
       if (configured) {
-        try {
-          const { uploadDamageEvidence } = await import('@/lib/supabase');
-          await uploadDamageEvidence({
-            caseId: `handover-${contractId}`,
-            file,
-            evidenceType: 'photo',
-          });
-        } catch (err) {
-          // eslint-disable-next-line no-console
-          console.error('[lend] handover photo upload failed', err);
-          setUploadError(t('contracts.handover.uploadFailed'));
-        }
+        await uploadAndRecordHandover({
+          contractId: contract.id,
+          file,
+        });
+        // After this, contract.handoverPhotoPath flips to the new key
+        // on next list refresh; the useEffect above resolves it to a
+        // signed URL which then displaces the optimistic preview.
+        setOptimisticallyCaptured(true);
+      } else {
+        // Demo mode keeps the localStorage cache as the only record;
+        // still flip the visual state to "captured" so the user gets
+        // the intended feedback.
+        setOptimisticallyCaptured(true);
       }
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error('[lend] handover photo persist failed', err);
+      setUploadError(t('contracts.handover.uploadFailed'));
     } finally {
       setUploading(false);
     }
@@ -259,7 +286,7 @@ function HandoverPhotoBanner({
           accept="image/*"
           capture="environment"
           className="hidden"
-          aria-label={t('contracts.handover.captureFor', { ref: contractRef })}
+          aria-label={t('contracts.handover.captureFor', { ref: contract.id })}
           onChange={(e) => {
             const f = e.target.files?.[0];
             if (f) void onFileSelected(f);

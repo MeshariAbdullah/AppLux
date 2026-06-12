@@ -195,6 +195,11 @@ export type RentalContractRow = {
   ended_at: string | null;
   nafath_verified_at: string | null;
   nafith_attested_at: string | null;
+  /** Storage object key for the customer's handover photo, written by
+   *  the record_contract_handover RPC after the customer captures it
+   *  in the Contracts tab. NULL until handover happens. */
+  handover_photo_path: string | null;
+  handover_at: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -397,6 +402,10 @@ export type Database = {
           used_amount: number;
           tier: EligibilityTier;
         }>;
+      };
+      record_contract_handover: {
+        Args: { p_contract_id: string; p_photo_path: string };
+        Returns: void;
       };
       next_invoice_number: { Args: Record<string, never>; Returns: string };
       next_contract_number: { Args: Record<string, never>; Returns: string };

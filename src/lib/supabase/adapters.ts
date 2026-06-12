@@ -188,6 +188,8 @@ export function adaptContract(
     endDate: row.end_date,
     monthlyAmount: Number(row.rental_fee_amount),
     status: mapContractStatus(row.status),
+    handoverPhotoPath: row.handover_photo_path,
+    handoverAt: row.handover_at,
   };
 }
 

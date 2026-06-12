@@ -101,8 +101,12 @@ export type { CreateInvoiceInput, CreatedInvoice } from './queries/invoices';
 export {
   closeRentalContract,
   fetchContractById,
+  getHandoverPhotoUrl,
+  HANDOVER_BUCKET,
+  HANDOVER_PREFIX,
   listCustomerContracts,
   listMerchantContracts,
+  uploadAndRecordHandover,
 } from './queries/contracts';
 
 export {

@@ -29,6 +29,11 @@ export type Contract = {
   endDate: string;
   monthlyAmount: number;
   status: ContractStatus;
+  /** Storage object key. Set after the customer records the handover
+   *  photo via record_contract_handover. Optional for the demo store
+   *  shape; live mode always populates from rental_contracts. */
+  handoverPhotoPath?: string | null;
+  handoverAt?: string | null;
 };
 
 export type NoteStatus = 'signed' | 'pending' | 'defaulted';
