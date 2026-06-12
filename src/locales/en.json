@@ -274,8 +274,12 @@
     }
   },
   "stores": {
-    "title": "Partner stores",
-    "subtitle": "Browse our verified dealerships and providers.",
+    "title": "Sectors",
+    "subtitle": "Each sector groups partner businesses by what they rent.",
+    "sectorPartners": "{count} partner businesses",
+    "sectorPartner": "1 partner business",
+    "sectorNoPartners": "Partners coming soon",
+    "sectorPartnerNote": "Stores in this sector are partners with Lend.",
     "searchPlaceholder": "Search by store name or city",
     "filters": {
       "all": "All",

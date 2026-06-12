@@ -274,8 +274,12 @@
     }
   },
   "stores": {
-    "title": "المتاجر الشركاء",
-    "subtitle": "تصفّح شركاءنا المعتمدين من المعارض والمزوّدين.",
+    "title": "القطاعات",
+    "subtitle": "كل قطاع يجمع شركاء الأعمال حسب ما يُقدّمونه للتأجير.",
+    "sectorPartners": "{count} شركاء أعمال",
+    "sectorPartner": "شريك أعمال واحد",
+    "sectorNoPartners": "الشركاء قريباً",
+    "sectorPartnerNote": "المتاجر في هذا القطاع شركاء مع Lend.",
     "searchPlaceholder": "ابحث باسم المتجر أو المدينة",
     "filters": {
       "all": "الكل",
