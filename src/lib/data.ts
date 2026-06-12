@@ -524,16 +524,16 @@ export const SEED_SCANS: ScannedPackage[] = [
           id: 'c2',
           title: { ar: 'العناية والاستخدام', en: 'Care & use' },
           body: {
-            ar: 'تُستخدم القطعة للمناسبة المصرّح بها فقط، ويُمنع الغسيل المنزلي أو التعديل أو الإعارة للغير.',
-            en: 'The piece is for the stated occasion only. Home washing, alterations, or lending to a third party are not allowed.',
+            ar: 'استخدم القطعة استخداماً معقولاً ومحافظاً عليها. يُمنع الغسيل المنزلي أو التعديل عليها أو إعارتها لشخص آخر.',
+            en: 'Use the piece reasonably and keep it in good condition. Home washing, alterations, or lending it to another person are not allowed.',
           },
         },
         {
           id: 'c3',
-          title: { ar: 'التأمين والتنظيف', en: 'Insurance & cleaning' },
+          title: { ar: 'التنظيف بعد الإرجاع', en: 'Cleaning on return' },
           body: {
-            ar: 'تشمل الباقة تأميناً على القطعة وخدمة تنظيف جاف متخصّص بعد الإرجاع. لا يشمل التأمين التلف الناتج عن الإهمال.',
-            en: 'The package includes insurance on the piece and professional dry-cleaning after return. Insurance does not cover negligence.',
+            ar: 'تشمل الباقة تنظيفاً جافاً متخصّصاً بعد الإرجاع. الالتزامات المالية في حال التلف موضّحة بصراحة في بند تلف القطعة أدناه.',
+            en: 'The package covers professional dry cleaning after return. Financial obligations on damage are spelled out separately under the damage clause below.',
           },
         },
         {

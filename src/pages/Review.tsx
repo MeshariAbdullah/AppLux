@@ -376,7 +376,12 @@ function InvoiceStep({ pkg }: { pkg: ScannedPackage }) {
         <Card padded className="space-y-2">
           <FeeRow label={t('review.invoice.rentalTotal')} amount={pkg.fees.rentalTotal} />
           <FeeRow label={t('review.invoice.deposit')} amount={pkg.fees.deposit} />
-          <FeeRow label={t('review.invoice.insurance')} amount={pkg.fees.insurance} />
+          {/* SCRUM-42 Bug 10: the "Insurance" line item was confusing —
+              there isn't an explicit coverage product. The customer's
+              financial exposure to damage is the original item value,
+              which is already covered by the promissory note. Hidden
+              here on purpose; the contract clauses still describe the
+              damage rule clearly. */}
           <FeeRow label={t('review.invoice.vat')} amount={pkg.fees.vat} muted />
           <div className="h-px bg-canvas-200/80 my-1" />
           <div className="flex items-center justify-between">

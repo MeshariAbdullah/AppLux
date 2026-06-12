@@ -172,7 +172,16 @@ export default function MerchantDamageNew() {
   };
 
   const claimValue = Number(claim) || 0;
-  const canSubmit = severity !== null && claimValue > 0;
+  // SCRUM-42 Bug 12: claim_amount must NEVER exceed the original item
+  // value. Total damage IS the item value; partial damage is anything
+  // below it. We treat itemValue as the hard cap regardless of
+  // severity so a typo or a "partial" classification can't push the
+  // claim above the asset's value. Empty itemValue (legacy demo rows
+  // with 0) is treated as "no cap known" — falls back to a positive-
+  // value-only check.
+  const itemValueCap = Number(rental.itemValue) || 0;
+  const claimOverCap = itemValueCap > 0 && claimValue > itemValueCap;
+  const canSubmit = severity !== null && claimValue > 0 && !claimOverCap;
 
   const onSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -387,22 +396,34 @@ export default function MerchantDamageNew() {
               <FormField
                 label={t('merchant.damage.new.claim.label')}
                 hint={
-                  severity
-                    ? t('merchant.damage.new.claim.suggested', {
-                        amount: formatCurrency(
-                          suggestedClaim(
-                            severity,
-                            rental.itemValue,
-                            rental.liabilityTotal,
-                          ),
-                        ),
+                  itemValueCap > 0
+                    ? t('merchant.damage.new.claim.cap', {
+                        amount: formatCurrency(itemValueCap),
                       })
-                    : t('merchant.damage.new.claim.hint')
+                    : severity
+                      ? t('merchant.damage.new.claim.suggested', {
+                          amount: formatCurrency(
+                            suggestedClaim(
+                              severity,
+                              rental.itemValue,
+                              rental.liabilityTotal,
+                            ),
+                          ),
+                        })
+                      : t('merchant.damage.new.claim.hint')
+                }
+                error={
+                  claimOverCap
+                    ? t('merchant.damage.new.claim.overCap', {
+                        amount: formatCurrency(itemValueCap),
+                      })
+                    : undefined
                 }
               >
                 <Input
                   type="number"
                   min="0"
+                  max={itemValueCap > 0 ? String(itemValueCap) : undefined}
                   inputMode="decimal"
                   placeholder="0"
                   value={claim}
@@ -410,6 +431,7 @@ export default function MerchantDamageNew() {
                     setClaim(e.target.value);
                     setClaimTouched(true);
                   }}
+                  invalid={claimOverCap}
                   trailing={
                     <span className="text-[12px] font-medium text-ink-500">
                       {t('common.sar')}
