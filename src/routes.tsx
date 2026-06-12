@@ -24,6 +24,8 @@ import Login from '@/pages/auth/Login';
 import Register from '@/pages/auth/Register';
 import Nafath from '@/pages/auth/Nafath';
 import RegisterSuccess from '@/pages/auth/RegisterSuccess';
+import ForgotPassword from '@/pages/auth/ForgotPassword';
+import ResetPassword from '@/pages/auth/ResetPassword';
 import MerchantWelcome from '@/pages/merchant/MerchantWelcome';
 import MerchantLogin from '@/pages/merchant/MerchantLogin';
 import MerchantRegister from '@/pages/merchant/MerchantRegister';
@@ -169,6 +171,8 @@ export function AppRoutes() {
         <Route path="/auth/register" element={<Register />} />
         <Route path="/auth/nafath" element={<Nafath />} />
         <Route path="/auth/success" element={<RegisterSuccess />} />
+        <Route path="/auth/forgot-password" element={<ForgotPassword />} />
+        <Route path="/auth/reset-password" element={<ResetPassword />} />
         <Route path="/merchant/welcome" element={<MerchantWelcome />} />
         <Route path="/merchant/login" element={<MerchantLogin />} />
         <Route path="/merchant/register" element={<MerchantRegister />} />

@@ -280,23 +280,13 @@ export default function Login() {
               />
             </FormField>
 
-            {/* Forgot-password is intentionally not a clickable action
-                yet — the reset flow isn't implemented. A real button
-                here would silently do nothing. Render the same label
-                disabled with a tooltip so the user understands. */}
-            <div className="flex flex-col items-end gap-1">
-              <button
-                type="button"
-                disabled
-                aria-disabled="true"
-                className="text-[12.5px] font-medium text-ink-300 cursor-not-allowed"
-                title={t('auth.forgotComingSoon')}
+            <div className="flex justify-end">
+              <Link
+                to="/auth/forgot-password"
+                className="text-[12.5px] font-semibold text-lavender-700 hover:text-lavender-800"
               >
                 {t('auth.forgot')}
-              </button>
-              <span className="text-[11px] text-ink-400 leading-snug text-end max-w-[28ch]">
-                {t('auth.forgotComingSoon')}
-              </span>
+              </Link>
             </div>
 
             {errors.form && (

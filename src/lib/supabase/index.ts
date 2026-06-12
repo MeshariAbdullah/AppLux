@@ -54,6 +54,8 @@ export {
   signInWithPassword,
   signOut,
   getCurrentSession,
+  sendPasswordResetEmail,
+  updatePassword,
 } from './auth';
 
 export type { SignInInput, SignUpInput } from './auth';

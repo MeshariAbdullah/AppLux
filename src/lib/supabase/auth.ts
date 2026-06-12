@@ -53,6 +53,40 @@ export async function signOut(): Promise<void> {
   if (error) throw error;
 }
 
+/**
+ * Kick off the forgot-password flow. Sends a one-time recovery email
+ * to the address provided; the email link points at `redirectTo` and
+ * carries the recovery token in the URL hash. Supabase's
+ * `detectSessionInUrl: true` (set on the client in client.ts) parses
+ * the hash on arrival and emits a PASSWORD_RECOVERY event on
+ * onAuthStateChange — that's the cue for the reset-password page to
+ * accept the new password.
+ *
+ * Always resolves successfully (no email-existence leak — Supabase
+ * silently no-ops when the email doesn't match a user).
+ */
+export async function sendPasswordResetEmail({
+  email,
+  redirectTo,
+}: {
+  email: string;
+  redirectTo: string;
+}): Promise<void> {
+  const sb = requireSupabase();
+  const { error } = await sb.auth.resetPasswordForEmail(email, { redirectTo });
+  if (error) throw error;
+}
+
+/**
+ * Updates the signed-in user's password. Used by the reset-password
+ * page after the recovery link has established a session.
+ */
+export async function updatePassword(newPassword: string): Promise<void> {
+  const sb = requireSupabase();
+  const { error } = await sb.auth.updateUser({ password: newPassword });
+  if (error) throw error;
+}
+
 export async function getCurrentSession(): Promise<Session | null> {
   const sb = requireSupabase();
   const { data, error } = await sb.auth.getSession();
