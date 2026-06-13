@@ -9,7 +9,6 @@ import {
 } from '@/components/icons';
 import { useI18n, useT } from '@/lib/i18n';
 import { useSupabaseAuth } from '@/lib/supabase';
-import { SECTORS } from '@/lib/sectors';
 import { cn } from '@/lib/cn';
 
 // =====================================================================
@@ -25,14 +24,18 @@ import { cn } from '@/lib/cn';
 //      contract → track). System snapshot, not a literal screen
 //      capture.
 //   5. trust strip — three value points as a single quiet row
-//   6. sectors index — editorial list, not card grid
-//   7. CTA stack — primary solid navy, secondary outlined,
+//   6. CTA stack — primary solid navy, secondary outlined,
 //      tertiary merchant text link
+//
+// Sectors are intentionally NOT on this screen. The platform's
+// sector taxonomy lives at /stores; surfacing it on the public
+// entry diluted the editorial focus on the hero → workflow →
+// trust → CTA arc. The src/lib/sectors.ts source-of-truth still
+// drives /stores and any other consumer.
 //
 // Scaffolding preserved verbatim:
 //   * LangToggle
 //   * `configured`-gated demo-admin link
-//   * SECTORS source-of-truth from src/lib/sectors.ts
 //   * CTA destinations
 //   * terms footer
 // =====================================================================
@@ -93,9 +96,12 @@ export default function Welcome() {
         {/* ======== WORKFLOW SNAPSHOT CARD ======== */}
         <WorkflowCard t={t} />
 
-        {/* ======== TRUST STRIP — single quiet row ======== */}
+        {/* ======== TRUST STRIP — single quiet row.
+            Sits closer to the workflow card now that the sectors
+            block below has been removed; otherwise the eye would
+            search for a missing section between them. */}
         <ul
-          className="mt-8 flex items-center justify-center flex-wrap gap-x-3 gap-y-2 text-[12px] font-medium text-ink-700"
+          className="mt-7 flex items-center justify-center flex-wrap gap-x-3 gap-y-2 text-[12px] font-medium text-ink-700"
           aria-label={t('welcome.heroEyebrow')}
         >
           {(
@@ -117,32 +123,12 @@ export default function Welcome() {
           ))}
         </ul>
 
-        {/* ======== SECTORS INDEX ======== */}
-        <section className="mt-10">
-          <div className="flex items-baseline justify-between">
-            <h2 className="editorial-title text-[17px] text-ink-900 leading-tight">
-              {t('welcome.sectors.title')}
-            </h2>
-            <span className="text-[10.5px] font-semibold uppercase tracking-[0.16em] text-ink-400">
-              {t('welcome.sectorIndex')}
-            </span>
-          </div>
-
-          <div className="mt-3 rounded-2xl bg-white/95 backdrop-blur ring-1 ring-lavender-100 shadow-soft overflow-hidden">
-            {SECTORS.map((sector, i) => (
-              <SectorRow
-                key={sector.key}
-                index={i + 1}
-                name={t(sector.i18nName)}
-                tags={t(sector.i18nSub)}
-                hairline={i < SECTORS.length - 1}
-              />
-            ))}
-          </div>
-        </section>
-
-        {/* ======== CTA STACK ======== */}
-        <div className="mt-auto pt-12 space-y-2.5">
+        {/* ======== CTA STACK ========
+            mt-auto absorbs the freed vertical space from the removed
+            sectors block — the CTAs stay bottom-anchored, and the
+            trust strip floats at a natural reading height above
+            them. No filler card is added in the gap by design. */}
+        <div className="mt-auto pt-10 space-y-2.5">
           {/* Primary — solid dark navy. Styled inline so the global
               Button primary (lavender) is unchanged for the rest of
               the app. Matches Button size=lg proportions. */}
@@ -308,45 +294,6 @@ function WorkflowCard({
           </li>
         ))}
       </ol>
-    </div>
-  );
-}
-
-/**
- * One row of the sectors editorial index. Numbered with an
- * editorial-title glyph, sector name in editorial-title, and a
- * thin meta line for the sub-categories. Hairline divider between
- * rows when not the last. Reads as a structured platform layer.
- */
-function SectorRow({
-  index,
-  name,
-  tags,
-  hairline,
-}: {
-  index: number;
-  name: string;
-  tags: string;
-  hairline: boolean;
-}) {
-  return (
-    <div
-      className={cn(
-        'flex items-start gap-3 px-4 py-3.5',
-        hairline && 'border-b border-lavender-100/70',
-      )}
-    >
-      <span className="editorial-title text-[15px] leading-none text-ink-300 num pt-1 w-6 shrink-0 text-center">
-        0{index}
-      </span>
-      <div className="min-w-0 flex-1">
-        <div className="editorial-title text-[15.5px] text-ink-900 leading-tight">
-          {name}
-        </div>
-        <div className="mt-1 text-[11px] text-ink-400 leading-snug tracking-tight">
-          {tags}
-        </div>
-      </div>
     </div>
   );
 }
