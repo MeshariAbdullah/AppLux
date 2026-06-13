@@ -207,7 +207,7 @@ export default function Welcome() {
             mt-auto absorbs the freed vertical space — CTAs stay
             bottom-anchored; the partners strip floats above them
             at a natural reading height. No filler card by design. */}
-        <div className="mt-auto pt-9 space-y-2.5">
+        <div className="mt-auto pt-6 space-y-2.5">
           {/* Primary — solid dark navy. Styled inline so the global
               Button primary (lavender) is unchanged for the rest of
               the app. Matches Button size=lg proportions. */}
