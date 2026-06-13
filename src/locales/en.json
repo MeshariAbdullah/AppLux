@@ -34,13 +34,27 @@
   },
   "welcome": {
     "eyebrow": "Lend",
+    "brandLatin": "LEND",
+    "brandArabic": "ليند",
+    "heroEyebrow": "Premium rental platform",
+    "headline": {
+      "line1": "Rent with confidence.",
+      "line2": "Document every right."
+    },
     "title": "Rent it. Contract it. Return it.",
     "subtitle": "Lend connects you with verified partners across multiple sectors so you can rent what you need — with proper contracts and protected value.",
+    "trustPillars": {
+      "secure": "Secured by digital contracts",
+      "documented": "Every step documented",
+      "protected": "Mutual protection of rights"
+    },
     "feature1": "Verified partner businesses",
     "feature2": "Contract & promissory note per rental",
     "feature3": "Underlying-value protection via Nafith",
     "signIn": "Sign in",
     "createAccount": "Create account",
+    "merchantCta": "Open the merchant portal",
+    "merchantCtaShort": "Merchant portal",
     "terms": "By continuing you agree to the Terms and Privacy Policy",
     "sectors": {
       "title": "Sectors we cover",
