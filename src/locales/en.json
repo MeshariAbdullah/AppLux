@@ -78,6 +78,10 @@
     "createAccount": "Create account",
     "merchantCta": "Open the merchant portal",
     "merchantCtaShort": "Merchant portal",
+    "partners": {
+      "eyebrow": "Selected Lend partners",
+      "fallback": "Partners who commit to Lend's standards of documentation and protection of rights."
+    },
     "terms": "By continuing you agree to the Terms and Privacy Policy",
     "sectors": {
       "title": "Sectors we cover",

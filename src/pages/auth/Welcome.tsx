@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui';
 import { LangToggle } from '@/components/auth/LangToggle';
@@ -8,7 +9,8 @@ import {
   ShieldIcon,
 } from '@/components/icons';
 import { useI18n, useT } from '@/lib/i18n';
-import { useSupabaseAuth } from '@/lib/supabase';
+import { listMerchants, useSupabaseAuth } from '@/lib/supabase';
+import type { LocalizedJson } from '@/lib/supabase';
 import { cn } from '@/lib/cn';
 
 // =====================================================================
@@ -24,7 +26,11 @@ import { cn } from '@/lib/cn';
 //      contract → track). System snapshot, not a literal screen
 //      capture.
 //   5. trust strip — three value points as a single quiet row
-//   6. CTA stack — primary solid navy, secondary outlined,
+//   6. partners strip — typographic row of live merchant
+//      wordmarks (no logos, no cards). Graceful editorial line
+//      when no real merchants are available — the section stays
+//      visible either way so the page rhythm is stable.
+//   7. CTA stack — primary solid navy, secondary outlined,
 //      tertiary merchant text link
 //
 // Sectors are intentionally NOT on this screen. The platform's
@@ -123,12 +129,19 @@ export default function Welcome() {
           ))}
         </ul>
 
+        {/* ======== PARTNERS STRIP ========
+            Typographic row of real merchant wordmarks. Never auto-
+            hides — when no real merchants are available (demo mode,
+            empty production list, or transient error) the strip
+            shows a graceful editorial line so the page rhythm
+            stays stable. */}
+        <TrustedPartnersStrip />
+
         {/* ======== CTA STACK ========
-            mt-auto absorbs the freed vertical space from the removed
-            sectors block — the CTAs stay bottom-anchored, and the
-            trust strip floats at a natural reading height above
-            them. No filler card is added in the gap by design. */}
-        <div className="mt-auto pt-10 space-y-2.5">
+            mt-auto absorbs the freed vertical space — CTAs stay
+            bottom-anchored; the partners strip floats above them
+            at a natural reading height. No filler card by design. */}
+        <div className="mt-auto pt-9 space-y-2.5">
           {/* Primary — solid dark navy. Styled inline so the global
               Button primary (lavender) is unchanged for the rest of
               the app. Matches Button size=lg proportions. */}
@@ -296,4 +309,103 @@ function WorkflowCard({
       </ol>
     </div>
   );
+}
+
+/**
+ * Trusted partners strip — a quiet typographic row of real merchant
+ * wordmarks, never a logo grid. Behaviour:
+ *
+ *   * configured + listMerchants returns ≥ 1 row → render the names
+ *     (up to 6) in small-caps separated by hairline dots. Verified
+ *     merchants take precedence, then the most recently approved
+ *     ones; we pick the localised display_name for the current
+ *     locale.
+ *   * configured + 0 rows / fetch error → render the editorial
+ *     fallback line. The strip stays visible so the page rhythm is
+ *     stable.
+ *   * !configured (demo mode) → render the editorial fallback line.
+ *     We never invent partner names just to fill the strip.
+ *
+ * The eyebrow row ("Selected Lend partners" / "نخبة من شركاء Lend")
+ * with thin lavender accents stays constant, regardless of body
+ * state — that's what makes the section feel intentional even when
+ * the live list is short or empty.
+ */
+function TrustedPartnersStrip() {
+  const t = useT();
+  const { locale } = useI18n();
+  const { configured } = useSupabaseAuth();
+  const [names, setNames] = useState<string[]>([]);
+
+  useEffect(() => {
+    if (!configured) return;
+    let cancelled = false;
+    listMerchants({ limit: 8 })
+      .then((rows) => {
+        if (cancelled) return;
+        // Verified merchants first, then by rating, then trim to 6 so
+        // the strip stays one comfortable line on phones.
+        const sorted = [...rows].sort((a, b) => {
+          if (a.verified !== b.verified) return a.verified ? -1 : 1;
+          return Number(b.rating ?? 0) - Number(a.rating ?? 0);
+        });
+        const picked = sorted
+          .map((r) => pickLocalized(r.display_name, locale))
+          .filter((s): s is string => Boolean(s && s.trim().length > 0))
+          .slice(0, 6);
+        setNames(picked);
+      })
+      .catch(() => {
+        if (!cancelled) setNames([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [configured, locale]);
+
+  const hasNames = names.length > 0;
+
+  return (
+    <section className="mt-9" aria-label={t('welcome.partners.eyebrow')}>
+      <div className="flex items-center justify-center gap-2 text-[10px] font-semibold uppercase tracking-[0.2em] text-ink-500">
+        <span aria-hidden className="h-px w-6 bg-lavender-300" />
+        {t('welcome.partners.eyebrow')}
+        <span aria-hidden className="h-px w-6 bg-lavender-300" />
+      </div>
+
+      <div className="mt-3 text-center">
+        {hasNames ? (
+          <ul className="inline-flex flex-wrap items-center justify-center gap-x-2 gap-y-1.5">
+            {names.map((n, i) => (
+              <li key={`${i}-${n}`} className="inline-flex items-center">
+                <span className="text-[11.5px] font-semibold uppercase tracking-[0.14em] text-ink-700">
+                  {n}
+                </span>
+                {i < names.length - 1 && (
+                  <span
+                    aria-hidden
+                    className="text-ink-300 ps-2 text-[10px]"
+                  >
+                    ·
+                  </span>
+                )}
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="text-[11.5px] text-ink-500 leading-relaxed max-w-[40ch] mx-auto">
+            {t('welcome.partners.fallback')}
+          </p>
+        )}
+      </div>
+    </section>
+  );
+}
+
+function pickLocalized(
+  json: LocalizedJson | null | undefined,
+  locale: 'ar' | 'en',
+): string {
+  if (!json) return '';
+  return json[locale] || json.ar || json.en || '';
 }
