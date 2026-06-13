@@ -1,55 +1,64 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { Link } from 'react-router-dom';
 import { Header, Screen } from '@/components/layout';
-import { Card, EmptyState, SectionHeader } from '@/components/ui';
-import { CameraIcon, CheckIcon, DocIcon, WalletIcon } from '@/components/icons';
-import { useT } from '@/lib/i18n';
+import { Card, SectionHeader } from '@/components/ui';
+import {
+  ArrowIcon,
+  BadgeCheckIcon,
+  CameraIcon,
+  CheckIcon,
+  DocIcon,
+} from '@/components/icons';
+import { useI18n, useT } from '@/lib/i18n';
 import { useStore } from '@/lib/store';
 import {
   adaptContract,
+  adaptContractToHistory,
   adaptNote,
+  fetchMerchantsByIds,
   getHandoverPhotoUrl,
   listCustomerContracts,
   listCustomerNotes,
   uploadAndRecordHandover,
   useSupabaseAuth,
 } from '@/lib/supabase';
-import type { Contract, PromissoryNote } from '@/lib/data';
-import { ContractRow, NoteRow } from '@/components/rental/Rows';
+import type {
+  Contract,
+  HistoryItem,
+  PromissoryNote,
+} from '@/lib/data';
 import { cn } from '@/lib/cn';
+import type { MerchantRow } from '@/lib/supabase';
 
 // =====================================================================
-// Contracts tab (SCRUM-41 Bug 6).
+// My rentals — restructured.
 //
-// Two sections, nothing else:
-//   - "New contracts" — active customer contracts.
-//   - "Promissory notes" — the customer's promissory notes.
+// Previously a pair of empty buckets. Now a real timeline:
+//   * Active rentals  — compound bundle cards (contract + note + handover)
+//   * Past rentals    — actual settled rentals (never surfaced before)
+//   * Empty fallback  — single editorial card with a guided CTA
 //
-// Per the SCRUM-41 brief, the old "New contract" CTA in the header
-// and in the empty state is removed entirely. A customer doesn't
-// create contracts from this surface — the merchant initiates them.
-//
-// Plus a required customer action: BEFORE receiving the item from the
-// merchant, the customer must capture a handover photo. This is shown
-// inline on each active contract row as a small banner. State is
-// kept client-side via localStorage (key: lend.handover.<contractId>)
-// because the rental_contracts table has no handover column yet.
-// When backend handover state is introduced later, this client flag
-// becomes the migration source.
+// Each active rental is one card, not three rows. The handover banner
+// lives inside the card, so the customer's required action sits next
+// to the rental it belongs to.
 // =====================================================================
 
 export default function Contracts() {
   const t = useT();
-  const { contracts: demoContracts, notes: demoNotes } = useStore();
+  const { locale } = useI18n();
+  const { contracts: demoContracts, notes: demoNotes, history: demoHistory } = useStore();
   const { configured, session } = useSupabaseAuth();
 
   const [liveContracts, setLiveContracts] = useState<Contract[] | null>(null);
   const [liveNotes, setLiveNotes] = useState<PromissoryNote[] | null>(null);
+  const [liveHistory, setLiveHistory] = useState<HistoryItem[] | null>(null);
 
   useEffect(() => {
     const userId = session?.user?.id;
     if (!configured || !userId) {
       setLiveContracts(null);
       setLiveNotes(null);
+      setLiveHistory(null);
       return;
     }
     let cancelled = false;
@@ -59,91 +68,331 @@ export default function Contracts() {
         listCustomerNotes(userId).catch(() => []),
       ]);
       if (cancelled) return;
+
+      const merchantIds = Array.from(
+        new Set([
+          ...contractRows.map((r) => r.merchant_id),
+          ...noteRows.map((r) => r.merchant_id),
+        ]),
+      );
+      const merchants = await fetchMerchantsByIds(merchantIds).catch(
+        () => [] as MerchantRow[],
+      );
+      if (cancelled) return;
+      const nameMap: Record<string, string> = {};
+      for (const m of merchants) {
+        const display =
+          (locale === 'ar' ? m.display_name?.ar : m.display_name?.en) ||
+          m.display_name?.ar ||
+          m.display_name?.en ||
+          m.company_name;
+        nameMap[m.id] = display;
+      }
+
       setLiveContracts(
         contractRows
           .filter((c) => c.status !== 'ended' && c.status !== 'cancelled')
-          .map((r) => adaptContract(r)),
+          .map((r) => adaptContract(r, nameMap[r.merchant_id])),
       );
-      setLiveNotes(noteRows.map((r) => adaptNote(r)));
+      setLiveNotes(
+        noteRows.map((r) => adaptNote(r, nameMap[r.merchant_id])),
+      );
+      setLiveHistory(
+        contractRows
+          .filter((c) => c.status === 'ended' || c.status === 'cancelled')
+          .map((r) => adaptContractToHistory(r, nameMap[r.merchant_id])),
+      );
     })();
     return () => {
       cancelled = true;
     };
-  }, [configured, session?.user?.id]);
+  }, [configured, locale, session?.user?.id]);
 
   const contracts = liveContracts ?? demoContracts;
   const notes = liveNotes ?? demoNotes;
+  const history = liveHistory ?? demoHistory;
+
+  const rentals = useMemo(
+    () =>
+      contracts.map((contract) => ({
+        contract,
+        note: notes.find((n) => n.counterparty === contract.counterparty),
+      })),
+    [contracts, notes],
+  );
+
+  const hasNothing = rentals.length === 0 && history.length === 0;
 
   return (
     <>
       <Header title={t('contracts.title')} />
       <Screen className="bg-canvas">
-        {/* New contracts */}
-        <section>
-          <SectionHeader title={t('contracts.sections.newContracts')} />
-          {contracts.length === 0 ? (
-            <EmptyState
-              icon={<DocIcon size={22} />}
-              title={t('contracts.sections.noContracts')}
-            />
-          ) : (
-            <Card padded={false} className="px-5">
-              {contracts.map((c, i, arr) => (
-                <div key={c.id}>
-                  <ContractRow contract={c} />
-                  <HandoverPhotoBanner contract={c} />
-                  {i < arr.length - 1 && (
-                    <div className="h-px bg-canvas-200/80 my-1" />
-                  )}
+        {hasNothing ? (
+          <EmptyRentals />
+        ) : (
+          <>
+            {rentals.length > 0 && (
+              <section>
+                <SectionHeader title={t('contracts.sections.newContracts')} />
+                <div className="space-y-3">
+                  {rentals.map((r) => (
+                    <RentalBundleCard
+                      key={r.contract.id}
+                      contract={r.contract}
+                      note={r.note}
+                    />
+                  ))}
                 </div>
-              ))}
-            </Card>
-          )}
-        </section>
+              </section>
+            )}
 
-        {/* Promissory notes */}
-        <section>
-          <SectionHeader title={t('contracts.sections.notes')} />
-          {notes.length === 0 ? (
-            <EmptyState
-              icon={<WalletIcon size={22} />}
-              title={t('contracts.sections.noNotes')}
-            />
-          ) : (
-            <Card padded={false} className="px-5">
-              {notes.map((n, i, arr) => (
-                <div key={n.id}>
-                  <NoteRow note={n} />
-                  {i < arr.length - 1 && (
-                    <div className="h-px bg-canvas-200/80" />
-                  )}
-                </div>
-              ))}
-            </Card>
-          )}
-        </section>
+            {history.length > 0 && (
+              <section>
+                <SectionHeader title={t('contracts.sections.past')} />
+                <Card padded={false} className="px-5">
+                  {history.map((h, i) => (
+                    <div key={h.id}>
+                      <PastRentalRow item={h} />
+                      {i < history.length - 1 && (
+                        <div className="h-px bg-canvas-200/80" />
+                      )}
+                    </div>
+                  ))}
+                </Card>
+              </section>
+            )}
+          </>
+        )}
       </Screen>
     </>
   );
 }
 
 // =====================================================================
-// Handover photo banner.
-//
-// Required customer action: capture a photo of the rental item BEFORE
-// physically receiving it from the merchant. State now lives on the
-// rental_contracts row (handover_photo_path + handover_at, populated
-// via the record_contract_handover RPC) so a refresh, a different
-// browser, and a different device all read the same source of truth.
-// The merchant can also surface this state in their own flow because
-// the column is on the shared contract row.
-//
-// localStorage is used only as an OPTIMISTIC preview: the dataURL of
-// the just-picked file is shown immediately while the upload + RPC
-// are in flight. Once they succeed, the authoritative preview comes
-// from a short-lived signed URL against the storage path on the
-// contract. If the user is offline / not configured, we fall back to
-// localStorage as a transient cache and surface a clear error.
+// Bundle card — one rental, all its artifacts.
+// =====================================================================
+
+function RentalBundleCard({
+  contract,
+  note,
+}: {
+  contract: Contract;
+  note?: PromissoryNote;
+}) {
+  const t = useT();
+  const { dir, formatCurrency, formatDate } = useI18n();
+  const daysLeft = daysUntil(contract.endDate);
+
+  return (
+    <Card className="animate-fade-in">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <div className="text-[15px] font-semibold text-ink-900 tracking-tight truncate">
+            {contract.title}
+          </div>
+          {contract.counterparty && contract.counterparty !== '—' && (
+            <div className="mt-0.5 text-[12.5px] text-ink-500 truncate">
+              {contract.counterparty}
+            </div>
+          )}
+        </div>
+        <div className="text-end shrink-0 num">
+          <div className="editorial-title text-[22px] text-ink-900 leading-none">
+            {daysLeft > 0 ? daysLeft : '0'}
+          </div>
+          <div className="mt-1 text-[10.5px] font-semibold text-ink-400 uppercase tracking-[0.08em]">
+            {daysLeft > 0
+              ? t('home.current.daysLeftArabic', { days: daysLeft })
+              : t('home.current.endsToday')}
+          </div>
+        </div>
+      </div>
+
+      {/* Two-pill artifact summary */}
+      <div className="mt-4 grid grid-cols-2 gap-2">
+        <ArtifactPill
+          icon={<DocIcon size={13} />}
+          label={t('home.current.contractPill')}
+          state={contract.status === 'active' ? 'signed' : 'pending'}
+          t={t}
+        />
+        <ArtifactPill
+          icon={<BadgeCheckIcon size={13} />}
+          label={t('home.current.notePill')}
+          state={note?.status === 'signed' ? 'signed' : 'pending'}
+          t={t}
+        />
+      </div>
+
+      {/* Period + amount */}
+      <div className="mt-4 grid grid-cols-2 gap-3">
+        <Field
+          label={t('contracts.bundle.amountLabel')}
+          value={formatCurrency(contract.monthlyAmount)}
+        />
+        <Field
+          label={t('contracts.bundle.endsOn')}
+          value={formatDate(contract.endDate)}
+          align="end"
+        />
+      </div>
+
+      {/* Handover photo banner — moved INSIDE the bundle so the
+          required customer action sits with the rental it belongs to. */}
+      <HandoverPhotoBanner contract={contract} />
+
+      <Link
+        to={`/track/contract/${contract.id}`}
+        className={cn(
+          'mt-2 inline-flex items-center justify-center gap-1.5 h-11 w-full rounded-xl2',
+          'bg-white text-ink-900 ring-1 ring-canvas-200 font-semibold text-[13.5px] tracking-tight',
+          'hover:bg-canvas-100/60 active:bg-canvas-100 transition-colors',
+        )}
+      >
+        {t('home.current.cta')}
+        <ArrowIcon size={14} className={cn(dir === 'rtl' ? 'rotate-180' : '')} />
+      </Link>
+    </Card>
+  );
+}
+
+function ArtifactPill({
+  icon,
+  label,
+  state,
+  t,
+}: {
+  icon: ReactNode;
+  label: string;
+  state: 'signed' | 'pending';
+  t: (k: string) => string;
+}) {
+  const signed = state === 'signed';
+  return (
+    <div
+      className={cn(
+        'rounded-xl px-3 py-2 flex items-center gap-2 ring-1',
+        signed
+          ? 'bg-success-50 ring-success-500/20 text-success-700'
+          : 'bg-canvas-100 ring-canvas-200 text-ink-500',
+      )}
+    >
+      <span className="grid place-items-center shrink-0">{icon}</span>
+      <div className="min-w-0">
+        <div className="text-[11px] font-semibold text-ink-700 truncate">
+          {label}
+        </div>
+        <div
+          className={cn(
+            'text-[10px] font-semibold mt-0.5',
+            signed ? 'text-success-600' : 'text-ink-400',
+          )}
+        >
+          {signed
+            ? t('home.current.stateSigned')
+            : t('home.current.statePending')}
+        </div>
+      </div>
+      {signed && <CheckIcon size={11} className="ms-auto shrink-0" />}
+    </div>
+  );
+}
+
+function Field({
+  label,
+  value,
+  align = 'start',
+}: {
+  label: string;
+  value: string;
+  align?: 'start' | 'end';
+}) {
+  return (
+    <div className={cn(align === 'end' && 'text-end')}>
+      <div className="text-[10.5px] font-semibold text-ink-400 uppercase tracking-[0.08em]">
+        {label}
+      </div>
+      <div className="mt-0.5 text-[13.5px] font-semibold text-ink-900 num">
+        {value}
+      </div>
+    </div>
+  );
+}
+
+// =====================================================================
+// Past rental row — minimal, typographic, premium.
+// =====================================================================
+
+function PastRentalRow({ item }: { item: HistoryItem }) {
+  const t = useT();
+  const { formatCurrency, formatDate } = useI18n();
+  return (
+    <div className="flex items-center justify-between gap-3 py-3.5">
+      <div className="min-w-0">
+        <div className="text-[13.5px] font-semibold text-ink-900 truncate tracking-tight">
+          {item.title}
+        </div>
+        <div className="mt-0.5 text-[11.5px] text-ink-400 truncate">
+          {item.counterparty && item.counterparty !== '—'
+            ? `${item.counterparty} · `
+            : ''}
+          {t('contracts.past.completedOn', { date: formatDate(item.closedAt) })}
+        </div>
+      </div>
+      <div className="text-end shrink-0">
+        <div className="text-[13px] font-semibold text-ink-900 num">
+          {formatCurrency(item.amount)}
+        </div>
+        <div className="text-[10.5px] text-success-600 font-semibold mt-0.5">
+          {t('contracts.past.settledNote')}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// =====================================================================
+// Empty state — single editorial card. No stacked "no X" blocks.
+// =====================================================================
+
+function EmptyRentals() {
+  const t = useT();
+  const { dir } = useI18n();
+  return (
+    <Card className="animate-fade-in">
+      <div className="flex flex-col items-center text-center py-4">
+        <span className="h-12 w-12 rounded-2xl bg-lavender-50 text-lavender-700 ring-1 ring-lavender-200 grid place-items-center">
+          <DocIcon size={20} />
+        </span>
+        <div className="mt-3 editorial-title text-[20px] text-ink-900 leading-snug tracking-tight">
+          {t('contracts.empty.title')}
+        </div>
+        <div className="mt-1.5 text-[12.5px] text-ink-500 leading-relaxed max-w-sm">
+          {t('contracts.empty.subtitle')}
+        </div>
+        <Link
+          to="/stores"
+          className={cn(
+            'mt-5 inline-flex items-center justify-center gap-1.5 h-11 px-5 rounded-xl2',
+            'bg-ink-900 text-white font-semibold text-[13.5px] tracking-tight',
+            'shadow-plush hover:bg-ink-800 active:bg-ink-800 transition-colors',
+          )}
+        >
+          {t('contracts.empty.cta')}
+          <ArrowIcon
+            size={14}
+            className={cn(dir === 'rtl' ? 'rotate-180' : '')}
+          />
+        </Link>
+      </div>
+    </Card>
+  );
+}
+
+// =====================================================================
+// Handover photo banner — unchanged behavior, now sits inside the
+// rental bundle card so the required action is contextual.
+// (Lifted as-is from the previous Contracts screen.)
 // =====================================================================
 
 function HandoverPhotoBanner({ contract }: { contract: Contract }) {
@@ -151,9 +400,6 @@ function HandoverPhotoBanner({ contract }: { contract: Contract }) {
   const { configured } = useSupabaseAuth();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Cache key for the optimistic preview only — NOT the source of
-  // truth. The real source is contract.handoverPhotoPath, populated
-  // by record_contract_handover.
   const previewCacheKey = `lend.handover.${contract.id}.dataUrl`;
 
   const [optimisticPreview, setOptimisticPreview] = useState<string | null>(
@@ -165,17 +411,11 @@ function HandoverPhotoBanner({ contract }: { contract: Contract }) {
   const [signedPreview, setSignedPreview] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
-  // Local "captured just now" flag so the banner flips to the green
-  // state immediately after a successful upload, without waiting for
-  // the parent's list refresh to bring back contract.handoverPhotoPath.
   const [optimisticallyCaptured, setOptimisticallyCaptured] =
     useState<boolean>(false);
   const captured =
     Boolean(contract.handoverPhotoPath) || optimisticallyCaptured;
 
-  // Resolve a signed URL for the persisted path. Re-runs whenever the
-  // backend path changes, so a freshly-uploaded photo replaces the
-  // optimistic dataURL preview as soon as the RPC commits.
   useEffect(() => {
     let cancelled = false;
     if (!configured || !contract.handoverPhotoPath) {
@@ -200,8 +440,6 @@ function HandoverPhotoBanner({ contract }: { contract: Contract }) {
     setUploadError(null);
     setUploading(true);
     try {
-      // Optimistic preview from the picked file — lets the user see
-      // their photo immediately while the network operations run.
       const dataUrl = await readAsDataUrl(file);
       window.localStorage.setItem(previewCacheKey, dataUrl);
       setOptimisticPreview(dataUrl);
@@ -211,14 +449,8 @@ function HandoverPhotoBanner({ contract }: { contract: Contract }) {
           contractId: contract.id,
           file,
         });
-        // After this, contract.handoverPhotoPath flips to the new key
-        // on next list refresh; the useEffect above resolves it to a
-        // signed URL which then displaces the optimistic preview.
         setOptimisticallyCaptured(true);
       } else {
-        // Demo mode keeps the localStorage cache as the only record;
-        // still flip the visual state to "captured" so the user gets
-        // the intended feedback.
         setOptimisticallyCaptured(true);
       }
     } catch (err) {
@@ -233,7 +465,7 @@ function HandoverPhotoBanner({ contract }: { contract: Contract }) {
   return (
     <div
       className={cn(
-        'mx-3.5 my-2 rounded-xl2 p-3.5 ring-1',
+        'mt-4 rounded-xl2 p-3.5 ring-1',
         captured
           ? 'bg-success-50 ring-success-500/20'
           : 'bg-warn-50 ring-warn-500/25',
@@ -333,4 +565,12 @@ function readAsDataUrl(file: File): Promise<string> {
     reader.onerror = reject;
     reader.readAsDataURL(file);
   });
+}
+
+function daysUntil(dateIso: string): number {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const target = new Date(dateIso);
+  target.setHours(0, 0, 0, 0);
+  return Math.round((target.getTime() - today.getTime()) / 86_400_000);
 }

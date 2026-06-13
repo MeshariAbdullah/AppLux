@@ -37,6 +37,27 @@ export async function listMerchants(
   return data ?? [];
 }
 
+/**
+ * Bulk lookup for resolving merchant_id → display row. Used by the
+ * customer dashboard / contracts screen so rows can show the boutique
+ * name instead of a dash. RLS allows authenticated reads on
+ * `merchants` with status='active'; rows that don't match are simply
+ * omitted (callers should handle missing ids gracefully).
+ */
+export async function fetchMerchantsByIds(
+  ids: string[],
+): Promise<MerchantRow[]> {
+  if (ids.length === 0) return [];
+  const sb = requireSupabase();
+  const unique = Array.from(new Set(ids));
+  const { data, error } = await sb
+    .from('merchants')
+    .select('*')
+    .in('id', unique);
+  if (error) throw error;
+  return data ?? [];
+}
+
 export async function fetchMerchant(id: string): Promise<MerchantRow | null> {
   const sb = requireSupabase();
   const { data, error } = await sb

@@ -346,7 +346,58 @@
     "summaryInvoices": "فواتير",
     "summaryContracts": "عقود",
     "summaryNotes": "سندات",
-    "viewAll": "عرض الكل"
+    "viewAll": "عرض الكل",
+    "eligibilityCompact": {
+      "available": "متاح للتأجير",
+      "ofLimit": "من سقف {limit}",
+      "tierLabel": "المستوى"
+    },
+    "attention": {
+      "title": "فاتورة بانتظار موافقتك",
+      "expiresIn": "تنتهي خلال {days} أيام",
+      "expiresInArabic": "تنتهي خلال {days} أيام",
+      "fromMerchant": "من",
+      "cta": "مراجعة الفاتورة وقبولها"
+    },
+    "current": {
+      "title": "إيجار جارٍ",
+      "daysLeft": "متبقي {days} يوم",
+      "daysLeftArabic": "متبقي {days} يوم",
+      "endsToday": "ينتهي اليوم",
+      "endedHint": "بانتظار الإقفال",
+      "invoicePill": "الفاتورة",
+      "contractPill": "العقد",
+      "notePill": "السند",
+      "stateSigned": "موقَّع",
+      "statePending": "قيد التوقيع",
+      "cta": "عرض تفاصيل العقد"
+    },
+    "starter": {
+      "eyebrow": "ابدأ من هنا",
+      "title": "ابدأ أول إيجار في ثلاث خطوات",
+      "step1Title": "اختر بوتيكاً شريكاً",
+      "step1Hint": "تصفّح الشركاء المعتمدين في القطاع المناسب.",
+      "step2Title": "استلم فاتورة رقمية",
+      "step2Hint": "يُصدر التاجر فاتورة لمراجعتها.",
+      "step3Title": "وقّع واستلم القطعة",
+      "step3Hint": "بمجرد التوقيع، يُوثَّق العقد والسند تلقائياً.",
+      "ctaPrimary": "تصفّح البوتيكات الشريكة",
+      "ctaSecondary": "كيف يعمل Lend"
+    },
+    "idle": {
+      "title": "لا يوجد التزام جارٍ",
+      "subtitle": "أهليتك جاهزة في أي وقت تحتاج فيه إيجاراً جديداً.",
+      "cta": "تصفّح البوتيكات الشريكة"
+    },
+    "historyStrip": {
+      "title": "آخر الإيجارات",
+      "viewAll": "عرض كل الإيجارات"
+    },
+    "quickLinks": {
+      "stores": "الشركاء",
+      "eligibility": "الأهلية",
+      "profile": "الحساب"
+    }
   },
   "sections": {
     "activeInvoices": "الفواتير الجارية",
@@ -466,13 +517,30 @@
     }
   },
   "contracts": {
-    "title": "العقود",
+    "title": "إيجاراتي",
     "searchPlaceholder": "ابحث بالاسم أو رقم العقد",
     "sections": {
-      "newContracts": "العقود الجديدة",
+      "newContracts": "الإيجارات الجارية",
       "notes": "سندات لأمر",
+      "past": "الإيجارات السابقة",
       "noContracts": "لا توجد عقود فعّالة بعد",
-      "noNotes": "لا توجد سندات لأمر بعد"
+      "noNotes": "لا توجد سندات لأمر بعد",
+      "noPast": "لا يوجد سجل إيجار سابق"
+    },
+    "bundle": {
+      "amountLabel": "رسم التأجير",
+      "endsOn": "ينتهي بتاريخ",
+      "noteRef": "سند {ref}",
+      "contractRef": "عقد {ref}"
+    },
+    "past": {
+      "completedOn": "اكتمل في {date}",
+      "settledNote": "تمّت تسوية السند"
+    },
+    "empty": {
+      "title": "ستظهر إيجاراتك هنا",
+      "subtitle": "حين يُصدر شريك فاتورة وتوقّعها، يُوثَّق كل إيجار في هذا القسم.",
+      "cta": "تصفّح البوتيكات الشريكة"
     },
     "handover": {
       "title": "مطلوب: صورة للمنتج",

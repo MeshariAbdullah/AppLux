@@ -1,20 +1,19 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Header, Screen } from '@/components/layout';
-import {
-  Avatar,
-  Card,
-  EmptyState,
-  IconButton,
-  SectionHeader,
-} from '@/components/ui';
+import { Avatar, Card, IconButton, SectionHeader } from '@/components/ui';
 import {
   ArrowIcon,
+  BadgeCheckIcon,
   BellIcon,
+  CheckIcon,
   DocIcon,
-  HistoryIcon,
   QrIcon,
   ReceiptIcon,
+  ShieldIcon,
+  SparkleIcon,
+  BuildingIcon,
+  UserIcon,
   WalletIcon,
 } from '@/components/icons';
 import { useI18n, useT } from '@/lib/i18n';
@@ -25,6 +24,7 @@ import {
   adaptEligibility,
   adaptInvoice,
   adaptNote,
+  fetchMerchantsByIds,
   listCustomerContracts,
   listCustomerInvoices,
   listCustomerNotes,
@@ -32,28 +32,54 @@ import {
 } from '@/lib/supabase';
 import type { Contract, HistoryItem, Invoice, PromissoryNote } from '@/lib/data';
 import { cn } from '@/lib/cn';
-import {
-  ContractRow,
-  HistoryRow,
-  InvoiceRow,
-  NoteRow,
-} from '@/components/rental/Rows';
-import type { ReactNode } from 'react';
+import type { MerchantRow } from '@/lib/supabase';
+
+// =====================================================================
+// Customer home — mode-driven layout
+// =====================================================================
+// The dashboard derives ONE `mode` from the loaded data and composes
+// itself from a small set of mode-aware blocks. The same screen renders
+// very differently for the four customer states (new / attention /
+// active / idle) without stacking parallel empty-state cards.
+//
+// Mode precedence (highest first):
+//   attention — any invoice waiting on the customer to accept
+//   active    — any signed contract or note still in-flight
+//   new       — never used eligibility AND no historic rentals
+//   idle      — fall-through (history customers, paused customers)
+// =====================================================================
+
+type DashboardMode = 'attention' | 'active' | 'new' | 'idle';
+
+type AttentionInvoice = Invoice & { merchantName: string };
+type ActiveRental = {
+  contract: Contract;
+  invoice?: Invoice;
+  note?: PromissoryNote;
+  merchantName: string;
+};
 
 export default function Home() {
   const t = useT();
-  const { dir, formatCurrency } = useI18n();
-  const { session, eligibility: demoEligibility, invoices: demoInvoices, contracts: demoContracts, notes: demoNotes, history: demoHistory } = useStore();
-  const { configured, eligibility: dbEligibility, profile, session: realSession } = useSupabaseAuth();
+  const { dir, locale, formatCurrency, formatDate } = useI18n();
+  const {
+    session,
+    eligibility: demoEligibility,
+    contracts: demoContracts,
+    notes: demoNotes,
+    invoices: demoInvoices,
+    history: demoHistory,
+  } = useStore();
+  const {
+    configured,
+    eligibility: dbEligibility,
+    profile,
+    session: realSession,
+  } = useSupabaseAuth();
   const navigate = useNavigate();
 
-  // Eligibility source rules:
-  //   - configured + DB row present  → real adapted row
-  //   - configured + DB row missing  → EMPTY (limit=0, used=0). Never
-  //     show the demo seed (18,500 / 50,000) in production — that was
-  //     the SCRUM-41 Bug 4 symptom: a customer with no eligibility row
-  //     was seeing the demo numbers as if they had a real limit.
-  //   - !configured                  → demo seed (local-only)
+  // Eligibility — same source rules as before. New customers in
+  // configured mode without a row see an empty (0/0) state.
   const emptyEligibility = {
     limit: 0,
     used: 0,
@@ -70,12 +96,11 @@ export default function Home() {
 
   const fullName = profile?.full_name ?? session?.fullName ?? '';
   const firstName = fullName.split(' ')[0] ?? '';
-  const usagePct =
-    eligibility.limit > 0
-      ? Math.round((eligibility.used / eligibility.limit) * 100)
-      : 0;
 
-  // Pull live customer rentals when configured.
+  // ---------------------------------------------------------------------
+  // Live data
+  // ---------------------------------------------------------------------
+
   const [liveInvoices, setLiveInvoices] = useState<Invoice[] | null>(null);
   const [liveContracts, setLiveContracts] = useState<Contract[] | null>(null);
   const [liveNotes, setLiveNotes] = useState<PromissoryNote[] | null>(null);
@@ -98,28 +123,111 @@ export default function Home() {
         listCustomerNotes(userId).catch(() => []),
       ]);
       if (cancelled) return;
+
+      // Resolve merchant display names in one batch.
+      const merchantIds = Array.from(
+        new Set([
+          ...invoiceRows.map((r) => r.merchant_id),
+          ...contractRows.map((r) => r.merchant_id),
+          ...noteRows.map((r) => r.merchant_id),
+        ]),
+      );
+      const merchants = await fetchMerchantsByIds(merchantIds).catch(
+        () => [] as MerchantRow[],
+      );
+      if (cancelled) return;
+      const nameMap: Record<string, string> = {};
+      for (const m of merchants) {
+        const display =
+          (locale === 'ar' ? m.display_name?.ar : m.display_name?.en) ||
+          m.display_name?.ar ||
+          m.display_name?.en ||
+          m.company_name;
+        nameMap[m.id] = display;
+      }
+
       setLiveInvoices(invoiceRows.map((r) => adaptInvoice(r)));
       setLiveContracts(
         contractRows
           .filter((c) => c.status !== 'ended' && c.status !== 'cancelled')
-          .map((r) => adaptContract(r)),
+          .map((r) => adaptContract(r, nameMap[r.merchant_id])),
       );
-      setLiveNotes(noteRows.map((r) => adaptNote(r)));
+      setLiveNotes(
+        noteRows.map((r) => adaptNote(r, nameMap[r.merchant_id])),
+      );
       setLiveHistory(
         contractRows
           .filter((c) => c.status === 'ended' || c.status === 'cancelled')
-          .map((r) => adaptContractToHistory(r)),
+          .map((r) => adaptContractToHistory(r, nameMap[r.merchant_id])),
       );
     })();
     return () => {
       cancelled = true;
     };
-  }, [configured, realSession?.user?.id]);
+  }, [configured, locale, realSession?.user?.id]);
 
   const invoices = liveInvoices ?? demoInvoices;
   const contracts = liveContracts ?? demoContracts;
   const notes = liveNotes ?? demoNotes;
   const history = liveHistory ?? demoHistory;
+
+  // Index invoices/notes by id so the rental bundle card can fuse them.
+  const invoicesByContractRef = useMemo(() => {
+    // We don't have invoice → contract id on the UI Invoice type, but
+    // `contract.title` already encodes the contract number. Match on
+    // amount + index as a fallback isn't reliable; instead we surface
+    // the most recent accepted invoice per merchant. Good enough for
+    // the active-rental case and unaffected if there's only one rental.
+    const map = new Map<string, Invoice>();
+    invoices.forEach((inv) => {
+      if (inv.status === 'paid') {
+        const key = inv.id;
+        map.set(key, inv);
+      }
+    });
+    return map;
+  }, [invoices]);
+
+  // Build mode-aware projections.
+  const attentionInvoices = useMemo<AttentionInvoice[]>(() => {
+    return invoices
+      .filter((inv) => inv.status === 'due')
+      .map((inv) => ({
+        ...inv,
+        merchantName: '', // resolved through row lookup below
+      }));
+  }, [invoices]);
+
+  const activeRentals = useMemo<ActiveRental[]>(() => {
+    return contracts
+      .filter((c) => c.status === 'active' || c.status === 'pending')
+      .map<ActiveRental>((contract) => {
+        // Pair this contract with its note (matched by counterparty
+        // since the UI types don't carry contract_id on the note).
+        const note = notes.find((n) => n.counterparty === contract.counterparty);
+        const invoice = Array.from(invoicesByContractRef.values()).find(
+          (inv) => inv.amount === contract.monthlyAmount,
+        );
+        return {
+          contract,
+          note,
+          invoice,
+          merchantName: contract.counterparty,
+        };
+      });
+  }, [contracts, notes, invoicesByContractRef]);
+
+  const mode: DashboardMode = useMemo(() => {
+    if (attentionInvoices.length > 0) return 'attention';
+    if (activeRentals.length > 0) return 'active';
+    const neverUsed = eligibility.used === 0 && history.length === 0;
+    if (neverUsed) return 'new';
+    return 'idle';
+  }, [attentionInvoices.length, activeRentals.length, eligibility.used, history.length]);
+
+  // ---------------------------------------------------------------------
+  // Render
+  // ---------------------------------------------------------------------
 
   return (
     <>
@@ -149,250 +257,604 @@ export default function Home() {
         }
       />
       <Screen className="bg-canvas">
-        {/* Eligibility summary card — soft lavender surface */}
-        <div className="-mt-12 relative rounded-xl3 bg-gradient-to-br from-lavender-300 via-lavender-400 to-lavender-500 text-white p-6 shadow-plush overflow-hidden">
-          <span
-            aria-hidden
-            className="pointer-events-none absolute -top-12 end-[-12%] h-44 w-44 rounded-full bg-white/15 blur-3xl"
-          />
-          <span
-            aria-hidden
-            className="pointer-events-none absolute -bottom-12 start-[-15%] h-40 w-40 rounded-full bg-lavender-700/20 blur-3xl"
-          />
-          <div className="relative flex items-start justify-between gap-3">
-            <div className="min-w-0">
-              <div className="text-[11px] font-semibold text-white/80 uppercase tracking-[0.08em]">
-                {t('home.eligibilityTitle')}
-              </div>
-              <div className="text-[12.5px] text-white/70 mt-1">
-                {t('home.eligibilitySub')}
-              </div>
-            </div>
-            <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-lavender-700 bg-white rounded-full px-2.5 py-1 shadow-soft">
-              {t(`eligibility.tiers.${eligibility.tier}`)}
-            </span>
-          </div>
-
-          <div className="relative mt-5">
-            <div className="text-[10.5px] font-semibold text-white/75 uppercase tracking-[0.08em]">
-              {t('home.remaining')}
-            </div>
-            <div className="mt-1.5 flex items-baseline gap-2">
-              <span className="editorial-title text-[40px] text-white num leading-none">
-                {formatCurrency(eligibility.remaining)}
-              </span>
-            </div>
-            <div className="mt-1.5 text-[12px] text-white/70 num">
-              {t('home.of')} {formatCurrency(eligibility.limit)}
-            </div>
-          </div>
-
-          <div className="relative mt-5">
-            <div className="h-1.5 rounded-full bg-white/20 overflow-hidden">
-              <div
-                className="h-full rounded-full bg-white/95 transition-[width]"
-                style={{ width: `${Math.min(100, usagePct)}%` }}
-              />
-            </div>
-            <div className="mt-3 flex items-center justify-between text-[11.5px]">
-              <span className="text-white/75">
-                {t('home.used')}{' '}
-                <span className="text-white font-semibold num">
-                  {formatCurrency(eligibility.used)}
-                </span>{' '}
-                <span className="text-white/55 num">({usagePct}%)</span>
-              </span>
-              <button
-                type="button"
-                onClick={() => navigate('/eligibility')}
-                className="inline-flex items-center gap-1 text-white font-semibold hover:text-white/85"
-              >
-                {t('home.viewDetails')}
-                <ArrowIcon size={14} className={cn(dir === 'rtl' ? 'rotate-180' : '')} />
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {/* SCRUM-42 Bug 8: the rental session is now merchant-initiated and
-            renter-verified by mobile, so scan is no longer the customer's
-            primary entry. The prominent dark scan CTA that used to live
-            here is removed. The small QR icon in the header still routes
-            to /scan as a secondary tool for retrieving an invoice
-            handed off out-of-band. */}
-
-        {/* Summary chips */}
-        <div className="grid grid-cols-3 gap-2.5">
-          <SummaryChip
-            label={t('home.summaryInvoices')}
-            value={invoices.length}
-            icon={<ReceiptIcon size={16} />}
-            tone="bg-canvas-100 text-ink-700"
-          />
-          <SummaryChip
-            label={t('home.summaryContracts')}
-            value={contracts.length}
-            icon={<DocIcon size={16} />}
-            tone="bg-canvas-100 text-ink-700"
-          />
-          <SummaryChip
-            label={t('home.summaryNotes')}
-            value={notes.length}
-            icon={<WalletIcon size={16} />}
-            tone="bg-gold-50 text-gold-700"
-          />
-        </div>
-
-        {/* Active rental invoices */}
-        <Section
-          title={t('sections.activeInvoices')}
-          viewAllHref="/contracts"
+        {/* Compact eligibility — always shown, never dominates. */}
+        <EligibilityCompact
+          eligibility={eligibility}
+          tierLabel={t(`eligibility.tiers.${eligibility.tier}`)}
+          onOpen={() => navigate('/eligibility')}
+          formatCurrency={formatCurrency}
           t={t}
-          empty={
-            invoices.length === 0 ? (
-              <EmptyState
-                icon={<ReceiptIcon size={20} />}
-                title={t('sections.noInvoices')}
-                description={t('sections.emptyHint')}
-              />
-            ) : null
-          }
-        >
-          {invoices.slice(0, 3).map((inv, i, arr) => (
-            <div key={inv.id}>
-              <InvoiceRow invoice={inv} />
-              {i < arr.length - 1 && <div className="h-px bg-canvas-200/80" />}
-            </div>
-          ))}
-        </Section>
+          dir={dir}
+        />
 
-        {/* Active contracts */}
-        <Section
-          title={t('sections.activeContracts')}
-          viewAllHref="/contracts"
-          t={t}
-          empty={
-            contracts.length === 0 ? (
-              <EmptyState
-                icon={<DocIcon size={20} />}
-                title={t('sections.noContracts')}
-                description={t('sections.emptyHint')}
-              />
-            ) : null
-          }
-        >
-          {contracts.slice(0, 3).map((c, i, arr) => (
-            <div key={c.id}>
-              <ContractRow contract={c} />
-              {i < arr.length - 1 && <div className="h-px bg-canvas-200/80" />}
-            </div>
-          ))}
-        </Section>
+        {/* Mode-driven hero block. */}
+        {mode === 'attention' && (
+          <AttentionStack
+            invoices={attentionInvoices}
+            t={t}
+            dir={dir}
+            formatCurrency={formatCurrency}
+            formatDate={formatDate}
+            onReview={(invoiceId) => navigate(`/track/invoice/${invoiceId}`)}
+          />
+        )}
 
-        {/* Active promissory notes */}
-        <Section
-          title={t('sections.activeNotes')}
-          viewAllHref="/contracts"
-          t={t}
-          empty={
-            notes.length === 0 ? (
-              <EmptyState
-                icon={<WalletIcon size={20} />}
-                title={t('sections.noNotes')}
-                description={t('sections.emptyHint')}
-              />
-            ) : null
-          }
-        >
-          {notes.slice(0, 3).map((n, i, arr) => (
-            <div key={n.id}>
-              <NoteRow note={n} />
-              {i < arr.length - 1 && <div className="h-px bg-canvas-200/80" />}
-            </div>
-          ))}
-        </Section>
+        {mode === 'active' && (
+          <ActiveStack
+            rentals={activeRentals}
+            t={t}
+            dir={dir}
+            formatCurrency={formatCurrency}
+            formatDate={formatDate}
+            onOpenContract={(id) => navigate(`/track/contract/${id}`)}
+          />
+        )}
 
-        {/* Previous rental history preview */}
-        <Section
-          title={t('sections.history')}
-          viewAllHref="/contracts"
-          t={t}
-          empty={
-            history.length === 0 ? (
-              <EmptyState
-                icon={<HistoryIcon size={20} />}
-                title={t('sections.noHistory')}
-                description={t('sections.emptyHint')}
-              />
-            ) : null
-          }
-        >
-          {history.slice(0, 3).map((h, i, arr) => (
-            <div key={h.id}>
-              <HistoryRow item={h} />
-              {i < arr.length - 1 && <div className="h-px bg-canvas-200/80" />}
-            </div>
-          ))}
-        </Section>
+        {mode === 'new' && <JourneyStarter t={t} dir={dir} />}
+
+        {mode === 'idle' && <IdleAcknowledgment t={t} dir={dir} />}
+
+        {/* History strip — appears whenever there's anything to show,
+            independent of mode. Only the new customer has zero history
+            and zero usage, so this block is naturally suppressed for them. */}
+        {history.length > 0 && (
+          <HistoryStrip
+            items={history.slice(0, 2)}
+            t={t}
+            dir={dir}
+            formatCurrency={formatCurrency}
+            formatDate={formatDate}
+          />
+        )}
+
+        {/* Quick links — always present, lightweight. */}
+        <QuickLinks t={t} />
       </Screen>
     </>
   );
 }
 
-function SummaryChip({
-  label,
-  value,
-  icon,
-  tone,
+// =====================================================================
+// Blocks
+// =====================================================================
+
+function EligibilityCompact({
+  eligibility,
+  tierLabel,
+  onOpen,
+  formatCurrency,
+  t,
+  dir,
 }: {
-  label: string;
-  value: number;
-  icon: ReactNode;
-  tone: string;
+  eligibility: {
+    limit: number;
+    used: number;
+    remaining: number;
+    tier: string;
+  };
+  tierLabel: string;
+  onOpen: () => void;
+  formatCurrency: (n: number) => string;
+  t: (k: string, p?: Record<string, string | number>) => string;
+  dir: 'rtl' | 'ltr';
 }) {
+  const usagePct =
+    eligibility.limit > 0
+      ? Math.min(100, Math.round((eligibility.used / eligibility.limit) * 100))
+      : 0;
   return (
-    <div className="rounded-xl2 bg-white hairline p-3.5 flex flex-col gap-3 shadow-soft">
-      <span className={cn('h-9 w-9 rounded-2xl grid place-items-center', tone)}>{icon}</span>
-      <div>
-        <div className="editorial-title text-[22px] text-ink-900 num leading-none">{value}</div>
-        <div className="mt-1 text-[11px] uppercase tracking-[0.06em] text-ink-400 font-medium">
-          {label}
+    <button
+      type="button"
+      onClick={onOpen}
+      className={cn(
+        '-mt-12 relative rounded-xl3 bg-gradient-to-br from-lavender-300 via-lavender-400 to-lavender-500',
+        'text-white px-5 py-4 shadow-plush w-full text-start',
+        'transition-transform active:scale-[0.995]',
+      )}
+    >
+      <span
+        aria-hidden
+        className="pointer-events-none absolute -top-8 end-[-8%] h-28 w-28 rounded-full bg-white/15 blur-2xl"
+      />
+      <div className="relative flex items-center justify-between gap-3">
+        <div className="min-w-0">
+          <div className="text-[10.5px] font-semibold text-white/80 uppercase tracking-[0.08em]">
+            {t('home.eligibilityCompact.available')}
+          </div>
+          <div className="mt-1 editorial-title text-[28px] text-white num leading-none truncate">
+            {formatCurrency(eligibility.remaining)}
+          </div>
+          <div className="mt-1 text-[11.5px] text-white/70 num">
+            {t('home.eligibilityCompact.ofLimit', {
+              limit: formatCurrency(eligibility.limit),
+            })}
+          </div>
+        </div>
+        <div className="flex flex-col items-end gap-2 shrink-0">
+          <span className="inline-flex items-center gap-1 text-[10.5px] font-semibold text-lavender-700 bg-white rounded-full px-2 py-0.5 shadow-soft">
+            {tierLabel}
+          </span>
+          <ArrowIcon
+            size={14}
+            className={cn('text-white/85', dir === 'rtl' ? 'rotate-180' : '')}
+          />
         </div>
       </div>
+      <div className="relative mt-3 h-1 rounded-full bg-white/20 overflow-hidden">
+        <div
+          className="h-full rounded-full bg-white/95"
+          style={{ width: `${usagePct}%` }}
+        />
+      </div>
+    </button>
+  );
+}
+
+// ---------------------------------------------------------------------
+
+function AttentionStack({
+  invoices,
+  t,
+  dir,
+  formatCurrency,
+  formatDate,
+  onReview,
+}: {
+  invoices: AttentionInvoice[];
+  t: (k: string, p?: Record<string, string | number>) => string;
+  dir: 'rtl' | 'ltr';
+  formatCurrency: (n: number) => string;
+  formatDate: (iso: string) => string;
+  onReview: (invoiceId: string) => void;
+}) {
+  return (
+    <div className="space-y-2.5">
+      {invoices.map((inv) => {
+        const daysLeft = daysUntil(inv.dueDate);
+        return (
+          <div
+            key={inv.id}
+            className={cn(
+              'relative rounded-xl3 bg-gradient-to-br from-warn-50 to-white',
+              'ring-1 ring-warn-500/25 p-5 shadow-soft animate-fade-in',
+            )}
+          >
+            <div className="flex items-start gap-3">
+              <span className="h-10 w-10 rounded-2xl bg-warn-600 text-white grid place-items-center shrink-0 shadow-soft">
+                <ReceiptIcon size={18} />
+              </span>
+              <div className="min-w-0 flex-1">
+                <div className="text-[11px] font-semibold text-warn-700 uppercase tracking-[0.08em]">
+                  {daysLeft > 0
+                    ? t('home.attention.expiresIn', { days: daysLeft })
+                    : t('common.overdue')}
+                </div>
+                <div className="mt-0.5 text-[15px] font-semibold text-ink-900 tracking-tight truncate">
+                  {t('home.attention.title')}
+                </div>
+                <div className="mt-1.5 text-[13px] text-ink-700 truncate">
+                  {inv.title}
+                </div>
+                <div className="mt-2 flex items-center gap-3 text-[12px] text-ink-500">
+                  <span className="num font-semibold text-ink-900">
+                    {formatCurrency(inv.amount)}
+                  </span>
+                  <span className="text-ink-300">·</span>
+                  <span className="num">{formatDate(inv.dueDate)}</span>
+                </div>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => onReview(inv.id)}
+              className={cn(
+                'mt-4 inline-flex items-center justify-center gap-1.5 h-11 w-full rounded-xl2',
+                'bg-ink-900 text-white font-semibold text-[14px] tracking-tight',
+                'shadow-plush hover:bg-ink-800 active:bg-ink-800 transition-colors',
+              )}
+            >
+              {t('home.attention.cta')}
+              <ArrowIcon
+                size={14}
+                className={cn(dir === 'rtl' ? 'rotate-180' : '')}
+              />
+            </button>
+          </div>
+        );
+      })}
     </div>
   );
 }
 
-function Section({
-  title,
-  viewAllHref,
-  children,
-  empty,
+// ---------------------------------------------------------------------
+
+function ActiveStack({
+  rentals,
+  t,
+  dir,
+  formatCurrency,
+  formatDate,
+  onOpenContract,
+}: {
+  rentals: ActiveRental[];
+  t: (k: string, p?: Record<string, string | number>) => string;
+  dir: 'rtl' | 'ltr';
+  formatCurrency: (n: number) => string;
+  formatDate: (iso: string) => string;
+  onOpenContract: (id: string) => void;
+}) {
+  return (
+    <div className="space-y-3">
+      {rentals.map(({ contract, invoice, note, merchantName }) => {
+        const daysLeft = daysUntil(contract.endDate);
+        const daysLabel =
+          daysLeft > 0
+            ? t('home.current.daysLeft', { days: daysLeft })
+            : daysLeft === 0
+              ? t('home.current.endsToday')
+              : t('home.current.endedHint');
+        return (
+          <div
+            key={contract.id}
+            className="rounded-xl3 bg-white hairline p-5 shadow-soft animate-fade-in"
+          >
+            <div className="flex items-start gap-3">
+              <span className="h-11 w-11 rounded-2xl bg-lavender-50 text-lavender-700 ring-1 ring-lavender-200 grid place-items-center shrink-0">
+                <SparkleIcon size={18} />
+              </span>
+              <div className="min-w-0 flex-1">
+                <div className="text-[10.5px] font-semibold text-lavender-700 uppercase tracking-[0.08em]">
+                  {t('home.current.title')}
+                </div>
+                <div className="mt-0.5 text-[15px] font-semibold text-ink-900 tracking-tight truncate">
+                  {contract.title}
+                </div>
+                {merchantName && merchantName !== '—' && (
+                  <div className="mt-0.5 text-[12.5px] text-ink-500 truncate">
+                    {merchantName}
+                  </div>
+                )}
+              </div>
+              <div className="text-end shrink-0 num">
+                <div className="editorial-title text-[26px] text-ink-900 leading-none">
+                  {daysLeft > 0 ? daysLeft : daysLeft === 0 ? '0' : '—'}
+                </div>
+                <div className="mt-1 text-[10.5px] font-semibold text-ink-400 uppercase tracking-[0.08em]">
+                  {daysLabel}
+                </div>
+              </div>
+            </div>
+
+            {/* Three-stamp row — one rental, three artifacts, one card. */}
+            <div className="mt-4 grid grid-cols-3 gap-2">
+              <ArtifactPill
+                icon={<ReceiptIcon size={13} />}
+                label={t('home.current.invoicePill')}
+                state={invoice ? 'signed' : 'pending'}
+                t={t}
+              />
+              <ArtifactPill
+                icon={<DocIcon size={13} />}
+                label={t('home.current.contractPill')}
+                state={contract.status === 'active' ? 'signed' : 'pending'}
+                t={t}
+              />
+              <ArtifactPill
+                icon={<WalletIcon size={13} />}
+                label={t('home.current.notePill')}
+                state={note?.status === 'signed' ? 'signed' : 'pending'}
+                t={t}
+              />
+            </div>
+
+            <div className="mt-4 flex items-end justify-between gap-3">
+              <div>
+                <div className="text-[10.5px] font-semibold text-ink-400 uppercase tracking-[0.08em]">
+                  {t('contracts.bundle.amountLabel')}
+                </div>
+                <div className="mt-0.5 text-[15px] font-semibold text-ink-900 num">
+                  {formatCurrency(contract.monthlyAmount)}
+                </div>
+              </div>
+              <div className="text-end">
+                <div className="text-[10.5px] font-semibold text-ink-400 uppercase tracking-[0.08em]">
+                  {t('contracts.bundle.endsOn')}
+                </div>
+                <div className="mt-0.5 text-[13px] text-ink-700 num">
+                  {formatDate(contract.endDate)}
+                </div>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => onOpenContract(contract.id)}
+              className={cn(
+                'mt-4 inline-flex items-center justify-center gap-1.5 h-11 w-full rounded-xl2',
+                'bg-lavender-400 text-white font-semibold text-[14px] tracking-tight',
+                'shadow-soft hover:bg-lavender-500 active:bg-lavender-500 transition-colors',
+              )}
+            >
+              {t('home.current.cta')}
+              <ArrowIcon
+                size={14}
+                className={cn(dir === 'rtl' ? 'rotate-180' : '')}
+              />
+            </button>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function ArtifactPill({
+  icon,
+  label,
+  state,
   t,
 }: {
-  title: string;
-  viewAllHref: string;
-  children: ReactNode;
-  empty: ReactNode;
+  icon: ReactNode;
+  label: string;
+  state: 'signed' | 'pending';
   t: (k: string) => string;
+}) {
+  const signed = state === 'signed';
+  return (
+    <div
+      className={cn(
+        'rounded-xl px-2.5 py-2 flex items-center gap-2 ring-1',
+        signed
+          ? 'bg-success-50 ring-success-500/20 text-success-700'
+          : 'bg-canvas-100 ring-canvas-200 text-ink-500',
+      )}
+    >
+      <span className="grid place-items-center shrink-0">{icon}</span>
+      <div className="min-w-0">
+        <div className="text-[10.5px] font-semibold text-ink-700 truncate">
+          {label}
+        </div>
+        <div
+          className={cn(
+            'text-[10px] font-semibold mt-0.5',
+            signed ? 'text-success-600' : 'text-ink-400',
+          )}
+        >
+          {signed
+            ? t('home.current.stateSigned')
+            : t('home.current.statePending')}
+        </div>
+      </div>
+      {signed && <CheckIcon size={11} className="ms-auto shrink-0" />}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------
+
+function JourneyStarter({
+  t,
+  dir,
+}: {
+  t: (k: string) => string;
+  dir: 'rtl' | 'ltr';
+}) {
+  const steps = [
+    {
+      icon: <BuildingIcon size={16} />,
+      title: t('home.starter.step1Title'),
+      hint: t('home.starter.step1Hint'),
+    },
+    {
+      icon: <ReceiptIcon size={16} />,
+      title: t('home.starter.step2Title'),
+      hint: t('home.starter.step2Hint'),
+    },
+    {
+      icon: <DocIcon size={16} />,
+      title: t('home.starter.step3Title'),
+      hint: t('home.starter.step3Hint'),
+    },
+  ];
+  return (
+    <Card className="animate-fade-in">
+      <div className="text-[10.5px] font-semibold text-lavender-700 uppercase tracking-[0.08em]">
+        {t('home.starter.eyebrow')}
+      </div>
+      <div className="mt-1 editorial-title text-[22px] text-ink-900 leading-snug tracking-tight">
+        {t('home.starter.title')}
+      </div>
+
+      <ol className="mt-4 space-y-3.5">
+        {steps.map((s, i) => (
+          <li key={i} className="flex items-start gap-3">
+            <span className="h-9 w-9 shrink-0 rounded-2xl bg-lavender-50 text-lavender-700 ring-1 ring-lavender-200 grid place-items-center">
+              {s.icon}
+            </span>
+            <div className="min-w-0 flex-1 pt-0.5">
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] font-bold text-ink-400 num">
+                  0{i + 1}
+                </span>
+                <span className="text-[14px] font-semibold text-ink-900 tracking-tight">
+                  {s.title}
+                </span>
+              </div>
+              <div className="mt-0.5 text-[12.5px] text-ink-500 leading-relaxed">
+                {s.hint}
+              </div>
+            </div>
+          </li>
+        ))}
+      </ol>
+
+      <Link
+        to="/stores"
+        className={cn(
+          'mt-5 inline-flex items-center justify-center gap-1.5 h-11 w-full rounded-xl2',
+          'bg-ink-900 text-white font-semibold text-[14px] tracking-tight',
+          'shadow-plush hover:bg-ink-800 active:bg-ink-800 transition-colors',
+        )}
+      >
+        {t('home.starter.ctaPrimary')}
+        <ArrowIcon
+          size={14}
+          className={cn(dir === 'rtl' ? 'rotate-180' : '')}
+        />
+      </Link>
+    </Card>
+  );
+}
+
+// ---------------------------------------------------------------------
+
+function IdleAcknowledgment({
+  t,
+  dir,
+}: {
+  t: (k: string) => string;
+  dir: 'rtl' | 'ltr';
+}) {
+  return (
+    <Card className="animate-fade-in">
+      <div className="flex items-start gap-3">
+        <span className="h-10 w-10 shrink-0 rounded-2xl bg-success-50 text-success-700 ring-1 ring-success-500/20 grid place-items-center">
+          <BadgeCheckIcon size={18} />
+        </span>
+        <div className="min-w-0 flex-1">
+          <div className="text-[15px] font-semibold text-ink-900 tracking-tight">
+            {t('home.idle.title')}
+          </div>
+          <div className="mt-1 text-[12.5px] text-ink-500 leading-relaxed">
+            {t('home.idle.subtitle')}
+          </div>
+        </div>
+      </div>
+      <Link
+        to="/stores"
+        className={cn(
+          'mt-4 inline-flex items-center justify-center gap-1.5 h-11 w-full rounded-xl2',
+          'bg-white text-ink-900 ring-1 ring-canvas-200 font-semibold text-[13.5px] tracking-tight',
+          'hover:bg-canvas-100/60 active:bg-canvas-100 transition-colors',
+        )}
+      >
+        {t('home.idle.cta')}
+        <ArrowIcon
+          size={14}
+          className={cn(dir === 'rtl' ? 'rotate-180' : '')}
+        />
+      </Link>
+    </Card>
+  );
+}
+
+// ---------------------------------------------------------------------
+
+function HistoryStrip({
+  items,
+  t,
+  dir,
+  formatCurrency,
+  formatDate,
+}: {
+  items: HistoryItem[];
+  t: (k: string) => string;
+  dir: 'rtl' | 'ltr';
+  formatCurrency: (n: number) => string;
+  formatDate: (iso: string) => string;
 }) {
   return (
     <section>
       <SectionHeader
-        title={title}
+        title={t('home.historyStrip.title')}
         action={
-          empty ? null : (
-            <Link to={viewAllHref}>{t('home.viewAll')}</Link>
-          )
+          <Link to="/contracts" className="inline-flex items-center gap-1">
+            {t('home.historyStrip.viewAll')}
+            <ArrowIcon
+              size={12}
+              className={cn(dir === 'rtl' ? 'rotate-180' : '')}
+            />
+          </Link>
         }
       />
-      {empty ? (
-        empty
-      ) : (
-        <Card padded={false} className="px-5">
-          {children}
-        </Card>
-      )}
+      <Card padded={false} className="px-5">
+        {items.map((h, i) => (
+          <div key={h.id}>
+            <div className="flex items-center justify-between gap-3 py-3.5">
+              <div className="min-w-0">
+                <div className="text-[13.5px] font-semibold text-ink-900 truncate tracking-tight">
+                  {h.title}
+                </div>
+                <div className="mt-0.5 text-[11.5px] text-ink-400 truncate">
+                  {h.counterparty !== '—' ? h.counterparty + ' · ' : ''}
+                  {formatDate(h.closedAt)}
+                </div>
+              </div>
+              <div className="text-end shrink-0">
+                <div className="text-[13px] font-semibold text-ink-900 num">
+                  {formatCurrency(h.amount)}
+                </div>
+                <div className="text-[10.5px] text-success-600 font-semibold mt-0.5">
+                  {t('status.history.completed')}
+                </div>
+              </div>
+            </div>
+            {i < items.length - 1 && <div className="h-px bg-canvas-200/80" />}
+          </div>
+        ))}
+      </Card>
     </section>
   );
 }
+
+// ---------------------------------------------------------------------
+
+function QuickLinks({ t }: { t: (k: string) => string }) {
+  return (
+    <div className="grid grid-cols-3 gap-2.5">
+      <QuickLink to="/stores" icon={<BuildingIcon size={16} />} label={t('home.quickLinks.stores')} />
+      <QuickLink to="/eligibility" icon={<ShieldIcon size={16} />} label={t('home.quickLinks.eligibility')} />
+      <QuickLink to="/profile" icon={<UserIcon size={16} />} label={t('home.quickLinks.profile')} />
+    </div>
+  );
+}
+
+function QuickLink({
+  to,
+  icon,
+  label,
+}: {
+  to: string;
+  icon: ReactNode;
+  label: string;
+}) {
+  return (
+    <Link
+      to={to}
+      className={cn(
+        'rounded-xl2 bg-white hairline p-3 flex flex-col gap-2 shadow-soft',
+        'transition-colors hover:bg-canvas-100/40 active:bg-canvas-100',
+      )}
+    >
+      <span className="h-8 w-8 rounded-xl bg-lavender-50 text-lavender-700 grid place-items-center">
+        {icon}
+      </span>
+      <div className="text-[12px] font-semibold text-ink-900 tracking-tight">
+        {label}
+      </div>
+    </Link>
+  );
+}
+
+// =====================================================================
+// Small utilities
+// =====================================================================
+
+function daysUntil(dateIso: string): number {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const target = new Date(dateIso);
+  target.setHours(0, 0, 0, 0);
+  return Math.round((target.getTime() - today.getTime()) / 86_400_000);
+}
+

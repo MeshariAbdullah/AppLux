@@ -346,7 +346,58 @@
     "summaryInvoices": "Invoices",
     "summaryContracts": "Contracts",
     "summaryNotes": "Notes",
-    "viewAll": "View all"
+    "viewAll": "View all",
+    "eligibilityCompact": {
+      "available": "Available to rent",
+      "ofLimit": "of {limit} ceiling",
+      "tierLabel": "Tier"
+    },
+    "attention": {
+      "title": "Invoice waiting for your review",
+      "expiresIn": "Expires in {days, plural, one {# day} other {# days}}",
+      "expiresInArabic": "Expires in {days} days",
+      "fromMerchant": "From",
+      "cta": "Review & accept"
+    },
+    "current": {
+      "title": "Live rental",
+      "daysLeft": "{days, plural, one {# day left} other {# days left}}",
+      "daysLeftArabic": "{days} days remaining",
+      "endsToday": "Ends today",
+      "endedHint": "Awaiting closure",
+      "invoicePill": "Invoice",
+      "contractPill": "Contract",
+      "notePill": "Note",
+      "stateSigned": "Signed",
+      "statePending": "Pending",
+      "cta": "View contract details"
+    },
+    "starter": {
+      "eyebrow": "Get started",
+      "title": "Begin your first rental in three steps",
+      "step1Title": "Choose a partner boutique",
+      "step1Hint": "Browse verified partners in your sector.",
+      "step2Title": "Receive a digital invoice",
+      "step2Hint": "The merchant issues an invoice for your review.",
+      "step3Title": "Sign and pick up",
+      "step3Hint": "Once signed, your contract and note are documented.",
+      "ctaPrimary": "Explore partner boutiques",
+      "ctaSecondary": "How Lend works"
+    },
+    "idle": {
+      "title": "You're all caught up",
+      "subtitle": "No active rentals. Your eligibility is ready when you are.",
+      "cta": "Explore partner boutiques"
+    },
+    "historyStrip": {
+      "title": "Recent rentals",
+      "viewAll": "View all rentals"
+    },
+    "quickLinks": {
+      "stores": "Partners",
+      "eligibility": "Eligibility",
+      "profile": "Profile"
+    }
   },
   "sections": {
     "activeInvoices": "Active invoices",
@@ -466,13 +517,30 @@
     }
   },
   "contracts": {
-    "title": "Contracts",
+    "title": "My rentals",
     "searchPlaceholder": "Search by name or contract ID",
     "sections": {
-      "newContracts": "New contracts",
+      "newContracts": "Active rentals",
       "notes": "Promissory notes",
+      "past": "Past rentals",
       "noContracts": "No active contracts yet",
-      "noNotes": "No promissory notes yet"
+      "noNotes": "No promissory notes yet",
+      "noPast": "No past rentals yet"
+    },
+    "bundle": {
+      "amountLabel": "Rental fee",
+      "endsOn": "Ends",
+      "noteRef": "Note {ref}",
+      "contractRef": "Contract {ref}"
+    },
+    "past": {
+      "completedOn": "Completed {date}",
+      "settledNote": "Note settled"
+    },
+    "empty": {
+      "title": "Your rentals will appear here",
+      "subtitle": "Once a partner issues you an invoice and you sign, every rental is documented in this section.",
+      "cta": "Explore partner boutiques"
     },
     "handover": {
       "title": "Required: photo of the product",

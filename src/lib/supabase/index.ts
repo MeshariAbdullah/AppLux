@@ -77,6 +77,7 @@ export type { UpsertEligibilityInput } from './queries/eligibility';
 export {
   listMerchants,
   fetchMerchant,
+  fetchMerchantsByIds,
   fetchMyMerchant,
 } from './queries/merchants';
 export type { ListMerchantsFilter } from './queries/merchants';
