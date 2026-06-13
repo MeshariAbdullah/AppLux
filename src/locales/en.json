@@ -43,25 +43,50 @@
     },
     "title": "Rent it. Contract it. Return it.",
     "subtitle": "Lend runs the entire rental journey as a documented digital workflow — verified customer, signed contract, attested promissory note, and tracked return. Mutual protection at every step.",
+    "subtitleMerchant": "Lend gives you a digital contract, an attested promissory note, and live handover tracking — every rental documented end to end, with mutual protection at every step.",
+    "audience": {
+      "customer": "For customers",
+      "merchant": "For merchants"
+    },
     "workflow": {
       "label": "Lend system",
       "badge": "Preview",
       "steps": {
-        "verify": {
-          "title": "Customer verification",
-          "meta": "Verified by mobile"
+        "customer": {
+          "verify": {
+            "title": "Customer verification",
+            "meta": "Verified by mobile"
+          },
+          "review": {
+            "title": "Review & approval",
+            "meta": "Approved by the merchant"
+          },
+          "contract": {
+            "title": "Digital contract & note",
+            "meta": "Signed by both parties"
+          },
+          "track": {
+            "title": "Handover & return tracking",
+            "meta": "In progress"
+          }
         },
-        "review": {
-          "title": "Review & approval",
-          "meta": "Approved by the merchant"
-        },
-        "contract": {
-          "title": "Digital contract & note",
-          "meta": "Signed by both parties"
-        },
-        "track": {
-          "title": "Handover & return tracking",
-          "meta": "In progress"
+        "merchant": {
+          "verify": {
+            "title": "Receive the customer",
+            "meta": "Fast lookup by mobile"
+          },
+          "review": {
+            "title": "Issue the contract",
+            "meta": "Drafted in your portal"
+          },
+          "contract": {
+            "title": "Approve the signing",
+            "meta": "Both parties sign in-app"
+          },
+          "track": {
+            "title": "Track handover & return",
+            "meta": "Live status updates"
+          }
         }
       }
     },

@@ -20,17 +20,21 @@ import { cn } from '@/lib/cn';
 //   1. minimal top bar (lang toggle only)
 //   2. brand: small Lend wordmark
 //   3. hero: eyebrow + two-line display headline (line 2 lavender)
-//      + subtitle
-//   4. workflow snapshot card — one elegant card with four rows
+//      + role-aware subtitle (customer or merchant)
+//   4. audience toggle — a compact two-segment pill above the
+//      workflow card. Customer ↔ Merchant. Persisted in
+//      localStorage as `lend.welcomeAudience` so a returning
+//      visitor opens to their last choice.
+//   5. workflow snapshot card — one elegant card with four rows
 //      reflecting the actual product flow (verify → review →
-//      contract → track). System snapshot, not a literal screen
-//      capture.
-//   5. trust strip — three value points as a single quiet row
-//   6. partners strip — typographic row of live merchant
+//      contract → track). The step labels + meta lines adapt to
+//      the selected audience.
+//   6. trust strip — three value points as a single quiet row
+//   7. partners strip — typographic row of live merchant
 //      wordmarks (no logos, no cards). Graceful editorial line
 //      when no real merchants are available — the section stays
 //      visible either way so the page rhythm is stable.
-//   7. CTA stack — primary solid navy, secondary outlined,
+//   8. CTA stack — primary solid navy, secondary outlined,
 //      tertiary merchant text link
 //
 // Sectors are intentionally NOT on this screen. The platform's
@@ -46,10 +50,26 @@ import { cn } from '@/lib/cn';
 //   * terms footer
 // =====================================================================
 
+type Audience = 'customer' | 'merchant';
+const AUDIENCE_STORAGE_KEY = 'lend.welcomeAudience';
+
 export default function Welcome() {
   const t = useT();
   const { dir } = useI18n();
   const { configured } = useSupabaseAuth();
+  const [audience, setAudienceState] = useState<Audience>(() => {
+    if (typeof window === 'undefined') return 'customer';
+    const v = window.localStorage.getItem(AUDIENCE_STORAGE_KEY);
+    return v === 'merchant' ? 'merchant' : 'customer';
+  });
+  const setAudience = (next: Audience) => {
+    setAudienceState(next);
+    try {
+      window.localStorage.setItem(AUDIENCE_STORAGE_KEY, next);
+    } catch {
+      /* ignore quota / disabled storage */
+    }
+  };
 
   return (
     <div className="relative flex flex-col min-h-full bg-canvas-50 text-ink-900 overflow-hidden">
@@ -95,12 +115,26 @@ export default function Welcome() {
           </h1>
 
           <p className="mt-5 text-[13.5px] leading-relaxed text-ink-500 max-w-[40ch] mx-auto">
-            {t('welcome.subtitle')}
+            {t(
+              audience === 'merchant'
+                ? 'welcome.subtitleMerchant'
+                : 'welcome.subtitle',
+            )}
           </p>
         </header>
 
+        {/* ======== AUDIENCE TOGGLE ========
+            Sits between the hero subtitle and the workflow card so
+            the user's role selection arrives at the card visually.
+            Persisted in localStorage; defaults to customer. */}
+        <AudienceToggle
+          value={audience}
+          onChange={setAudience}
+          t={t}
+        />
+
         {/* ======== WORKFLOW SNAPSHOT CARD ======== */}
-        <WorkflowCard t={t} />
+        <WorkflowCard t={t} audience={audience} />
 
         {/* ======== TRUST STRIP — single quiet row.
             Sits closer to the workflow card now that the sectors
@@ -239,8 +273,10 @@ function LendWordmark({ latin, arabic }: { latin: string; arabic: string }) {
  */
 function WorkflowCard({
   t,
+  audience,
 }: {
   t: (k: string, vars?: Record<string, string | number>) => string;
+  audience: Audience;
 }) {
   const steps = [
     {
@@ -293,7 +329,7 @@ function WorkflowCard({
             </span>
             <div className="min-w-0 flex-1">
               <div className="text-[13px] font-semibold text-ink-900 leading-tight">
-                {t(`welcome.workflow.steps.${s.key}.title`)}
+                {t(`welcome.workflow.steps.${audience}.${s.key}.title`)}
               </div>
               <div
                 className={cn(
@@ -301,12 +337,83 @@ function WorkflowCard({
                   s.done ? 'text-ink-500' : 'text-lavender-700 font-medium',
                 )}
               >
-                {t(`welcome.workflow.steps.${s.key}.meta`)}
+                {t(`welcome.workflow.steps.${audience}.${s.key}.meta`)}
               </div>
             </div>
           </li>
         ))}
       </ol>
+    </div>
+  );
+}
+
+/**
+ * Audience toggle — a compact two-segment pill that switches the
+ * workflow card + hero subtitle between the customer and merchant
+ * perspectives. Default = customer; persisted in localStorage via
+ * the `lend.welcomeAudience` key so a returning visitor opens to
+ * their last choice.
+ *
+ * Visual:
+ *   * outlined pill, white surface, hairline canvas ring
+ *   * an ink-900 navy knob that slides under the active segment
+ *     (180ms ease-plush)
+ *   * RTL-aware: uses logical `start-*` positioning so the knob
+ *     glides correctly in both directions
+ *
+ * Accessibility: implemented as a role="tablist" with two
+ * role="tab" buttons. The hero subtitle and workflow card are
+ * controlled regions; aria-controls wires them up.
+ */
+function AudienceToggle({
+  value,
+  onChange,
+  t,
+}: {
+  value: Audience;
+  onChange: (next: Audience) => void;
+  t: (k: string, vars?: Record<string, string | number>) => string;
+}) {
+  const isCustomer = value === 'customer';
+  return (
+    <div className="mt-7 flex justify-center" role="tablist" aria-label="Audience">
+      <div className="relative h-10 w-full max-w-[280px] rounded-full bg-white ring-1 ring-canvas-200 shadow-soft p-1">
+        {/* Sliding knob — logical positioning so RTL flips naturally. */}
+        <span
+          aria-hidden
+          className={cn(
+            'absolute top-1 bottom-1 w-[calc(50%-4px)] rounded-full bg-ink-900',
+            // transition-all so the start-* swap animates regardless
+            // of Tailwind's default transition property list.
+            'transition-all duration-200 ease-plush',
+            isCustomer ? 'start-1' : 'start-[50%]',
+          )}
+        />
+        <button
+          type="button"
+          role="tab"
+          aria-selected={isCustomer}
+          onClick={() => onChange('customer')}
+          className={cn(
+            'relative z-10 w-1/2 h-full rounded-full text-[12.5px] font-semibold tracking-tight transition-colors duration-150',
+            isCustomer ? 'text-white' : 'text-ink-700 hover:text-ink-900',
+          )}
+        >
+          {t('welcome.audience.customer')}
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={!isCustomer}
+          onClick={() => onChange('merchant')}
+          className={cn(
+            'relative z-10 w-1/2 h-full rounded-full text-[12.5px] font-semibold tracking-tight transition-colors duration-150',
+            !isCustomer ? 'text-white' : 'text-ink-700 hover:text-ink-900',
+          )}
+        >
+          {t('welcome.audience.merchant')}
+        </button>
+      </div>
     </div>
   );
 }
