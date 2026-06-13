@@ -105,7 +105,17 @@
     "merchantCtaShort": "Merchant portal",
     "partners": {
       "eyebrow": "Selected Lend partners",
-      "fallback": "Partners who commit to Lend's standards of documentation and protection of rights."
+      "fallback": "Partners who commit to Lend's standards of documentation and protection of rights.",
+      "browse": "Browse Lend partners",
+      "sheetTitle": "Lend partners",
+      "sheetEyebrow": "Curated network",
+      "searchPlaceholder": "Search by partner or store name",
+      "searchLabel": "Search Lend partners",
+      "emptyMatch": "No partner matches «{query}»",
+      "emptyAll": "More partners are joining Lend soon.",
+      "verified": "Verified",
+      "close": "Close",
+      "ctaSignUp": "Create account to start renting"
     },
     "terms": "By continuing you agree to the Terms and Privacy Policy",
     "sectors": {

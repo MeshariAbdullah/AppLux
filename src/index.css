@@ -114,12 +114,28 @@ html[dir='ltr'] body {
 }
 .animate-halo-sweep { animation: haloSweep 1400ms cubic-bezier(0.22, 1, 0.36, 1) both; }
 
+/* Backdrop fade — for modal/sheet overlays. */
+@keyframes fadeIn {
+  0% { opacity: 0; }
+  100% { opacity: 1; }
+}
+.animate-fade-in { animation: fadeIn 220ms cubic-bezier(0.22, 1, 0.36, 1) both; }
+
+/* Soft sheet rise — for bottom-anchored modal panels. */
+@keyframes sheetUp {
+  0% { transform: translateY(100%); }
+  100% { transform: translateY(0); }
+}
+.animate-slide-up-soft { animation: sheetUp 260ms cubic-bezier(0.22, 1, 0.36, 1) both; }
+
 /* Reduce motion respectfully. */
 @media (prefers-reduced-motion: reduce) {
   .animate-reveal-up,
   .animate-stamp-in,
   .animate-halo-sweep,
-  .animate-pulse-ring {
+  .animate-pulse-ring,
+  .animate-fade-in,
+  .animate-slide-up-soft {
     animation: none;
   }
 }

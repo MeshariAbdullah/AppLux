@@ -105,7 +105,17 @@
     "merchantCtaShort": "بوابة التاجر",
     "partners": {
       "eyebrow": "نخبة من شركاء Lend",
-      "fallback": "شركاء يلتزمون بمعايير Lend في التوثيق وحماية الحقوق."
+      "fallback": "شركاء يلتزمون بمعايير Lend في التوثيق وحماية الحقوق.",
+      "browse": "تصفّح شركاء Lend",
+      "sheetTitle": "شركاء Lend",
+      "sheetEyebrow": "شبكة مختارة",
+      "searchPlaceholder": "ابحث باسم الشريك أو المتجر",
+      "searchLabel": "البحث في شركاء Lend",
+      "emptyMatch": "لا يوجد شريك مطابق لـ «{query}»",
+      "emptyAll": "ينضمّ شركاء جدد إلى Lend قريباً.",
+      "verified": "موثَّق",
+      "close": "إغلاق",
+      "ctaSignUp": "إنشاء حساب لبدء التأجير"
     },
     "terms": "بالمتابعة، فأنت توافق على الشروط وسياسة الخصوصية",
     "sectors": {

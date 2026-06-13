@@ -1,16 +1,19 @@
-import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui';
 import { LangToggle } from '@/components/auth/LangToggle';
 import {
   ArrowIcon,
+  BadgeCheckIcon,
   CheckIcon,
+  ChevronIcon,
   ClockIcon,
+  SearchIcon,
   ShieldIcon,
 } from '@/components/icons';
 import { useI18n, useT } from '@/lib/i18n';
 import { listMerchants, useSupabaseAuth } from '@/lib/supabase';
-import type { LocalizedJson } from '@/lib/supabase';
+import type { LocalizedJson, MerchantRow } from '@/lib/supabase';
 import { cn } from '@/lib/cn';
 
 // =====================================================================
@@ -70,6 +73,31 @@ export default function Welcome() {
       /* ignore quota / disabled storage */
     }
   };
+
+  // Real merchants for the partners strip + partner-discovery sheet.
+  // Fetched once at the Welcome level so both surfaces share the same
+  // data — no duplicate network round-trip.
+  const [partners, setPartners] = useState<MerchantRow[] | null>(null);
+  useEffect(() => {
+    if (!configured) {
+      setPartners(null);
+      return;
+    }
+    let cancelled = false;
+    listMerchants({ limit: 50 })
+      .then((rows) => {
+        if (!cancelled) setPartners(rows);
+      })
+      .catch(() => {
+        if (!cancelled) setPartners([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [configured]);
+
+  // Partner discovery sheet — bottom-anchored, in-page modal.
+  const [partnersSheetOpen, setPartnersSheetOpen] = useState(false);
 
   return (
     <div className="relative flex flex-col min-h-full bg-canvas-50 text-ink-900 overflow-hidden">
@@ -169,7 +197,11 @@ export default function Welcome() {
             empty production list, or transient error) the strip
             shows a graceful editorial line so the page rhythm
             stays stable. */}
-        <TrustedPartnersStrip />
+        <TrustedPartnersStrip
+          partners={partners}
+          onOpenSheet={() => setPartnersSheetOpen(true)}
+          t={t}
+        />
 
         {/* ======== CTA STACK ========
             mt-auto absorbs the freed vertical space — CTAs stay
@@ -233,6 +265,18 @@ export default function Welcome() {
           </p>
         </div>
       </div>
+
+      {/* ======== PARTNER DISCOVERY SHEET ========
+          Mounted at the page-root level so it overlays the entire
+          screen. Visibility is purely state-driven; the strip above
+          is the trigger. */}
+      <PartnerDiscoverySheet
+        open={partnersSheetOpen}
+        onClose={() => setPartnersSheetOpen(false)}
+        partners={partners}
+        t={t}
+        dir={dir}
+      />
     </div>
   );
 }
@@ -438,74 +482,350 @@ function AudienceToggle({
  * state — that's what makes the section feel intentional even when
  * the live list is short or empty.
  */
-function TrustedPartnersStrip() {
-  const t = useT();
+function TrustedPartnersStrip({
+  partners,
+  onOpenSheet,
+  t,
+}: {
+  partners: MerchantRow[] | null;
+  onOpenSheet: () => void;
+  t: (k: string, vars?: Record<string, string | number>) => string;
+}) {
   const { locale } = useI18n();
-  const { configured } = useSupabaseAuth();
-  const [names, setNames] = useState<string[]>([]);
 
-  useEffect(() => {
-    if (!configured) return;
-    let cancelled = false;
-    listMerchants({ limit: 8 })
-      .then((rows) => {
-        if (cancelled) return;
-        // Verified merchants first, then by rating, then trim to 6 so
-        // the strip stays one comfortable line on phones.
-        const sorted = [...rows].sort((a, b) => {
-          if (a.verified !== b.verified) return a.verified ? -1 : 1;
-          return Number(b.rating ?? 0) - Number(a.rating ?? 0);
-        });
-        const picked = sorted
-          .map((r) => pickLocalized(r.display_name, locale))
-          .filter((s): s is string => Boolean(s && s.trim().length > 0))
-          .slice(0, 6);
-        setNames(picked);
+  // Display sorting: verified first, then by rating, trim to 6 so the
+  // strip stays one comfortable line on phones. Data is read straight
+  // from the lifted Welcome state — no per-strip fetch.
+  const names = useMemo(() => {
+    if (!partners || partners.length === 0) return [];
+    return [...partners]
+      .sort((a, b) => {
+        if (a.verified !== b.verified) return a.verified ? -1 : 1;
+        return Number(b.rating ?? 0) - Number(a.rating ?? 0);
       })
-      .catch(() => {
-        if (!cancelled) setNames([]);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [configured, locale]);
+      .map((r) => pickLocalized(r.display_name, locale))
+      .filter((s): s is string => Boolean(s && s.trim().length > 0))
+      .slice(0, 6);
+  }, [partners, locale]);
 
   const hasNames = names.length > 0;
 
+  // The whole strip is the trigger — a single <button> so screen
+  // readers announce one actionable region with a meaningful label.
+  // Visual change vs the static version is tiny: a small chevron at
+  // the end and a subtle hover tone shift on the body. The eyebrow
+  // row keeps its constant typographic frame.
   return (
-    <section className="mt-9" aria-label={t('welcome.partners.eyebrow')}>
-      <div className="flex items-center justify-center gap-2 text-[10px] font-semibold uppercase tracking-[0.2em] text-ink-500">
-        <span aria-hidden className="h-px w-6 bg-lavender-300" />
-        {t('welcome.partners.eyebrow')}
-        <span aria-hidden className="h-px w-6 bg-lavender-300" />
-      </div>
+    <section className="mt-9">
+      <button
+        type="button"
+        onClick={onOpenSheet}
+        aria-label={t('welcome.partners.browse')}
+        className="group block w-full text-center focus:outline-none focus-visible:ring-2 focus-visible:ring-lavender-300 focus-visible:ring-offset-2 focus-visible:ring-offset-canvas-50 rounded-xl"
+      >
+        <div className="flex items-center justify-center gap-2 text-[10px] font-semibold uppercase tracking-[0.2em] text-ink-500">
+          <span aria-hidden className="h-px w-6 bg-lavender-300" />
+          {t('welcome.partners.eyebrow')}
+          <span aria-hidden className="h-px w-6 bg-lavender-300" />
+        </div>
 
-      <div className="mt-3 text-center">
-        {hasNames ? (
-          <ul className="inline-flex flex-wrap items-center justify-center gap-x-2 gap-y-1.5">
-            {names.map((n, i) => (
-              <li key={`${i}-${n}`} className="inline-flex items-center">
-                <span className="text-[11.5px] font-semibold uppercase tracking-[0.14em] text-ink-700">
-                  {n}
-                </span>
-                {i < names.length - 1 && (
-                  <span
-                    aria-hidden
-                    className="text-ink-300 ps-2 text-[10px]"
-                  >
-                    ·
+        <div className="mt-3 transition-colors group-hover:text-ink-900">
+          {hasNames ? (
+            <ul className="inline-flex flex-wrap items-center justify-center gap-x-2 gap-y-1.5">
+              {names.map((n, i) => (
+                <li key={`${i}-${n}`} className="inline-flex items-center">
+                  <span className="text-[11.5px] font-semibold uppercase tracking-[0.14em] text-ink-700 group-hover:text-ink-900">
+                    {n}
                   </span>
-                )}
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <p className="text-[11.5px] text-ink-500 leading-relaxed max-w-[40ch] mx-auto">
-            {t('welcome.partners.fallback')}
-          </p>
-        )}
-      </div>
+                  {i < names.length - 1 && (
+                    <span
+                      aria-hidden
+                      className="text-ink-300 ps-2 text-[10px]"
+                    >
+                      ·
+                    </span>
+                  )}
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="text-[11.5px] text-ink-500 leading-relaxed max-w-[40ch] mx-auto">
+              {t('welcome.partners.fallback')}
+            </p>
+          )}
+        </div>
+
+        <div className="mt-2 inline-flex items-center gap-1 text-[10.5px] font-semibold text-lavender-700 group-hover:text-lavender-800">
+          {t('welcome.partners.browse')}
+          <ChevronIcon
+            size={11}
+            className="transition-transform group-hover:translate-x-0.5 rtl:rotate-180 rtl:group-hover:-translate-x-0.5"
+          />
+        </div>
+      </button>
     </section>
+  );
+}
+
+/**
+ * Partner discovery sheet — a bottom-anchored, in-page modal that
+ * rises from the trusted partners strip. Stays restrained on
+ * purpose:
+ *
+ *   * One editorial header (title + tiny eyebrow + close X).
+ *   * One single search input (no filters, no sort, no categories).
+ *   * One typographic list of partners. Each row: editorial name,
+ *     a thin meta line under it with city, and a small "Verified"
+ *     pill at the end when verified=true. No logos, no prices, no
+ *     ratings, no per-row "Open" CTA.
+ *   * One bottom CTA → /auth/register. Closes the sheet on tap.
+ *
+ * Behaviour:
+ *   * Backdrop ink-900/40 + backdrop-blur-sm. Tap to close.
+ *   * Esc key closes.
+ *   * Body scroll is locked while open.
+ *   * Search input is autofocused on open; substring match against
+ *     the localised display_name + the city slug. Results capped at
+ *     24 to keep the sheet readable.
+ *   * Empty state: graceful editorial line, either "no match" or
+ *     "more partners joining" depending on whether the query is
+ *     empty.
+ */
+function PartnerDiscoverySheet({
+  open,
+  onClose,
+  partners,
+  t,
+  dir,
+}: {
+  open: boolean;
+  onClose: () => void;
+  partners: MerchantRow[] | null;
+  t: (k: string, vars?: Record<string, string | number>) => string;
+  dir: 'ltr' | 'rtl';
+}) {
+  const navigate = useNavigate();
+  const { locale } = useI18n();
+  const [query, setQuery] = useState('');
+  const inputRef = useRef<HTMLInputElement | null>(null);
+
+  // Reset the query whenever the sheet re-opens so a stale value
+  // doesn't ambush the next visitor.
+  useEffect(() => {
+    if (open) setQuery('');
+  }, [open]);
+
+  // Body scroll lock + autofocus the search field when the sheet
+  // mounts in the open state. Esc closes.
+  useEffect(() => {
+    if (!open) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', onKey);
+    // Defer focus a frame so the slide-up doesn't fight the focus
+    // ring's reveal.
+    const focusId = window.setTimeout(() => inputRef.current?.focus(), 220);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener('keydown', onKey);
+      window.clearTimeout(focusId);
+    };
+  }, [open, onClose]);
+
+  const normalisedQuery = query.trim().toLowerCase();
+  const results = useMemo(() => {
+    const source = partners ?? [];
+    const sorted = [...source].sort((a, b) => {
+      if (a.verified !== b.verified) return a.verified ? -1 : 1;
+      return Number(b.rating ?? 0) - Number(a.rating ?? 0);
+    });
+    if (!normalisedQuery) return sorted.slice(0, 24);
+    return sorted
+      .filter((m) => {
+        const name = pickLocalized(m.display_name, locale).toLowerCase();
+        const city = (m.city ?? '').toLowerCase();
+        return name.includes(normalisedQuery) || city.includes(normalisedQuery);
+      })
+      .slice(0, 24);
+  }, [partners, locale, normalisedQuery]);
+
+  if (!open) return null;
+
+  const hasAnyPartner = (partners ?? []).length > 0;
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-end justify-center"
+      role="dialog"
+      aria-modal="true"
+      aria-label={t('welcome.partners.sheetTitle')}
+    >
+      {/* Backdrop — quiet ink overlay with light blur. Tap dismisses. */}
+      <button
+        type="button"
+        onClick={onClose}
+        aria-label={t('welcome.partners.close')}
+        className="absolute inset-0 bg-ink-900/45 backdrop-blur-sm transition-opacity duration-200 animate-fade-in"
+      />
+
+      {/* Sheet — pinned to the viewport bottom, rounded top corners,
+          slides up. Caps height so a long list scrolls inside. */}
+      <div
+        className={cn(
+          'relative w-full max-w-[480px] bg-canvas-50 rounded-t-3xl shadow-plush',
+          'ring-1 ring-canvas-200',
+          'flex flex-col max-h-[88vh]',
+          'animate-slide-up-soft',
+        )}
+        // Avoid the safe-area when the device has a home-indicator strip.
+        style={{
+          paddingBottom: 'env(safe-area-inset-bottom)',
+        }}
+      >
+        {/* Drag handle */}
+        <div className="pt-2.5 pb-1 flex justify-center">
+          <span aria-hidden className="h-1 w-10 rounded-full bg-canvas-300" />
+        </div>
+
+        {/* Header */}
+        <div className="px-5 pb-3 flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <div className="text-[10.5px] font-semibold uppercase tracking-[0.18em] text-lavender-700">
+              {t('welcome.partners.sheetEyebrow')}
+            </div>
+            <h2 className="mt-1 editorial-title text-[22px] leading-tight text-ink-900">
+              {t('welcome.partners.sheetTitle')}
+            </h2>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label={t('welcome.partners.close')}
+            className="shrink-0 h-8 w-8 rounded-full bg-canvas-100 text-ink-700 hover:bg-canvas-200 grid place-items-center"
+          >
+            <span aria-hidden className="text-[15px] leading-none">
+              ×
+            </span>
+          </button>
+        </div>
+
+        {/* Search */}
+        <div className="px-5 pb-3">
+          <label className="sr-only" htmlFor="lend-partners-search">
+            {t('welcome.partners.searchLabel')}
+          </label>
+          <div className="relative">
+            <span
+              aria-hidden
+              className="pointer-events-none absolute inset-y-0 start-3 grid place-items-center text-lavender-600"
+            >
+              <SearchIcon size={14} />
+            </span>
+            <input
+              id="lend-partners-search"
+              ref={inputRef}
+              type="search"
+              autoComplete="off"
+              autoCorrect="off"
+              spellCheck={false}
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder={t('welcome.partners.searchPlaceholder')}
+              disabled={!hasAnyPartner}
+              className={cn(
+                'h-10 w-full rounded-xl2 bg-white ring-1 ring-canvas-200 ps-9 pe-3',
+                'text-[13px] text-ink-900 placeholder:text-ink-400',
+                'focus:outline-none focus:ring-2 focus:ring-lavender-300',
+                'disabled:bg-canvas-100 disabled:text-ink-400 disabled:cursor-not-allowed',
+                dir === 'rtl' ? 'text-right' : 'text-left',
+              )}
+            />
+          </div>
+        </div>
+
+        {/* Results */}
+        <div className="flex-1 overflow-y-auto px-5 pb-3">
+          {!hasAnyPartner ? (
+            <EmptySheetLine text={t('welcome.partners.fallback')} />
+          ) : results.length === 0 ? (
+            <EmptySheetLine
+              text={
+                normalisedQuery
+                  ? t('welcome.partners.emptyMatch', { query: query.trim() })
+                  : t('welcome.partners.emptyAll')
+              }
+            />
+          ) : (
+            <ul className="divide-y divide-canvas-200/80">
+              {results.map((m) => {
+                const name = pickLocalized(m.display_name, locale);
+                const cityLabel = m.city
+                  ? t(`register.cities.${m.city}`)
+                  : '';
+                return (
+                  <li key={m.id} className="py-3.5 first:pt-2">
+                    <div className="flex items-start gap-3">
+                      <div className="min-w-0 flex-1">
+                        <div className="editorial-title text-[14.5px] leading-tight text-ink-900 truncate">
+                          {name}
+                        </div>
+                        {cityLabel && (
+                          <div className="mt-0.5 text-[11px] text-ink-500 leading-snug tracking-tight">
+                            {cityLabel}
+                          </div>
+                        )}
+                      </div>
+                      {m.verified && (
+                        <span className="inline-flex items-center gap-1 text-[9.5px] font-semibold uppercase tracking-[0.14em] text-lavender-700 bg-lavender-50 ring-1 ring-lavender-100 rounded-full px-1.5 py-0.5 shrink-0">
+                          <BadgeCheckIcon size={9} />
+                          {t('welcome.partners.verified')}
+                        </span>
+                      )}
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </div>
+
+        {/* Single bottom CTA */}
+        <div className="px-5 pt-3 pb-4 border-t border-canvas-200/70 bg-canvas-50/80 backdrop-blur">
+          <button
+            type="button"
+            onClick={() => {
+              onClose();
+              navigate('/auth/register');
+            }}
+            className={cn(
+              'group h-12 w-full rounded-xl2 bg-ink-900 text-white font-semibold text-[14px] tracking-tight',
+              'hover:bg-ink-800 active:bg-ink-800 transition-[background-color,transform] duration-200 active:scale-[0.985]',
+              'inline-flex items-center justify-center gap-2',
+            )}
+          >
+            {t('welcome.partners.ctaSignUp')}
+            <ArrowIcon
+              size={14}
+              className={cn(
+                'transition-transform group-hover:translate-x-0.5',
+                dir === 'rtl' ? 'rotate-180 group-hover:-translate-x-0.5' : '',
+              )}
+            />
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function EmptySheetLine({ text }: { text: string }) {
+  return (
+    <p className="text-center text-[12.5px] text-ink-500 leading-relaxed max-w-[36ch] mx-auto py-8">
+      {text}
+    </p>
   );
 }
 
