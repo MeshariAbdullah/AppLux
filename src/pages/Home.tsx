@@ -7,6 +7,7 @@ import {
   BadgeCheckIcon,
   BellIcon,
   CheckIcon,
+  ChevronIcon,
   DocIcon,
   QrIcon,
   ReceiptIcon,
@@ -318,6 +319,18 @@ export default function Home() {
 // Blocks
 // =====================================================================
 
+// Eligibility summary strip — restrained, premium, calm.
+//
+// Design intent: this is a smart summary, not a hero. It sits in the
+// normal page flow below the header, on white, with hairline borders
+// and small typography. The only colored accent is the tier pill and
+// a barely-visible usage hairline at the bottom edge — both there so
+// active customers still get usage information at a glance.
+//
+// Anything that previously made it dominate the top — lavender
+// gradient fill, white-on-color type, the -mt-12 pull-up into the
+// header, the editorial 28px number, the 6px progress bar, the
+// decorative blur dots — is gone.
 function EligibilityCompact({
   eligibility,
   tierLabel,
@@ -342,50 +355,54 @@ function EligibilityCompact({
     eligibility.limit > 0
       ? Math.min(100, Math.round((eligibility.used / eligibility.limit) * 100))
       : 0;
+  const hasUsage = eligibility.used > 0 && eligibility.limit > 0;
   return (
     <button
       type="button"
       onClick={onOpen}
       className={cn(
-        '-mt-12 relative rounded-xl3 bg-gradient-to-br from-lavender-300 via-lavender-400 to-lavender-500',
-        'text-white px-5 py-4 shadow-plush w-full text-start',
-        'transition-transform active:scale-[0.995]',
+        'relative w-full text-start rounded-2xl bg-white hairline overflow-hidden',
+        'px-4 py-3 shadow-soft transition-colors',
+        'hover:bg-canvas-100/40 active:bg-canvas-100/70',
       )}
     >
-      <span
-        aria-hidden
-        className="pointer-events-none absolute -top-8 end-[-8%] h-28 w-28 rounded-full bg-white/15 blur-2xl"
-      />
-      <div className="relative flex items-center justify-between gap-3">
-        <div className="min-w-0">
-          <div className="text-[10.5px] font-semibold text-white/80 uppercase tracking-[0.08em]">
+      <div className="flex items-center justify-between gap-3">
+        <div className="min-w-0 flex-1">
+          <div className="text-[10px] font-semibold text-ink-400 uppercase tracking-[0.08em]">
             {t('home.eligibilityCompact.available')}
           </div>
-          <div className="mt-1 editorial-title text-[28px] text-white num leading-none truncate">
-            {formatCurrency(eligibility.remaining)}
-          </div>
-          <div className="mt-1 text-[11.5px] text-white/70 num">
-            {t('home.eligibilityCompact.ofLimit', {
-              limit: formatCurrency(eligibility.limit),
-            })}
+          <div className="mt-0.5 flex items-baseline gap-1.5">
+            <span className="num text-[17px] font-semibold text-ink-900 tracking-tight">
+              {formatCurrency(eligibility.remaining)}
+            </span>
+            {eligibility.limit > 0 && (
+              <span className="text-[10.5px] text-ink-400 num">
+                / {formatCurrency(eligibility.limit)}
+              </span>
+            )}
           </div>
         </div>
-        <div className="flex flex-col items-end gap-2 shrink-0">
-          <span className="inline-flex items-center gap-1 text-[10.5px] font-semibold text-lavender-700 bg-white rounded-full px-2 py-0.5 shadow-soft">
+        <div className="flex items-center gap-2 shrink-0">
+          <span className="inline-flex items-center text-[10px] font-semibold text-lavender-700 bg-lavender-50 ring-1 ring-lavender-200 rounded-full px-2 py-0.5">
             {tierLabel}
           </span>
-          <ArrowIcon
-            size={14}
-            className={cn('text-white/85', dir === 'rtl' ? 'rotate-180' : '')}
+          <ChevronIcon
+            size={12}
+            className={cn('text-ink-300', dir === 'rtl' ? 'rotate-180' : '')}
           />
         </div>
       </div>
-      <div className="relative mt-3 h-1 rounded-full bg-white/20 overflow-hidden">
-        <div
-          className="h-full rounded-full bg-white/95"
-          style={{ width: `${usagePct}%` }}
-        />
-      </div>
+      {hasUsage && (
+        <span
+          aria-hidden
+          className="pointer-events-none absolute inset-x-0 bottom-0 h-[2px] bg-canvas-200"
+        >
+          <span
+            className="block h-full bg-lavender-400"
+            style={{ width: `${usagePct}%` }}
+          />
+        </span>
+      )}
     </button>
   );
 }
