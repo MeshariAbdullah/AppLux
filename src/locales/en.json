@@ -36,18 +36,41 @@
     "eyebrow": "Lend",
     "brandLatin": "LEND",
     "brandArabic": "ليند",
-    "heroEyebrow": "Premium rental platform",
+    "heroEyebrow": "A documented rental workflow",
     "headline": {
       "line1": "Rent with confidence.",
       "line2": "Document every right."
     },
     "title": "Rent it. Contract it. Return it.",
-    "subtitle": "Lend connects you with verified partners across multiple sectors so you can rent what you need — with proper contracts and protected value.",
+    "subtitle": "Lend runs the entire rental journey as a documented digital workflow — verified customer, signed contract, attested promissory note, and tracked return. Mutual protection at every step.",
+    "workflow": {
+      "label": "Lend system",
+      "badge": "Preview",
+      "steps": {
+        "verify": {
+          "title": "Customer verification",
+          "meta": "Verified by mobile"
+        },
+        "review": {
+          "title": "Review & approval",
+          "meta": "Approved by the merchant"
+        },
+        "contract": {
+          "title": "Digital contract & note",
+          "meta": "Signed by both parties"
+        },
+        "track": {
+          "title": "Handover & return tracking",
+          "meta": "In progress"
+        }
+      }
+    },
     "trustPillars": {
-      "secure": "Secured by digital contracts",
-      "documented": "Every step documented",
+      "secure": "Digitally documented contracts",
+      "documented": "Every step recorded",
       "protected": "Mutual protection of rights"
     },
+    "sectorIndex": "Sectors index",
     "feature1": "Verified partner businesses",
     "feature2": "Contract & promissory note per rental",
     "feature3": "Underlying-value protection via Nafith",
