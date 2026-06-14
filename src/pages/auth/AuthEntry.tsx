@@ -75,10 +75,18 @@ export default function AuthEntry() {
             <span className="h-px flex-1 bg-canvas-200" />
           </div>
 
-          <Link to="/auth/login" className="block">
-            <Button size="lg" variant="secondary" block>
-              {t('welcome.signIn')}
-            </Button>
+          <Link
+            to="/auth/login"
+            className={cn(
+              'flex items-center justify-center gap-2 h-13 w-full rounded-xl2 px-5',
+              'bg-white text-ink-900 ring-1 ring-inset ring-lavender-200',
+              'font-semibold text-[15px] tracking-tight select-none',
+              'hover:bg-lavender-50 active:bg-lavender-100',
+              'transition-[background-color,transform] duration-200 ease-plush active:scale-[0.985]',
+              'focus:outline-none',
+            )}
+          >
+            {t('welcome.signIn')}
           </Link>
 
           <Card padded className="flex items-start gap-3.5">

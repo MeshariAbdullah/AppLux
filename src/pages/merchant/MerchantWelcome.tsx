@@ -11,6 +11,7 @@ import {
 } from '@/components/icons';
 import { useT } from '@/lib/i18n';
 import { useSupabaseAuth } from '@/lib/supabase';
+import { cn } from '@/lib/cn';
 
 export default function MerchantWelcome() {
   const t = useT();
@@ -97,15 +98,29 @@ export default function MerchantWelcome() {
         </ul>
 
         <div className="mt-auto space-y-3 pt-10">
-          <Link to="/merchant/register" className="block">
-            <Button size="lg" block className="bg-white text-ink-900 hover:bg-white/90">
-              {t('merchant.entry.register')}
-            </Button>
+          <Link
+            to="/merchant/register"
+            className={cn(
+              'flex items-center justify-center gap-2 h-13 w-full rounded-xl2 px-5',
+              'bg-white text-ink-900 font-semibold text-[15px] tracking-tight select-none',
+              'shadow-soft hover:bg-white/90 active:bg-white/85',
+              'transition-[background-color,transform] duration-200 ease-plush active:scale-[0.985]',
+              'focus:outline-none',
+            )}
+          >
+            {t('merchant.entry.register')}
           </Link>
-          <Link to="/merchant/login" className="block">
-            <Button size="lg" block variant="ghost" className="text-white hover:bg-white/10">
-              {t('merchant.entry.login')}
-            </Button>
+          <Link
+            to="/merchant/login"
+            className={cn(
+              'flex items-center justify-center gap-2 h-13 w-full rounded-xl2 px-5',
+              'bg-transparent text-white font-semibold text-[15px] tracking-tight select-none',
+              'hover:bg-white/10 active:bg-white/15',
+              'transition-[background-color,transform] duration-200 ease-plush active:scale-[0.985]',
+              'focus:outline-none',
+            )}
+          >
+            {t('merchant.entry.login')}
           </Link>
           <Link
             to="/welcome"

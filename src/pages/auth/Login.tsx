@@ -11,6 +11,7 @@ import {
   ShieldIcon,
 } from '@/components/icons';
 import { useT } from '@/lib/i18n';
+import { cn } from '@/lib/cn';
 import { useStore } from '@/lib/store';
 import { emptyRegistration } from '@/lib/store';
 import { useSupabaseAuth } from '@/lib/supabase';
@@ -310,16 +311,19 @@ export default function Login() {
                   <span className="tracking-tight">{t('auth.login.or')}</span>
                   <span className="h-px flex-1 bg-canvas-200" />
                 </div>
-                <Link to="/auth/nafath" className="block">
-                  <Button
-                    type="button"
-                    size="lg"
-                    variant="secondary"
-                    block
-                    leading={<ShieldIcon size={16} />}
-                  >
-                    {t('auth.login.continueNafath')}
-                  </Button>
+                <Link
+                  to="/auth/nafath"
+                  className={cn(
+                    'flex items-center justify-center gap-2 h-13 w-full rounded-xl2 px-5',
+                    'bg-white text-ink-900 ring-1 ring-inset ring-lavender-200',
+                    'font-semibold text-[15px] tracking-tight select-none',
+                    'hover:bg-lavender-50 active:bg-lavender-100',
+                    'transition-[background-color,transform] duration-200 ease-plush active:scale-[0.985]',
+                    'focus:outline-none',
+                  )}
+                >
+                  <ShieldIcon size={16} />
+                  {t('auth.login.continueNafath')}
                 </Link>
               </>
             )}
