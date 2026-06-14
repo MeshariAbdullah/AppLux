@@ -100,7 +100,7 @@ export default function Welcome() {
   const [partnersSheetOpen, setPartnersSheetOpen] = useState(false);
 
   return (
-    <div className="relative flex flex-col min-h-full bg-canvas-50 text-ink-900 overflow-hidden">
+    <div className="relative flex flex-col h-dvh md:h-[calc(100dvh-4rem)] bg-canvas-50 text-ink-900 overflow-hidden">
       {/* Restrained surface — one quiet lavender wash at the top end,
           one warm canvas fade at the bottom. The previous large
           gradient blurs are pulled back so the composition reads as
@@ -118,7 +118,10 @@ export default function Welcome() {
         <LangToggle tone="dark" />
       </div>
 
-      <div className="relative flex-1 px-6 pt-3 pb-8 flex flex-col">
+      {/* Scrollable content region. Sized to remaining space inside the
+          viewport-bounded Welcome container, so the CTA stack below
+          stays pinned regardless of content height. */}
+      <div className="relative flex-1 min-h-0 overflow-y-auto overflow-x-hidden no-scrollbar px-6 pt-3 flex flex-col">
         {/* ======== BRAND ======== */}
         <div className="flex justify-center pt-2">
           <LendWordmark
@@ -203,11 +206,22 @@ export default function Welcome() {
           t={t}
         />
 
-        {/* ======== CTA STACK ========
-            mt-auto absorbs the freed vertical space — CTAs stay
-            bottom-anchored; the partners strip floats above them
-            at a natural reading height. No filler card by design. */}
-        <div className="mt-auto pt-6 space-y-2.5">
+        {/* trailing space so the last in-scroll item isn't kissed
+            by the pinned CTA panel's edge. */}
+        <div className="pb-4" />
+      </div>
+
+      {/* ======== PINNED CTA STACK ========
+          Lives OUTSIDE the scroll region so it is always visible at
+          the bottom of the viewport regardless of how the user has
+          scrolled the content above. This is the fix for the dead-
+          login-button regression: with the previous layout the CTAs
+          rendered below the visible viewport on common phone sizes
+          (offscreen Y ≈ 1000 px on a 664px-tall viewport) and the
+          outer Welcome container's overflow-hidden made them
+          unreachable. */}
+      <div className="relative shrink-0 border-t border-canvas-200/70 bg-canvas-50/95 backdrop-blur px-6 pt-3 pb-[calc(env(safe-area-inset-bottom)+10px)]">
+        <div className="space-y-2.5">
           {/* Primary — solid dark navy. Styled inline so the global
               Button primary (lavender) is unchanged for the rest of
               the app. Matches Button size=lg proportions. */}
@@ -268,7 +282,7 @@ export default function Welcome() {
             </Link>
           )}
 
-          <p className="text-center text-[11px] text-ink-400 leading-relaxed px-6 pt-2">
+          <p className="text-center text-[11px] text-ink-400 leading-relaxed pt-2">
             {t('welcome.terms')}
           </p>
         </div>
