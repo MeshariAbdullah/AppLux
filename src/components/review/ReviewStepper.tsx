@@ -2,9 +2,14 @@ import { cn } from '@/lib/cn';
 import { CheckIcon } from '@/components/icons';
 import { useT } from '@/lib/i18n';
 
-export type ReviewStepKey = 'invoice' | 'contract' | 'note' | 'confirm';
+// The customer-side review wizard intentionally has THREE steps —
+// offer → contract → confirm. There is no "note" step here:
+// the promissory note doesn't exist yet at this stage. The note
+// is issued by the platform AFTER payment and is approved by the
+// customer in Nafath, outside the platform.
+export type ReviewStepKey = 'invoice' | 'contract' | 'confirm';
 
-const ORDER: ReviewStepKey[] = ['invoice', 'contract', 'note', 'confirm'];
+const ORDER: ReviewStepKey[] = ['invoice', 'contract', 'confirm'];
 
 type Props = {
   active: ReviewStepKey;

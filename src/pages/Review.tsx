@@ -172,7 +172,6 @@ export default function Review() {
           <RentalJourneyTimeline variant="lead" steps={journeySteps} />
           {step === 'invoice' && <InvoiceStep pkg={pkg} />}
           {step === 'contract' && <ContractStep pkg={pkg} />}
-          {step === 'note' && <NoteStep pkg={pkg} />}
           {step === 'confirm' && (
             <ConfirmStep
               pkg={pkg}
@@ -194,8 +193,7 @@ export default function Review() {
           const back: Record<ReviewStepKey, ReviewStepKey | null> = {
             invoice: null,
             contract: 'invoice',
-            note: 'contract',
-            confirm: 'note',
+            confirm: 'contract',
           };
           const prev = back[step];
           if (prev) setStep(prev);
@@ -204,8 +202,7 @@ export default function Review() {
         onNext={() => {
           const next: Record<ReviewStepKey, ReviewStepKey | null> = {
             invoice: 'contract',
-            contract: 'note',
-            note: 'confirm',
+            contract: 'confirm',
             confirm: null,
           };
           const nxt = next[step];
@@ -868,7 +865,7 @@ function StepFooter({
         {t('review.nav.back')}
       </Button>
       <Button variant="primary" className="flex-1" onClick={onNext}>
-        {step === 'note' ? t('review.nav.accept') : t('review.nav.next')}
+        {step === 'contract' ? t('review.nav.accept') : t('review.nav.next')}
       </Button>
     </div>
   );

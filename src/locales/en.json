@@ -365,9 +365,9 @@
       "daysLeftArabic": "{days} days remaining",
       "endsToday": "Ends today",
       "endedHint": "Awaiting closure",
-      "invoicePill": "Invoice",
+      "invoicePill": "Offer",
       "contractPill": "Contract",
-      "notePill": "Note",
+      "notePill": "Note (Nafath)",
       "stateSigned": "Signed",
       "statePending": "Pending",
       "cta": "View contract details"
@@ -379,8 +379,8 @@
       "step1Hint": "Browse verified partners in your sector.",
       "step2Title": "Receive a digital invoice",
       "step2Hint": "The merchant issues an invoice for your review.",
-      "step3Title": "Sign and pick up",
-      "step3Hint": "Once signed, your contract and note are documented.",
+      "step3Title": "Pay & sign in Nafath",
+      "step3Hint": "After approving the offer + contract you pay, then sign the note in Nafath outside the app — only then is the rental activated.",
       "ctaPrimary": "Explore partner boutiques",
       "ctaSecondary": "How Lend works"
     },
@@ -599,9 +599,8 @@
       "hint": "The link may have expired or wasn't issued for you. Ask the merchant for a fresh code and scan it again."
     },
     "steps": {
-      "invoice": "Invoice",
+      "invoice": "Offer",
       "contract": "Contract",
-      "note": "Note",
       "confirm": "Confirm"
     },
     "nav": {
@@ -648,7 +647,7 @@
     },
     "note": {
       "title": "Promissory note",
-      "subtitle": "Summary of the note to be digitally signed.",
+      "subtitle": "Summary of the note you'll sign in Nafath after payment.",
       "reference": "Note ref",
       "beneficiary": "Beneficiary",
       "principal": "Principal amount",
@@ -656,24 +655,24 @@
       "place": "Place of issue",
       "purpose": "Purpose",
       "summary": "Note summary",
-      "disclaimer": "The note is attested inside the Lend app on final approval. Official Nafith integration will arrive in a later release."
+      "disclaimer": "The note is issued by Lend after payment is completed, then you're handed to Nafath to sign it outside the app."
     },
     "confirm": {
       "title": "Confirm approval",
-      "subtitle": "Please confirm your approval of the contract and note to complete the digital signature.",
-      "eyebrow": "Final step",
-      "commitmentTitle": "Sign the contract and attest the promissory note",
-      "commitmentBody": "This is the decision that documents the rental. Once you sign, the contract and promissory note become part of your official rental record under our care.",
-      "consent1": "I confirm I have reviewed the invoice, contract and promissory note",
+      "subtitle": "Approve the offer and contract to continue to payment.",
+      "eyebrow": "Confirm approval",
+      "commitmentTitle": "Approve the offer and contract",
+      "commitmentBody": "After you approve, you continue to payment. Lend then issues the promissory note and hands you to Nafath to sign it. The rental is only activated once Lend verifies your Nafath approval.",
+      "consent1": "I confirm I have reviewed the offer and contract",
       "consent2": "I accept the damage liabilities outlined above",
-      "consent3": "I agree to have the promissory note attested digitally inside the Lend app",
-      "nafith": "Lend in-app note attestation",
-      "nafithNote": "The note is recorded inside the Lend app now. Official Nafith integration will be wired in later when ready.",
-      "approve": "Approve & sign",
-      "commitAction": "Sign and document the rental",
-      "afterHint": "After signing, the rental becomes officially recorded — you can return to this record any time.",
-      "processing": "Recording the rental…",
-      "recording": "Recording on the official record"
+      "consent3": "I agree to continue to payment and to sign the promissory note via Nafath after payment",
+      "nafith": "What happens after approval",
+      "nafithNote": "After approval: pay fees → Lend issues the note → sign it in Nafath outside the app → Lend verifies and activates the rental.",
+      "approve": "Approve & continue to payment",
+      "commitAction": "Approve & continue to payment",
+      "afterHint": "After approval you continue to payment, then we hand you off to Nafath to sign the promissory note.",
+      "processing": "Recording your approval…",
+      "recording": "Confirming approval & continuing to payment"
     },
     "framing": {
       "eyebrow": "Entering a rental",
@@ -686,19 +685,19 @@
     "title": "Rental Journey",
     "step": "Step {current} of {total}",
     "stages": {
-      "request": "Rental Request",
+      "request": "Offer & contract issued",
       "review": "Customer Review",
-      "agreement": "Contract Signed",
+      "agreement": "Payment & Nafath signing",
       "started": "Rental Started",
       "tracking": "Active Tracking",
       "return": "Return",
       "closed": "Contract & Note Closed"
     },
     "descriptions": {
-      "request": "The merchant has issued the rental request to you.",
-      "review": "Review the contract and promissory note before signing — you are the one acknowledging and signing.",
-      "agreement": "The contract is signed and the promissory note is attested inside the app.",
-      "started": "The agreed rental period has officially begun.",
+      "request": "The merchant issued the offer and contract and sent them to you in-app.",
+      "review": "Review the offer and contract, then approve to continue to payment.",
+      "agreement": "You pay the fees, then Lend issues the promissory note and hands you to Nafath to sign it outside the app. Once Lend verifies the Nafath approval, the rental is activated and the merchant is notified.",
+      "started": "The contract is activated after Nafath verification — the rental period has begun.",
       "tracking": "The contract is active — the remaining period is being tracked.",
       "return": "The rental period is closing — it's time to return the piece.",
       "closed": "The contract is closed and the promissory note is officially released."
@@ -728,37 +727,37 @@
     }
   },
   "approval": {
-    "title": "Approved",
-    "subtitle": "Your contract has been approved and the promissory note signed.",
-    "documentedHeadline": "Your rental is officially documented",
-    "documentedSubtitle": "The contract and promissory note are now part of your rental's official record, kept under our care.",
-    "officialSeal": "Official rental record",
-    "contractSigned": "Contract signed",
-    "noteSigned": "Note attested digitally",
-    "approvedAt": "Signed at",
-    "viewTracking": "Track contract",
+    "title": "Approval recorded",
+    "subtitle": "You've approved the offer and contract. Next: pay the fees, then sign the promissory note in Nafath.",
+    "documentedHeadline": "Your approval is recorded",
+    "documentedSubtitle": "Next we continue with payment, then we hand you to Nafath to sign the promissory note outside the app, then Lend verifies and activates the rental.",
+    "officialSeal": "Customer approval recorded",
+    "contractSigned": "Contract approved",
+    "noteSigned": "Note will be issued after payment",
+    "approvedAt": "Approved at",
+    "viewTracking": "Track rental",
     "goHome": "Back to home",
-    "summaryTitle": "Signing summary",
-    "documentedRecordTitle": "Official rental record",
-    "documentedRecordTime": "Documented at {time}",
+    "summaryTitle": "Approval summary",
+    "documentedRecordTitle": "Customer approval",
+    "documentedRecordTime": "Approved at {time}",
     "nextStepsTitle": "What happens next",
     "steps": {
       "review": {
-        "title": "Keep your signed contract",
-        "hint": "You can download the contract and note any time from the tracking screen."
+        "title": "Pay the rental fees",
+        "hint": "The payment screen opens next. Lend issues the promissory note right after payment is completed."
       },
       "invoice": {
-        "title": "Watch for the monthly rental invoice",
-        "hint": "We'll notify you ahead of the due date so payments stay current."
+        "title": "Sign the note via Nafath",
+        "hint": "After payment we hand you to Nafath outside the app to sign the note, then bring you back to Lend."
       },
       "return": {
-        "title": "Return the piece on the agreed date",
-        "hint": "A clean return automatically closes the note and frees up your eligibility."
+        "title": "Lend verifies & notifies the merchant",
+        "hint": "Lend verifies the Nafath approval, then activates the rental and notifies the merchant."
       }
     },
     "contact": {
       "title": "Need a hand?",
-      "hint": "Lend support is available for anything related to your contract or note.",
+      "hint": "Lend support is available to help with payment or the Nafath note signing.",
       "cta": "Open support"
     },
     "invalid": {
@@ -989,15 +988,15 @@
       },
       "handoff": {
         "seal": "Rental package issued",
-        "title": "The in-store session is complete",
-        "body": "The rental is now ready for documentation. The renter takes it from here.",
+        "title": "Rental package issued",
+        "body": "Your in-store step is done — the rental isn't active yet. The renter picks up the package in-app and works through the next steps before you activate the rental.",
         "line1Label": "Rental package",
         "line1Value": "Created · {ref}",
         "line2Label": "Renter",
-        "line2Value": "{name} can now review and sign on their device.",
+        "line2Value": "{name} will review the offer and contract on their device.",
         "renterFallback": "The renter",
-        "line3Label": "Documented journey",
-        "line3Value": "Begins the moment the renter accepts. You'll see it in the timeline below.",
+        "line3Label": "Renter's next steps",
+        "line3Value": "Review offer & contract → Pay fees → Sign note in Nafath outside the app → Lend verifies → You're notified to activate.",
         "tokenLabel": "Rental review token",
         "copyCta": "Copy token",
         "openReviewCta": "Open review screen",
@@ -1225,12 +1224,12 @@
         }
       },
       "nafith": {
-        "title": "Nafith attestation",
-        "hint": "Digital e-signature for the promissory note via the official Nafith platform.",
-        "submit": "Submit to Nafith",
-        "submitSub": "The promissory note is sent for customer e-signing.",
-        "approve": "Nafith approval",
-        "approveSub": "Binding digital attestation is recorded.",
+        "title": "Promissory note via Nafath",
+        "hint": "After the customer pays, the platform issues the note and hands the customer to Nafath to sign it outside the app. Lend verifies once Nafath confirms, then notifies you.",
+        "submit": "Note issued after payment",
+        "submitSub": "Once the customer's payment is received, Lend issues the note and links it to Nafath automatically.",
+        "approve": "Customer Nafath approval + Lend verification",
+        "approveSub": "The customer signs the note in Nafath outside the app. Lend then verifies and notifies you to activate.",
         "state": {
           "done": "Done",
           "current": "In progress",
@@ -1245,12 +1244,12 @@
         "inProgress": "In progress",
         "pending": "Pending",
         "stage": {
-          "created": "Invoice created",
+          "created": "Offer & contract issued",
           "customer-approved": "Customer approved",
-          "documents-ready": "Documents ready",
-          "nafith-submitted": "Submitted to Nafith",
-          "nafith-approved": "Approved by Nafith",
-          "activated": "Rental active"
+          "documents-ready": "Customer paid, note issued",
+          "nafith-submitted": "Note awaiting Nafath approval",
+          "nafith-approved": "Customer Nafath approval",
+          "activated": "Rental activated & you're notified"
         }
       },
       "activity": {
@@ -1258,14 +1257,14 @@
         "count": "{count} events"
       },
       "events": {
-        "created": "Invoice created",
-        "customer-approved": "Customer approved",
-        "contract-ready": "Contract ready",
-        "note-ready": "Promissory note ready",
-        "nafith-submitted": "Submitted to Nafith",
-        "nafith-approved": "Approved by Nafith",
-        "activated": "Rental activated",
-        "payment-received": "Payment received",
+        "created": "Offer & contract issued",
+        "customer-approved": "Customer approved offer & contract",
+        "contract-ready": "Offer & contract ready",
+        "note-ready": "Note issued and handed to Nafath",
+        "nafith-submitted": "Note awaiting customer Nafath approval",
+        "nafith-approved": "Customer signed the note via Nafath",
+        "activated": "Rental activated & you were notified",
+        "payment-received": "Customer payment received",
         "due-reminder": "Payment reminder sent",
         "returned": "Item returned"
       },
