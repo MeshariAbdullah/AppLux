@@ -23,8 +23,10 @@ import {
 } from '@/components/icons';
 import { cn } from '@/lib/cn';
 import { useI18n, useT } from '@/lib/i18n';
-import { RentalJourneyTimeline } from '@/components/rental/RentalJourneyTimeline';
-import { deriveJourneyFromMerchantRental } from '@/lib/rentalJourney';
+import {
+  MerchantStatusStrip,
+  type MerchantStatusStep,
+} from '@/components/merchant/MerchantStatusStrip';
 import { useStore } from '@/lib/store';
 import {
   adaptContractToMerchantRental,
@@ -79,6 +81,22 @@ function toneForNafith(state: MerchantNafithState): StatusTone {
   if (state === 'approved') return 'success';
   if (state === 'submitted') return 'gold';
   return 'neutral';
+}
+
+// Map an in-flight rental's operational state to one of the four
+// merchant-facing status steps. Only meaningful pre-activation; the
+// caller already gates this away once the rental is live.
+function deriveMerchantStatusStep(rental: MerchantRental): MerchantStatusStep {
+  if (rental.customerApproved) return 'notify';
+  if (
+    rental.contractState === 'signed' ||
+    rental.noteState === 'signed' ||
+    rental.nafithState === 'submitted' ||
+    rental.nafithState === 'approved'
+  ) {
+    return 'payment-and-signing';
+  }
+  return 'customer-review';
 }
 
 function stageStates(rental: MerchantRental): Record<StageKey, StageState> {
@@ -229,10 +247,16 @@ export default function MerchantRentalDetails() {
       />
       <Screen padded={false} className="bg-canvas">
         <div className="px-5 pt-5 pb-10 space-y-5">
-          <RentalJourneyTimeline
-            variant="lead"
-            steps={deriveJourneyFromMerchantRental(rental)}
-          />
+          {/* Pre-activation operational status. Hidden once the rental
+              is live — at that point the status chip in the header,
+              the closure banner below, and the activity log already
+              tell the merchant everything they need. */}
+          {!rental.customerApproved && (
+            <MerchantStatusStrip
+              t={t}
+              currentStep={deriveMerchantStatusStep(rental)}
+            />
+          )}
 
           {/* Outcome banner */}
           {closureState !== 'active' && (

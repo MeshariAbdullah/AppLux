@@ -38,8 +38,7 @@ import {
   maskMobile,
   type MobileIssue,
 } from '@/lib/mobile';
-import { RentalJourneyTimeline } from '@/components/rental/RentalJourneyTimeline';
-import { deriveJourneyFromInvoice } from '@/lib/rentalJourney';
+import { MerchantStatusStrip } from '@/components/merchant/MerchantStatusStrip';
 import { cn } from '@/lib/cn';
 
 // =====================================================================
@@ -1306,9 +1305,6 @@ function OperationCard({
 function EligibilityCard({
   t,
   verdict,
-  rentalAmount,
-  originalItemValue,
-  formatCurrency,
   issuing,
   issueError,
   issueDisabled,
@@ -1332,12 +1328,16 @@ function EligibilityCard({
   onReduce: () => void;
   onCancel: () => void;
 }) {
-  const verdictTone =
+  // Merchant-facing outcome only. No customer financial figures.
+  const outcome: 'approved' | 'insufficient' | 'review' =
     verdict.status === 'approved'
-      ? 'success'
+      ? 'approved'
       : verdict.status === 'insufficient'
-        ? 'danger'
-        : 'warn';
+        ? 'insufficient'
+        : 'review';
+
+  const tone =
+    outcome === 'approved' ? 'success' : outcome === 'insufficient' ? 'danger' : 'warn';
 
   return (
     <StepShell
@@ -1347,74 +1347,37 @@ function EligibilityCard({
       active={active}
       locked={locked}
     >
-      {(active || locked) && verdict.status !== 'missing' && (
+      {(active || locked) && (
         <div className="space-y-3">
-          {/* What we're evaluating — named explicitly so the merchant
-              understands eligibility is being checked against the
-              original item value, not the rental fee. */}
-          <div className="rounded-xl2 bg-canvas-100/70 ring-1 ring-canvas-200 px-3.5 py-2.5">
-            <div className="text-[10px] font-semibold uppercase tracking-[0.12em] text-ink-500">
-              {t('merchant.session.eligibility.checkingAgainst')}
-            </div>
-            <div className="mt-1 flex items-baseline justify-between gap-3">
-              <div className="text-[13px] text-ink-900">
-                {t('merchant.session.eligibility.originalItemValueLabel')}
-              </div>
-              <div className="num font-bold text-ink-900 text-[14px]">
-                {formatCurrency(originalItemValue)}
-              </div>
-            </div>
-            <div className="text-[10.5px] text-ink-400 leading-relaxed mt-0.5">
-              {t('merchant.session.eligibility.checkingAgainstHint')}
-            </div>
-          </div>
-
-          <div className="grid grid-cols-3 gap-2.5">
-            <EligibilityFigure
-              label={t('merchant.session.eligibility.limit')}
-              value={formatCurrency(verdict.limit)}
-            />
-            <EligibilityFigure
-              label={t('merchant.session.eligibility.used')}
-              value={formatCurrency(verdict.used)}
-            />
-            <EligibilityFigure
-              label={t('merchant.session.eligibility.remaining')}
-              value={formatCurrency(verdict.remaining)}
-              emphasize
-            />
-          </div>
-
           <div
             className={cn(
-              'rounded-xl2 px-4 py-3 ring-1 flex items-center justify-between gap-3',
-              verdictTone === 'success' && 'bg-success-50 ring-success-500/20 text-success-700',
-              verdictTone === 'danger' && 'bg-danger-50 ring-danger-500/20 text-danger-700',
-              verdictTone === 'warn' && 'bg-warn-50 ring-warn-500/20 text-warn-700',
+              'rounded-xl2 px-4 py-3.5 ring-1 flex items-center gap-3',
+              tone === 'success' && 'bg-success-50 ring-success-500/20 text-success-700',
+              tone === 'danger' && 'bg-danger-50 ring-danger-500/20 text-danger-700',
+              tone === 'warn' && 'bg-warn-50 ring-warn-500/20 text-warn-700',
             )}
           >
+            <span
+              className={cn(
+                'h-9 w-9 shrink-0 rounded-xl grid place-items-center ring-1 bg-white',
+                tone === 'success' && 'text-success-600 ring-success-500/20',
+                tone === 'danger' && 'text-danger-600 ring-danger-500/20',
+                tone === 'warn' && 'text-warn-600 ring-warn-500/20',
+              )}
+            >
+              {outcome === 'approved' ? <BadgeCheckIcon size={16} /> : <ClockIcon size={16} />}
+            </span>
             <div className="min-w-0">
-              <div className="text-[10.5px] font-semibold uppercase tracking-[0.12em] opacity-80">
-                {verdict.status === 'approved'
-                  ? t('merchant.session.eligibility.verdict.approved')
-                  : t('merchant.session.eligibility.verdict.insufficient')}
+              <div className="text-[13.5px] font-semibold">
+                {t(`merchant.session.eligibility.verdict.${outcome}`)}
               </div>
-              <div className="mt-0.5 text-[12.5px] num">
-                {verdict.status === 'approved'
-                  ? t('merchant.session.eligibility.detailApproved')
-                      .replace('{amount}', formatCurrency(verdict.required))
-                  : t('merchant.session.eligibility.detailShort')
-                      .replace('{shortBy}', formatCurrency(verdict.shortBy))}
+              <div className="mt-0.5 text-[12px] opacity-80 leading-relaxed">
+                {t(`merchant.session.eligibility.verdict.${outcome}Hint`)}
               </div>
             </div>
-            {verdict.status === 'approved' ? (
-              <BadgeCheckIcon size={18} />
-            ) : (
-              <ClockIcon size={18} />
-            )}
           </div>
 
-          {active && verdict.status === 'approved' && (
+          {active && outcome === 'approved' && (
             <>
               {issueError && (
                 <div className="rounded-xl2 bg-danger-50 ring-1 ring-danger-500/25 px-3.5 py-2.5 text-[12.5px] text-danger-700">
@@ -1430,16 +1393,12 @@ function EligibilityCard({
                 disabled={issuing || issueDisabled}
                 leading={<DocIcon size={16} />}
               >
-                {t('merchant.session.eligibility.issuePackageCta')
-                  .replace('{amount}', formatCurrency(rentalAmount))}
+                {t('merchant.session.eligibility.issuePackageCta')}
               </Button>
-              <p className="text-center text-[11.5px] text-ink-400 leading-relaxed px-2">
-                {t('merchant.session.eligibility.issuePackageHint')}
-              </p>
             </>
           )}
 
-          {active && verdict.status === 'insufficient' && (
+          {active && outcome === 'insufficient' && (
             <div className="grid grid-cols-2 gap-2">
               <Button variant="secondary" size="md" onClick={onReduce}>
                 {t('merchant.session.eligibility.reduceCta')}
@@ -1449,41 +1408,17 @@ function EligibilityCard({
               </Button>
             </div>
           )}
-        </div>
-      )}
 
-      {(active || locked) && verdict.status === 'missing' && (
-        <div className="rounded-xl2 bg-warn-50 ring-1 ring-warn-500/25 px-3.5 py-2.5 text-[12.5px] text-warn-700">
-          {t('merchant.session.eligibility.missing')}
+          {active && outcome === 'review' && (
+            <div className="grid grid-cols-1">
+              <Button variant="ghost" size="md" onClick={onCancel}>
+                {t('merchant.session.eligibility.cancelCta')}
+              </Button>
+            </div>
+          )}
         </div>
       )}
     </StepShell>
-  );
-}
-
-function EligibilityFigure({
-  label,
-  value,
-  emphasize,
-}: {
-  label: ReactNode;
-  value: ReactNode;
-  emphasize?: boolean;
-}) {
-  return (
-    <div
-      className={cn(
-        'rounded-xl2 px-3 py-2.5 ring-1',
-        emphasize
-          ? 'bg-lavender-50 ring-lavender-200 text-lavender-700'
-          : 'bg-canvas-100 ring-canvas-200 text-ink-700',
-      )}
-    >
-      <div className="text-[10px] font-semibold uppercase tracking-[0.1em] opacity-80">
-        {label}
-      </div>
-      <div className="mt-0.5 text-[13.5px] num font-bold text-ink-900">{value}</div>
-    </div>
   );
 }
 
@@ -1494,9 +1429,7 @@ function EligibilityFigure({
 
 function HandoffCard({
   t,
-  dir,
   invoice,
-  renter,
   navigate,
 }: {
   t: (k: string, v?: Record<string, string | number>) => string;
@@ -1505,15 +1438,6 @@ function HandoffCard({
   renter: ProfileRow | null;
   navigate: (path: string) => void;
 }) {
-  const token = invoice.scan_token ?? invoice.invoice_number;
-  const journey = deriveJourneyFromInvoice(
-    {
-      issued_at: invoice.issued_at,
-      created_at: invoice.created_at,
-      status: invoice.status,
-    },
-    { viewerIsReviewing: false },
-  );
   return (
     <>
       <section className="rounded-xl3 bg-white hairline shadow-soft p-6 animate-reveal-up">
@@ -1528,62 +1452,20 @@ function HandoffCard({
           {t('merchant.session.handoff.body')}
         </p>
 
-        {/* Three explicit lines of confirmation — what just happened, what
-            the customer does next, where the documented journey begins. */}
-        <ol className="mt-5 space-y-3">
-          <HandoffLine
-            number={1}
-            label={t('merchant.session.handoff.line1Label')}
-            value={t('merchant.session.handoff.line1Value', {
-              ref: invoice.invoice_number,
-            })}
-            tone="documented"
-          />
-          <HandoffLine
-            number={2}
-            label={t('merchant.session.handoff.line2Label')}
-            value={t('merchant.session.handoff.line2Value', {
-              name: renter?.full_name ?? t('merchant.session.handoff.renterFallback'),
-            })}
-          />
-          <HandoffLine
-            number={3}
-            label={t('merchant.session.handoff.line3Label')}
-            value={t('merchant.session.handoff.line3Value')}
-          />
-        </ol>
-
-        <div className="mt-5 rounded-xl2 bg-canvas-100 ring-1 ring-canvas-200 p-4">
+        {/* Request number — the single identifier the merchant needs. */}
+        <div className="mt-5 rounded-xl2 bg-canvas-100 ring-1 ring-canvas-200 px-4 py-3">
           <div className="text-[10.5px] font-semibold uppercase tracking-[0.12em] text-ink-500">
-            {t('merchant.session.handoff.tokenLabel')}
+            {t('merchant.session.handoff.requestNumberLabel')}
           </div>
-          <div className="mt-1.5 font-mono text-[13.5px] text-ink-900 break-all num">
-            {token}
+          <div className="mt-1 font-semibold text-[15px] text-ink-900 num">
+            {invoice.invoice_number}
           </div>
-        </div>
-
-        <div className="mt-5 grid grid-cols-2 gap-2">
-          <Button
-            variant="primary"
-            size="md"
-            onClick={() => {
-              navigator.clipboard?.writeText(token).catch(() => {});
-            }}
-            leading={<WalletIcon size={14} />}
-          >
-            {t('merchant.session.handoff.copyCta')}
-          </Button>
-          <Link
-            to={`/review/${token}`}
-            className="inline-flex items-center justify-center h-11 px-4 rounded-xl2 bg-white ring-1 ring-inset ring-lavender-200 text-ink-900 text-[14px] font-semibold gap-2 hover:bg-lavender-50"
-          >
-            {t('merchant.session.handoff.openReviewCta')}
-            <ArrowIcon size={14} className={cn(dir === 'rtl' ? 'rotate-180' : '')} />
-          </Link>
         </div>
       </section>
 
-      <RentalJourneyTimeline variant="lead" steps={journey} />
+      {/* 4-step merchant-facing operational status — no customer journey
+          narration, no platform internals. */}
+      <MerchantStatusStrip t={t} currentStep="customer-review" />
 
       <div className="text-center pt-2">
         <button
@@ -1595,40 +1477,6 @@ function HandoffCard({
         </button>
       </div>
     </>
-  );
-}
-
-function HandoffLine({
-  number,
-  label,
-  value,
-  tone,
-}: {
-  number: number;
-  label: ReactNode;
-  value: ReactNode;
-  tone?: 'documented';
-}) {
-  return (
-    <li className="flex items-start gap-3">
-      <span
-        className={cn(
-          'h-7 w-7 shrink-0 rounded-full grid place-items-center text-[11.5px] font-semibold num ring-1',
-          tone === 'documented'
-            ? 'bg-lavender-400 text-white ring-lavender-200'
-            : 'bg-white text-ink-700 ring-canvas-200',
-        )}
-        aria-hidden
-      >
-        {tone === 'documented' ? <CheckIcon size={13} strokeWidth={3} /> : number}
-      </span>
-      <div className="min-w-0">
-        <div className="text-[10.5px] font-semibold uppercase tracking-[0.12em] text-ink-500">
-          {label}
-        </div>
-        <div className="mt-0.5 text-[13px] text-ink-900 leading-relaxed">{value}</div>
-      </div>
-    </li>
   );
 }
 

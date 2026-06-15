@@ -962,44 +962,29 @@
         "summary": "{days}-day rental at {rate} per day"
       },
       "eligibility": {
-        "title": "Eligibility availability check",
-        "hint": "Checks the renter's existing limit against the original item value. No new assessment.",
-        "checkingAgainst": "Checking against",
-        "originalItemValueLabel": "Original item value",
-        "checkingAgainstHint": "Eligibility holds the item value as collateral. The rental fee is paid separately.",
-        "limit": "Limit",
-        "used": "Used",
-        "remaining": "Remaining",
+        "title": "Eligibility check",
+        "hint": "We only check: can this rental proceed?",
         "verdict": {
-          "approved": "Approved",
-          "insufficient": "Insufficient remaining limit"
+          "approved": "Renter eligible",
+          "approvedHint": "You can issue the rental package now.",
+          "insufficient": "Not eligible for this amount",
+          "insufficientHint": "Reduce the item value or cancel the session.",
+          "review": "Review required",
+          "reviewHint": "This renter has no eligibility profile yet. Contact the Lend team."
         },
-        "detailApproved": "Available to cover an item value of {amount}.",
-        "detailShort": "Short by {shortBy}. Reduce the original item value or cancel.",
-        "issuePackageCta": "Issue rental package · {amount}",
-        "issuePackageHint": "Prepares the rental for documentation. The renter then reviews and signs.",
-        "reduceCta": "Reduce item value",
+        "issuePackageCta": "Issue rental package",
+        "reduceCta": "Reduce value",
         "cancelCta": "Cancel session",
-        "missing": "This renter has no eligibility profile yet. Ask an Lend operator to assign one.",
         "errors": {
-          "fetch": "Could not load the renter's eligibility.",
+          "fetch": "Could not check the renter's eligibility.",
           "merchantLoading": "Your merchant profile is still loading. Wait a moment and try again."
         }
       },
       "handoff": {
         "seal": "Rental package issued",
         "title": "Rental package issued",
-        "body": "Your in-store step is done — the rental isn't active yet. The renter picks up the package in-app and works through the next steps before you activate the rental.",
-        "line1Label": "Rental package",
-        "line1Value": "Created · {ref}",
-        "line2Label": "Renter",
-        "line2Value": "{name} will review the offer and contract on their device.",
-        "renterFallback": "The renter",
-        "line3Label": "Renter's next steps",
-        "line3Value": "Review offer & contract → Pay fees → Sign note in Nafath outside the app → Lend verifies → You're notified to activate.",
-        "tokenLabel": "Rental review token",
-        "copyCta": "Copy token",
-        "openReviewCta": "Open review screen",
+        "body": "The renter is continuing the next steps. You'll be notified when payment and Nafath approval are complete.",
+        "requestNumberLabel": "Request number",
         "doneCta": "Return to operations"
       }
     },
@@ -1173,6 +1158,15 @@
       "viewAll": "View all",
       "signOut": "Sign out",
       "branchesCount": "{count} branches"
+    },
+    "status": {
+      "title": "Request status",
+      "steps": {
+        "created": "Request created",
+        "customer-review": "Awaiting renter review",
+        "payment-and-signing": "Awaiting payment & Nafath signing",
+        "notify": "You'll be notified when complete"
+      }
     },
     "rentals": {
       "title": "Active rentals",
