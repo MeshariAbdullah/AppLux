@@ -160,6 +160,7 @@ function mapNoteStatus(status: DBNoteStatus): UINoteStatus {
 export function adaptInvoice(
   row: RentalInvoiceRow,
   items: RentalInvoiceItemRow[] = [],
+  merchantName?: string,
 ): Invoice {
   const headline =
     items[0]?.item_name ??
@@ -173,6 +174,7 @@ export function adaptInvoice(
     dueDate: row.expires_at ?? row.issued_at ?? row.created_at,
     amount: Number(row.total_amount),
     status: mapInvoiceStatus(row.status),
+    counterparty: merchantName,
   };
 }
 

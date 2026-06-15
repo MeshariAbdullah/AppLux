@@ -356,7 +356,8 @@
       "title": "فاتورة بانتظار موافقتك",
       "expiresIn": "تنتهي خلال {days} أيام",
       "expiresInArabic": "تنتهي خلال {days} أيام",
-      "fromMerchant": "من",
+      "fromMerchant": "من {merchant}",
+      "morePending": "+{count} فاتورة أخرى بانتظارك · عرض الكل",
       "cta": "مراجعة الفاتورة وقبولها"
     },
     "current": {
@@ -724,6 +725,16 @@
         "label": "موثَّق عبر نافذ",
         "hint": "تم توثيق السند رقمياً عبر نافذ."
       }
+    }
+  },
+  "continuation": {
+    "title": "خطوات الإيجار",
+    "steps": {
+      "offer-and-contract": "العرض والعقد جاهزان",
+      "review": "مراجعتك للعرض",
+      "payment": "دفع الرسوم",
+      "nafath": "توقيع السند عبر نفاذ",
+      "activation": "تفعيل الإيجار"
     }
   },
   "approval": {

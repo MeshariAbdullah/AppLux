@@ -147,7 +147,9 @@ export default function Home() {
         nameMap[m.id] = display;
       }
 
-      setLiveInvoices(invoiceRows.map((r) => adaptInvoice(r)));
+      setLiveInvoices(
+        invoiceRows.map((r) => adaptInvoice(r, [], nameMap[r.merchant_id])),
+      );
       setLiveContracts(
         contractRows
           .filter((c) => c.status !== 'ended' && c.status !== 'cancelled')
@@ -190,13 +192,15 @@ export default function Home() {
   }, [invoices]);
 
   // Build mode-aware projections.
+  // Sorted by ascending due date so the most urgent invoice is first.
   const attentionInvoices = useMemo<AttentionInvoice[]>(() => {
     return invoices
       .filter((inv) => inv.status === 'due')
       .map((inv) => ({
         ...inv,
-        merchantName: '', // resolved through row lookup below
-      }));
+        merchantName: inv.counterparty ?? '',
+      }))
+      .sort((a, b) => a.dueDate.localeCompare(b.dueDate));
   }, [invoices]);
 
   const activeRentals = useMemo<ActiveRental[]>(() => {
@@ -424,61 +428,76 @@ function AttentionStack({
   formatDate: (iso: string) => string;
   onReview: (invoiceId: string) => void;
 }) {
+  // Show only the most urgent pending invoice. The home page is an
+  // action hub, not a feed — if there are more, link to the full list.
+  const top = invoices[0];
+  if (!top) return null;
+  const extra = invoices.length - 1;
+  const daysLeft = daysUntil(top.dueDate);
   return (
-    <div className="space-y-2.5">
-      {invoices.map((inv) => {
-        const daysLeft = daysUntil(inv.dueDate);
-        return (
-          <div
-            key={inv.id}
-            className={cn(
-              'relative rounded-xl3 bg-gradient-to-br from-warn-50 to-white',
-              'ring-1 ring-warn-500/25 p-5 shadow-soft animate-fade-in',
-            )}
-          >
-            <div className="flex items-start gap-3">
-              <span className="h-10 w-10 rounded-2xl bg-warn-600 text-white grid place-items-center shrink-0 shadow-soft">
-                <ReceiptIcon size={18} />
-              </span>
-              <div className="min-w-0 flex-1">
-                <div className="text-[11px] font-semibold text-warn-700 uppercase tracking-[0.08em]">
-                  {daysLeft > 0
-                    ? t('home.attention.expiresIn', { days: daysLeft })
-                    : t('common.overdue')}
-                </div>
-                <div className="mt-0.5 text-[15px] font-semibold text-ink-900 tracking-tight truncate">
-                  {t('home.attention.title')}
-                </div>
-                <div className="mt-1.5 text-[13px] text-ink-700 truncate">
-                  {inv.title}
-                </div>
-                <div className="mt-2 flex items-center gap-3 text-[12px] text-ink-500">
-                  <span className="num font-semibold text-ink-900">
-                    {formatCurrency(inv.amount)}
-                  </span>
-                  <span className="text-ink-300">·</span>
-                  <span className="num">{formatDate(inv.dueDate)}</span>
-                </div>
-              </div>
+    <div className="space-y-2">
+      <div
+        key={top.id}
+        className={cn(
+          'relative rounded-xl3 bg-gradient-to-br from-warn-50 to-white',
+          'ring-1 ring-warn-500/25 p-5 shadow-soft animate-fade-in',
+        )}
+      >
+        <div className="flex items-start gap-3">
+          <span className="h-10 w-10 rounded-2xl bg-warn-600 text-white grid place-items-center shrink-0 shadow-soft">
+            <ReceiptIcon size={18} />
+          </span>
+          <div className="min-w-0 flex-1">
+            <div className="text-[11px] font-semibold text-warn-700 uppercase tracking-[0.08em]">
+              {daysLeft > 0
+                ? t('home.attention.expiresIn', { days: daysLeft })
+                : t('common.overdue')}
             </div>
-            <button
-              type="button"
-              onClick={() => onReview(inv.id)}
-              className={cn(
-                'mt-4 inline-flex items-center justify-center gap-1.5 h-11 w-full rounded-xl2',
-                'bg-ink-900 text-white font-semibold text-[14px] tracking-tight',
-                'shadow-plush hover:bg-ink-800 active:bg-ink-800 transition-colors',
-              )}
-            >
-              {t('home.attention.cta')}
-              <ArrowIcon
-                size={14}
-                className={cn(dir === 'rtl' ? 'rotate-180' : '')}
-              />
-            </button>
+            {top.merchantName && (
+              <div className="mt-0.5 text-[11.5px] text-ink-500 truncate">
+                {t('home.attention.fromMerchant', { merchant: top.merchantName })}
+              </div>
+            )}
+            <div className="mt-1 text-[16px] font-semibold text-ink-900 tracking-tight truncate">
+              {top.title}
+            </div>
+            <div className="mt-2 flex items-center gap-3 text-[12px] text-ink-500">
+              <span className="num font-semibold text-ink-900">
+                {formatCurrency(top.amount)}
+              </span>
+              <span className="text-ink-300">·</span>
+              <span className="num">{formatDate(top.dueDate)}</span>
+            </div>
           </div>
-        );
-      })}
+        </div>
+        <button
+          type="button"
+          onClick={() => onReview(top.id)}
+          className={cn(
+            'mt-4 inline-flex items-center justify-center gap-1.5 h-11 w-full rounded-xl2',
+            'bg-ink-900 text-white font-semibold text-[14px] tracking-tight',
+            'shadow-plush hover:bg-ink-800 active:bg-ink-800 transition-colors',
+          )}
+        >
+          {t('home.attention.cta')}
+          <ArrowIcon
+            size={14}
+            className={cn(dir === 'rtl' ? 'rotate-180' : '')}
+          />
+        </button>
+      </div>
+
+      {extra > 0 && (
+        <Link
+          to="/contracts"
+          className={cn(
+            'block text-center text-[12px] font-semibold text-lavender-700',
+            'hover:text-lavender-800',
+          )}
+        >
+          {t('home.attention.morePending', { count: extra })}
+        </Link>
+      )}
     </div>
   );
 }

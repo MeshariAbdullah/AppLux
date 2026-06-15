@@ -356,7 +356,8 @@
       "title": "Invoice waiting for your review",
       "expiresIn": "Expires in {days, plural, one {# day} other {# days}}",
       "expiresInArabic": "Expires in {days} days",
-      "fromMerchant": "From",
+      "fromMerchant": "From {merchant}",
+      "morePending": "+{count} more invoice(s) waiting · View all",
       "cta": "Review & accept"
     },
     "current": {
@@ -724,6 +725,16 @@
         "label": "Nafith attested",
         "hint": "The note has been digitally attested via Nafith."
       }
+    }
+  },
+  "continuation": {
+    "title": "Rental steps",
+    "steps": {
+      "offer-and-contract": "Offer & contract ready",
+      "review": "Your review",
+      "payment": "Pay the fees",
+      "nafath": "Sign note via Nafath",
+      "activation": "Rental activated"
     }
   },
   "approval": {

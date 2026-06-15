@@ -18,6 +18,9 @@ export type Invoice = {
   dueDate: string;
   amount: number;
   status: InvoiceStatus;
+  /** Merchant display name in the active locale. Populated by
+   *  adapters when a merchant lookup is available; '' otherwise. */
+  counterparty?: string;
 };
 
 export type ContractStatus = 'active' | 'pending' | 'ended';

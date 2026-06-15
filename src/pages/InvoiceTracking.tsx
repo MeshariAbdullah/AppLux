@@ -1,17 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Header, Screen } from '@/components/layout';
-import {
-  Button,
-  Card,
-  CardDivider,
-  EmptyState,
-  SectionHeader,
-} from '@/components/ui';
+import { Button, Card, EmptyState } from '@/components/ui';
 import {
   AlertIcon,
   ArrowIcon,
-  BadgeCheckIcon,
   CheckIcon,
   ClockIcon,
   DocIcon,
@@ -26,45 +19,35 @@ import {
   adaptContract,
   adaptInvoice,
   fetchInvoiceById,
+  fetchMerchant,
   getSupabase,
   listInvoiceItems,
   useSupabaseAuth,
 } from '@/lib/supabase';
 import type { Contract, Invoice } from '@/lib/data';
 import { InvoiceStatusChip } from '@/components/rental/StatusChips';
-import { RentalJourneyTimeline } from '@/components/rental/RentalJourneyTimeline';
 import {
-  deriveJourneyFromUIContract,
-  RENTAL_STAGES,
-  type JourneyStep,
-} from '@/lib/rentalJourney';
+  CustomerContinuationStrip,
+  type ContinuationStep,
+} from '@/components/rental/CustomerContinuationStrip';
 import {
   DocTimeline,
   type TimelineEvent,
 } from '@/components/track/DocTimeline';
 import { PlatformBadge } from '@/components/track/PlatformBadge';
 
-function buildInvoiceJourney(
-  invoice: Invoice | undefined,
+// Map an invoice's status (and any linked contract state) to the
+// customer's current step in the 5-step continuation strip.
+function deriveContinuationStep(
+  invoice: Invoice,
   contract: Contract | null | undefined,
-): JourneyStep[] {
+): ContinuationStep {
   if (contract) {
-    return deriveJourneyFromUIContract(
-      contract,
-      invoice ? { issuedAt: invoice.issuedAt } : null,
-    );
+    if (contract.status === 'active') return 'activation';
+    return 'nafath';
   }
-  return RENTAL_STAGES.map((stage): JourneyStep => {
-    if (stage === 'request')
-      return { stage, status: 'completed', at: invoice?.issuedAt ?? null };
-    if (stage === 'review')
-      return {
-        stage,
-        status: invoice?.status === 'paid' ? 'completed' : 'active',
-        at: null,
-      };
-    return { stage, status: 'pending', at: null };
-  });
+  if (invoice.status === 'paid') return 'nafath';
+  return 'review';
 }
 
 function addDays(iso: string, days: number) {
@@ -82,6 +65,7 @@ export default function InvoiceTracking() {
   const { formatCurrency, formatDate } = useI18n();
 
   const demoInvoice = useMemo(() => invoices.find((i) => i.id === id), [invoices, id]);
+  const { locale } = useI18n();
 
   const [liveInvoice, setLiveInvoice] = useState<Invoice | null>(null);
   const [liveContract, setLiveContract] = useState<Contract | null>(null);
@@ -96,9 +80,18 @@ export default function InvoiceTracking() {
     (async () => {
       const row = await fetchInvoiceById(id).catch(() => null);
       if (cancelled || !row) return;
-      const items = await listInvoiceItems(row.id).catch(() => []);
+      const [items, merchant] = await Promise.all([
+        listInvoiceItems(row.id).catch(() => []),
+        fetchMerchant(row.merchant_id).catch(() => null),
+      ]);
       if (cancelled) return;
-      setLiveInvoice(adaptInvoice(row, items));
+      const merchantName = merchant
+        ? (locale === 'ar' ? merchant.display_name?.ar : merchant.display_name?.en) ||
+          merchant.display_name?.ar ||
+          merchant.display_name?.en ||
+          merchant.company_name
+        : undefined;
+      setLiveInvoice(adaptInvoice(row, items, merchantName));
 
       // Find the linked contract via invoice_id
       const sb = getSupabase();
@@ -109,12 +102,12 @@ export default function InvoiceTracking() {
         .eq('invoice_id', row.id)
         .maybeSingle();
       if (cancelled || !contractRow) return;
-      setLiveContract(adaptContract(contractRow));
+      setLiveContract(adaptContract(contractRow, merchantName));
     })();
     return () => {
       cancelled = true;
     };
-  }, [configured, id]);
+  }, [configured, id, locale]);
 
   const invoice = liveInvoice ?? demoInvoice;
   const contract =
@@ -141,58 +134,64 @@ export default function InvoiceTracking() {
   }
 
   const events = buildInvoiceEvents(invoice, t);
+  const merchantName = invoice.counterparty || contract?.counterparty || '';
+  const continuationStep = deriveContinuationStep(invoice, contract);
 
   return (
     <>
       <Header title={t('track.invoiceTitle')} showBack />
       <Screen padded={false} className="bg-canvas">
         <div className="px-5 pt-5 pb-10 space-y-5">
-          {/* Hero — soft tinted, framed as an official record */}
-          <div className="relative overflow-hidden rounded-xl3 bg-gradient-to-br from-canvas-50 via-white to-gold-50 hairline p-6 shadow-card">
-            <div
-              aria-hidden
-              className="pointer-events-none absolute -top-12 end-[-15%] h-44 w-44 rounded-full bg-gold-300/18 blur-3xl"
-            />
-            <div className="relative inline-flex items-center gap-1.5 rounded-full bg-white ring-1 ring-lavender-200 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-lavender-700">
-              <BadgeCheckIcon size={11} />
-              {t('track.recordedOn', { date: formatDate(invoice.issuedAt) })}
+          {/* ====== FOCUSED HERO ======
+              Task-first: who you're renting from + what you're renting,
+              right at the top. Status + amount + due date sit beneath. */}
+          <div className="rounded-xl3 bg-white hairline shadow-soft p-5 animate-fade-in">
+            {merchantName && (
+              <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-lavender-700">
+                {t('home.attention.fromMerchant', { merchant: merchantName })}
+              </div>
+            )}
+            <div className="mt-1 editorial-title text-[20px] text-ink-900 leading-snug tracking-tight">
+              {invoice.title}
             </div>
-            <div className="relative mt-4 flex items-start gap-3">
-              <span className="h-11 w-11 rounded-xl bg-white text-ink-700 hairline grid place-items-center shrink-0">
-                <ReceiptIcon size={20} />
+            <div className="mt-3 flex items-center gap-2">
+              <InvoiceStatusChip status={invoice.status} />
+              <span className="text-[11.5px] text-ink-400 num">
+                {invoice.contractRef}
               </span>
-              <div className="min-w-0 flex-1">
+            </div>
+            <div className="mt-4 grid grid-cols-2 gap-3">
+              <div>
                 <div className="text-[10.5px] font-semibold text-ink-400 uppercase tracking-[0.08em]">
                   {t('track.invoice.amountDue')}
                 </div>
-                <div className="mt-1 editorial-title text-[28px] font-bold num leading-none text-ink-900">
+                <div className="mt-0.5 num text-[18px] font-semibold text-ink-900 leading-none">
                   {formatCurrency(invoice.amount)}
                 </div>
-                <div className="mt-1.5 text-[12px] text-ink-500 truncate">{invoice.title}</div>
               </div>
-              <InvoiceStatusChip status={invoice.status} />
-            </div>
-            <div className="relative mt-4 grid grid-cols-2 gap-3 text-[12px]">
               <div>
-                <div className="text-ink-400 uppercase tracking-wide text-[10.5px] font-medium">
+                <div className="text-[10.5px] font-semibold text-ink-400 uppercase tracking-[0.08em]">
                   {t('track.invoice.dueOn')}
                 </div>
-                <div className="mt-0.5 font-semibold num text-ink-900">{formatDate(invoice.dueDate)}</div>
-              </div>
-              <div>
-                <div className="text-ink-400 uppercase tracking-wide text-[10.5px] font-medium">
-                  {t('track.invoice.contractRef')}
+                <div className="mt-0.5 num text-[14px] font-semibold text-ink-900 leading-none">
+                  {formatDate(invoice.dueDate)}
                 </div>
-                <div className="mt-0.5 font-semibold num truncate text-ink-900">{invoice.contractRef}</div>
               </div>
             </div>
+            {invoice.status !== 'paid' && (
+              <Button
+                variant="primary"
+                size="lg"
+                block
+                className="mt-5"
+                leading={<SparkleIcon size={18} />}
+              >
+                {t('track.invoice.payNow')}
+              </Button>
+            )}
           </div>
 
-          <RentalJourneyTimeline
-            variant="lead"
-            steps={buildInvoiceJourney(invoice, contract)}
-          />
-
+          {/* ====== STATE BANNERS ====== */}
           {invoice.status === 'overdue' && (
             <div className="rounded-xl2 bg-danger-50 ring-1 ring-danger-500/20 px-4 py-3 flex items-start gap-2.5 text-[12.5px] text-danger-600">
               <AlertIcon size={16} className="mt-0.5 shrink-0" />
@@ -206,63 +205,50 @@ export default function InvoiceTracking() {
             </div>
           )}
 
-          {/* Summary */}
-          <section>
-            <SectionHeader title={t('track.summary')} />
-            <Card padded className="space-y-3">
-              <Field
-                label={t('track.invoice.issuedOn')}
-                value={<span className="num">{formatDate(invoice.issuedAt)}</span>}
-              />
-              <CardDivider />
-              <Field
-                label={t('track.invoice.dueOn')}
-                value={<span className="num">{formatDate(invoice.dueDate)}</span>}
-              />
-              <CardDivider />
-              <Field
-                label={t('track.invoice.amountDue')}
-                value={<span className="num">{formatCurrency(invoice.amount)}</span>}
-              />
-            </Card>
-          </section>
+          {/* ====== 5-STEP CONTINUATION STRIP ======
+              Replaces the 7-stage RentalJourneyTimeline at this surface.
+              Customer-pre-payment view doesn't need the full system-
+              of-record granularity. */}
+          <CustomerContinuationStrip currentStep={continuationStep} />
 
-          {/* Linked contract */}
+          {/* ====== LINKED CONTRACT (small card, only when present) ====== */}
           {contract && (
-            <section>
-              <SectionHeader title={t('track.linkedContract')} />
-              <button
-                type="button"
-                onClick={() => navigate(`/track/contract/${contract.id}`)}
-                className="w-full text-start"
-              >
-                <Card padded interactive className="flex items-center gap-3">
-                  <span className="h-10 w-10 shrink-0 rounded-xl bg-canvas-100 text-ink-700 grid place-items-center">
-                    <DocIcon size={18} />
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <div className="text-[13.5px] font-semibold text-ink-900 truncate">
-                      {contract.title}
-                    </div>
-                    <div className="mt-0.5 text-[12px] text-ink-400 truncate">
-                      {contract.counterparty}
-                    </div>
+            <button
+              type="button"
+              onClick={() => navigate(`/track/contract/${contract.id}`)}
+              className="w-full text-start"
+            >
+              <Card padded interactive className="flex items-center gap-3">
+                <span className="h-10 w-10 shrink-0 rounded-xl bg-canvas-100 text-ink-700 grid place-items-center">
+                  <DocIcon size={18} />
+                </span>
+                <div className="min-w-0 flex-1">
+                  <div className="text-[10.5px] font-semibold text-ink-400 uppercase tracking-[0.08em]">
+                    {t('track.linkedContract')}
                   </div>
-                  <span className="num text-[11.5px] text-ink-400 shrink-0">{contract.id}</span>
-                </Card>
-              </button>
-            </section>
+                  <div className="mt-0.5 text-[13.5px] font-semibold text-ink-900 truncate">
+                    {contract.title}
+                  </div>
+                </div>
+                <ArrowIcon size={14} className="shrink-0 text-ink-300 rtl:rotate-180" />
+              </Card>
+            </button>
           )}
 
-          {/* Timeline */}
-          <section>
-            <SectionHeader title={t('track.activity')} />
-            <Card padded>
+          {/* ====== ACTIVITY (demoted — secondary, quieter) ======
+              No SectionHeader heading-weight. Single muted card with
+              a tiny label inside; the activity is supportive context,
+              not the main action. */}
+          <div className="rounded-xl2 bg-canvas-100/60 hairline px-4 pt-3.5 pb-3">
+            <div className="text-[10.5px] font-semibold uppercase tracking-[0.12em] text-ink-400">
+              {t('track.activity')}
+            </div>
+            <div className="mt-2">
               <DocTimeline events={events} />
-            </Card>
-          </section>
+            </div>
+          </div>
 
-          {/* Execution escalation placeholder (only when overdue) */}
+          {/* ====== EXECUTION ESCALATION (only when overdue) ====== */}
           {invoice.status === 'overdue' && (
             <PlatformBadge
               platform="execution"
@@ -273,22 +259,10 @@ export default function InvoiceTracking() {
             />
           )}
 
-          {/* Actions */}
-          <div className="space-y-2.5">
-            {invoice.status !== 'paid' && (
-              <Button
-                variant="primary"
-                size="lg"
-                block
-                leading={<SparkleIcon size={18} />}
-              >
-                {t('track.invoice.payNow')}
-              </Button>
-            )}
-            <Button variant="secondary" block leading={<SupportIcon size={16} />}>
-              {t('track.contactSupport')}
-            </Button>
-          </div>
+          {/* ====== SECONDARY ACTION ====== */}
+          <Button variant="secondary" block leading={<SupportIcon size={16} />}>
+            {t('track.contactSupport')}
+          </Button>
         </div>
       </Screen>
     </>
@@ -345,11 +319,3 @@ function evt(
   return { id, label, at, state, tone, icon };
 }
 
-function Field({ label, value }: { label: React.ReactNode; value: React.ReactNode }) {
-  return (
-    <div>
-      <div className="text-[11.5px] font-medium uppercase tracking-wide text-ink-400">{label}</div>
-      <div className="mt-0.5 text-[13.5px] font-semibold text-ink-900 leading-relaxed">{value}</div>
-    </div>
-  );
-}
