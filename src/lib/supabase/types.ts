@@ -140,6 +140,14 @@ export type RentalInvoiceRow = {
    *  + the promissory note principal. Distinct from total_amount, which
    *  is the rental fee charge. */
   original_item_value: number;
+  /** Light damage fraction (0..1). Multiplied by the replacement
+   *  value to give the partial-damage liability. Merchant-controlled
+   *  in the contract preparation step; defaults to 0.300. */
+  light_damage_fraction: number;
+  /** Late return multiplier (×). Multiplied by the daily rate to give
+   *  the per-day late-return fee. Merchant-controlled; defaults to
+   *  1.50. */
+  late_return_multiplier: number;
   status: InvoiceStatus;
   issued_at: string | null;
   expires_at: string | null;

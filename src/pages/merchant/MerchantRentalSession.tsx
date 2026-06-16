@@ -23,6 +23,7 @@ import {
   fetchRenterEligibility,
   fetchMyMerchant,
   useSupabaseAuth,
+  type MerchantRow,
   type ProfileRow,
   type RentalCategoryDB,
   type RentalEligibilityRow,
@@ -39,6 +40,7 @@ import {
   type MobileIssue,
 } from '@/lib/mobile';
 import { MerchantStatusStrip } from '@/components/merchant/MerchantStatusStrip';
+import { buildContractFromTemplate } from '@/lib/contractTemplate';
 import { cn } from '@/lib/cn';
 
 // =====================================================================
@@ -82,7 +84,13 @@ function verifyMobileIssueMessage(
 // `verifyRenterCode` below change; the SessionState shape stays.
 // =====================================================================
 
-type SessionStep = 'start' | 'verify' | 'operation' | 'eligibility' | 'issued';
+type SessionStep =
+  | 'start'
+  | 'verify'
+  | 'operation'
+  | 'eligibility'
+  | 'contract'
+  | 'issued';
 
 /**
  * Granular verification status. The interim renter-presence flow uses
@@ -120,6 +128,10 @@ type OperationDraft = {
   rentalDays: string;     // strings for input ergonomics; coerced on use
   dailyRate: string;
   originalItemValue: string;
+  // Contract overrides — merchant-controlled in the new 'contract' step.
+  // Stored as strings so the inputs remain ergonomic; coerced on use.
+  lightDamagePercent: string;  // 0..100, default '30'
+  lateReturnMultiplier: string; // ×, default '1.5'
 };
 
 type EligibilityState = {
@@ -162,13 +174,22 @@ const INITIAL_SESSION: SessionState = {
     rentalDays: '1',
     dailyRate: '',
     originalItemValue: '',
+    lightDamagePercent: '30',
+    lateReturnMultiplier: '1.5',
   },
   eligibility: { row: null, loading: false, error: null },
   issue: { invoice: null, submitting: false, error: null },
 };
 
 const CATEGORIES: RentalCategoryDB[] = ['dress', 'bag', 'watch', 'bisht'];
-const STEPS: SessionStep[] = ['start', 'verify', 'operation', 'eligibility', 'issued'];
+const STEPS: SessionStep[] = [
+  'start',
+  'verify',
+  'operation',
+  'eligibility',
+  'contract',
+  'issued',
+];
 
 // ---------------------------------------------------------------------
 
@@ -227,6 +248,9 @@ export default function MerchantRentalSession() {
   const [merchantId, setMerchantId] = useState<string | null>(null);
   const [merchantPrimaryCategory, setMerchantPrimaryCategory] =
     useState<RentalCategoryDB | null>(null);
+  // Full merchant row — used by the new ContractCard preview so the
+  // "Lessor" clause shows the correct boutique name.
+  const [liveMerchant, setLiveMerchant] = useState<MerchantRow | null>(null);
 
   const setStep = (step: SessionStep) =>
     setSession((s) => ({ ...s, step }));
@@ -248,6 +272,7 @@ export default function MerchantRentalSession() {
       .then((m) => {
         if (cancelled || !m) return;
         setMerchantId(m.id);
+        setLiveMerchant(m);
         setMerchantPrimaryCategory(m.primary_category);
         setSession((s) =>
           s.operation.category === 'dress'
@@ -496,6 +521,8 @@ export default function MerchantRentalSession() {
     const days = Math.max(Number(session.operation.rentalDays) || 1, 1);
     const rentalFee = rate * days;
     const itemValue = Number(session.operation.originalItemValue) || 0;
+    const lightDamageFraction = clampLightFraction(session.operation.lightDamagePercent);
+    const lateReturnMultiplier = clampLateMultiplier(session.operation.lateReturnMultiplier);
 
     // --- Dev-only synthetic issuance ----------------------------------
     // Production builds tree-shake this branch (DEV_DEMO_FALLBACK = false).
@@ -517,6 +544,8 @@ export default function MerchantRentalSession() {
           security_deposit: 0,
           total_amount: rentalFee,
           original_item_value: itemValue,
+          light_damage_fraction: lightDamageFraction,
+          late_return_multiplier: lateReturnMultiplier,
           status: 'issued',
           issued_at: now,
           expires_at: null,
@@ -557,6 +586,8 @@ export default function MerchantRentalSession() {
         subtotalAmount: rentalFee,
         totalAmount: rentalFee,
         originalItemValue: itemValue,
+        lightDamageFraction,
+        lateReturnMultiplier,
         items: [
           {
             position: 0,
@@ -632,6 +663,7 @@ export default function MerchantRentalSession() {
 
           {(session.step === 'operation' ||
             session.step === 'eligibility' ||
+            session.step === 'contract' ||
             session.step === 'issued') && (
             <OperationCard
               t={t}
@@ -642,28 +674,54 @@ export default function MerchantRentalSession() {
               originalItemValue={originalItemValue}
               formatCurrency={formatCurrency}
               active={session.step === 'operation'}
-              locked={session.step === 'eligibility' || session.step === 'issued'}
+              locked={
+                session.step === 'eligibility' ||
+                session.step === 'contract' ||
+                session.step === 'issued'
+              }
               loading={session.eligibility.loading}
               error={session.eligibility.error}
               onContinue={handleOperationContinue}
             />
           )}
 
-          {(session.step === 'eligibility' || session.step === 'issued') && (
+          {(session.step === 'eligibility' ||
+            session.step === 'contract' ||
+            session.step === 'issued') && (
             <EligibilityCard
               t={t}
               verdict={verdict}
               rentalAmount={rentalAmount}
               originalItemValue={originalItemValue}
               formatCurrency={formatCurrency}
+              issuing={false}
+              issueError={null}
+              issueDisabled={false}
+              active={session.step === 'eligibility'}
+              locked={session.step === 'contract' || session.step === 'issued'}
+              onIssue={() => setStep('contract')}
+              onReduce={() => setStep('operation')}
+              onCancel={() => navigate('/merchant/home')}
+            />
+          )}
+
+          {(session.step === 'contract' || session.step === 'issued') && (
+            <ContractCard
+              t={t}
+              dir={dir}
+              operation={session.operation}
+              setOperation={updateOperation}
+              merchant={liveMerchant}
+              rentalAmount={rentalAmount}
+              originalItemValue={originalItemValue}
+              formatCurrency={formatCurrency}
+              active={session.step === 'contract'}
+              locked={session.step === 'issued'}
               issuing={session.issue.submitting}
               issueError={session.issue.error}
               issueDisabled={supabaseAuth.configured && !merchantId}
-              active={session.step === 'eligibility'}
-              locked={session.step === 'issued'}
               onIssue={handleIssue}
-              onReduce={() => setStep('operation')}
-              onCancel={() => navigate('/merchant/home')}
+              onBack={() => setStep('eligibility')}
             />
           )}
 
@@ -1419,6 +1477,298 @@ function EligibilityCard({
         </div>
       )}
     </StepShell>
+  );
+}
+
+// ---------------------------------------------------------------------
+// Contract overrides — clamp helpers
+// ---------------------------------------------------------------------
+
+function clampLightFraction(raw: string): number {
+  const n = Number(raw);
+  if (!Number.isFinite(n) || n <= 0) return 0.3;
+  // Input is in PERCENT (0..100). Convert to fraction (0..1) and clamp.
+  return Math.min(Math.max(n / 100, 0.01), 1);
+}
+
+function clampLateMultiplier(raw: string): number {
+  const n = Number(raw);
+  if (!Number.isFinite(n) || n <= 0) return 1.5;
+  return Math.min(Math.max(n, 0.1), 10);
+}
+
+// ---------------------------------------------------------------------
+// ContractCard — merchant-side contract preparation + preview.
+// Sits between Eligibility and Issued. Shows a small editable form for
+// the two adjustable terms (light damage % and late return multiplier)
+// followed by a live preview of every clause the customer will see.
+// The "Issue rental package" CTA actually creates the invoice + items,
+// passing the overrides through createInvoiceWithItems.
+// ---------------------------------------------------------------------
+
+function ContractCard({
+  t,
+  dir,
+  operation,
+  setOperation,
+  merchant,
+  rentalAmount,
+  originalItemValue,
+  formatCurrency,
+  active,
+  locked,
+  issuing,
+  issueError,
+  issueDisabled,
+  onIssue,
+  onBack,
+}: {
+  t: (k: string, p?: Record<string, string | number>) => string;
+  dir: 'rtl' | 'ltr';
+  operation: OperationDraft;
+  setOperation: (patch: Partial<OperationDraft>) => void;
+  merchant: MerchantRow | null;
+  rentalAmount: number;
+  originalItemValue: number;
+  formatCurrency: (n: number) => string;
+  active: boolean;
+  locked: boolean;
+  issuing: boolean;
+  issueError: string | null;
+  issueDisabled: boolean;
+  onIssue: () => void;
+  onBack: () => void;
+}) {
+  const { locale } = useI18n();
+  const days = Math.max(Number(operation.rentalDays) || 1, 1);
+  const dailyRate = Number(operation.dailyRate) || 0;
+  const lightFrac = clampLightFraction(operation.lightDamagePercent);
+  const lateMult = clampLateMultiplier(operation.lateReturnMultiplier);
+
+  // Synthesize the minimum invoice/items shape the template needs so
+  // we can preview the EXACT clauses the customer will receive.
+  const previewClauses = buildContractFromTemplate({
+    invoice: {
+      // Only the fields the template touches need real values; the
+      // rest are filled with safe placeholders.
+      id: 'preview',
+      invoice_number: 'PREVIEW',
+      merchant_id: merchant?.id ?? 'preview',
+      branch_id: null,
+      customer_user_id: 'preview',
+      subtotal_amount: rentalAmount,
+      tax_amount: 0,
+      security_deposit: 0,
+      total_amount: rentalAmount,
+      original_item_value: originalItemValue,
+      light_damage_fraction: lightFrac,
+      late_return_multiplier: lateMult,
+      status: 'issued',
+      issued_at: new Date().toISOString(),
+      expires_at: null,
+      scan_token: null,
+      notes: null,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    },
+    items: [
+      {
+        id: 'preview-item',
+        invoice_id: 'preview',
+        position: 0,
+        item_name: operation.itemName,
+        category: operation.category,
+        size_label: null,
+        color: null,
+        daily_rate: dailyRate,
+        rental_days: days,
+        subtotal: rentalAmount,
+        replacement_value: originalItemValue,
+        notes: null,
+        created_at: new Date().toISOString(),
+      },
+    ],
+    merchant: merchant ?? null,
+    pickupDate: new Date().toISOString(),
+    returnDate: new Date(Date.now() + days * 86_400_000).toISOString(),
+    durationDays: days,
+    lightDamageFraction: lightFrac,
+    lateReturnMultiplier: lateMult,
+  }).clauses;
+
+  const lightDamageAmount = Math.round(originalItemValue * lightFrac);
+  const latePerDay = Math.round(dailyRate * lateMult);
+
+  return (
+    <StepShell
+      number={4}
+      title={t('merchant.session.contract.title')}
+      hint={!active && !locked ? t('merchant.session.contract.hint') : undefined}
+      active={active}
+      locked={locked}
+    >
+      {(active || locked) && (
+        <div className="space-y-4">
+          {/* Adjustable terms */}
+          {active && (
+            <section className="rounded-xl2 bg-canvas-100/60 ring-1 ring-canvas-200 p-4 space-y-3">
+              <div className="text-[10.5px] font-semibold uppercase tracking-[0.12em] text-ink-500">
+                {t('merchant.session.contract.adjustableTitle')}
+              </div>
+
+              <FormField label={t('merchant.session.contract.lightDamageLabel')}>
+                <div className="flex items-center gap-2">
+                  <Input
+                    type="number"
+                    inputMode="decimal"
+                    min={1}
+                    max={100}
+                    step={1}
+                    value={operation.lightDamagePercent}
+                    onChange={(e) =>
+                      setOperation({ lightDamagePercent: e.target.value })
+                    }
+                  />
+                  <span className="text-[12px] font-semibold text-ink-500 num">
+                    {t('merchant.session.contract.lightDamageUnit')}
+                  </span>
+                </div>
+                <div className="mt-1 text-[11px] text-ink-500 leading-relaxed">
+                  {t('merchant.session.contract.lightDamageHint')}
+                </div>
+                <div className="mt-0.5 text-[11.5px] text-ink-700 num">
+                  {t('merchant.session.contract.lightDamagePreview', {
+                    amount: formatCurrency(lightDamageAmount),
+                  })}
+                </div>
+              </FormField>
+
+              <FormField label={t('merchant.session.contract.lateReturnLabel')}>
+                <div className="flex items-center gap-2">
+                  <Input
+                    type="number"
+                    inputMode="decimal"
+                    min={0.1}
+                    max={10}
+                    step={0.1}
+                    value={operation.lateReturnMultiplier}
+                    onChange={(e) =>
+                      setOperation({ lateReturnMultiplier: e.target.value })
+                    }
+                  />
+                  <span className="text-[12px] font-semibold text-ink-500 num">
+                    {t('merchant.session.contract.lateReturnUnit')}
+                  </span>
+                </div>
+                <div className="mt-1 text-[11px] text-ink-500 leading-relaxed">
+                  {t('merchant.session.contract.lateReturnHint')}
+                </div>
+                <div className="mt-0.5 text-[11.5px] text-ink-700 num">
+                  {t('merchant.session.contract.lateReturnPreview', {
+                    amount: formatCurrency(latePerDay),
+                  })}
+                </div>
+              </FormField>
+            </section>
+          )}
+
+          {/* Quick summary tiles */}
+          <div className="grid grid-cols-2 gap-2">
+            <PreviewTile
+              label={t('merchant.session.contract.summary.rentalPeriod')}
+              value={t('merchant.session.contract.summary.rentalPeriodValue', { days })}
+            />
+            <PreviewTile
+              label={t('merchant.session.contract.summary.rentalFee')}
+              value={formatCurrency(rentalAmount)}
+            />
+            <PreviewTile
+              label={t('merchant.session.contract.summary.itemValue')}
+              value={formatCurrency(originalItemValue)}
+            />
+            <PreviewTile
+              label={t('merchant.session.contract.summary.lightDamage')}
+              value={formatCurrency(lightDamageAmount)}
+            />
+            <PreviewTile
+              label={t('merchant.session.contract.summary.fullDamage')}
+              value={formatCurrency(originalItemValue)}
+            />
+            <PreviewTile
+              label={t('merchant.session.contract.summary.lateReturnPerDay')}
+              value={formatCurrency(latePerDay)}
+            />
+          </div>
+
+          {/* Full preview clauses */}
+          <section className="rounded-xl2 bg-white hairline shadow-soft p-4">
+            <div className="text-[10.5px] font-semibold uppercase tracking-[0.12em] text-lavender-700">
+              {t('merchant.session.contract.previewTitle')}
+            </div>
+            <div className="mt-0.5 text-[11.5px] text-ink-500 leading-relaxed">
+              {t('merchant.session.contract.previewSubtitle')}
+            </div>
+            <ol className="mt-3 space-y-3">
+              {previewClauses.map((c) => (
+                <li key={c.id}>
+                  <div className="text-[11.5px] font-semibold text-ink-900 tracking-tight">
+                    {c.title[locale]}
+                  </div>
+                  <div className="mt-0.5 text-[12px] text-ink-600 leading-relaxed">
+                    {c.body[locale]}
+                  </div>
+                </li>
+              ))}
+            </ol>
+          </section>
+
+          {active && (
+            <>
+              {issueError && (
+                <div className="rounded-xl2 bg-danger-50 ring-1 ring-danger-500/25 px-3.5 py-2.5 text-[12.5px] text-danger-700">
+                  {issueError}
+                </div>
+              )}
+              <Button
+                variant="primary"
+                size="lg"
+                block
+                onClick={onIssue}
+                loading={issuing}
+                disabled={issuing || issueDisabled}
+                leading={<DocIcon size={16} />}
+              >
+                {t('merchant.session.contract.issuePackageCta', {
+                  amount: formatCurrency(rentalAmount),
+                })}
+              </Button>
+              <Button variant="ghost" size="md" block onClick={onBack}>
+                {t('merchant.session.contract.backCta')}
+              </Button>
+            </>
+          )}
+        </div>
+      )}
+    </StepShell>
+  );
+}
+
+function PreviewTile({
+  label,
+  value,
+}: {
+  label: ReactNode;
+  value: ReactNode;
+}) {
+  return (
+    <div className="rounded-xl bg-white hairline px-3 py-2.5">
+      <div className="text-[10px] font-semibold uppercase tracking-[0.08em] text-ink-400 truncate">
+        {label}
+      </div>
+      <div className="mt-0.5 text-[13.5px] font-bold text-ink-900 num truncate">
+        {value}
+      </div>
+    </div>
   );
 }
 

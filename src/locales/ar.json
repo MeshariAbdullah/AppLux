@@ -1022,13 +1022,39 @@
           "review": "مراجعة مطلوبة",
           "reviewHint": "لا يوجد ملف أهلية لهذا العميل بعد. تواصل مع فريق Lend."
         },
-        "issuePackageCta": "إصدار حزمة الإيجار",
+        "issuePackageCta": "متابعة إلى العقد",
         "reduceCta": "تقليل القيمة",
         "cancelCta": "إلغاء الجلسة",
         "errors": {
           "fetch": "تعذّر فحص أهلية العميل.",
           "merchantLoading": "جارٍ تحميل بيانات تاجرك. أعد المحاولة بعد لحظة."
         }
+      },
+      "contract": {
+        "title": "اعتماد عقد الإيجار",
+        "hint": "يُولَّد العقد من قالب Lend وفق بيانات العملية. راجع الشروط القابلة للتعديل ثم أصدر الحزمة.",
+        "adjustableTitle": "بنود قابلة للتعديل",
+        "lightDamageLabel": "نسبة الضرر الخفيف",
+        "lightDamageHint": "نسبة قيمة القطعة المحسوبة في حال الضرر الجزئي.",
+        "lightDamageUnit": "%",
+        "lightDamagePreview": "أي ما يعادل {amount}",
+        "lateReturnLabel": "غرامة التأخير اليومية (×)",
+        "lateReturnHint": "مضاعف السعر اليومي يُحتسب لكل يوم تأخير في الإرجاع.",
+        "lateReturnUnit": "×",
+        "lateReturnPreview": "أي ما يعادل {amount} عن كل يوم",
+        "previewTitle": "معاينة العقد",
+        "previewSubtitle": "هذه هي البنود التي سيستلمها العميل.",
+        "summary": {
+          "rentalPeriod": "فترة الإيجار",
+          "rentalPeriodValue": "{days} يوماً",
+          "rentalFee": "رسوم الإيجار",
+          "itemValue": "قيمة القطعة",
+          "lightDamage": "الضرر الجزئي",
+          "fullDamage": "الضرر الكلي",
+          "lateReturnPerDay": "تأخير الإرجاع / اليوم"
+        },
+        "issuePackageCta": "إصدار حزمة الإيجار · {amount}",
+        "backCta": "تعديل البنود"
       },
       "handoff": {
         "seal": "تم إصدار حزمة الإيجار",

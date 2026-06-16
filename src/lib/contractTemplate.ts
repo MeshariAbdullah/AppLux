@@ -36,11 +36,13 @@ import type {
   RentalInvoiceRow,
 } from './supabase';
 
-// Light damage = 30% of full replacement value. A merchant-facing
-// override may land later; the constant keeps the default in one place.
-const LIGHT_DAMAGE_FRACTION = 0.30;
-// Late return penalty = 1.5× the daily rate per day overdue.
-const LATE_RETURN_MULTIPLIER = 1.5;
+// Defaults — used when the merchant didn't override these in the
+// contract preparation step. The current source of truth is the
+// invoice row's light_damage_fraction + late_return_multiplier
+// columns; these are the fallback for older rows or callers that
+// don't pass overrides.
+export const DEFAULT_LIGHT_DAMAGE_FRACTION = 0.30;
+export const DEFAULT_LATE_RETURN_MULTIPLIER = 1.5;
 
 const SAR = (n: number) =>
   `${n.toLocaleString('en-US', { maximumFractionDigits: 0 })} SAR`;
@@ -69,6 +71,14 @@ type TemplateInputs = {
   pickupDate: string;
   returnDate: string;
   durationDays: number;
+  /** Merchant-controlled override for the light damage liability. If
+   *  omitted, falls back to invoice.light_damage_fraction, then to
+   *  DEFAULT_LIGHT_DAMAGE_FRACTION. */
+  lightDamageFraction?: number;
+  /** Merchant-controlled override for the late-return multiplier. If
+   *  omitted, falls back to invoice.late_return_multiplier, then to
+   *  DEFAULT_LATE_RETURN_MULTIPLIER. */
+  lateReturnMultiplier?: number;
 };
 
 export type ContractTemplateOutput = {
@@ -83,14 +93,26 @@ export function buildContractFromTemplate({
   pickupDate,
   returnDate,
   durationDays,
+  lightDamageFraction,
+  lateReturnMultiplier,
 }: TemplateInputs): ContractTemplateOutput {
+  const lightFrac =
+    lightDamageFraction ??
+    (typeof invoice.light_damage_fraction === 'number'
+      ? Number(invoice.light_damage_fraction)
+      : DEFAULT_LIGHT_DAMAGE_FRACTION);
+  const lateMult =
+    lateReturnMultiplier ??
+    (typeof invoice.late_return_multiplier === 'number'
+      ? Number(invoice.late_return_multiplier)
+      : DEFAULT_LATE_RETURN_MULTIPLIER);
   const totalReplacement = items.reduce(
     (s, it) => s + Number(it.replacement_value ?? 0),
     0,
   );
-  const lightDamage = Math.round(totalReplacement * LIGHT_DAMAGE_FRACTION);
+  const lightDamage = Math.round(totalReplacement * lightFrac);
   const dailyRate = items[0]?.daily_rate ? Number(items[0].daily_rate) : 0;
-  const latePerDay = Math.round(dailyRate * LATE_RETURN_MULTIPLIER);
+  const latePerDay = Math.round(dailyRate * lateMult);
   const merchantName: Localized = merchant?.display_name
     ? {
         ar: merchant.display_name.ar || merchant.display_name.en || '',
@@ -143,8 +165,8 @@ export function buildContractFromTemplate({
       id: 'light-damage',
       title: { ar: 'الضرر الجزئي (الخفيف)', en: 'Light damage' },
       body: {
-        ar: `يلتزم المستأجر بدفع ما يعادل ${SARAr(lightDamage)} (30% من قيمة القطعة) لتغطية الأضرار البسيطة كالبقع أو الخدوش الخفيفة.`,
-        en: `Lessee is liable for up to ${SAR(lightDamage)} (30% of the item value) covering minor damages such as stains or light scuffs.`,
+        ar: `يلتزم المستأجر بدفع ما يعادل ${SARAr(lightDamage)} (${Math.round(lightFrac * 100)}% من قيمة القطعة) لتغطية الأضرار البسيطة كالبقع أو الخدوش الخفيفة.`,
+        en: `Lessee is liable for up to ${SAR(lightDamage)} (${Math.round(lightFrac * 100)}% of the item value) covering minor damages such as stains or light scuffs.`,
       },
     },
     {
@@ -159,8 +181,8 @@ export function buildContractFromTemplate({
       id: 'late-return',
       title: { ar: 'التأخّر في الإرجاع', en: 'Late return' },
       body: {
-        ar: `يُحتسب على كل يوم تأخّر مبلغ ${SARAr(latePerDay)} (1.5× السعر اليومي)، بحد أقصى قيمة القطعة الكاملة.`,
-        en: `Each day late incurs ${SAR(latePerDay)} (1.5× the daily rate), capped at the full item value.`,
+        ar: `يُحتسب على كل يوم تأخّر مبلغ ${SARAr(latePerDay)} (${lateMult}× السعر اليومي)، بحد أقصى قيمة القطعة الكاملة.`,
+        en: `Each day late incurs ${SAR(latePerDay)} (${lateMult}× the daily rate), capped at the full item value.`,
       },
     },
     {
@@ -188,8 +210,8 @@ export function buildContractFromTemplate({
       partialDamage: lightDamage,
       totalDamage: totalReplacement,
       note: {
-        ar: `يُحتسب الضرر الخفيف بنسبة 30% من قيمة القطعة. التأخّر في الإرجاع: ${SARAr(latePerDay)} عن كل يوم.`,
-        en: `Light damage is 30% of the item value. Late return: ${SAR(latePerDay)} per day.`,
+        ar: `يُحتسب الضرر الخفيف بنسبة ${Math.round(lightFrac * 100)}% من قيمة القطعة. التأخّر في الإرجاع: ${SARAr(latePerDay)} عن كل يوم.`,
+        en: `Light damage is ${Math.round(lightFrac * 100)}% of the item value. Late return: ${SAR(latePerDay)} per day.`,
       },
     },
   };

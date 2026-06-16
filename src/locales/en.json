@@ -1022,13 +1022,39 @@
           "review": "Review required",
           "reviewHint": "This renter has no eligibility profile yet. Contact the Lend team."
         },
-        "issuePackageCta": "Issue rental package",
+        "issuePackageCta": "Continue to contract",
         "reduceCta": "Reduce value",
         "cancelCta": "Cancel session",
         "errors": {
           "fetch": "Could not check the renter's eligibility.",
           "merchantLoading": "Your merchant profile is still loading. Wait a moment and try again."
         }
+      },
+      "contract": {
+        "title": "Confirm the rental contract",
+        "hint": "Lend generates the contract from a template using your operation inputs. Adjust the two policy values, review the preview, then issue the package.",
+        "adjustableTitle": "Adjustable terms",
+        "lightDamageLabel": "Light damage fraction",
+        "lightDamageHint": "Percentage of the item value used for partial-damage liability.",
+        "lightDamageUnit": "%",
+        "lightDamagePreview": "Equals {amount}",
+        "lateReturnLabel": "Late-return multiplier",
+        "lateReturnHint": "Multiplier applied to the daily rate per day the item is overdue.",
+        "lateReturnUnit": "×",
+        "lateReturnPreview": "Equals {amount} per day",
+        "previewTitle": "Contract preview",
+        "previewSubtitle": "These are the clauses the customer will receive.",
+        "summary": {
+          "rentalPeriod": "Rental period",
+          "rentalPeriodValue": "{days} days",
+          "rentalFee": "Rental fee",
+          "itemValue": "Item value",
+          "lightDamage": "Light damage",
+          "fullDamage": "Full damage",
+          "lateReturnPerDay": "Late return / day"
+        },
+        "issuePackageCta": "Issue rental package · {amount}",
+        "backCta": "Adjust terms"
       },
       "handoff": {
         "seal": "Rental package issued",

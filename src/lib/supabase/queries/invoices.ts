@@ -20,6 +20,12 @@ export type CreateInvoiceInput = {
   /** Required. The underlying value of the rented item — drives
    *  eligibility holds and the promissory note principal. */
   originalItemValue: number;
+  /** Light damage fraction the merchant confirmed in the contract
+   *  preparation step. Defaults to 0.30. */
+  lightDamageFraction?: number;
+  /** Late return per-day multiplier (× daily rate) the merchant
+   *  confirmed. Defaults to 1.5. */
+  lateReturnMultiplier?: number;
   notes?: string | null;
   expiresAt?: string | null;
   items: Array<Omit<RentalInvoiceItemInsert, 'invoice_id'>>;
@@ -58,6 +64,8 @@ export async function createInvoiceWithItems(
       security_deposit: input.securityDeposit ?? 0,
       total_amount: input.totalAmount,
       original_item_value: input.originalItemValue,
+      light_damage_fraction: input.lightDamageFraction ?? 0.3,
+      late_return_multiplier: input.lateReturnMultiplier ?? 1.5,
       status: 'issued' satisfies InvoiceStatus,
       issued_at: new Date().toISOString(),
       expires_at: input.expiresAt ?? null,
