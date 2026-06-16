@@ -11,7 +11,6 @@ import {
   InfoIcon,
   ReceiptIcon,
   SparkleIcon,
-  SupportIcon,
 } from '@/components/icons';
 import { useI18n, useT } from '@/lib/i18n';
 import { useStore } from '@/lib/store';
@@ -259,10 +258,6 @@ export default function InvoiceTracking() {
             />
           )}
 
-          {/* ====== SECONDARY ACTION ====== */}
-          <Button variant="secondary" block leading={<SupportIcon size={16} />}>
-            {t('track.contactSupport')}
-          </Button>
         </div>
       </Screen>
     </>
@@ -299,10 +294,16 @@ function buildInvoiceEvents(
     ];
   }
 
+  // Default pre-due branch.
+  //
+  // Previous bug: this branch marked "reminder" as the CURRENT event,
+  // so a freshly issued invoice showed "Payment reminder sent" as the
+  // current state — wrong: the customer hasn't even reviewed it yet.
+  // The reminder event belongs only on the overdue path.
   return [
     evt('issued', t('track.invoice.events.issued'), issued, 'done', 'brand', <ReceiptIcon size={15} />),
     evt('sent', t('track.invoice.events.sent'), sent, 'done', 'brand', <ArrowIcon size={14} />),
-    evt('reminder', t('track.invoice.events.reminder'), reminder, 'current', 'warn', <ClockIcon size={14} />),
+    evt('awaiting-review', t('track.invoice.events.awaitingReview'), null, 'current', 'warn', <ClockIcon size={14} />),
     evt('due', t('track.invoice.events.due'), due, 'pending', 'neutral', <ClockIcon size={14} />),
     evt('paid', t('track.invoice.events.paid'), null, 'pending', 'success', <CheckIcon size={14} />),
   ];

@@ -22,6 +22,7 @@ import {
 import { RentalJourneyTimeline } from '@/components/rental/RentalJourneyTimeline';
 import { deriveJourneyOnApproval } from '@/lib/rentalJourney';
 import type { ScannedPackage } from '@/lib/data';
+import { PaymentSimulationSheet } from '@/components/payment/PaymentSimulationSheet';
 
 export default function Approval() {
   const t = useT();
@@ -34,7 +35,7 @@ export default function Approval() {
     () => scans.find((s) => s.token === token),
     [scans, token],
   );
-  const { formatDate, formatNumber } = useI18n();
+  const { formatCurrency, formatDate, formatNumber } = useI18n();
 
   const [livePkg, setLivePkg] = useState<ScannedPackage | null>(null);
   // Bug 14: capture the live invoice id so the "Continue contract"
@@ -42,12 +43,18 @@ export default function Approval() {
   // backed by Supabase) instead of /tracking/<token> (a demo-only
   // page that silently dead-ends configured customers).
   const [liveInvoiceId, setLiveInvoiceId] = useState<string | null>(null);
+  // Contract id created by accept_rental_invoice (RPC fires from the
+  // Review wizard). Captured here so the post-approval payment
+  // simulation can route to the active rental tracking page.
+  const [liveContractId, setLiveContractId] = useState<string | null>(null);
   const [resolving, setResolving] = useState(false);
+  const [paySheetOpen, setPaySheetOpen] = useState(false);
 
   useEffect(() => {
     if (!configured || !token || demoPkg) {
       setLivePkg(null);
       setLiveInvoiceId(null);
+      setLiveContractId(null);
       return;
     }
     let cancelled = false;
@@ -56,9 +63,22 @@ export default function Approval() {
       .then(async (res) => {
         if (cancelled || !res) return;
         setLiveInvoiceId(res.invoice.id);
-        const merchant = await fetchMerchant(res.invoice.merchant_id).catch(() => null);
+        const [merchant, contractRow] = await Promise.all([
+          fetchMerchant(res.invoice.merchant_id).catch(() => null),
+          (async () => {
+            const sb = (await import('@/lib/supabase')).getSupabase();
+            if (!sb) return null;
+            const { data } = await sb
+              .from('rental_contracts')
+              .select('id')
+              .eq('invoice_id', res.invoice.id)
+              .maybeSingle();
+            return data;
+          })(),
+        ]);
         if (cancelled) return;
         setLivePkg(synthesizePackageFromInvoice(res.invoice, res.items, merchant));
+        if (contractRow?.id) setLiveContractId(contractRow.id);
       })
       .catch(() => {})
       .finally(() => {
@@ -217,33 +237,38 @@ export default function Approval() {
             <div className="min-w-0 flex-1">{t('review.note.disclaimer')}</div>
           </div>
 
-          {/* Single primary action — anything else is a quiet inline link. */}
+          {/* Primary action — opens the temporary payment simulation
+              that walks the customer through pay → Nafath → verify →
+              activate. Replaces the live payment + Nafath integration
+              until those land. Secondary link skips the simulation
+              and just opens the existing tracking page. */}
           <div className="pt-2 space-y-3">
             <Button
               variant="primary"
               size="lg"
               block
-              onClick={() => {
-                // SCRUM-42 Bug 14: route to the right tracking page.
-                // configured + we know the live invoice id → real
-                // /track/invoice/<id> (InvoiceTracking.tsx, backed by
-                // Supabase). Otherwise (demo mode) keep the old
-                // /tracking/<token> shape so the demo flow still
-                // terminates somewhere meaningful. The previous
-                // unconditional /tracking/<token> dead-ended a
-                // configured customer on the demo-only Tracking page
-                // because the demo store has no scan record for
-                // their live token.
-                if (configured && liveInvoiceId) {
-                  navigate(`/track/invoice/${liveInvoiceId}`, { replace: true });
-                } else {
-                  navigate(`/tracking/${token}`, { replace: true });
-                }
-              }}
+              leading={<SparkleIcon size={18} />}
+              onClick={() => setPaySheetOpen(true)}
             >
-              {t('approval.viewTracking')}
+              {t('payment.simulation.pay.cta', {
+                amount: formatCurrency(pkg.fees.grandTotal),
+              })}
             </Button>
-            <div className="text-center text-[12.5px] text-ink-500">
+            <div className="text-center text-[12.5px] text-ink-500 space-x-3 rtl:space-x-reverse">
+              <button
+                type="button"
+                onClick={() => {
+                  if (configured && liveInvoiceId) {
+                    navigate(`/track/invoice/${liveInvoiceId}`, { replace: true });
+                  } else {
+                    navigate(`/tracking/${token}`, { replace: true });
+                  }
+                }}
+                className="text-ink-700 hover:text-ink-900 underline underline-offset-4 decoration-canvas-300 hover:decoration-ink-700"
+              >
+                {t('approval.viewTracking')}
+              </button>
+              <span aria-hidden className="text-ink-300">·</span>
               <button
                 type="button"
                 onClick={() => navigate('/home', { replace: true })}
@@ -255,6 +280,14 @@ export default function Approval() {
           </div>
         </div>
       </Screen>
+
+      <PaymentSimulationSheet
+        open={paySheetOpen}
+        onClose={() => setPaySheetOpen(false)}
+        amount={pkg.fees.grandTotal}
+        contractId={liveContractId}
+        invoiceId={liveInvoiceId}
+      />
     </>
   );
 }

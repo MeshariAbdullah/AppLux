@@ -25,6 +25,7 @@ import type {
   StoreBranch,
   StoreCategory,
 } from '@/lib/data';
+import { buildContractFromTemplate } from '@/lib/contractTemplate';
 import type { AdminMerchantRequest } from '@/lib/store';
 import type {
   AccountStatus,
@@ -312,6 +313,18 @@ export function synthesizePackageFromInvoice(
   const cityLocalized = merchant
     ? { ar: merchant.city, en: merchant.city }
     : { ar: '—', en: '—' };
+  // Contract is auto-generated from a fixed template so the customer
+  // sees the rental's real terms (period, damage policy, late return,
+  // cancellation) inside the same review thread — not a disconnected
+  // empty contract page.
+  const contractTemplate = buildContractFromTemplate({
+    invoice,
+    items,
+    merchant,
+    pickupDate,
+    returnDate,
+    durationDays,
+  });
 
   return {
     token: invoice.scan_token ?? invoice.id,
@@ -355,15 +368,10 @@ export function synthesizePackageFromInvoice(
       vat: Number(invoice.tax_amount),
       grandTotal: Number(invoice.total_amount),
     },
-    damages: {
-      nonReturn: items.reduce((s, it) => s + Number(it.replacement_value ?? 0), 0),
-      partialDamage: 0,
-      totalDamage: items.reduce((s, it) => s + Number(it.replacement_value ?? 0), 0),
-      note: { ar: '', en: '' },
-    },
+    damages: contractTemplate.damages,
     contract: {
       reference: invoice.invoice_number,
-      clauses: [],
+      clauses: contractTemplate.clauses,
     },
     note: {
       reference: invoice.invoice_number,

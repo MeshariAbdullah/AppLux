@@ -743,6 +743,37 @@
       "activation": "Rental activated"
     }
   },
+  "payment": {
+    "simulation": {
+      "title": "Payment simulation",
+      "demoPill": "Simulation — testing only",
+      "pay": {
+        "title": "Pay the rental fees",
+        "subtitle": "This is a simulation screen. It will be replaced when the live payment gateway is wired.",
+        "amountLabel": "Amount due",
+        "cardNumber": "Card number",
+        "expiry": "Expiry",
+        "cvc": "CVC",
+        "cta": "Pay {amount}",
+        "footnote": "Any values in the fields are fine for the simulation."
+      },
+      "nafath": {
+        "title": "Opening Nafath",
+        "body": "Handing you off to Nafath to sign the promissory note outside the app.",
+        "hint": "Opening…"
+      },
+      "verify": {
+        "title": "Verifying Nafath approval",
+        "body": "Lend is verifying your signature via Nafath.",
+        "hint": "Verifying…"
+      },
+      "done": {
+        "title": "Rental activated",
+        "body": "Payment received and the note is verified via Nafath. The merchant has been notified.",
+        "cta": "Open my rental"
+      }
+    }
+  },
   "approval": {
     "title": "Approval recorded",
     "subtitle": "You've approved the offer and contract. Next: pay the fees, then sign the promissory note in Nafath.",
@@ -840,6 +871,7 @@
       "events": {
         "issued": "Invoice issued",
         "sent": "Invoice sent to customer",
+        "awaitingReview": "Awaiting your review",
         "reminder": "Payment reminder sent",
         "due": "Due date",
         "overdue": "Past due",
