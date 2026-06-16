@@ -8,6 +8,12 @@ import {
 } from '@/components/icons';
 import { useI18n, useT } from '@/lib/i18n';
 import { cn } from '@/lib/cn';
+import {
+  recordNafathSigning,
+  recordRentalPayment,
+  useSupabaseAuth,
+  verifyAndActivateRental,
+} from '@/lib/supabase';
 
 // =====================================================================
 // PaymentSimulationSheet — temporary stand-in for the real payment +
@@ -46,11 +52,25 @@ export function PaymentSimulationSheet({
   const t = useT();
   const { dir, formatCurrency } = useI18n();
   const navigate = useNavigate();
+  const { configured } = useSupabaseAuth();
   const [phase, setPhase] = useState<Phase>('pay');
+  // Note id created by record_rental_payment in phase 'pay'.
+  // Carried through phases 'nafath' (signing) and 'verify' (activation).
+  const [noteId, setNoteId] = useState<string | null>(null);
+  // Final contract id captured from verify_and_activate_rental so the
+  // 'done' phase can route the customer to /track/contract/<id> even
+  // if the contract id passed in as a prop was stale.
+  const [activatedContractId, setActivatedContractId] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
-  // Reset phase whenever the sheet re-opens.
+  // Reset whenever the sheet re-opens.
   useEffect(() => {
-    if (open) setPhase('pay');
+    if (open) {
+      setPhase('pay');
+      setNoteId(null);
+      setActivatedContractId(null);
+      setError(null);
+    }
   }, [open]);
 
   // Body scroll lock while the sheet is open.
@@ -63,25 +83,83 @@ export function PaymentSimulationSheet({
     };
   }, [open]);
 
-  // Phase transitions (each held for ~1.2s).
+  // Phase transitions — each phase calls the next-step RPC and holds
+  // for ~1.3s before advancing visually so the customer can read the
+  // status. RPC failures stop the simulation with a visible error.
   useEffect(() => {
     if (!open) return;
-    if (phase === 'nafath') {
-      const id = window.setTimeout(() => setPhase('verify'), 1300);
-      return () => window.clearTimeout(id);
-    }
-    if (phase === 'verify') {
-      const id = window.setTimeout(() => setPhase('done'), 1300);
-      return () => window.clearTimeout(id);
-    }
-  }, [open, phase]);
 
-  const handlePay = () => setPhase('nafath');
+    if (phase === 'nafath') {
+      let cancelled = false;
+      (async () => {
+        try {
+          if (configured && noteId) {
+            await recordNafathSigning(noteId);
+          }
+        } catch (err) {
+          if (cancelled) return;
+          // eslint-disable-next-line no-console
+          console.error('[lend] recordNafathSigning failed', err);
+          setError(t('payment.simulation.error'));
+          return;
+        }
+        if (cancelled) return;
+        window.setTimeout(() => {
+          if (!cancelled) setPhase('verify');
+        }, 1300);
+      })();
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    if (phase === 'verify') {
+      let cancelled = false;
+      (async () => {
+        try {
+          if (configured && noteId) {
+            const cid = await verifyAndActivateRental(noteId);
+            if (!cancelled) setActivatedContractId(cid);
+          }
+        } catch (err) {
+          if (cancelled) return;
+          // eslint-disable-next-line no-console
+          console.error('[lend] verifyAndActivateRental failed', err);
+          setError(t('payment.simulation.error'));
+          return;
+        }
+        if (cancelled) return;
+        window.setTimeout(() => {
+          if (!cancelled) setPhase('done');
+        }, 1300);
+      })();
+      return () => {
+        cancelled = true;
+      };
+    }
+  }, [open, phase, configured, noteId, t]);
+
+  const handlePay = async () => {
+    setError(null);
+    if (configured && invoiceId) {
+      try {
+        const id = await recordRentalPayment(invoiceId);
+        setNoteId(id);
+      } catch (err) {
+        // eslint-disable-next-line no-console
+        console.error('[lend] recordRentalPayment failed', err);
+        setError(t('payment.simulation.error'));
+        return;
+      }
+    }
+    setPhase('nafath');
+  };
 
   const handleFinish = () => {
     onClose();
-    if (contractId) {
-      navigate(`/track/contract/${contractId}`, { replace: true });
+    const target = activatedContractId ?? contractId;
+    if (target) {
+      navigate(`/track/contract/${target}`, { replace: true });
     } else if (invoiceId) {
       navigate(`/track/invoice/${invoiceId}`, { replace: true });
     } else {
@@ -138,6 +216,15 @@ export function PaymentSimulationSheet({
           {phase === 'nafath' && <NafathStep t={t} />}
           {phase === 'verify' && <VerifyStep t={t} />}
           {phase === 'done' && <DoneStep t={t} dir={dir} onContinue={handleFinish} />}
+
+          {error && (
+            <div
+              role="alert"
+              className="mt-4 rounded-xl2 bg-danger-50 ring-1 ring-danger-500/25 px-3.5 py-2.5 text-[12.5px] text-danger-700 leading-relaxed"
+            >
+              {error}
+            </div>
+          )}
         </div>
       </div>
     </div>

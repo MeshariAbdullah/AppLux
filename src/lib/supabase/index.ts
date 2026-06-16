@@ -98,6 +98,9 @@ export {
   listCustomerInvoices,
   listInvoiceItems,
   listMerchantInvoices,
+  recordNafathSigning,
+  recordRentalPayment,
+  verifyAndActivateRental,
 } from './queries/invoices';
 export type { CreateInvoiceInput, CreatedInvoice } from './queries/invoices';
 

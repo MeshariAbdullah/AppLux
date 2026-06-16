@@ -771,7 +771,8 @@
         "title": "Rental activated",
         "body": "Payment received and the note is verified via Nafath. The merchant has been notified.",
         "cta": "Open my rental"
-      }
+      },
+      "error": "Couldn't complete this step. Try again in a moment."
     }
   },
   "approval": {

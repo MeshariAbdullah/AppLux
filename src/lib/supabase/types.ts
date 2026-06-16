@@ -407,6 +407,18 @@ export type Database = {
         Args: { p_contract_id: string; p_photo_path: string };
         Returns: void;
       };
+      record_rental_payment: {
+        Args: { p_invoice_id: string };
+        Returns: string;
+      };
+      record_nafath_signing: {
+        Args: { p_note_id: string };
+        Returns: void;
+      };
+      verify_and_activate_rental: {
+        Args: { p_note_id: string };
+        Returns: string;
+      };
       next_invoice_number: { Args: Record<string, never>; Returns: string };
       next_contract_number: { Args: Record<string, never>; Returns: string };
       next_note_number: { Args: Record<string, never>; Returns: string };

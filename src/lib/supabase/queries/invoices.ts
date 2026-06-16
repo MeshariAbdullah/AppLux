@@ -175,14 +175,59 @@ export async function listMerchantInvoices(
 }
 
 /**
- * Customer-side acceptance — wraps the SECURITY DEFINER RPC that
- * creates contract + note and bumps eligibility atomically.
+ * Customer-side acceptance — wraps the SECURITY DEFINER RPC. This
+ * call ONLY moves the invoice to 'accepted' and creates the contract
+ * in 'pending' state. It does NOT create the promissory note and does
+ * NOT bump eligibility — those happen later in the lifecycle:
+ *   record_rental_payment    → creates the note (pending)
+ *   record_nafath_signing    → marks the note as signed
+ *   verify_and_activate_rental → flips contract to active, bumps eligibility
  * Returns the new contract id.
  */
 export async function acceptRentalInvoice(invoiceId: string): Promise<string> {
   const sb = requireSupabase();
   const { data, error } = await sb.rpc('accept_rental_invoice', {
     p_invoice_id: invoiceId,
+  });
+  if (error) throw error;
+  return data as string;
+}
+
+/**
+ * T2 — record the customer's payment for an accepted invoice. Creates
+ * the promissory note in 'pending' state (or returns the existing
+ * note id if one was already created). Returns the note id.
+ */
+export async function recordRentalPayment(invoiceId: string): Promise<string> {
+  const sb = requireSupabase();
+  const { data, error } = await sb.rpc('record_rental_payment', {
+    p_invoice_id: invoiceId,
+  });
+  if (error) throw error;
+  return data as string;
+}
+
+/**
+ * T3 — record the customer's Nafath signing of the promissory note.
+ * Marks the note as signed and stamps signed_at. Idempotent.
+ */
+export async function recordNafathSigning(noteId: string): Promise<void> {
+  const sb = requireSupabase();
+  const { error } = await sb.rpc('record_nafath_signing', {
+    p_note_id: noteId,
+  });
+  if (error) throw error;
+}
+
+/**
+ * T4 — final verification + activation. Stamps the note as Nafath-
+ * attested, flips the contract to 'active', and bumps the customer's
+ * eligibility used_amount once. Idempotent. Returns the contract id.
+ */
+export async function verifyAndActivateRental(noteId: string): Promise<string> {
+  const sb = requireSupabase();
+  const { data, error } = await sb.rpc('verify_and_activate_rental', {
+    p_note_id: noteId,
   });
   if (error) throw error;
   return data as string;
