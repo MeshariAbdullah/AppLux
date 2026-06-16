@@ -524,6 +524,7 @@
       "newContracts": "Active rentals",
       "notes": "Promissory notes",
       "past": "Past rentals",
+      "pending": "Awaiting your review",
       "noContracts": "No active contracts yet",
       "noNotes": "No promissory notes yet",
       "noPast": "No past rentals yet"
@@ -537,6 +538,11 @@
     "past": {
       "completedOn": "Completed {date}",
       "settledNote": "Note settled"
+    },
+    "pending": {
+      "expiresIn": "Expires in {days, plural, one {# day} other {# days}}",
+      "expiredHint": "Expired — ask the merchant for a new code",
+      "review": "Review"
     },
     "empty": {
       "title": "Your rentals will appear here",

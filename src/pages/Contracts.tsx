@@ -8,16 +8,19 @@ import {
   CameraIcon,
   CheckIcon,
   DocIcon,
+  ReceiptIcon,
 } from '@/components/icons';
 import { useI18n, useT } from '@/lib/i18n';
 import { useStore } from '@/lib/store';
 import {
   adaptContract,
   adaptContractToHistory,
+  adaptInvoice,
   adaptNote,
   fetchMerchantsByIds,
   getHandoverPhotoUrl,
   listCustomerContracts,
+  listCustomerInvoices,
   listCustomerNotes,
   uploadAndRecordHandover,
   useSupabaseAuth,
@@ -25,30 +28,40 @@ import {
 import type {
   Contract,
   HistoryItem,
+  Invoice,
   PromissoryNote,
 } from '@/lib/data';
 import { cn } from '@/lib/cn';
 import type { MerchantRow } from '@/lib/supabase';
 
 // =====================================================================
-// My rentals — restructured.
+// My rentals — three sections, one destination for the whole lifecycle.
 //
-// Previously a pair of empty buckets. Now a real timeline:
-//   * Active rentals  — compound bundle cards (contract + note + handover)
-//   * Past rentals    — actual settled rentals (never surfaced before)
-//   * Empty fallback  — single editorial card with a guided CTA
+//   1. Pending invoices   — issued / viewed invoices waiting on the
+//                           customer's approval. Tappable rows that
+//                           route to /track/invoice/<id>.
+//   2. Active rentals     — compound bundle cards (contract + note +
+//                           handover)
+//   3. Past rentals       — settled rentals
 //
-// Each active rental is one card, not three rows. The handover banner
-// lives inside the card, so the customer's required action sits next
-// to the rental it belongs to.
+// The page is the canonical "View all" destination from the home
+// dashboard's "+N more invoices waiting" link. Invoices must NOT
+// disappear here just because a contract hasn't been created yet —
+// they're part of the same rental lifecycle.
 // =====================================================================
 
 export default function Contracts() {
   const t = useT();
   const { locale } = useI18n();
-  const { contracts: demoContracts, notes: demoNotes, history: demoHistory } = useStore();
+  const {
+    invoices: demoInvoices,
+    contracts: demoContracts,
+    notes: demoNotes,
+    history: demoHistory,
+  } = useStore();
   const { configured, session } = useSupabaseAuth();
 
+  const [livePending, setLivePending] = useState<Invoice[] | null>(null);
   const [liveContracts, setLiveContracts] = useState<Contract[] | null>(null);
   const [liveNotes, setLiveNotes] = useState<PromissoryNote[] | null>(null);
   const [liveHistory, setLiveHistory] = useState<HistoryItem[] | null>(null);
@@ -56,6 +69,7 @@ export default function Contracts() {
   useEffect(() => {
     const userId = session?.user?.id;
     if (!configured || !userId) {
+      setLivePending(null);
       setLiveContracts(null);
       setLiveNotes(null);
       setLiveHistory(null);
@@ -63,7 +77,8 @@ export default function Contracts() {
     }
     let cancelled = false;
     (async () => {
-      const [contractRows, noteRows] = await Promise.all([
+      const [invoiceRows, contractRows, noteRows] = await Promise.all([
+        listCustomerInvoices(userId).catch(() => []),
         listCustomerContracts(userId).catch(() => []),
         listCustomerNotes(userId).catch(() => []),
       ]);
@@ -71,6 +86,7 @@ export default function Contracts() {
 
       const merchantIds = Array.from(
         new Set([
+          ...invoiceRows.map((r) => r.merchant_id),
           ...contractRows.map((r) => r.merchant_id),
           ...noteRows.map((r) => r.merchant_id),
         ]),
@@ -89,6 +105,11 @@ export default function Contracts() {
         nameMap[m.id] = display;
       }
 
+      setLivePending(
+        invoiceRows
+          .filter((r) => r.status === 'issued' || r.status === 'viewed')
+          .map((r) => adaptInvoice(r, [], nameMap[r.merchant_id])),
+      );
       setLiveContracts(
         contractRows
           .filter((c) => c.status !== 'ended' && c.status !== 'cancelled')
@@ -108,6 +129,9 @@ export default function Contracts() {
     };
   }, [configured, locale, session?.user?.id]);
 
+  // Demo fallback: the demo store keeps invoices with the UI 'due'
+  // status which mirrors live 'issued'. Treat them as pending here.
+  const pending = livePending ?? demoInvoices.filter((i) => i.status === 'due');
   const contracts = liveContracts ?? demoContracts;
   const notes = liveNotes ?? demoNotes;
   const history = liveHistory ?? demoHistory;
@@ -121,7 +145,8 @@ export default function Contracts() {
     [contracts, notes],
   );
 
-  const hasNothing = rentals.length === 0 && history.length === 0;
+  const hasNothing =
+    pending.length === 0 && rentals.length === 0 && history.length === 0;
 
   return (
     <>
@@ -131,6 +156,22 @@ export default function Contracts() {
           <EmptyRentals />
         ) : (
           <>
+            {pending.length > 0 && (
+              <section>
+                <SectionHeader title={t('contracts.sections.pending')} />
+                <Card padded={false} className="px-5">
+                  {pending.map((inv, i) => (
+                    <div key={inv.id}>
+                      <PendingInvoiceRow invoice={inv} />
+                      {i < pending.length - 1 && (
+                        <div className="h-px bg-canvas-200/80" />
+                      )}
+                    </div>
+                  ))}
+                </Card>
+              </section>
+            )}
+
             {rentals.length > 0 && (
               <section>
                 <SectionHeader title={t('contracts.sections.newContracts')} />
@@ -165,6 +206,58 @@ export default function Contracts() {
         )}
       </Screen>
     </>
+  );
+}
+
+// =====================================================================
+// Pending invoice row — opens the focused invoice tracking page.
+// Surfaces the merchant name + item title at the top, then the amount
+// and due date underneath, with a clear "Review" affordance.
+// =====================================================================
+
+function PendingInvoiceRow({ invoice }: { invoice: Invoice }) {
+  const t = useT();
+  const { dir, formatCurrency, formatDate } = useI18n();
+  const days = daysUntil(invoice.dueDate);
+  const expired = days < 0;
+  return (
+    <Link
+      to={`/track/invoice/${invoice.id}`}
+      className="flex items-center gap-3 py-3.5 -mx-1 px-1 rounded-2xl transition-colors hover:bg-canvas-100/60 active:bg-canvas-100"
+    >
+      <span className="h-11 w-11 shrink-0 rounded-2xl bg-warn-50 text-warn-700 ring-1 ring-warn-500/20 grid place-items-center">
+        <ReceiptIcon size={18} />
+      </span>
+      <div className="flex-1 min-w-0">
+        {invoice.counterparty && (
+          <div className="text-[11px] font-semibold text-warn-700 uppercase tracking-[0.1em] truncate">
+            {t('home.attention.fromMerchant', { merchant: invoice.counterparty })}
+          </div>
+        )}
+        <div className="mt-0.5 text-[13.5px] font-semibold text-ink-900 truncate tracking-tight">
+          {invoice.title}
+        </div>
+        <div className="mt-0.5 text-[11.5px] text-ink-400 truncate num">
+          {expired
+            ? t('contracts.pending.expiredHint')
+            : t('contracts.pending.expiresIn', { days })}
+          {' · '}
+          {formatDate(invoice.dueDate)}
+        </div>
+      </div>
+      <div className="flex flex-col items-end gap-1 shrink-0">
+        <div className="text-[13.5px] font-semibold text-ink-900 num">
+          {formatCurrency(invoice.amount)}
+        </div>
+        <span className="inline-flex items-center gap-0.5 text-[11px] font-semibold text-lavender-700">
+          {t('contracts.pending.review')}
+          <ArrowIcon
+            size={11}
+            className={cn(dir === 'rtl' ? 'rotate-180' : '')}
+          />
+        </span>
+      </div>
+    </Link>
   );
 }
 
