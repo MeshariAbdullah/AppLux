@@ -721,7 +721,6 @@ export default function MerchantRentalSession() {
               issueError={session.issue.error}
               issueDisabled={supabaseAuth.configured && !merchantId}
               onIssue={handleIssue}
-              onBack={() => setStep('eligibility')}
             />
           )}
 
@@ -1521,7 +1520,6 @@ function ContractCard({
   issueError,
   issueDisabled,
   onIssue,
-  onBack,
 }: {
   t: (k: string, p?: Record<string, string | number>) => string;
   dir: 'rtl' | 'ltr';
@@ -1537,7 +1535,6 @@ function ContractCard({
   issueError: string | null;
   issueDisabled: boolean;
   onIssue: () => void;
-  onBack: () => void;
 }) {
   const { locale } = useI18n();
   const days = Math.max(Number(operation.rentalDays) || 1, 1);
@@ -1741,9 +1738,6 @@ function ContractCard({
                 {t('merchant.session.contract.issuePackageCta', {
                   amount: formatCurrency(rentalAmount),
                 })}
-              </Button>
-              <Button variant="ghost" size="md" block onClick={onBack}>
-                {t('merchant.session.contract.backCta')}
               </Button>
             </>
           )}

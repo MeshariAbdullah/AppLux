@@ -21,6 +21,10 @@ export type Invoice = {
   /** Merchant display name in the active locale. Populated by
    *  adapters when a merchant lookup is available; '' otherwise. */
   counterparty?: string;
+  /** The invoice's one-time scan token. Routes the customer into
+   *  the review wizard at /review/<scanToken>. Populated by
+   *  adaptInvoice when a Supabase row is available. */
+  scanToken?: string | null;
 };
 
 export type ContractStatus = 'active' | 'pending' | 'ended';

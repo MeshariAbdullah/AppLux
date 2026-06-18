@@ -868,6 +868,7 @@
       "overdueBanner": "هذه الفاتورة متأخرة، يرجى السداد لتجنّب إجراءات التحصيل.",
       "paidBanner": "تم استلام السداد بنجاح وتحديث حالة العقد.",
       "payNow": "سداد الآن",
+      "reviewAndAccept": "مراجعة العقد وقبوله",
       "paymentPlan": "جدول السداد",
       "events": {
         "issued": "تم إصدار الفاتورة",
@@ -1053,8 +1054,7 @@
           "fullDamage": "الضرر الكلي",
           "lateReturnPerDay": "تأخير الإرجاع / اليوم"
         },
-        "issuePackageCta": "إصدار حزمة الإيجار · {amount}",
-        "backCta": "تعديل البنود"
+        "issuePackageCta": "إصدار حزمة الإيجار · {amount}"
       },
       "handoff": {
         "seal": "تم إصدار حزمة الإيجار",

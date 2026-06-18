@@ -176,6 +176,7 @@ export function adaptInvoice(
     amount: Number(row.total_amount),
     status: mapInvoiceStatus(row.status),
     counterparty: merchantName,
+    scanToken: row.scan_token,
   };
 }
 

@@ -280,7 +280,18 @@ export default function Home() {
             dir={dir}
             formatCurrency={formatCurrency}
             formatDate={formatDate}
-            onReview={(invoiceId) => navigate(`/track/invoice/${invoiceId}`)}
+            onReview={(invoice) => {
+              // Route directly into the review wizard. The tracking
+              // page (/track/invoice/<id>) is read-only; the customer
+              // needs the wizard at /review/<scanToken> to actually
+              // see the contract clauses and approve. Fall back to
+              // tracking only if a scan token isn't available.
+              if (invoice.scanToken) {
+                navigate(`/review/${invoice.scanToken}`);
+              } else {
+                navigate(`/track/invoice/${invoice.id}`);
+              }
+            }}
           />
         )}
 
@@ -426,7 +437,7 @@ function AttentionStack({
   dir: 'rtl' | 'ltr';
   formatCurrency: (n: number) => string;
   formatDate: (iso: string) => string;
-  onReview: (invoiceId: string) => void;
+  onReview: (invoice: AttentionInvoice) => void;
 }) {
   // Show only the most urgent pending invoice. The home page is an
   // action hub, not a feed — if there are more, link to the full list.
@@ -472,7 +483,7 @@ function AttentionStack({
         </div>
         <button
           type="button"
-          onClick={() => onReview(top.id)}
+          onClick={() => onReview(top)}
           className={cn(
             'mt-4 inline-flex items-center justify-center gap-1.5 h-11 w-full rounded-xl2',
             'bg-ink-900 text-white font-semibold text-[14px] tracking-tight',

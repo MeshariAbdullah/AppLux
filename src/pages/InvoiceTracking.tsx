@@ -177,15 +177,24 @@ export default function InvoiceTracking() {
                 </div>
               </div>
             </div>
-            {invoice.status !== 'paid' && (
+            {/* Pre-approval CTA — only when the invoice is still
+                'due' (i.e. the customer hasn't accepted yet) AND we
+                have a scan token to route into the review wizard.
+                The wizard is where the customer actually reviews the
+                contract clauses and approves. Once accepted, payment
+                + Nafath simulation lives on the Approval screen, so
+                this page intentionally has no primary CTA in the
+                'paid' (= accepted) or 'overdue' state. */}
+            {invoice.status === 'due' && invoice.scanToken && (
               <Button
                 variant="primary"
                 size="lg"
                 block
                 className="mt-5"
                 leading={<SparkleIcon size={18} />}
+                onClick={() => navigate(`/review/${invoice.scanToken}`)}
               >
-                {t('track.invoice.payNow')}
+                {t('track.invoice.reviewAndAccept')}
               </Button>
             )}
           </div>
