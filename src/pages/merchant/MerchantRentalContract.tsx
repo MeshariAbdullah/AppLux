@@ -22,12 +22,19 @@ import { useStore } from '@/lib/store';
 import {
   adaptContractToMerchantRental,
   fetchContractById,
+  fetchInvoiceById,
   fetchMerchant,
+  fetchNoteByContractId,
   fetchProfile,
+  listInvoiceItems,
   useSupabaseAuth,
 } from '@/lib/supabase';
-import { SEED_SCANS } from '@/lib/data';
-import type { MerchantRental } from '@/lib/data';
+import type {
+  ContractClause,
+  Localized,
+  MerchantRental,
+} from '@/lib/data';
+import { buildContractFromTemplate } from '@/lib/contractTemplate';
 import { toneForDocState } from './MerchantRentalDetails';
 
 export default function MerchantRentalContract() {
@@ -43,6 +50,11 @@ export default function MerchantRentalContract() {
     [id, merchantRentals],
   );
   const [liveRental, setLiveRental] = useState<MerchantRental | null>(null);
+  // Real generated clauses from the same template the customer sees
+  // and the merchant confirmed at issuance time. Replaces the
+  // hardcoded SEED_SCANS demo clauses that used to render here.
+  const [liveClauses, setLiveClauses] = useState<ContractClause[] | null>(null);
+  const [liveLessor, setLiveLessor] = useState<Localized | null>(null);
   // Same lazy-init pattern as MerchantRentalDetails — starts in the
   // "resolving" state for live ids so the first render doesn't
   // synchronously redirect before useEffect can run the fetch.
@@ -53,6 +65,8 @@ export default function MerchantRentalContract() {
   useEffect(() => {
     if (!configured || !id || demoRental) {
       setLiveRental(null);
+      setLiveClauses(null);
+      setLiveLessor(null);
       return;
     }
     let cancelled = false;
@@ -60,10 +74,16 @@ export default function MerchantRentalContract() {
     (async () => {
       const contract = await fetchContractById(id).catch(() => null);
       if (cancelled || !contract) return;
-      const [m, c] = await Promise.all([
+      const [m, c, note, invoice] = await Promise.all([
         fetchMerchant(contract.merchant_id).catch(() => null),
         fetchProfile(contract.customer_user_id).catch(() => null),
+        fetchNoteByContractId(contract.id).catch(() => null),
+        fetchInvoiceById(contract.invoice_id).catch(() => null),
       ]);
+      if (cancelled) return;
+      const items = invoice
+        ? await listInvoiceItems(invoice.id).catch(() => [])
+        : [];
       if (cancelled) return;
       const customerName = c?.full_name ?? '—';
       setLiveRental(
@@ -76,8 +96,33 @@ export default function MerchantRentalContract() {
           headlineItem: `Rental ${contract.contract_number}`,
           category: m?.primary_category,
           itemValue: Number(contract.total_amount),
+          note,
         }),
       );
+
+      // Regenerate the contract template using the merchant overrides
+      // stored on the invoice row — what the customer was shown at
+      // review time and the merchant confirmed at issuance.
+      if (invoice && items.length > 0) {
+        const durationDays = items[0]?.rental_days ?? 30;
+        const template = buildContractFromTemplate({
+          invoice,
+          items,
+          merchant: m,
+          pickupDate: contract.start_date,
+          returnDate: contract.end_date,
+          durationDays,
+        });
+        setLiveClauses(template.clauses);
+      } else {
+        setLiveClauses([]);
+      }
+      if (m?.display_name) {
+        setLiveLessor({
+          ar: m.display_name.ar || m.display_name.en || '',
+          en: m.display_name.en || m.display_name.ar || '',
+        });
+      }
     })()
       .finally(() => {
         if (!cancelled) setResolving(false);
@@ -130,7 +175,9 @@ export default function MerchantRentalContract() {
     if (Number.isNaN(s) || Number.isNaN(e) || e <= s) return 0;
     return Math.max(1, Math.round((e - s) / (1000 * 60 * 60 * 24)));
   })();
-  const clauses = SEED_SCANS[0]?.contract.clauses ?? [];
+  // Live generated clauses if we have them; otherwise empty (the
+  // page handles an empty clauses list gracefully).
+  const clauses: ContractClause[] = liveClauses ?? [];
   const readyAt = rental.timeline.find((e) => e.key === 'contract-ready')?.at;
   const signedAt = rental.timeline.find((e) => e.key === 'nafith-approved')?.at;
 
@@ -200,7 +247,11 @@ export default function MerchantRentalContract() {
             />
             <Row
               label={t('merchant.rental.contract.lessor')}
-              value={merchant?.companyName ?? ''}
+              value={
+                liveLessor
+                  ? liveLessor[locale]
+                  : merchant?.companyName ?? ''
+              }
             />
             <CardDivider />
             <Row

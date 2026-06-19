@@ -30,6 +30,7 @@ import {
   closeRentalContract,
   fetchContractById,
   fetchMerchant,
+  fetchNoteByContractId,
   fetchProfile,
   useSupabaseAuth,
 } from '@/lib/supabase';
@@ -68,9 +69,10 @@ export default function MerchantRentalClose() {
     (async () => {
       const contract = await fetchContractById(id).catch(() => null);
       if (cancelled || !contract) return;
-      const [m, c] = await Promise.all([
+      const [m, c, note] = await Promise.all([
         fetchMerchant(contract.merchant_id).catch(() => null),
         fetchProfile(contract.customer_user_id).catch(() => null),
+        fetchNoteByContractId(contract.id).catch(() => null),
       ]);
       if (cancelled) return;
       const customerName = c?.full_name ?? '—';
@@ -84,6 +86,7 @@ export default function MerchantRentalClose() {
           headlineItem: `Rental ${contract.contract_number}`,
           category: m?.primary_category,
           itemValue: Number(contract.total_amount),
+          note,
         }),
       );
     })()

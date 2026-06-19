@@ -13,9 +13,12 @@ import type {
   Invoice,
   InvoiceStatus as UIInvoiceStatus,
   Localized,
+  MerchantNafithState,
   MerchantRental,
   MerchantRentalCategory,
+  MerchantRentalDocState,
   MerchantRentalStatus,
+  MerchantRentalTimelineEvent,
   NoteStatus as UINoteStatus,
   PartnerStore,
   PromissoryNote,
@@ -257,9 +260,74 @@ export function adaptContractToMerchantRental(
     category?: RentalCategoryDB;
     noteRef?: string;
     itemValue?: number;
+    /** Linked promissory note row. Without this the adapter falls
+     *  back to safe defaults (nafith=pending, empty timeline) — that
+     *  was the source of the merchant detail page showing the Nafath
+     *  section as pending even when the rental was fully active.
+     *  Pass the actual note (or null) so noteState / nafithState /
+     *  timeline reflect the real DB state. */
+    note?: PromissoryNoteRow | null;
   } = {},
 ): MerchantRental {
   const status = deriveRentalStatus(row);
+  const note = ctx.note;
+
+  // Contract is "signed" once contract.signed_at is set. In the
+  // lifecycle-split flow that happens in verify_and_activate_rental
+  // (T4), i.e. once Lend has verified the customer's Nafath approval.
+  const contractState: MerchantRentalDocState = row.signed_at ? 'signed' : 'sent';
+
+  // Note state reads the promissory_notes row directly. Settled is
+  // shown as 'signed' here because the merchant-facing semantics are
+  // "the note is in force"; settled means it's been satisfied.
+  const noteState: MerchantRentalDocState = !note
+    ? 'draft'
+    : note.status === 'signed' || note.status === 'settled'
+      ? 'signed'
+      : 'sent';
+
+  // Nafath: only 'approved' when the platform has recorded a real
+  // attestation timestamp. 'submitted' covers the window between the
+  // customer signing in Nafath and Lend verifying.
+  const nafithState: MerchantNafithState = note?.nafith_attested_at
+    ? 'approved'
+    : note?.status === 'signed'
+      ? 'submitted'
+      : 'pending';
+
+  // "customerApproved" semantically means "the rental is past all
+  // customer steps and live" (post-Nafath verification). Pending
+  // contracts have an approved customer but are not yet live.
+  const customerApproved = row.status === 'active' || row.status === 'ended';
+
+  // Synthesize a timeline from the real timestamps we have. Skipped
+  // entries (e.g. note not yet created) are simply absent, so
+  // downstream consumers can sort + render whatever is present.
+  const timeline: MerchantRentalTimelineEvent[] = [];
+  if (row.created_at) {
+    timeline.push({ key: 'created', at: row.created_at });
+    // In the lifecycle-split flow, contract row creation == customer
+    // approval == contract document being ready (all the same moment).
+    timeline.push({ key: 'customer-approved', at: row.created_at });
+    timeline.push({ key: 'contract-ready', at: row.created_at });
+  }
+  if (note?.created_at) {
+    timeline.push({ key: 'payment-received', at: note.created_at });
+    timeline.push({ key: 'note-ready', at: note.created_at });
+  }
+  if (note?.signed_at) {
+    timeline.push({ key: 'nafith-submitted', at: note.signed_at });
+  }
+  if (note?.nafith_attested_at) {
+    timeline.push({ key: 'nafith-approved', at: note.nafith_attested_at });
+  }
+  if (row.signed_at) {
+    timeline.push({ key: 'activated', at: row.signed_at });
+  }
+  if (row.ended_at) {
+    timeline.push({ key: 'returned', at: row.ended_at });
+  }
+
   return {
     id: row.id,
     customerName: ctx.customerName ?? '—',
@@ -279,12 +347,12 @@ export function adaptContractToMerchantRental(
     totalInstallments: 1,
     status,
     contractRef: row.contract_number,
-    noteRef: ctx.noteRef ?? row.contract_number,
-    customerApproved: row.status !== 'pending',
-    contractState: row.signed_at ? 'signed' : 'sent',
-    noteState: row.signed_at ? 'signed' : 'sent',
-    nafithState: 'pending',
-    timeline: [],
+    noteRef: ctx.noteRef ?? note?.reference_number ?? row.contract_number,
+    customerApproved,
+    contractState,
+    noteState,
+    nafithState,
+    timeline,
   };
 }
 

@@ -23,15 +23,17 @@ import {
   adaptContractToMerchantRental,
   fetchContractById,
   fetchMerchant,
+  fetchNoteByContractId,
   fetchProfile,
   useSupabaseAuth,
+  type PromissoryNoteRow,
 } from '@/lib/supabase';
-import type { MerchantRental } from '@/lib/data';
+import type { Localized, MerchantRental } from '@/lib/data';
 import { toneForDocState, toneForNafith } from './MerchantRentalDetails';
 
 export default function MerchantRentalNote() {
   const t = useT();
-  const { formatCurrency, formatDate } = useI18n();
+  const { formatCurrency, formatDate, locale } = useI18n();
   const navigate = useNavigate();
   const { id } = useParams();
   const { merchantRentals, merchant } = useStore();
@@ -42,6 +44,14 @@ export default function MerchantRentalNote() {
     [id, merchantRentals],
   );
   const [liveRental, setLiveRental] = useState<MerchantRental | null>(null);
+  // Live promissory note + lessor name. Without these the page used
+  // to show `merchant?.companyName` (demo store, undefined in live
+  // mode), `rental.endDate` for due date (= contract end, not note
+  // due_date), and `rental.liabilityTotal` for principal (= contract
+  // total, not note.principal_amount). Hydrating from the real note
+  // row removes all three stale references.
+  const [liveNote, setLiveNote] = useState<PromissoryNoteRow | null>(null);
+  const [liveLessor, setLiveLessor] = useState<Localized | null>(null);
   const [resolving, setResolving] = useState<boolean>(() =>
     Boolean(configured && id && !demoRental),
   );
@@ -49,6 +59,8 @@ export default function MerchantRentalNote() {
   useEffect(() => {
     if (!configured || !id || demoRental) {
       setLiveRental(null);
+      setLiveNote(null);
+      setLiveLessor(null);
       return;
     }
     let cancelled = false;
@@ -56,9 +68,10 @@ export default function MerchantRentalNote() {
     (async () => {
       const contract = await fetchContractById(id).catch(() => null);
       if (cancelled || !contract) return;
-      const [m, c] = await Promise.all([
+      const [m, c, note] = await Promise.all([
         fetchMerchant(contract.merchant_id).catch(() => null),
         fetchProfile(contract.customer_user_id).catch(() => null),
+        fetchNoteByContractId(contract.id).catch(() => null),
       ]);
       if (cancelled) return;
       const customerName = c?.full_name ?? '—';
@@ -72,8 +85,16 @@ export default function MerchantRentalNote() {
           headlineItem: `Rental ${contract.contract_number}`,
           category: m?.primary_category,
           itemValue: Number(contract.total_amount),
+          note,
         }),
       );
+      setLiveNote(note);
+      if (m?.display_name) {
+        setLiveLessor({
+          ar: m.display_name.ar || m.display_name.en || '',
+          en: m.display_name.en || m.display_name.ar || '',
+        });
+      }
     })()
       .finally(() => {
         if (!cancelled) setResolving(false);
@@ -121,8 +142,23 @@ export default function MerchantRentalNote() {
     );
   }
 
-  const issuedAt = rental.timeline.find((e) => e.key === 'note-ready')?.at;
-  const attestedAt = rental.timeline.find((e) => e.key === 'nafith-approved')?.at;
+  // Prefer live note row fields; fall back to the timeline (which the
+  // adapter now also emits from real timestamps) and finally to the
+  // contract-derived defaults for demo mode.
+  const issuedAt =
+    liveNote?.created_at ??
+    rental.timeline.find((e) => e.key === 'note-ready')?.at;
+  const attestedAt =
+    liveNote?.nafith_attested_at ??
+    rental.timeline.find((e) => e.key === 'nafith-approved')?.at;
+  const beneficiary =
+    liveNote?.beneficiary_name ??
+    (liveLessor ? liveLessor[locale] : merchant?.companyName ?? '');
+  const principal =
+    liveNote?.principal_amount != null
+      ? Number(liveNote.principal_amount)
+      : rental.liabilityTotal;
+  const dueDate = liveNote?.due_date ?? rental.endDate;
 
   return (
     <>
@@ -168,7 +204,7 @@ export default function MerchantRentalNote() {
                   {t('merchant.rental.note.principal')}
                 </div>
                 <div className="mt-0.5 font-semibold num truncate">
-                  {formatCurrency(rental.liabilityTotal)}
+                  {formatCurrency(principal)}
                 </div>
               </div>
               <div>
@@ -176,7 +212,7 @@ export default function MerchantRentalNote() {
                   {t('merchant.rental.note.dueDate')}
                 </div>
                 <div className="mt-0.5 font-semibold num truncate">
-                  {formatDate(rental.endDate)}
+                  {formatDate(dueDate)}
                 </div>
               </div>
             </div>
@@ -190,14 +226,12 @@ export default function MerchantRentalNote() {
             />
             <Row
               label={t('merchant.rental.note.beneficiary')}
-              value={merchant?.companyName ?? ''}
+              value={beneficiary}
             />
             <CardDivider />
             <Row
               label={t('merchant.rental.note.principalFull')}
-              value={
-                <span className="num">{formatCurrency(rental.liabilityTotal)}</span>
-              }
+              value={<span className="num">{formatCurrency(principal)}</span>}
               sub={t('merchant.rental.note.principalHint')}
             />
             <CardDivider />
@@ -208,7 +242,7 @@ export default function MerchantRentalNote() {
             <CardDivider />
             <Row
               label={t('merchant.rental.note.dueDate')}
-              value={<span className="num">{formatDate(rental.endDate)}</span>}
+              value={<span className="num">{formatDate(dueDate)}</span>}
             />
           </Card>
 

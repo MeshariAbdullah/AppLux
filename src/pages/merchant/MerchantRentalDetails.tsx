@@ -32,6 +32,7 @@ import {
   adaptContractToMerchantRental,
   fetchContractById,
   fetchMerchant,
+  fetchNoteByContractId,
   fetchProfile,
   useSupabaseAuth,
 } from '@/lib/supabase';
@@ -194,9 +195,13 @@ export default function MerchantRentalDetails() {
         // a back action once `resolving` flips to false in finally.
         return;
       }
-      const [merchant, customer] = await Promise.all([
+      const [merchant, customer, note] = await Promise.all([
         fetchMerchant(contract.merchant_id).catch(() => null),
         fetchProfile(contract.customer_user_id).catch(() => null),
+        // Linked promissory note — drives noteState, nafithState, and
+        // the activity timeline. Without it the Nafath section was
+        // stuck on "pending" even after the rental was fully verified.
+        fetchNoteByContractId(contract.id).catch(() => null),
       ]);
       if (cancelled) return;
       const customerName = customer?.full_name ?? '—';
@@ -211,6 +216,7 @@ export default function MerchantRentalDetails() {
           headlineItem: `Rental ${contract.contract_number}`,
           category: merchant?.primary_category,
           itemValue: Number(contract.total_amount),
+          note,
         }),
       );
     })()
