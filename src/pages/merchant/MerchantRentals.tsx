@@ -12,7 +12,6 @@ import {
   CarIcon,
   ChevronIcon,
   InfoIcon,
-  PlusIcon,
 } from '@/components/icons';
 import { useI18n, useT } from '@/lib/i18n';
 import { useStore } from '@/lib/store';
@@ -109,15 +108,6 @@ export default function MerchantRentals() {
         title={t('merchant.rentals.title')}
         subtitle={t('merchant.rentals.count', { count: filtered.length })}
         showBack
-        trailing={
-          <Link
-            to="/merchant/invoice/new"
-            className="h-9 w-9 grid place-items-center rounded-full bg-ink-900 text-white hover:bg-ink-800"
-            aria-label={t('merchant.home.quickInvoice')}
-          >
-            <PlusIcon size={16} />
-          </Link>
-        }
       />
       <Screen padded={false} className="bg-canvas">
         <div className="px-5 pt-4 pb-10 space-y-4">

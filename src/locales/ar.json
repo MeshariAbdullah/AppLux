@@ -1211,14 +1211,14 @@
       "approvalsAlertHint": "تابع تقدّم العملاء في مراجعة العروض.",
       "viewAlert": "مراجعة",
       "summaryTitle": "نظرة عامة",
-      "summaryActive": "العقود",
+      "summaryActive": "الإيجارات",
       "summaryPending": "الموافقات",
       "summaryDamages": "الضرر",
       "quickActionsTitle": "إجراءات سريعة",
       "startSession": "بدء جلسة تأجير",
       "startSessionDesc": "تحقّق من العميل، إعداد العملية، تأكيد الأهلية.",
-      "quickRentals": "العقود",
-      "quickRentalsDesc": "كل عقود التأجير: نشِط، منتهي، مُقفل.",
+      "quickRentals": "الإيجارات",
+      "quickRentalsDesc": "كل الإيجارات: نشِط، منتهي، مُقفل.",
       "quickDamages": "حالات الضرر",
       "quickDamagesDesc": "مطالبات الضرر وإجراءات التسوية",
       "quickHistory": "السجل",
@@ -1236,8 +1236,8 @@
       }
     },
     "rentals": {
-      "title": "العقود النشطة",
-      "subtitle": "جميع عقود التأجير التي تديرها المنشأة حالياً.",
+      "title": "الإيجارات",
+      "subtitle": "جميع الإيجارات التي تديرها المنشأة — نشطة، منتهية، ومُقفلة.",
       "searchPlaceholder": "ابحث بالعميل أو رقم العقد",
       "filterAll": "الكل",
       "filterActive": "نشِط",
@@ -1262,6 +1262,11 @@
     },
     "rental": {
       "title": "متابعة التأجير",
+      "notFound": {
+        "title": "تعذّر تحميل تفاصيل هذا الإيجار",
+        "hint": "ربما تم حذف الإيجار أو لا تملك صلاحية الوصول. عُد إلى قائمة الإيجارات وحاول من جديد.",
+        "back": "العودة إلى الإيجارات"
+      },
       "hero": {
         "current": "التأجير الحالي",
         "progress": "التقدّم"

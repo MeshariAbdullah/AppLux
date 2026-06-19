@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
-import { Link, Navigate, useNavigate, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import { Header, Screen } from '@/components/layout';
-import { Button, Card, CardDivider, SectionHeader, StatusChip, type StatusTone } from '@/components/ui';
+import { Button, Card, CardDivider, EmptyState, SectionHeader, StatusChip, type StatusTone } from '@/components/ui';
 import {
   AlertIcon,
   BadgeCheckIcon,
@@ -166,7 +166,17 @@ export default function MerchantRentalDetails() {
   );
 
   const [liveRental, setLiveRental] = useState<MerchantRental | null>(null);
-  const [resolving, setResolving] = useState(false);
+  // Initialise `resolving` lazily based on whether the effect below
+  // is actually going to run a fetch. Critical fix: the previous
+  // `useState(false)` caused the first render to satisfy the
+  // !rental && !resolving branch and synchronously emit
+  // <Navigate to="/merchant/rentals" replace />, bouncing the
+  // merchant back to the list before useEffect could even fire. By
+  // starting in the "resolving" state for live ids, the page renders
+  // a loading placeholder until the fetch resolves.
+  const [resolving, setResolving] = useState<boolean>(() =>
+    Boolean(configured && id && !demoRental),
+  );
 
   useEffect(() => {
     if (!configured || !id || demoRental) {
@@ -177,7 +187,13 @@ export default function MerchantRentalDetails() {
     setResolving(true);
     (async () => {
       const contract = await fetchContractById(id).catch(() => null);
-      if (cancelled || !contract) return;
+      if (cancelled) return;
+      if (!contract) {
+        // No row (or RLS denied). Leave liveRental=null; the render
+        // path below shows a clear "couldn't load" empty state with
+        // a back action once `resolving` flips to false in finally.
+        return;
+      }
       const [merchant, customer] = await Promise.all([
         fetchMerchant(contract.merchant_id).catch(() => null),
         fetchProfile(contract.customer_user_id).catch(() => null),
@@ -209,8 +225,44 @@ export default function MerchantRentalDetails() {
   const rental = liveRental ?? demoRental;
 
   if (!rental) {
-    if (resolving) return null;
-    return <Navigate to="/merchant/rentals" replace />;
+    if (resolving) {
+      // Still fetching — render a quiet placeholder rather than
+      // bouncing back to the list. Header keeps the user oriented.
+      return (
+        <>
+          <Header title="…" showBack />
+          <Screen className="bg-canvas">
+            <div className="min-h-[40vh] grid place-items-center">
+              <span className="h-7 w-7 rounded-full border-2 border-canvas-200 border-t-lavender-600 animate-spin" />
+            </div>
+          </Screen>
+        </>
+      );
+    }
+    // Fetch finished and produced nothing (deleted row, RLS denied,
+    // network failure). Surface this explicitly with a back action
+    // instead of silently redirecting.
+    return (
+      <>
+        <Header title={t('merchant.rentals.title')} showBack />
+        <Screen className="bg-canvas">
+          <EmptyState
+            tone="warn"
+            icon={<AlertIcon size={22} />}
+            title={t('merchant.rental.notFound.title')}
+            description={t('merchant.rental.notFound.hint')}
+            action={
+              <Button
+                size="sm"
+                onClick={() => navigate('/merchant/rentals', { replace: true })}
+              >
+                {t('merchant.rental.notFound.back')}
+              </Button>
+            }
+          />
+        </Screen>
+      </>
+    );
   }
 
   const statusTone = toneForStatus(rental.status);

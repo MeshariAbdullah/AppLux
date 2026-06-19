@@ -1211,13 +1211,13 @@
       "approvalsAlertHint": "Follow up on renters reviewing offers.",
       "viewAlert": "Review",
       "summaryTitle": "Overview",
-      "summaryActive": "Contracts",
+      "summaryActive": "Rentals",
       "summaryPending": "Approvals",
       "summaryDamages": "Damages",
       "quickActionsTitle": "Quick actions",
       "startSession": "Start rental session",
       "startSessionDesc": "Verify the renter, set up the operation, confirm eligibility.",
-      "quickRentals": "Contracts",
+      "quickRentals": "Rentals",
       "quickRentalsDesc": "All rentals: active, ended, closed.",
       "quickDamages": "Damage cases",
       "quickDamagesDesc": "Damage claims and settlement actions",
@@ -1236,8 +1236,8 @@
       }
     },
     "rentals": {
-      "title": "Active rentals",
-      "subtitle": "All rental contracts currently managed by your business.",
+      "title": "Rentals",
+      "subtitle": "All rentals managed by your business — active, ended, and closed.",
       "searchPlaceholder": "Search by customer or contract ID",
       "filterAll": "All",
       "filterActive": "Active",
@@ -1262,6 +1262,11 @@
     },
     "rental": {
       "title": "Rental tracking",
+      "notFound": {
+        "title": "Couldn't load this rental",
+        "hint": "It may have been deleted or you don't have access. Go back to the rentals list and try again.",
+        "back": "Back to rentals"
+      },
       "hero": {
         "current": "Current rental",
         "progress": "Progress"
