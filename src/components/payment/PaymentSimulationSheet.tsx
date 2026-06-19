@@ -35,6 +35,42 @@ import {
 
 type Phase = 'pay' | 'nafath' | 'verify' | 'done';
 
+// =====================================================================
+// Error helpers — surface the real Postgres error and detect the
+// specific "function does not exist" case (code 42883) so the
+// simulation can fall back to visual-only when the new lifecycle
+// migration (20260502121300_split_rental_lifecycle.sql) hasn't been
+// applied yet. Backend state advancement is then skipped but the
+// customer can still complete end-to-end testing.
+// =====================================================================
+
+type SupabaseErrorLike = {
+  message?: string;
+  code?: string;
+  details?: string;
+  hint?: string;
+};
+
+function readErr(err: unknown): SupabaseErrorLike {
+  if (err && typeof err === 'object') return err as SupabaseErrorLike;
+  return { message: String(err) };
+}
+
+function isFunctionMissing(err: unknown): boolean {
+  const e = readErr(err);
+  if (e.code === '42883') return true;
+  return /function\s+[\w_.]+\s*\([^)]*\)\s+does not exist/i.test(
+    e.message ?? '',
+  );
+}
+
+function errorSummary(err: unknown): string {
+  const e = readErr(err);
+  const parts = [e.message, e.details, e.hint].filter(Boolean);
+  if (e.code) parts.push(`code ${e.code}`);
+  return parts.join(' — ') || 'Unknown error';
+}
+
 export function PaymentSimulationSheet({
   open,
   onClose,
@@ -100,8 +136,15 @@ export function PaymentSimulationSheet({
           if (cancelled) return;
           // eslint-disable-next-line no-console
           console.error('[lend] recordNafathSigning failed', err);
-          setError(t('payment.simulation.error'));
-          return;
+          if (isFunctionMissing(err)) {
+            // eslint-disable-next-line no-console
+            console.warn(
+              '[lend] record_nafath_signing RPC missing — continuing visual-only. Apply 20260502121300_split_rental_lifecycle.sql to enable backend state advancement.',
+            );
+          } else {
+            setError(`${t('payment.simulation.error')} (${errorSummary(err)})`);
+            return;
+          }
         }
         if (cancelled) return;
         window.setTimeout(() => {
@@ -125,8 +168,15 @@ export function PaymentSimulationSheet({
           if (cancelled) return;
           // eslint-disable-next-line no-console
           console.error('[lend] verifyAndActivateRental failed', err);
-          setError(t('payment.simulation.error'));
-          return;
+          if (isFunctionMissing(err)) {
+            // eslint-disable-next-line no-console
+            console.warn(
+              '[lend] verify_and_activate_rental RPC missing — continuing visual-only. Apply 20260502121300_split_rental_lifecycle.sql to enable backend state advancement.',
+            );
+          } else {
+            setError(`${t('payment.simulation.error')} (${errorSummary(err)})`);
+            return;
+          }
         }
         if (cancelled) return;
         window.setTimeout(() => {
@@ -148,7 +198,20 @@ export function PaymentSimulationSheet({
       } catch (err) {
         // eslint-disable-next-line no-console
         console.error('[lend] recordRentalPayment failed', err);
-        setError(t('payment.simulation.error'));
+        if (isFunctionMissing(err)) {
+          // Most common cause: the lifecycle-split migration hasn't
+          // been applied yet on this Supabase project. Continue the
+          // simulation visually so the user can complete testing;
+          // noteId stays null and the subsequent Nafath / verify
+          // phases also fall through to visual-only.
+          // eslint-disable-next-line no-console
+          console.warn(
+            '[lend] record_rental_payment RPC missing — continuing visual-only. Apply 20260502121300_split_rental_lifecycle.sql to enable backend state advancement.',
+          );
+          setPhase('nafath');
+          return;
+        }
+        setError(`${t('payment.simulation.error')} (${errorSummary(err)})`);
         return;
       }
     }
