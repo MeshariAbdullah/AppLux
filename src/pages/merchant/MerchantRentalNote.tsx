@@ -26,9 +26,11 @@ import {
   fetchNoteByContractId,
   fetchProfile,
   useSupabaseAuth,
+  type MerchantRow,
   type PromissoryNoteRow,
 } from '@/lib/supabase';
-import type { Localized, MerchantRental } from '@/lib/data';
+import type { MerchantRental } from '@/lib/data';
+import { resolveMerchantName } from '@/lib/merchantName';
 import { toneForDocState, toneForNafith } from './MerchantRentalDetails';
 
 export default function MerchantRentalNote() {
@@ -44,14 +46,18 @@ export default function MerchantRentalNote() {
     [id, merchantRentals],
   );
   const [liveRental, setLiveRental] = useState<MerchantRental | null>(null);
-  // Live promissory note + lessor name. Without these the page used
-  // to show `merchant?.companyName` (demo store, undefined in live
-  // mode), `rental.endDate` for due date (= contract end, not note
-  // due_date), and `rental.liabilityTotal` for principal (= contract
-  // total, not note.principal_amount). Hydrating from the real note
-  // row removes all three stale references.
+  // Live promissory note + merchant row. Without these the page
+  // used to show `merchant?.companyName` (demo store, undefined in
+  // live mode), `rental.endDate` for due date (= contract end, not
+  // note due_date), and `rental.liabilityTotal` for principal (=
+  // contract total, not note.principal_amount). Hydrating from the
+  // real note row removes all three stale references. The merchant
+  // row drives the beneficiary label via resolveMerchantName so the
+  // user sees the consumer-facing display name (e.g. "بيت
+  // الفساتين") rather than the legal trade name stored on
+  // notes.beneficiary_name.
   const [liveNote, setLiveNote] = useState<PromissoryNoteRow | null>(null);
-  const [liveLessor, setLiveLessor] = useState<Localized | null>(null);
+  const [liveMerchant, setLiveMerchant] = useState<MerchantRow | null>(null);
   const [resolving, setResolving] = useState<boolean>(() =>
     Boolean(configured && id && !demoRental),
   );
@@ -60,7 +66,7 @@ export default function MerchantRentalNote() {
     if (!configured || !id || demoRental) {
       setLiveRental(null);
       setLiveNote(null);
-      setLiveLessor(null);
+      setLiveMerchant(null);
       return;
     }
     let cancelled = false;
@@ -89,12 +95,7 @@ export default function MerchantRentalNote() {
         }),
       );
       setLiveNote(note);
-      if (m?.display_name) {
-        setLiveLessor({
-          ar: m.display_name.ar || m.display_name.en || '',
-          en: m.display_name.en || m.display_name.ar || '',
-        });
-      }
+      setLiveMerchant(m);
     })()
       .finally(() => {
         if (!cancelled) setResolving(false);
@@ -151,9 +152,13 @@ export default function MerchantRentalNote() {
   const attestedAt =
     liveNote?.nafith_attested_at ??
     rental.timeline.find((e) => e.key === 'nafith-approved')?.at;
-  const beneficiary =
-    liveNote?.beneficiary_name ??
-    (liveLessor ? liveLessor[locale] : merchant?.companyName ?? '');
+  // Prefer the merchant's localized display_name over the
+  // beneficiary_name persisted on the note row (which is the legal
+  // trade name) — the user-facing label should match what the
+  // customer recognizes the boutique by.
+  const beneficiary = liveMerchant
+    ? resolveMerchantName(liveMerchant, locale, liveNote?.beneficiary_name ?? '—')
+    : liveNote?.beneficiary_name ?? merchant?.companyName ?? '—';
   const principal =
     liveNote?.principal_amount != null
       ? Number(liveNote.principal_amount)

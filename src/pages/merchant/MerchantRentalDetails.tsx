@@ -622,22 +622,11 @@ export default function MerchantRentalDetails() {
                 {t('merchant.rental.actions.openDamageCase')}
               </Button>
             )}
-            <Button
-              variant={closureState === 'active' ? 'ghost' : 'secondary'}
-              block
-              leading={<DocIcon size={16} />}
-              onClick={() => navigate(`/merchant/rentals/${rental.id}/contract`)}
-            >
-              {t('merchant.rental.actions.openContract')}
-            </Button>
-            <Button
-              variant="ghost"
-              block
-              leading={<SignatureIcon size={16} />}
-              onClick={() => navigate(`/merchant/rentals/${rental.id}/note`)}
-            >
-              {t('merchant.rental.actions.openNote')}
-            </Button>
+            {/* "Open contract details" + "Open promissory note" used
+                to live here as ghost buttons. They were exact
+                duplicates of the rows in the Documents section above,
+                so they're removed — the Documents card is now the
+                single access point for opening the contract or note. */}
           </div>
 
           <div className="rounded-xl2 bg-gold-50 hairline p-3.5 flex items-start gap-3">

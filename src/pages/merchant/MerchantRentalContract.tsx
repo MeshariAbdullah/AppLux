@@ -28,13 +28,14 @@ import {
   fetchProfile,
   listInvoiceItems,
   useSupabaseAuth,
+  type MerchantRow,
 } from '@/lib/supabase';
 import type {
   ContractClause,
-  Localized,
   MerchantRental,
 } from '@/lib/data';
 import { buildContractFromTemplate } from '@/lib/contractTemplate';
+import { resolveMerchantName } from '@/lib/merchantName';
 import { toneForDocState } from './MerchantRentalDetails';
 
 export default function MerchantRentalContract() {
@@ -54,7 +55,11 @@ export default function MerchantRentalContract() {
   // and the merchant confirmed at issuance time. Replaces the
   // hardcoded SEED_SCANS demo clauses that used to render here.
   const [liveClauses, setLiveClauses] = useState<ContractClause[] | null>(null);
-  const [liveLessor, setLiveLessor] = useState<Localized | null>(null);
+  // Live merchant row — resolved via the shared resolveMerchantName
+  // helper so the lessor row uses display_name (locale-aware) with a
+  // proper fallback to company_name. Replaces the prior ad-hoc
+  // Localized state that didn't fall back beyond display_name.
+  const [liveMerchant, setLiveMerchant] = useState<MerchantRow | null>(null);
   // Same lazy-init pattern as MerchantRentalDetails — starts in the
   // "resolving" state for live ids so the first render doesn't
   // synchronously redirect before useEffect can run the fetch.
@@ -66,7 +71,7 @@ export default function MerchantRentalContract() {
     if (!configured || !id || demoRental) {
       setLiveRental(null);
       setLiveClauses(null);
-      setLiveLessor(null);
+      setLiveMerchant(null);
       return;
     }
     let cancelled = false;
@@ -117,12 +122,7 @@ export default function MerchantRentalContract() {
       } else {
         setLiveClauses([]);
       }
-      if (m?.display_name) {
-        setLiveLessor({
-          ar: m.display_name.ar || m.display_name.en || '',
-          en: m.display_name.en || m.display_name.ar || '',
-        });
-      }
+      setLiveMerchant(m);
     })()
       .finally(() => {
         if (!cancelled) setResolving(false);
@@ -248,9 +248,9 @@ export default function MerchantRentalContract() {
             <Row
               label={t('merchant.rental.contract.lessor')}
               value={
-                liveLessor
-                  ? liveLessor[locale]
-                  : merchant?.companyName ?? ''
+                liveMerchant
+                  ? resolveMerchantName(liveMerchant, locale)
+                  : merchant?.companyName ?? '—'
               }
             />
             <CardDivider />
