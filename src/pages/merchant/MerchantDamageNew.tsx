@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Navigate, useNavigate, useParams } from 'react-router-dom';
 import { Header, Screen } from '@/components/layout';
 import {
@@ -6,6 +6,7 @@ import {
   Card,
   CardDivider,
   ConfirmSheet,
+  EmptyState,
   FormField,
   ImageLightbox,
   Input,
@@ -30,13 +31,16 @@ import { cn } from '@/lib/cn';
 import { useI18n, useT } from '@/lib/i18n';
 import { useStore } from '@/lib/store';
 import {
+  adaptContractToMerchantRental,
   createDamageCase,
   fetchContractById,
+  fetchMerchant,
+  fetchProfile,
   uploadDamageEvidence,
   useSupabaseAuth,
   type DamageSeverity,
 } from '@/lib/supabase';
-import type { MerchantDamageSeverity } from '@/lib/data';
+import type { MerchantDamageSeverity, MerchantRental } from '@/lib/data';
 
 type SeverityOption = {
   key: MerchantDamageSeverity;
@@ -100,10 +104,58 @@ export default function MerchantDamageNew() {
   const galleryInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
 
-  const rental = useMemo(
+  // Demo-store match first (uses short ids like 'MR-2026-031').
+  const demoRental = useMemo(
     () => merchantRentals.find((r) => r.id === id),
     [id, merchantRentals],
   );
+  // Live fetch — this page was completely missing this. For real
+  // contracts (UUIDs), demoRental is undefined and the page used to
+  // synchronously redirect back to /merchant/rentals before any
+  // fetch could run.
+  const [liveRental, setLiveRental] = useState<MerchantRental | null>(null);
+  const [resolving, setResolving] = useState<boolean>(() =>
+    Boolean(supabaseAuth.configured && id && !demoRental),
+  );
+
+  useEffect(() => {
+    if (!supabaseAuth.configured || !id || demoRental) {
+      setLiveRental(null);
+      return;
+    }
+    let cancelled = false;
+    setResolving(true);
+    (async () => {
+      const contract = await fetchContractById(id).catch(() => null);
+      if (cancelled || !contract) return;
+      const [m, c] = await Promise.all([
+        fetchMerchant(contract.merchant_id).catch(() => null),
+        fetchProfile(contract.customer_user_id).catch(() => null),
+      ]);
+      if (cancelled) return;
+      const customerName = c?.full_name ?? '—';
+      setLiveRental(
+        adaptContractToMerchantRental(contract, {
+          customerName,
+          customerInitials:
+            customerName.trim().split(/\s+/).slice(0, 2).map((p) => p[0]?.toUpperCase() ?? '').join('') || '—',
+          customerCity: c?.city ?? '',
+          customerMobile: c?.mobile ?? '',
+          headlineItem: `Rental ${contract.contract_number}`,
+          category: m?.primary_category,
+          itemValue: Number(contract.total_amount),
+        }),
+      );
+    })()
+      .finally(() => {
+        if (!cancelled) setResolving(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [supabaseAuth.configured, id, demoRental]);
+
+  const rental = liveRental ?? demoRental;
 
   const [severity, setSeverity] = useState<MerchantDamageSeverity | null>(null);
   const [claim, setClaim] = useState<string>('');
@@ -119,7 +171,39 @@ export default function MerchantDamageNew() {
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
 
   if (!rental) {
-    return <Navigate to="/merchant/rentals" replace />;
+    if (resolving) {
+      return (
+        <>
+          <Header title="…" showBack />
+          <Screen className="bg-canvas">
+            <div className="min-h-[40vh] grid place-items-center">
+              <span className="h-7 w-7 rounded-full border-2 border-canvas-200 border-t-lavender-600 animate-spin" />
+            </div>
+          </Screen>
+        </>
+      );
+    }
+    return (
+      <>
+        <Header title={t('merchant.rentals.title')} showBack />
+        <Screen className="bg-canvas">
+          <EmptyState
+            tone="warn"
+            icon={<AlertIcon size={22} />}
+            title={t('merchant.rental.notFound.title')}
+            description={t('merchant.rental.notFound.hint')}
+            action={
+              <Button
+                size="sm"
+                onClick={() => navigate('/merchant/rentals', { replace: true })}
+              >
+                {t('merchant.rental.notFound.back')}
+              </Button>
+            }
+          />
+        </Screen>
+      </>
+    );
   }
 
   if (rental.closureStatus === 'closed' || rental.closureStatus === 'damaged') {

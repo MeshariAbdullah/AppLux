@@ -1,8 +1,16 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Navigate, useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { Header, Screen } from '@/components/layout';
-import { Button, Card, CardDivider, SectionHeader, StatusChip } from '@/components/ui';
 import {
+  Button,
+  Card,
+  CardDivider,
+  EmptyState,
+  SectionHeader,
+  StatusChip,
+} from '@/components/ui';
+import {
+  AlertIcon,
   BadgeCheckIcon,
   GavelIcon,
   InfoIcon,
@@ -34,6 +42,9 @@ export default function MerchantRentalNote() {
     [id, merchantRentals],
   );
   const [liveRental, setLiveRental] = useState<MerchantRental | null>(null);
+  const [resolving, setResolving] = useState<boolean>(() =>
+    Boolean(configured && id && !demoRental),
+  );
 
   useEffect(() => {
     if (!configured || !id || demoRental) {
@@ -41,6 +52,7 @@ export default function MerchantRentalNote() {
       return;
     }
     let cancelled = false;
+    setResolving(true);
     (async () => {
       const contract = await fetchContractById(id).catch(() => null);
       if (cancelled || !contract) return;
@@ -62,7 +74,10 @@ export default function MerchantRentalNote() {
           itemValue: Number(contract.total_amount),
         }),
       );
-    })();
+    })()
+      .finally(() => {
+        if (!cancelled) setResolving(false);
+      });
     return () => {
       cancelled = true;
     };
@@ -71,7 +86,39 @@ export default function MerchantRentalNote() {
   const rental = liveRental ?? demoRental;
 
   if (!rental) {
-    return <Navigate to="/merchant/rentals" replace />;
+    if (resolving) {
+      return (
+        <>
+          <Header title="…" showBack />
+          <Screen className="bg-canvas">
+            <div className="min-h-[40vh] grid place-items-center">
+              <span className="h-7 w-7 rounded-full border-2 border-canvas-200 border-t-lavender-600 animate-spin" />
+            </div>
+          </Screen>
+        </>
+      );
+    }
+    return (
+      <>
+        <Header title={t('merchant.rentals.title')} showBack />
+        <Screen className="bg-canvas">
+          <EmptyState
+            tone="warn"
+            icon={<AlertIcon size={22} />}
+            title={t('merchant.rental.notFound.title')}
+            description={t('merchant.rental.notFound.hint')}
+            action={
+              <Button
+                size="sm"
+                onClick={() => navigate('/merchant/rentals', { replace: true })}
+              >
+                {t('merchant.rental.notFound.back')}
+              </Button>
+            }
+          />
+        </Screen>
+      </>
+    );
   }
 
   const issuedAt = rental.timeline.find((e) => e.key === 'note-ready')?.at;
