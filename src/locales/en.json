@@ -6,7 +6,7 @@
   "nav": {
     "home": "Home",
     "stores": "Stores",
-    "contracts": "Contracts",
+    "contracts": "My rentals",
     "notifications": "Alerts",
     "profile": "Profile"
   },
@@ -895,6 +895,8 @@
       "recordTitle": "Documented contract record",
       "linkedDocs": "Linked documents",
       "openContract": "Open full contract",
+      "hideFullContract": "Hide full contract",
+      "fullContractTitle": "Documented contract clauses",
       "events": {
         "created": "Contract created",
         "nafathVerified": "Identity verified via Nafath",

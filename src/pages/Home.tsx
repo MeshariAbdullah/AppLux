@@ -9,7 +9,6 @@ import {
   CheckIcon,
   ChevronIcon,
   DocIcon,
-  QrIcon,
   ReceiptIcon,
   ShieldIcon,
   SparkleIcon,
@@ -247,18 +246,13 @@ export default function Home() {
         }
         subtitle={t('home.subtitle')}
         trailing={
-          <>
-            <IconButton
-              variant="glass"
-              label={t('qr.entry')}
-              onClick={() => navigate('/scan')}
-            >
-              <QrIcon size={18} />
-            </IconButton>
-            <IconButton variant="glass" label={t('nav.notifications')}>
-              <BellIcon size={18} />
-            </IconButton>
-          </>
+          <IconButton
+            variant="glass"
+            label={t('nav.notifications')}
+            onClick={() => navigate('/notifications')}
+          >
+            <BellIcon size={18} />
+          </IconButton>
         }
       />
       <Screen className="bg-canvas">

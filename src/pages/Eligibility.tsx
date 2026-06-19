@@ -1,17 +1,96 @@
+import { useEffect, useState, type ReactNode } from 'react';
 import { Header, Screen } from '@/components/layout';
 import { Card, ProgressBar, StatCard, StatusChip } from '@/components/ui';
 import { InfoIcon, ShieldIcon, SparkleIcon, WalletIcon } from '@/components/icons';
 import { useI18n, useT } from '@/lib/i18n';
 import { useStore } from '@/lib/store';
 import { cn } from '@/lib/cn';
-import type { ReactNode } from 'react';
+import {
+  adaptContract,
+  adaptEligibility,
+  adaptInvoice,
+  listCustomerContracts,
+  listCustomerInvoices,
+  useSupabaseAuth,
+} from '@/lib/supabase';
+import type {
+  Contract,
+  Invoice,
+  RentalEligibility,
+} from '@/lib/data';
+
+// =====================================================================
+// Eligibility — reads LIVE data from Supabase when configured.
+//
+// Previously this page read everything from `useStore()` (the demo
+// store), so a real logged-in customer saw stale demo numbers
+// regardless of their actual eligibility row. Home.tsx was already
+// correct; this page was the outlier.
+//
+// Sources (mirrors Home.tsx's rules):
+//   * configured + DB row present  → adaptEligibility(dbEligibility)
+//   * configured + DB row missing  → empty eligibility (0 / 0)
+//   * !configured                  → demo store eligibility
+// Breakdown rows (contracts + outstanding invoices) are also live
+// when configured, falling back to the demo store otherwise.
+// =====================================================================
 
 export default function Eligibility() {
   const t = useT();
   const { formatCurrency, formatDate } = useI18n();
-  const { eligibility, contracts, invoices } = useStore();
+  const {
+    eligibility: demoEligibility,
+    contracts: demoContracts,
+    invoices: demoInvoices,
+  } = useStore();
+  const { configured, eligibility: dbEligibility, session } = useSupabaseAuth();
 
-  const usagePct = Math.round((eligibility.used / eligibility.limit) * 100);
+  const emptyEligibility: RentalEligibility = {
+    limit: 0,
+    used: 0,
+    remaining: 0,
+    tier: 'standard',
+    assignedBy: '',
+    assignedAt: new Date(0).toISOString(),
+  };
+  const eligibility: RentalEligibility = configured
+    ? dbEligibility
+      ? adaptEligibility(dbEligibility)
+      : emptyEligibility
+    : demoEligibility;
+
+  const [liveContracts, setLiveContracts] = useState<Contract[] | null>(null);
+  const [liveInvoices, setLiveInvoices] = useState<Invoice[] | null>(null);
+
+  useEffect(() => {
+    const userId = session?.user?.id;
+    if (!configured || !userId) {
+      setLiveContracts(null);
+      setLiveInvoices(null);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      const [contractRows, invoiceRows] = await Promise.all([
+        listCustomerContracts(userId).catch(() => []),
+        listCustomerInvoices(userId).catch(() => []),
+      ]);
+      if (cancelled) return;
+      setLiveContracts(contractRows.map((r) => adaptContract(r)));
+      setLiveInvoices(invoiceRows.map((r) => adaptInvoice(r)));
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [configured, session?.user?.id]);
+
+  const contracts = liveContracts ?? demoContracts;
+  const invoices = liveInvoices ?? demoInvoices;
+
+  const usagePct =
+    eligibility.limit > 0
+      ? Math.min(100, Math.round((eligibility.used / eligibility.limit) * 100))
+      : 0;
   const contractCommitments = contracts
     .filter((c) => c.status === 'active')
     .reduce((sum, c) => sum + c.monthlyAmount, 0);
@@ -62,7 +141,7 @@ export default function Eligibility() {
             <div className="relative mt-6">
               <ProgressBar
                 value={eligibility.used}
-                max={eligibility.limit}
+                max={Math.max(eligibility.limit, 1)}
                 tone="white"
                 className="bg-white/12"
               />
@@ -121,13 +200,21 @@ export default function Eligibility() {
                 <BreakdownRow
                   label={t('eligibility.contractsShare')}
                   value={formatCurrency(contractCommitments)}
-                  percent={Math.round(Math.min(100, (contractCommitments / eligibility.limit) * 100))}
+                  percent={
+                    eligibility.limit > 0
+                      ? Math.round(Math.min(100, (contractCommitments / eligibility.limit) * 100))
+                      : 0
+                  }
                   tone="brand"
                 />
                 <BreakdownRow
                   label={t('eligibility.invoicesShare')}
                   value={formatCurrency(outstandingInvoices)}
-                  percent={Math.round(Math.min(100, (outstandingInvoices / eligibility.limit) * 100))}
+                  percent={
+                    eligibility.limit > 0
+                      ? Math.round(Math.min(100, (outstandingInvoices / eligibility.limit) * 100))
+                      : 0
+                  }
                   tone="gold"
                 />
               </div>
@@ -145,10 +232,18 @@ export default function Eligibility() {
                   {t('eligibility.adminNotice')}
                 </div>
                 <dl className="mt-3.5 grid grid-cols-2 gap-3 text-[12px]">
-                  <InfoPair label={t('eligibility.assignedBy')} value={eligibility.assignedBy} />
+                  <InfoPair
+                    label={t('eligibility.assignedBy')}
+                    value={eligibility.assignedBy || 'Lend'}
+                  />
                   <InfoPair
                     label={t('eligibility.assignedOn')}
-                    value={formatDate(eligibility.assignedAt)}
+                    value={
+                      eligibility.assignedAt &&
+                      eligibility.assignedAt !== new Date(0).toISOString()
+                        ? formatDate(eligibility.assignedAt)
+                        : '—'
+                    }
                   />
                 </dl>
               </div>

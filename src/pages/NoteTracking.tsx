@@ -17,7 +17,6 @@ import {
   GavelIcon,
   InfoIcon,
   SparkleIcon,
-  SupportIcon,
 } from '@/components/icons';
 import { useI18n, useT } from '@/lib/i18n';
 import { useStore } from '@/lib/store';
@@ -279,9 +278,6 @@ export default function NoteTracking() {
           <div className="space-y-2.5">
             <Button variant="primary" size="lg" block leading={<GavelIcon size={18} />}>
               {t('tracking.downloadNote')}
-            </Button>
-            <Button variant="secondary" block leading={<SupportIcon size={16} />}>
-              {t('track.contactSupport')}
             </Button>
           </div>
         </div>

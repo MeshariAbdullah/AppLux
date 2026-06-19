@@ -6,7 +6,7 @@
   "nav": {
     "home": "الرئيسية",
     "stores": "المتاجر",
-    "contracts": "العقود",
+    "contracts": "إيجاراتي",
     "notifications": "الإشعارات",
     "profile": "حسابي"
   },
@@ -895,6 +895,8 @@
       "recordTitle": "السجل الموثَّق للعقد",
       "linkedDocs": "المستندات المرتبطة",
       "openContract": "عرض العقد الكامل",
+      "hideFullContract": "إخفاء العقد الكامل",
+      "fullContractTitle": "بنود العقد الموثَّقة",
       "events": {
         "created": "تم إنشاء العقد",
         "nafathVerified": "تم التحقق من الهوية عبر نفاذ",

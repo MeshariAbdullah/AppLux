@@ -17,7 +17,6 @@ import {
   ReceiptIcon,
   ShieldIcon,
   SparkleIcon,
-  SupportIcon,
   WalletIcon,
 } from '@/components/icons';
 import { useI18n, useT } from '@/lib/i18n';
@@ -33,10 +32,19 @@ import {
   listInvoiceItems,
   useSupabaseAuth,
 } from '@/lib/supabase';
+import type {
+  MerchantRow,
+  RentalInvoiceItemRow,
+  RentalInvoiceRow,
+} from '@/lib/supabase';
 import type { Contract, Invoice, PromissoryNote } from '@/lib/data';
 import { ContractStatusChip } from '@/components/rental/StatusChips';
 import { RentalJourneyTimeline } from '@/components/rental/RentalJourneyTimeline';
 import { deriveJourneyFromUIContract } from '@/lib/rentalJourney';
+import {
+  buildContractFromTemplate,
+  type ContractTemplateOutput,
+} from '@/lib/contractTemplate';
 import type { TimelineEvent } from '@/components/track/DocTimeline';
 
 function daysBetween(start: string, end: string) {
@@ -52,18 +60,25 @@ export default function ContractTracking() {
   const navigate = useNavigate();
   const { contracts, invoices, notes, session } = useStore();
   const { configured } = useSupabaseAuth();
-  const { formatCurrency, formatDate } = useI18n();
+  const { formatCurrency, formatDate, locale } = useI18n();
 
   const demoContract = useMemo(() => contracts.find((c) => c.id === id), [contracts, id]);
   const [liveContract, setLiveContract] = useState<Contract | null>(null);
   const [liveInvoices, setLiveInvoices] = useState<Invoice[] | null>(null);
   const [liveNote, setLiveNote] = useState<PromissoryNote | null>(null);
+  // Generated contract content — the same template the customer
+  // approved during the review wizard. Rendered inline when the
+  // "View full contract" button is tapped (drives the panel below).
+  const [contractTemplate, setContractTemplate] =
+    useState<ContractTemplateOutput | null>(null);
+  const [showFullContract, setShowFullContract] = useState(false);
 
   useEffect(() => {
     if (!configured || !id) {
       setLiveContract(null);
       setLiveInvoices(null);
       setLiveNote(null);
+      setContractTemplate(null);
       return;
     }
     let cancelled = false;
@@ -76,13 +91,37 @@ export default function ContractTracking() {
         merchant?.display_name?.en ?? merchant?.company_name ?? '—';
       setLiveContract(adaptContract(row, merchantName));
 
-      const invoiceRow = await fetchInvoiceById(row.invoice_id).catch(() => null);
-      if (cancelled || !invoiceRow) {
+      let invoiceRow: RentalInvoiceRow | null = null;
+      let items: RentalInvoiceItemRow[] = [];
+      const fetchedInvoice = await fetchInvoiceById(row.invoice_id).catch(() => null);
+      if (cancelled) return;
+      if (!fetchedInvoice) {
         setLiveInvoices([]);
       } else {
-        const items = await listInvoiceItems(invoiceRow.id).catch(() => []);
+        invoiceRow = fetchedInvoice;
+        items = await listInvoiceItems(fetchedInvoice.id).catch(() => []);
         if (cancelled) return;
-        setLiveInvoices([adaptInvoice(invoiceRow, items)]);
+        setLiveInvoices([adaptInvoice(fetchedInvoice, items, merchantName)]);
+      }
+
+      // Build the generated contract content from the same template
+      // the customer saw at review time. Uses the invoice's stored
+      // light_damage_fraction + late_return_multiplier so the panel
+      // here matches what was approved.
+      if (invoiceRow) {
+        const durationDays = items[0]?.rental_days ?? 30;
+        setContractTemplate(
+          buildContractFromTemplate({
+            invoice: invoiceRow,
+            items,
+            merchant: merchant as MerchantRow | null,
+            pickupDate: row.start_date,
+            returnDate: row.end_date,
+            durationDays,
+          }),
+        );
+      } else {
+        setContractTemplate(null);
       }
 
       const noteRow = await fetchNoteByContractId(row.id).catch(() => null);
@@ -290,20 +329,48 @@ export default function ContractTracking() {
             </div>
           </section>
 
-          {/* Single primary action — anything else is a quiet inline link. */}
+          {/* Primary action — expands the inline full-contract panel
+              with all the generated clauses the customer approved. */}
           <div className="pt-2 space-y-3">
-            <Button variant="primary" size="lg" block leading={<DocIcon size={18} />}>
-              {t('track.contract.openContract')}
+            <Button
+              variant="primary"
+              size="lg"
+              block
+              leading={<DocIcon size={18} />}
+              onClick={() => setShowFullContract((v) => !v)}
+              disabled={!contractTemplate}
+            >
+              {showFullContract
+                ? t('track.contract.hideFullContract')
+                : t('track.contract.openContract')}
             </Button>
-            <div className="text-center text-[12.5px] text-ink-500">
-              <button
-                type="button"
-                className="text-ink-700 hover:text-ink-900 underline underline-offset-4 decoration-canvas-300 hover:decoration-ink-700"
-              >
-                {t('track.contactSupport')}
-              </button>
-            </div>
           </div>
+
+          {showFullContract && contractTemplate && (
+            <section className="space-y-2.5 animate-fade-in">
+              <SectionHeader title={t('track.contract.fullContractTitle')} />
+              <Card padded className="space-y-3.5">
+                {contractTemplate.clauses.map((c, i) => (
+                  <div key={c.id} className="flex items-start gap-3">
+                    <span className="num h-6 w-6 shrink-0 rounded-full bg-canvas-100 text-ink-700 grid place-items-center text-[10.5px] font-semibold">
+                      {i + 1}
+                    </span>
+                    <div className="min-w-0">
+                      <div className="text-[13px] font-semibold text-ink-900 tracking-tight">
+                        {c.title[locale]}
+                      </div>
+                      <div className="mt-0.5 text-[12.5px] text-ink-600 leading-relaxed">
+                        {c.body[locale]}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+                <div className="rounded-xl2 bg-canvas-100 px-3.5 py-2.5 text-[11.5px] text-ink-500 leading-relaxed">
+                  {contractTemplate.damages.note[locale]}
+                </div>
+              </Card>
+            </section>
+          )}
         </div>
       </Screen>
     </>
