@@ -60,6 +60,10 @@ export default function MerchantRentalContract() {
   // proper fallback to company_name. Replaces the prior ad-hoc
   // Localized state that didn't fall back beyond display_name.
   const [liveMerchant, setLiveMerchant] = useState<MerchantRow | null>(null);
+  // Rental period (days) from the FIRST invoice item — same value
+  // the clauses panel uses. Drives the Key Terms "Duration" stat so
+  // it can't diverge from the contract clauses.
+  const [liveRentalDays, setLiveRentalDays] = useState<number | null>(null);
   // Same lazy-init pattern as MerchantRentalDetails — starts in the
   // "resolving" state for live ids so the first render doesn't
   // synchronously redirect before useEffect can run the fetch.
@@ -72,6 +76,7 @@ export default function MerchantRentalContract() {
       setLiveRental(null);
       setLiveClauses(null);
       setLiveMerchant(null);
+      setLiveRentalDays(null);
       return;
     }
     let cancelled = false;
@@ -91,6 +96,24 @@ export default function MerchantRentalContract() {
         : [];
       if (cancelled) return;
       const customerName = c?.full_name ?? '—';
+      // Real item title + item value come from the first invoice
+      // item, NOT from a placeholder + contract.total_amount. This
+      // guarantees the Key Terms summary uses the same source the
+      // clauses panel uses; both now read items[0] directly.
+      const firstItem = items[0];
+      const headlineItem =
+        firstItem?.item_name?.trim() ||
+        `Rental ${contract.contract_number}`;
+      const itemValue =
+        firstItem?.replacement_value != null
+          ? Number(firstItem.replacement_value)
+          : invoice?.original_item_value != null
+            ? Number(invoice.original_item_value)
+            : Number(contract.total_amount);
+      // Period length the contract was actually written for — same
+      // value the template uses for the period clause.
+      const itemRentalDays = firstItem?.rental_days ?? null;
+      setLiveRentalDays(itemRentalDays);
       setLiveRental(
         adaptContractToMerchantRental(contract, {
           customerName,
@@ -98,9 +121,9 @@ export default function MerchantRentalContract() {
             customerName.trim().split(/\s+/).slice(0, 2).map((p) => p[0]?.toUpperCase() ?? '').join('') || '—',
           customerCity: c?.city ?? '',
           customerMobile: c?.mobile ?? '',
-          headlineItem: `Rental ${contract.contract_number}`,
+          headlineItem,
           category: m?.primary_category,
-          itemValue: Number(contract.total_amount),
+          itemValue,
           note,
         }),
       );
@@ -169,12 +192,20 @@ export default function MerchantRentalContract() {
     );
   }
 
-  const durationDays = (() => {
-    const s = new Date(rental.startDate).getTime();
-    const e = new Date(rental.endDate).getTime();
-    if (Number.isNaN(s) || Number.isNaN(e) || e <= s) return 0;
-    return Math.max(1, Math.round((e - s) / (1000 * 60 * 60 * 24)));
-  })();
+  // Prefer the canonical period from invoice items (same source the
+  // clauses panel uses) over an arithmetic on contract start/end —
+  // contract.end_date was historically hardcoded to start + 30 days
+  // by accept_rental_invoice, so for any non-30-day rental the two
+  // diverged. The Phase 8d migration fixes this for new contracts,
+  // but for any legacy row we still read items[0].rental_days first.
+  const durationDays =
+    liveRentalDays ??
+    (() => {
+      const s = new Date(rental.startDate).getTime();
+      const e = new Date(rental.endDate).getTime();
+      if (Number.isNaN(s) || Number.isNaN(e) || e <= s) return 0;
+      return Math.max(1, Math.round((e - s) / (1000 * 60 * 60 * 24)));
+    })();
   // Live generated clauses if we have them; otherwise empty (the
   // page handles an empty clauses list gracefully).
   const clauses: ContractClause[] = liveClauses ?? [];

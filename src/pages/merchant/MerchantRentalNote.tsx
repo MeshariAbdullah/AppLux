@@ -136,27 +136,33 @@ export default function MerchantRentalNote() {
     );
   }
 
-  // Prefer live note row fields; fall back to the timeline (which the
-  // adapter now also emits from real timestamps) and finally to the
-  // contract-derived defaults for demo mode.
-  const issuedAt =
-    liveNote?.created_at ??
-    rental.timeline.find((e) => e.key === 'note-ready')?.at;
-  const attestedAt =
-    liveNote?.nafith_attested_at ??
-    rental.timeline.find((e) => e.key === 'nafith-approved')?.at;
+  // Source-of-truth rule: the note page MUST read from the
+  // promissory_notes row. In live (configured) mode we never fall
+  // back to contract values — a contract that's still 'pending' has
+  // no note row yet, and displaying contract.total_amount /
+  // contract.end_date in those slots would be displaying the wrong
+  // entity's data. Show '—' instead and let the Nafath state chip
+  // communicate the pending status.
+  //
+  // Demo mode keeps the existing rental-shape fallbacks so SEED
+  // scenarios render unchanged.
+  const isLive = configured;
+  const principal: number | null =
+    liveNote?.principal_amount != null
+      ? Number(liveNote.principal_amount)
+      : isLive
+        ? null
+        : rental.liabilityTotal;
+  const dueDate: string | null =
+    liveNote?.due_date ?? (isLive ? null : rental.endDate);
+  const issuedAt = liveNote?.created_at ?? null;
+  const attestedAt = liveNote?.nafith_attested_at ?? null;
   // Per the corrected product flow, the promissory note is between
   // the platform (Lend) and the renter — the merchant is NOT a party
   // on the note. Always show the platform legal entity here,
   // regardless of what beneficiary_name happens to be persisted on
-  // the row (legacy rows embedded merchants.company_name; new rows
-  // from record_rental_payment now persist the platform name).
+  // the row.
   const beneficiary = resolvePlatformBeneficiary(locale);
-  const principal =
-    liveNote?.principal_amount != null
-      ? Number(liveNote.principal_amount)
-      : rental.liabilityTotal;
-  const dueDate = liveNote?.due_date ?? rental.endDate;
 
   return (
     <>
@@ -202,7 +208,9 @@ export default function MerchantRentalNote() {
                   {t('merchant.rental.note.principal')}
                 </div>
                 <div className="mt-0.5 font-semibold num truncate">
-                  {formatCurrency(principal)}
+                  {principal != null
+                    ? formatCurrency(principal)
+                    : t('merchant.rental.timeline.pending')}
                 </div>
               </div>
               <div>
@@ -210,7 +218,9 @@ export default function MerchantRentalNote() {
                   {t('merchant.rental.note.dueDate')}
                 </div>
                 <div className="mt-0.5 font-semibold num truncate">
-                  {formatDate(dueDate)}
+                  {dueDate
+                    ? formatDate(dueDate)
+                    : t('merchant.rental.timeline.pending')}
                 </div>
               </div>
             </div>
@@ -229,7 +239,13 @@ export default function MerchantRentalNote() {
             <CardDivider />
             <Row
               label={t('merchant.rental.note.principalFull')}
-              value={<span className="num">{formatCurrency(principal)}</span>}
+              value={
+                <span className="num">
+                  {principal != null
+                    ? formatCurrency(principal)
+                    : t('merchant.rental.timeline.pending')}
+                </span>
+              }
               sub={t('merchant.rental.note.principalHint')}
             />
             <CardDivider />
@@ -240,7 +256,13 @@ export default function MerchantRentalNote() {
             <CardDivider />
             <Row
               label={t('merchant.rental.note.dueDate')}
-              value={<span className="num">{formatDate(dueDate)}</span>}
+              value={
+                <span className="num">
+                  {dueDate
+                    ? formatDate(dueDate)
+                    : t('merchant.rental.timeline.pending')}
+                </span>
+              }
             />
           </Card>
 
