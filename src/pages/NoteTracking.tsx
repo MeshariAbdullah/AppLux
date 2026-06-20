@@ -19,6 +19,7 @@ import {
   SparkleIcon,
 } from '@/components/icons';
 import { useI18n, useT } from '@/lib/i18n';
+import { resolvePlatformBeneficiary } from '@/lib/platformIdentity';
 import { useStore } from '@/lib/store';
 import {
   adaptContract,
@@ -50,7 +51,7 @@ export default function NoteTracking() {
   const navigate = useNavigate();
   const { notes, contracts } = useStore();
   const { configured } = useSupabaseAuth();
-  const { formatCurrency, formatDate } = useI18n();
+  const { formatCurrency, formatDate, locale } = useI18n();
 
   const demoNote = useMemo(() => notes.find((n) => n.id === id), [notes, id]);
 
@@ -145,7 +146,9 @@ export default function NoteTracking() {
                 <div className="text-ink-400 uppercase tracking-wide text-[10.5px] font-medium">
                   {t('track.note.beneficiary')}
                 </div>
-                <div className="mt-0.5 font-semibold truncate text-ink-900">{note.counterparty}</div>
+                <div className="mt-0.5 font-semibold truncate text-ink-900">
+                  {resolvePlatformBeneficiary(locale)}
+                </div>
               </div>
               <div>
                 <div className="text-ink-400 uppercase tracking-wide text-[10.5px] font-medium">

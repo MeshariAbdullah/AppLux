@@ -26,11 +26,10 @@ import {
   fetchNoteByContractId,
   fetchProfile,
   useSupabaseAuth,
-  type MerchantRow,
   type PromissoryNoteRow,
 } from '@/lib/supabase';
 import type { MerchantRental } from '@/lib/data';
-import { resolveMerchantName } from '@/lib/merchantName';
+import { resolvePlatformBeneficiary } from '@/lib/platformIdentity';
 import { toneForDocState, toneForNafith } from './MerchantRentalDetails';
 
 export default function MerchantRentalNote() {
@@ -38,7 +37,7 @@ export default function MerchantRentalNote() {
   const { formatCurrency, formatDate, locale } = useI18n();
   const navigate = useNavigate();
   const { id } = useParams();
-  const { merchantRentals, merchant } = useStore();
+  const { merchantRentals } = useStore();
   const { configured } = useSupabaseAuth();
 
   const demoRental = useMemo(
@@ -46,18 +45,14 @@ export default function MerchantRentalNote() {
     [id, merchantRentals],
   );
   const [liveRental, setLiveRental] = useState<MerchantRental | null>(null);
-  // Live promissory note + merchant row. Without these the page
-  // used to show `merchant?.companyName` (demo store, undefined in
-  // live mode), `rental.endDate` for due date (= contract end, not
-  // note due_date), and `rental.liabilityTotal` for principal (=
-  // contract total, not note.principal_amount). Hydrating from the
-  // real note row removes all three stale references. The merchant
-  // row drives the beneficiary label via resolveMerchantName so the
-  // user sees the consumer-facing display name (e.g. "بيت
-  // الفساتين") rather than the legal trade name stored on
-  // notes.beneficiary_name.
+  // Live promissory note row drives the page: beneficiary
+  // (platform constant, see below), principal (note.principal_amount),
+  // due date (note.due_date), issuance (note.created_at), and
+  // attestation (note.nafith_attested_at). Without it the page used
+  // to read `rental.endDate` for the due date (= contract end, not
+  // note.due_date) and `rental.liabilityTotal` for the principal
+  // (= contract total, not note.principal_amount).
   const [liveNote, setLiveNote] = useState<PromissoryNoteRow | null>(null);
-  const [liveMerchant, setLiveMerchant] = useState<MerchantRow | null>(null);
   const [resolving, setResolving] = useState<boolean>(() =>
     Boolean(configured && id && !demoRental),
   );
@@ -66,7 +61,6 @@ export default function MerchantRentalNote() {
     if (!configured || !id || demoRental) {
       setLiveRental(null);
       setLiveNote(null);
-      setLiveMerchant(null);
       return;
     }
     let cancelled = false;
@@ -95,7 +89,6 @@ export default function MerchantRentalNote() {
         }),
       );
       setLiveNote(note);
-      setLiveMerchant(m);
     })()
       .finally(() => {
         if (!cancelled) setResolving(false);
@@ -152,13 +145,13 @@ export default function MerchantRentalNote() {
   const attestedAt =
     liveNote?.nafith_attested_at ??
     rental.timeline.find((e) => e.key === 'nafith-approved')?.at;
-  // Prefer the merchant's localized display_name over the
-  // beneficiary_name persisted on the note row (which is the legal
-  // trade name) — the user-facing label should match what the
-  // customer recognizes the boutique by.
-  const beneficiary = liveMerchant
-    ? resolveMerchantName(liveMerchant, locale, liveNote?.beneficiary_name ?? '—')
-    : liveNote?.beneficiary_name ?? merchant?.companyName ?? '—';
+  // Per the corrected product flow, the promissory note is between
+  // the platform (Lend) and the renter — the merchant is NOT a party
+  // on the note. Always show the platform legal entity here,
+  // regardless of what beneficiary_name happens to be persisted on
+  // the row (legacy rows embedded merchants.company_name; new rows
+  // from record_rental_payment now persist the platform name).
+  const beneficiary = resolvePlatformBeneficiary(locale);
   const principal =
     liveNote?.principal_amount != null
       ? Number(liveNote.principal_amount)

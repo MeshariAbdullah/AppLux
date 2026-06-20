@@ -29,6 +29,7 @@ import type {
   StoreCategory,
 } from '@/lib/data';
 import { buildContractFromTemplate } from '@/lib/contractTemplate';
+import { LEND_PLATFORM_NAME } from '@/lib/platformIdentity';
 import type { AdminMerchantRequest } from '@/lib/store';
 import type {
   AccountStatus,
@@ -376,9 +377,14 @@ export function synthesizePackageFromInvoice(
   const durationDays = items[0]?.rental_days ?? 30;
   const pickupDate = issuedAt;
   const returnDate = invoice.expires_at ?? dur(issuedAt, durationDays);
-  const beneficiary = merchant
-    ? localized(merchant.display_name)
-    : { ar: 'Lend Partner', en: 'Lend Partner' };
+  // Note beneficiary is the platform legal entity, NOT the merchant.
+  // Per the corrected product flow:
+  //   * Contract  : merchant  ↔ renter   (the merchant IS a party)
+  //   * Note      : platform  ↔ renter   (the merchant is NOT a party)
+  const beneficiary: Localized = {
+    ar: LEND_PLATFORM_NAME.ar,
+    en: LEND_PLATFORM_NAME.en,
+  };
   const cityLocalized = merchant
     ? { ar: merchant.city, en: merchant.city }
     : { ar: '—', en: '—' };
