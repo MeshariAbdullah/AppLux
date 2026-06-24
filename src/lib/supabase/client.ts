@@ -8,6 +8,36 @@ const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined;
 
 export const supabaseConfigured = Boolean(url && anonKey);
 
+// =====================================================================
+// Demo mode — explicit, env-gated. The renter platform must NEVER show
+// seeded demo records on top of a real Supabase project, because users
+// would see fake invoices/contracts flash before the real data arrives.
+//
+// Truth table:
+//   VITE_DEMO_MODE=true             → demo ON  (regardless of env)
+//   PROD + !configured              → demo OFF (production safety;
+//                                              ProductionConfigGuard
+//                                              surfaces the misconfig)
+//   DEV + !configured + no override → demo ON  (preserves the
+//                                              local-dev workflow)
+//   configured + no override        → demo OFF (live data only)
+//
+// `isDemoMode()` is the single source of truth — the StoreProvider
+// uses it to decide whether to expose SEED_* arrays or empty values.
+// =====================================================================
+
+const VITE_DEMO_MODE_OVERRIDE =
+  (import.meta.env.VITE_DEMO_MODE as string | undefined) === 'true';
+
+export function isDemoMode(): boolean {
+  if (VITE_DEMO_MODE_OVERRIDE) return true;
+  if (import.meta.env.PROD) return false;
+  return !supabaseConfigured;
+}
+
+/** Stable snapshot — module-level so hooks/selectors don't re-evaluate it. */
+export const demoMode: boolean = isDemoMode();
+
 let client: SupabaseClient<Database> | null = null;
 
 if (supabaseConfigured) {

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Header, Screen } from '@/components/layout';
-import { Button, Card, EmptyState } from '@/components/ui';
+import { Button, Card, CardSkeleton, EmptyState, PageSkeleton } from '@/components/ui';
 import {
   AlertIcon,
   ArrowIcon,
@@ -68,17 +68,29 @@ export default function InvoiceTracking() {
 
   const [liveInvoice, setLiveInvoice] = useState<Invoice | null>(null);
   const [liveContract, setLiveContract] = useState<Contract | null>(null);
+  const [resolving, setResolving] = useState<boolean>(
+    () => configured && Boolean(id),
+  );
 
   useEffect(() => {
     if (!configured || !id) {
       setLiveInvoice(null);
       setLiveContract(null);
+      setResolving(false);
       return;
     }
+    // Clear any previous-entity state before fetching the new :id.
+    setLiveInvoice(null);
+    setLiveContract(null);
+    setResolving(true);
     let cancelled = false;
     (async () => {
       const row = await fetchInvoiceById(id).catch(() => null);
-      if (cancelled || !row) return;
+      if (cancelled) return;
+      if (!row) {
+        setResolving(false);
+        return;
+      }
       const [items, merchant] = await Promise.all([
         listInvoiceItems(row.id).catch(() => []),
         fetchMerchant(row.merchant_id).catch(() => null),
@@ -100,8 +112,11 @@ export default function InvoiceTracking() {
         .select('*')
         .eq('invoice_id', row.id)
         .maybeSingle();
-      if (cancelled || !contractRow) return;
-      setLiveContract(adaptContract(contractRow, merchantName));
+      if (cancelled) return;
+      if (contractRow) {
+        setLiveContract(adaptContract(contractRow, merchantName));
+      }
+      if (!cancelled) setResolving(false);
     })();
     return () => {
       cancelled = true;
@@ -112,6 +127,20 @@ export default function InvoiceTracking() {
   const contract =
     liveContract ??
     (invoice ? contracts.find((c) => c.id === (invoice as Invoice).contractRef) : undefined);
+
+  if (!invoice && resolving) {
+    return (
+      <>
+        <Header title={t('track.invoiceTitle')} showBack />
+        <Screen>
+          <CardSkeleton />
+          <div className="mt-4">
+            <PageSkeleton rows={2} />
+          </div>
+        </Screen>
+      </>
+    );
+  }
 
   if (!invoice) {
     return (

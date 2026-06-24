@@ -4,7 +4,9 @@ import { Header, Screen } from '@/components/layout';
 import {
   Button,
   Card,
+  CardSkeleton,
   EmptyState,
+  PageSkeleton,
   SectionHeader,
 } from '@/components/ui';
 import {
@@ -66,6 +68,14 @@ export default function ContractTracking() {
   const [liveContract, setLiveContract] = useState<Contract | null>(null);
   const [liveInvoices, setLiveInvoices] = useState<Invoice[] | null>(null);
   const [liveNote, setLiveNote] = useState<PromissoryNote | null>(null);
+  // Loading guard — true while the route-param-driven Supabase fetch
+  // is in flight. Keeps the page from rendering the previous entity's
+  // data while the new one loads (entity-leak risk on /track/:id
+  // navigation) and prevents the "not found" empty state from
+  // appearing before the fetch resolves.
+  const [resolving, setResolving] = useState<boolean>(
+    () => configured && Boolean(id),
+  );
   // Generated contract content — the same template the customer
   // approved during the review wizard. Rendered inline when the
   // "View full contract" button is tapped (drives the panel below).
@@ -79,12 +89,24 @@ export default function ContractTracking() {
       setLiveInvoices(null);
       setLiveNote(null);
       setContractTemplate(null);
+      setResolving(false);
       return;
     }
+    // Clear any stale previous-entity state when the :id param changes
+    // before kicking off the new fetch.
+    setLiveContract(null);
+    setLiveInvoices(null);
+    setLiveNote(null);
+    setContractTemplate(null);
+    setResolving(true);
     let cancelled = false;
     (async () => {
       const row = await fetchContractById(id).catch(() => null);
-      if (cancelled || !row) return;
+      if (cancelled) return;
+      if (!row) {
+        setResolving(false);
+        return;
+      }
       const merchant = await fetchMerchant(row.merchant_id).catch(() => null);
       if (cancelled) return;
       const merchantName =
@@ -128,6 +150,7 @@ export default function ContractTracking() {
       if (!cancelled && noteRow) {
         setLiveNote(adaptNote(noteRow, merchantName));
       }
+      if (!cancelled) setResolving(false);
     })();
     return () => {
       cancelled = true;
@@ -141,6 +164,23 @@ export default function ContractTracking() {
   const linkedNote =
     liveNote ??
     (contract ? notes.find((n) => n.counterparty === contract.counterparty) : undefined);
+
+  // Loading first — never let the "not found" empty state flash while
+  // the live fetch is still resolving (or while the previous entity's
+  // data is being cleared after the :id param changed).
+  if (!contract && resolving) {
+    return (
+      <>
+        <Header title={t('track.contractTitle')} showBack />
+        <Screen>
+          <CardSkeleton />
+          <div className="mt-4">
+            <PageSkeleton rows={2} />
+          </div>
+        </Screen>
+      </>
+    );
+  }
 
   if (!contract) {
     return (

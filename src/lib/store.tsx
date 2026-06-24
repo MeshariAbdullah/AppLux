@@ -7,6 +7,7 @@ import {
   useState,
   type ReactNode,
 } from 'react';
+import { demoMode } from './supabase/client';
 import {
   DEFAULT_ELIGIBILITY,
   SEED_ADMIN_CASE_DETAILS,
@@ -219,6 +220,39 @@ export type ApprovalRecord = {
   approvedAt: string;
   contractRef: string;
   noteRef: string;
+};
+
+// =====================================================================
+// Stable empty references used when demoMode is OFF. Every page that
+// previously read seed data through useStore() now sees an empty array
+// (or zeroed eligibility) in live mode — which forces the `live ?? store`
+// fallback pattern to collapse to `live ?? []`, never showing demo
+// records before the real Supabase query resolves.
+//
+// IMPORTANT: these are module-level constants on purpose. Returning a
+// fresh [] every render would re-trigger downstream memos and effects.
+// =====================================================================
+const EMPTY_INVOICES: Invoice[] = [];
+const EMPTY_CONTRACTS: Contract[] = [];
+const EMPTY_NOTES: PromissoryNote[] = [];
+const EMPTY_HISTORY: HistoryItem[] = [];
+const EMPTY_STORES: PartnerStore[] = [];
+const EMPTY_SCANS: ScannedPackage[] = [];
+const EMPTY_MERCHANT_RENTALS: MerchantRental[] = [];
+const EMPTY_MERCHANT_APPROVALS: MerchantApproval[] = [];
+const EMPTY_MERCHANT_DAMAGES: MerchantDamageCase[] = [];
+const EMPTY_MERCHANT_HISTORY: MerchantHistoryRecord[] = [];
+const EMPTY_MERCHANT_CUSTOMERS: MerchantCustomer[] = [];
+const EMPTY_ADMIN_MERCHANT_REQUESTS: AdminMerchantRequest[] = [];
+const EMPTY_ADMIN_USERS: AdminUserRecord[] = [];
+const EMPTY_ADMIN_CASES: AdminCaseDetail[] = [];
+const EMPTY_ELIGIBILITY: RentalEligibility = {
+  limit: 0,
+  used: 0,
+  remaining: 0,
+  tier: 'standard',
+  assignedBy: '',
+  assignedAt: '',
 };
 
 const STORAGE_KEY = 'applux.session';
@@ -640,6 +674,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const adminMerchantRequests = useMemo<AdminMerchantRequest[]>(() => {
+    if (!demoMode) return EMPTY_ADMIN_MERCHANT_REQUESTS;
     const seeded = SEED_ADMIN_PENDING_MERCHANTS.map((m) => ({
       ...m,
       decision: merchantDecisions[m.id] ?? {
@@ -660,10 +695,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
   const adminUsers = useMemo<AdminUserRecord[]>(
     () =>
-      SEED_ADMIN_USERS_LIST.map((u) => {
-        const o = userOverrides[u.id];
-        return o ? { ...u, ...o } : u;
-      }),
+      demoMode
+        ? SEED_ADMIN_USERS_LIST.map((u) => {
+            const o = userOverrides[u.id];
+            return o ? { ...u, ...o } : u;
+          })
+        : EMPTY_ADMIN_USERS,
     [userOverrides],
   );
 
@@ -704,6 +741,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const adminCases = useMemo<AdminCaseDetail[]>(() => {
+    if (!demoMode) return EMPTY_ADMIN_CASES;
     return Object.values(SEED_ADMIN_CASE_DETAILS).map((c) => {
       const o = caseOverrides[c.id];
       if (!o) return c;
@@ -833,29 +871,44 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
-  const eligibility = DEFAULT_ELIGIBILITY;
-  const invoices = SEED_INVOICES;
-  const contracts = SEED_CONTRACTS;
-  const notes = SEED_NOTES;
-  const history = SEED_HISTORY;
-  const stores = SEED_STORES;
-  const scans = SEED_SCANS;
+  // PRODUCTION SAFETY (Phase 9): seed data is exposed by this provider
+  // ONLY when demoMode is true. In live (Supabase) mode every list
+  // collapses to []; the rental flow (`live ?? store.invoices` etc.)
+  // therefore renders the page's empty/loading state instead of demo
+  // records flashing before real data arrives. `demoMode` is a stable
+  // module-level snapshot — see src/lib/supabase/client.ts.
+  const eligibility = demoMode ? DEFAULT_ELIGIBILITY : EMPTY_ELIGIBILITY;
+  const invoices = demoMode ? SEED_INVOICES : EMPTY_INVOICES;
+  const contracts = demoMode ? SEED_CONTRACTS : EMPTY_CONTRACTS;
+  const notes = demoMode ? SEED_NOTES : EMPTY_NOTES;
+  const history = demoMode ? SEED_HISTORY : EMPTY_HISTORY;
+  const stores = demoMode ? SEED_STORES : EMPTY_STORES;
+  const scans = demoMode ? SEED_SCANS : EMPTY_SCANS;
   const merchantRentals = useMemo<MerchantRental[]>(
     () =>
-      SEED_MERCHANT_RENTALS.map((r) => {
-        const o = rentalOverrides[r.id];
-        if (!o) return r;
-        return { ...r, ...o };
-      }),
+      demoMode
+        ? SEED_MERCHANT_RENTALS.map((r) => {
+            const o = rentalOverrides[r.id];
+            if (!o) return r;
+            return { ...r, ...o };
+          })
+        : EMPTY_MERCHANT_RENTALS,
     [rentalOverrides],
   );
-  const merchantApprovals = SEED_MERCHANT_APPROVALS;
+  const merchantApprovals = demoMode
+    ? SEED_MERCHANT_APPROVALS
+    : EMPTY_MERCHANT_APPROVALS;
   const merchantDamages = useMemo<MerchantDamageCase[]>(
-    () => [...extraDamages, ...SEED_MERCHANT_DAMAGES],
+    () =>
+      demoMode
+        ? [...extraDamages, ...SEED_MERCHANT_DAMAGES]
+        : EMPTY_MERCHANT_DAMAGES,
     [extraDamages],
   );
-  const merchantHistory = SEED_MERCHANT_HISTORY;
-  const merchantCustomers = SEED_MERCHANT_CUSTOMERS;
+  const merchantHistory = demoMode ? SEED_MERCHANT_HISTORY : EMPTY_MERCHANT_HISTORY;
+  const merchantCustomers = demoMode
+    ? SEED_MERCHANT_CUSTOMERS
+    : EMPTY_MERCHANT_CUSTOMERS;
 
   const value = useMemo<StoreContextValue>(
     () => ({

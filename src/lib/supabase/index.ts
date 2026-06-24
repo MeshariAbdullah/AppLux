@@ -6,7 +6,13 @@
 // All exports are tree-shakeable; importing one helper does not pull
 // in the others.
 
-export { getSupabase, requireSupabase, supabaseConfigured } from './client';
+export {
+  demoMode,
+  getSupabase,
+  isDemoMode,
+  requireSupabase,
+  supabaseConfigured,
+} from './client';
 export type { Database } from './types';
 export type {
   AccountStatus,

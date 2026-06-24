@@ -5,7 +5,9 @@ import {
   Button,
   Card,
   CardDivider,
+  CardSkeleton,
   EmptyState,
+  PageSkeleton,
   SectionHeader,
 } from '@/components/ui';
 import {
@@ -57,17 +59,28 @@ export default function NoteTracking() {
 
   const [liveNote, setLiveNote] = useState<PromissoryNote | null>(null);
   const [liveContract, setLiveContract] = useState<Contract | null>(null);
+  const [resolving, setResolving] = useState<boolean>(
+    () => configured && Boolean(id),
+  );
 
   useEffect(() => {
     if (!configured || !id) {
       setLiveNote(null);
       setLiveContract(null);
+      setResolving(false);
       return;
     }
+    setLiveNote(null);
+    setLiveContract(null);
+    setResolving(true);
     let cancelled = false;
     (async () => {
       const row = await fetchNoteById(id).catch(() => null);
-      if (cancelled || !row) return;
+      if (cancelled) return;
+      if (!row) {
+        setResolving(false);
+        return;
+      }
       const merchant = await fetchMerchant(row.merchant_id).catch(() => null);
       if (cancelled) return;
       const merchantName =
@@ -78,6 +91,7 @@ export default function NoteTracking() {
       if (!cancelled && contractRow) {
         setLiveContract(adaptContract(contractRow, merchantName));
       }
+      if (!cancelled) setResolving(false);
     })();
     return () => {
       cancelled = true;
@@ -88,6 +102,20 @@ export default function NoteTracking() {
   const linkedContract =
     liveContract ??
     (note ? contracts.find((c) => c.counterparty === note.counterparty) : undefined);
+
+  if (!note && resolving) {
+    return (
+      <>
+        <Header title={t('track.noteTitle')} showBack />
+        <Screen>
+          <CardSkeleton />
+          <div className="mt-4">
+            <PageSkeleton rows={2} />
+          </div>
+        </Screen>
+      </>
+    );
+  }
 
   if (!note) {
     return (

@@ -4,6 +4,7 @@ import { Header, Screen } from '@/components/layout';
 import {
   Card,
   EmptyState,
+  PageSkeleton,
   SectionHeader,
   StatusChip,
   type StatusTone,
@@ -40,6 +41,9 @@ export default function MerchantRentals() {
   const { merchantRentals: demoRentals } = useStore();
   const { configured, session } = useSupabaseAuth();
   const [liveRentals, setLiveRentals] = useState<MerchantRental[] | null>(null);
+  const [liveLoading, setLiveLoading] = useState<boolean>(
+    () => configured && Boolean(session?.user?.id),
+  );
   const [searchParams, setSearchParams] = useSearchParams();
   const initialFilter = (searchParams.get('filter') as Filter | null) ?? 'all';
   const [filter, setFilter] = useState<Filter>(
@@ -50,12 +54,19 @@ export default function MerchantRentals() {
     const userId = session?.user?.id;
     if (!configured || !userId) {
       setLiveRentals(null);
+      setLiveLoading(false);
       return;
     }
+    setLiveLoading(true);
     let cancelled = false;
     (async () => {
       const myMerchant = await fetchMyMerchant(userId).catch(() => null);
-      if (cancelled || !myMerchant) return;
+      if (cancelled) return;
+      if (!myMerchant) {
+        setLiveRentals([]);
+        setLiveLoading(false);
+        return;
+      }
       const contractRows = await listMerchantContracts(myMerchant.id).catch(() => []);
       if (cancelled) return;
       const profileMap = await fetchProfilesByIds(
@@ -81,6 +92,7 @@ export default function MerchantRentals() {
           });
         }),
       );
+      if (!cancelled) setLiveLoading(false);
     })();
     return () => {
       cancelled = true;
@@ -101,6 +113,19 @@ export default function MerchantRentals() {
     else params.set('filter', next);
     setSearchParams(params, { replace: true });
   };
+
+  if (configured && liveLoading) {
+    return (
+      <>
+        <Header title={t('merchant.rentals.title')} showBack />
+        <Screen padded={false} className="bg-canvas">
+          <div className="px-5 pt-4 pb-10">
+            <PageSkeleton rows={4} />
+          </div>
+        </Screen>
+      </>
+    );
+  }
 
   return (
     <>

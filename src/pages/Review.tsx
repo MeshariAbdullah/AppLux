@@ -5,7 +5,9 @@ import {
   Button,
   Card,
   CardDivider,
+  CardSkeleton,
   EmptyState,
+  PageSkeleton,
   SectionHeader,
   StatusChip,
 } from '@/components/ui';
@@ -103,6 +105,23 @@ export default function Review() {
   // sheet's onVerified callback retries the original acceptance.
   const [identityOpen, setIdentityOpen] = useState(false);
 
+  // Loading first — never show the "invalid code" empty state while
+  // the live invoice fetch is still resolving (Phase 9 production
+  // safety: live mode must never fall back to demo data).
+  if (resolving && !livePkg) {
+    return (
+      <>
+        <Header title={t('review.title')} showBack />
+        <Screen>
+          <CardSkeleton />
+          <div className="mt-4">
+            <PageSkeleton rows={2} />
+          </div>
+        </Screen>
+      </>
+    );
+  }
+
   if (!pkg || (!store && !livePkg)) {
     return (
       <>
@@ -111,14 +130,12 @@ export default function Review() {
           <EmptyState
             tone="warn"
             icon={<AlertIcon size={22} />}
-            title={resolving ? t('review.title') : t('qr.invalidCode')}
-            description={resolving ? t('review.title') : t('review.invalid.hint')}
+            title={t('qr.invalidCode')}
+            description={t('review.invalid.hint')}
             action={
-              !resolving && (
-                <Button size="sm" onClick={() => navigate('/scan', { replace: true })}>
-                  {t('qr.tryAgain')}
-                </Button>
-              )
+              <Button size="sm" onClick={() => navigate('/scan', { replace: true })}>
+                {t('qr.tryAgain')}
+              </Button>
             }
           />
         </Screen>

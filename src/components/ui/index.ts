@@ -8,6 +8,7 @@ export { FormField, Input, Textarea, Select } from './FormField';
 export { Avatar } from './Avatar';
 export { EmptyState } from './EmptyState';
 export { Skeleton } from './Skeleton';
+export { CardSkeleton, PageSkeleton } from './PageSkeleton';
 export { Sheet } from './Sheet';
 export { ConfirmSheet } from './ConfirmSheet';
 export { ImageLightbox } from './ImageLightbox';

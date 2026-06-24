@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { Header, Screen } from '@/components/layout';
-import { Card, SectionHeader } from '@/components/ui';
+import { Card, PageSkeleton, SectionHeader } from '@/components/ui';
 import {
   ArrowIcon,
   BadgeCheckIcon,
@@ -65,6 +65,9 @@ export default function Contracts() {
   const [liveContracts, setLiveContracts] = useState<Contract[] | null>(null);
   const [liveNotes, setLiveNotes] = useState<PromissoryNote[] | null>(null);
   const [liveHistory, setLiveHistory] = useState<HistoryItem[] | null>(null);
+  const [liveLoading, setLiveLoading] = useState<boolean>(
+    () => configured && Boolean(session?.user?.id),
+  );
 
   useEffect(() => {
     const userId = session?.user?.id;
@@ -73,8 +76,10 @@ export default function Contracts() {
       setLiveContracts(null);
       setLiveNotes(null);
       setLiveHistory(null);
+      setLiveLoading(false);
       return;
     }
+    setLiveLoading(true);
     let cancelled = false;
     (async () => {
       const [invoiceRows, contractRows, noteRows] = await Promise.all([
@@ -123,6 +128,7 @@ export default function Contracts() {
           .filter((c) => c.status === 'ended' || c.status === 'cancelled')
           .map((r) => adaptContractToHistory(r, nameMap[r.merchant_id])),
       );
+      if (!cancelled) setLiveLoading(false);
     })();
     return () => {
       cancelled = true;
@@ -147,6 +153,19 @@ export default function Contracts() {
 
   const hasNothing =
     pending.length === 0 && rentals.length === 0 && history.length === 0;
+
+  // Loading first — never let the "no rentals yet" empty state flash
+  // while the live customer query is still resolving (Phase 9).
+  if (configured && liveLoading) {
+    return (
+      <>
+        <Header title={t('contracts.title')} />
+        <Screen className="bg-canvas">
+          <PageSkeleton rows={4} />
+        </Screen>
+      </>
+    );
+  }
 
   return (
     <>

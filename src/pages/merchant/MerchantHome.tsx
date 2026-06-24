@@ -4,6 +4,7 @@ import { Header, Screen } from '@/components/layout';
 import {
   Button,
   Card,
+  PageSkeleton,
   SectionHeader,
 } from '@/components/ui';
 import { LangToggle } from '@/components/auth/LangToggle';
@@ -76,6 +77,10 @@ export default function MerchantHome() {
   const [merchantLoading, setMerchantLoading] = useState(false);
   const [liveRentals, setLiveRentals] = useState<MerchantRental[] | null>(null);
   const [livePendingInvoices, setLivePendingInvoices] = useState<number | null>(null);
+  // Phase 9: in live mode the dashboard must render a skeleton until
+  // the second-stage fetch (rentals + pending invoices) resolves —
+  // otherwise the seeded demo rentals would flash before real data.
+  const [dataLoading, setDataLoading] = useState(false);
 
   useEffect(() => {
     const userId = supabaseAuth.session?.user?.id;
@@ -113,6 +118,7 @@ export default function MerchantHome() {
     if (!supabaseAuth.configured) return;
     if (!liveMerchant) return;
     let cancelled = false;
+    setDataLoading(true);
     (async () => {
       const [contractRows, pendingInvoices] = await Promise.all([
         withTimeout(
@@ -165,6 +171,7 @@ export default function MerchantHome() {
           });
         }),
       );
+      if (!cancelled) setDataLoading(false);
     })();
     return () => {
       cancelled = true;
@@ -201,6 +208,21 @@ export default function MerchantHome() {
 
   // ---------- Pre-render gate (demo only) ----------
   if (!supabaseAuth.configured && !merchant) return null;
+
+  // Phase 9 — in live mode show a skeleton while the merchant identity
+  // or the rentals/pending invoices fetches are in flight. Without this
+  // the dashboard would briefly show zeroed counts (now that seed data
+  // is gated behind demoMode) before the real numbers arrive.
+  if (supabaseAuth.configured && (merchantLoading || dataLoading)) {
+    return (
+      <>
+        <Header title={t('merchant.home.title')} />
+        <Screen className="bg-canvas">
+          <PageSkeleton rows={4} />
+        </Screen>
+      </>
+    );
+  }
 
   const companyName = supabaseAuth.configured
     ? liveMerchant?.company_name ?? (merchantLoading ? '…' : t('merchant.home.unknownMerchant'))

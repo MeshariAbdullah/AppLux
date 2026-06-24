@@ -1,7 +1,14 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Header, Screen } from '@/components/layout';
-import { Avatar, Card, IconButton, SectionHeader } from '@/components/ui';
+import {
+  Avatar,
+  Card,
+  CardSkeleton,
+  IconButton,
+  PageSkeleton,
+  SectionHeader,
+} from '@/components/ui';
 import {
   ArrowIcon,
   BadgeCheckIcon,
@@ -105,6 +112,14 @@ export default function Home() {
   const [liveContracts, setLiveContracts] = useState<Contract[] | null>(null);
   const [liveNotes, setLiveNotes] = useState<PromissoryNote[] | null>(null);
   const [liveHistory, setLiveHistory] = useState<HistoryItem[] | null>(null);
+  // Live loading guard — true while the customer's invoices/contracts/
+  // notes are being fetched. Without this, configured mode would show
+  // the "new customer" empty state for a beat (since the seed arrays
+  // are now empty in live mode), then swap to real data. Phase 9: the
+  // page must render a skeleton while the fetch is in flight.
+  const [liveLoading, setLiveLoading] = useState<boolean>(
+    () => configured && Boolean(realSession?.user?.id),
+  );
 
   useEffect(() => {
     const userId = realSession?.user?.id;
@@ -113,8 +128,10 @@ export default function Home() {
       setLiveContracts(null);
       setLiveNotes(null);
       setLiveHistory(null);
+      setLiveLoading(false);
       return;
     }
+    setLiveLoading(true);
     let cancelled = false;
     (async () => {
       const [invoiceRows, contractRows, noteRows] = await Promise.all([
@@ -162,6 +179,7 @@ export default function Home() {
           .filter((c) => c.status === 'ended' || c.status === 'cancelled')
           .map((r) => adaptContractToHistory(r, nameMap[r.merchant_id])),
       );
+      if (!cancelled) setLiveLoading(false);
     })();
     return () => {
       cancelled = true;
@@ -232,6 +250,43 @@ export default function Home() {
   // ---------------------------------------------------------------------
   // Render
   // ---------------------------------------------------------------------
+
+  // Loading first — in live mode we MUST NOT render mode-based content
+  // until invoices/contracts/notes have been fetched, otherwise the
+  // dashboard briefly shows the "new customer" mode before the real
+  // data arrives. The hero stays so the user sees the page chrome.
+  if (configured && liveLoading) {
+    return (
+      <>
+        <Header
+          variant="hero"
+          leading={<Avatar name={session?.fullName ?? profile?.full_name ?? 'A'} tone="gold" />}
+          title={
+            <span className="text-white">
+              {t('home.greeting')}
+              {firstName && `، ${firstName}`}
+            </span>
+          }
+          subtitle={t('home.subtitle')}
+          trailing={
+            <IconButton
+              variant="glass"
+              label={t('nav.notifications')}
+              onClick={() => navigate('/notifications')}
+            >
+              <BellIcon size={18} />
+            </IconButton>
+          }
+        />
+        <Screen className="bg-canvas">
+          <CardSkeleton />
+          <div className="mt-4">
+            <PageSkeleton rows={3} />
+          </div>
+        </Screen>
+      </>
+    );
+  }
 
   return (
     <>

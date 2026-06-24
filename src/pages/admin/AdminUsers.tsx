@@ -5,6 +5,7 @@ import {
   Card,
   EmptyState,
   Input,
+  PageSkeleton,
   StatusChip,
   type StatusTone,
 } from '@/components/ui';
@@ -45,14 +46,17 @@ export default function AdminUsers() {
   const { adminUsers: demoUsers } = useStore();
   const { configured } = useSupabaseAuth();
   const [liveUsers, setLiveUsers] = useState<AdminUserRecord[] | null>(null);
+  const [liveLoading, setLiveLoading] = useState<boolean>(() => configured);
   const [tab, setTab] = useState<TabKey>('all');
   const [query, setQuery] = useState('');
 
   useEffect(() => {
     if (!configured) {
       setLiveUsers(null);
+      setLiveLoading(false);
       return;
     }
+    setLiveLoading(true);
     let cancelled = false;
     (async () => {
       // List customer profiles only — admin/merchant users live in their
@@ -64,6 +68,7 @@ export default function AdminUsers() {
       ).catch(() => new Map());
       if (cancelled) return;
       setLiveUsers(profiles.map((p) => adaptUserRecord(p, eligibility.get(p.id))));
+      setLiveLoading(false);
     })();
     return () => {
       cancelled = true;
@@ -113,6 +118,23 @@ export default function AdminUsers() {
     () => adminUsers.reduce((s, u) => s + u.usedAmount, 0),
     [adminUsers],
   );
+
+  if (configured && liveLoading) {
+    return (
+      <>
+        <Header
+          title={t('admin.users.title')}
+          showBack
+          trailing={<LangToggle tone="dark" />}
+        />
+        <Screen padded={false} className="bg-canvas">
+          <div className="px-5 pt-5 pb-10">
+            <PageSkeleton rows={5} />
+          </div>
+        </Screen>
+      </>
+    );
+  }
 
   return (
     <>

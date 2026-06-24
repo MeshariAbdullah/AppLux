@@ -4,6 +4,7 @@ import { Header, Screen } from '@/components/layout';
 import {
   Card,
   EmptyState,
+  PageSkeleton,
   StatusChip,
   type StatusTone,
 } from '@/components/ui';
@@ -23,6 +24,7 @@ import { useI18n, useT } from '@/lib/i18n';
 import { useStore } from '@/lib/store';
 import {
   adaptDamageCase,
+  demoMode,
   fetchProfilesByIds,
   listAllDamageCases,
   useSupabaseAuth,
@@ -79,12 +81,15 @@ export default function AdminCases() {
   const { configured } = useSupabaseAuth();
   const [tab, setTab] = useState<TabKey>('damage');
   const [liveDamage, setLiveDamage] = useState<AdminActiveCase[] | null>(null);
+  const [liveLoading, setLiveLoading] = useState<boolean>(() => configured);
 
   useEffect(() => {
     if (!configured) {
       setLiveDamage(null);
+      setLiveLoading(false);
       return;
     }
+    setLiveLoading(true);
     let cancelled = false;
     (async () => {
       const rows = await listAllDamageCases().catch(() => []);
@@ -109,16 +114,20 @@ export default function AdminCases() {
           });
         }),
       );
+      if (!cancelled) setLiveLoading(false);
     })();
     return () => {
       cancelled = true;
     };
   }, [configured]);
 
-  const damageCases = liveDamage ?? SEED_ADMIN_ACTIVE_CASES;
-  // Overdue payments aren't modelled in Phase 5 yet — keep demo seed.
-  const overdueCases = SEED_ADMIN_OVERDUE;
-  const buckets = SEED_ADMIN_OVERDUE_BUCKETS;
+  // Phase 9: SEED_ADMIN_* arrays are demo data and must not appear in
+  // live mode. Use [] when demoMode is off so the empty state renders
+  // instead of fake cases. Overdue payments aren't modelled in
+  // Phase 5 yet, so live mode shows an empty overdue bucket.
+  const damageCases = liveDamage ?? (demoMode ? SEED_ADMIN_ACTIVE_CASES : []);
+  const overdueCases = demoMode ? SEED_ADMIN_OVERDUE : [];
+  const buckets = demoMode ? SEED_ADMIN_OVERDUE_BUCKETS : [];
 
   const claimTotal = useMemo(
     () => damageCases.reduce((s, c) => s + c.claimAmount, 0),
@@ -167,6 +176,23 @@ export default function AdminCases() {
     }
     return map;
   }, [adminCases]);
+
+  if (configured && liveLoading) {
+    return (
+      <>
+        <Header
+          title={t('admin.cases.title')}
+          showBack
+          trailing={<LangToggle tone="dark" />}
+        />
+        <Screen padded={false} className="bg-canvas">
+          <div className="px-5 pt-5 pb-10">
+            <PageSkeleton rows={5} />
+          </div>
+        </Screen>
+      </>
+    );
+  }
 
   return (
     <>
