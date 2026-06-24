@@ -124,6 +124,8 @@ export default function MerchantDamageNew() {
       return;
     }
     let cancelled = false;
+    // Phase 9 entity-leak fix.
+    setLiveRental(null);
     setResolving(true);
     (async () => {
       const contract = await fetchContractById(id).catch(() => null);

@@ -64,6 +64,9 @@ export default function MerchantRentalNote() {
       return;
     }
     let cancelled = false;
+    // Phase 9 entity-leak fix — clear previous note state up front.
+    setLiveRental(null);
+    setLiveNote(null);
     setResolving(true);
     (async () => {
       const contract = await fetchContractById(id).catch(() => null);

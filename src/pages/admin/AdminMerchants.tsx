@@ -4,6 +4,7 @@ import { Header, Screen } from '@/components/layout';
 import {
   Card,
   EmptyState,
+  PageSkeleton,
   StatusChip,
   type StatusTone,
 } from '@/components/ui';
@@ -42,22 +43,33 @@ export default function AdminMerchants() {
   const { adminMerchantRequests: demoRequests } = useStore();
   const { configured } = useSupabaseAuth();
   const [requests, setRequests] = useState<AdminMerchantRequest[]>(demoRequests);
+  const [liveLoading, setLiveLoading] = useState<boolean>(() => configured);
   const [tab, setTab] = useState<TabKey>('pending');
 
   useEffect(() => {
     if (!configured) {
       setRequests(demoRequests);
+      setLiveLoading(false);
       return;
     }
+    setLiveLoading(true);
     let cancelled = false;
     listMerchantApplications()
       .then((rows) => {
-        if (!cancelled) setRequests(rows.map(adaptMerchantApplication));
+        if (!cancelled) {
+          setRequests(rows.map(adaptMerchantApplication));
+          setLiveLoading(false);
+        }
       })
       .catch((err) => {
         // eslint-disable-next-line no-console
-        console.error('[applux] listMerchantApplications failed; falling back to demo seed', err);
-        if (!cancelled) setRequests(demoRequests);
+        console.error('[applux] listMerchantApplications failed', err);
+        // Phase 9: in live mode, do NOT fall back to demo seeds on error.
+        // Empty list with an error pill is the right signal.
+        if (!cancelled) {
+          setRequests([]);
+          setLiveLoading(false);
+        }
       });
     return () => {
       cancelled = true;
@@ -182,7 +194,9 @@ export default function AdminMerchants() {
           </div>
 
           {/* List */}
-          {visible.length === 0 ? (
+          {configured && liveLoading ? (
+            <PageSkeleton rows={4} />
+          ) : visible.length === 0 ? (
             <EmptyState
               icon={
                 tab === 'pending' ? (

@@ -1529,6 +1529,11 @@
     },
     "damageCase": {
       "eyebrow": "Case record",
+      "notFound": {
+        "title": "Case not found",
+        "body": "We couldn't load this damage case. It may have been removed, or live data for this view isn't wired up yet.",
+        "back": "Back to cases"
+      },
       "claim": "Claim amount",
       "reportedAt": "Reported on",
       "linkedRental": "Linked rental",

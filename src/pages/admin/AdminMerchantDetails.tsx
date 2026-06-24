@@ -8,6 +8,7 @@ import {
   ConfirmSheet,
   EmptyState,
   FormField,
+  PageSkeleton,
   StatusChip,
   Textarea,
   type StatusTone,
@@ -73,22 +74,31 @@ export default function AdminMerchantDetails() {
   );
 
   const [liveRequest, setLiveRequest] = useState<AdminMerchantRequest | null>(null);
+  const [liveLoading, setLiveLoading] = useState<boolean>(
+    () => configured && Boolean(id),
+  );
   const [decisionError, setDecisionError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!configured || !id) {
       setLiveRequest(null);
+      setLiveLoading(false);
       return;
     }
+    // Phase 9 entity-leak fix.
+    setLiveRequest(null);
+    setLiveLoading(true);
     let cancelled = false;
     fetchMerchantApplication(id)
       .then((row) => {
         if (cancelled) return;
         setLiveRequest(row ? adaptMerchantApplication(row) : null);
+        setLiveLoading(false);
       })
       .catch((err) => {
         // eslint-disable-next-line no-console
         console.error('[applux] fetchMerchantApplication failed', err);
+        if (!cancelled) setLiveLoading(false);
       });
     return () => {
       cancelled = true;
@@ -104,6 +114,19 @@ export default function AdminMerchantDetails() {
   useEffect(() => {
     setNotes(request?.decision.notes ?? '');
   }, [request?.id, request?.decision.status, request?.decision.notes]);
+
+  if (configured && liveLoading) {
+    return (
+      <>
+        <Header title={t('admin.merchantRequest.title')} showBack />
+        <Screen padded={false} className="bg-canvas">
+          <div className="px-4 pt-6">
+            <PageSkeleton rows={4} />
+          </div>
+        </Screen>
+      </>
+    );
+  }
 
   if (!request) {
     return (

@@ -13,6 +13,11 @@ import {
 } from '@/components/icons';
 import { useI18n, useT } from '@/lib/i18n';
 import { useStore } from '@/lib/store';
+import {
+  adaptMerchantToStore,
+  fetchMerchant,
+  useSupabaseAuth,
+} from '@/lib/supabase';
 import type { PartnerStore, StoreBranch } from '@/lib/data';
 import { StoreLogo, categoryIcon } from '@/components/stores/StoreLogo';
 
@@ -22,17 +27,51 @@ export default function StoreDetails() {
   const navigate = useNavigate();
   const { id } = useParams();
   const { stores } = useStore();
+  const { configured } = useSupabaseAuth();
 
   const [loading, setLoading] = useState(true);
   const [store, setStore] = useState<PartnerStore | null>(null);
 
   useEffect(() => {
-    const id2 = window.setTimeout(() => {
+    let cancelled = false;
+    // Clear previous entity + start loading on every :id change so the
+    // page never flashes the previous store's data while the new one
+    // resolves (Phase 9 entity-leak fix).
+    setStore(null);
+    setLoading(true);
+
+    if (configured && id) {
+      fetchMerchant(id)
+        .then((m) => {
+          if (cancelled) return;
+          setStore(m ? adaptMerchantToStore(m) : null);
+        })
+        .catch((err) => {
+          if (cancelled) return;
+          // eslint-disable-next-line no-console
+          console.error('[lend] fetchMerchant failed', err);
+          setStore(null);
+        })
+        .finally(() => {
+          if (!cancelled) setLoading(false);
+        });
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    // Demo path — keeps the short delay so the skeleton flashes briefly
+    // even with synchronous store reads.
+    const tid = window.setTimeout(() => {
+      if (cancelled) return;
       setStore(stores.find((s) => s.id === id) ?? null);
       setLoading(false);
     }, 450);
-    return () => window.clearTimeout(id2);
-  }, [id, stores]);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(tid);
+    };
+  }, [configured, id, stores]);
 
   if (loading) return <DetailsSkeleton />;
 

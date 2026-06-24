@@ -48,8 +48,11 @@ export default function Stores() {
       .catch((err) => {
         if (cancelled) return;
         // eslint-disable-next-line no-console
-        console.error('[lend] listMerchants failed; falling back to demo seed', err);
-        setStores(demoStores);
+        console.error('[lend] listMerchants failed', err);
+        // Phase 9: do NOT fall back to demo seeds in live mode. Surface
+        // an empty list — the per-sector "Partners coming soon" copy
+        // already reads correctly when sectorCounts is all zeros.
+        setStores([]);
       })
       .finally(() => {
         if (!cancelled) setLoading(false);

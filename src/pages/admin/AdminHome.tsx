@@ -10,7 +10,7 @@ import {
   type StatusTone,
 } from '@/components/ui';
 import { LangToggle } from '@/components/auth/LangToggle';
-import { useSupabaseAuth } from '@/lib/supabase';
+import { demoMode, useSupabaseAuth } from '@/lib/supabase';
 import {
   AlertIcon,
   BadgeCheckIcon,
@@ -97,13 +97,17 @@ export default function AdminHome() {
     }
   };
 
-  const pendingMerchants = SEED_ADMIN_PENDING_MERCHANTS;
-  const users = SEED_ADMIN_USERS;
-  const merchants = SEED_ADMIN_MERCHANTS;
-  const limits = SEED_ADMIN_LIMITS;
-  const activeCases = SEED_ADMIN_ACTIVE_CASES;
-  const overdueCases = SEED_ADMIN_OVERDUE;
-  const buckets = SEED_ADMIN_OVERDUE_BUCKETS;
+  // Phase 9: SEED_* arrays are demo dashboard data. In live mode this
+  // page surfaces zeroed counts until proper Supabase queries are
+  // wired; demo mode keeps the original seeded story for screenshots
+  // and stakeholder previews.
+  const pendingMerchants = demoMode ? SEED_ADMIN_PENDING_MERCHANTS : [];
+  const users = demoMode ? SEED_ADMIN_USERS : [];
+  const merchants = demoMode ? SEED_ADMIN_MERCHANTS : [];
+  const limits = demoMode ? SEED_ADMIN_LIMITS : [];
+  const activeCases = demoMode ? SEED_ADMIN_ACTIVE_CASES : [];
+  const overdueCases = demoMode ? SEED_ADMIN_OVERDUE : [];
+  const buckets = demoMode ? SEED_ADMIN_OVERDUE_BUCKETS : [];
 
   const overdueTotal = useMemo(
     () => buckets.reduce((sum, b) => sum + b.count, 0),

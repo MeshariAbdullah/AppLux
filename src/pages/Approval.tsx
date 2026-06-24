@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Header, Screen } from '@/components/layout';
-import { Button, EmptyState } from '@/components/ui';
+import { Button, CardSkeleton, EmptyState, PageSkeleton } from '@/components/ui';
 import {
   AlertIcon,
   BadgeCheckIcon,
@@ -130,7 +130,22 @@ export default function Approval() {
     );
   }
 
-  if (!pkg) return null; // resolving
+  if (!pkg) {
+    // Phase 9: while the live invoice fetch is in flight, render a
+    // skeleton instead of a blank screen so the user understands the
+    // page is loading rather than broken.
+    return (
+      <>
+        <Header title={t('approval.title')} />
+        <Screen className="bg-canvas">
+          <CardSkeleton />
+          <div className="mt-4">
+            <PageSkeleton rows={2} />
+          </div>
+        </Screen>
+      </>
+    );
+  }
 
   const approvedAt = record?.approvedAt ?? new Date().toISOString();
   const approvedTime = formatDate(approvedAt, { dateStyle: 'medium', timeStyle: 'short' });

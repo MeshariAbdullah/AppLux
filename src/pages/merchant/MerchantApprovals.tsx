@@ -3,6 +3,7 @@ import { Header, Screen } from '@/components/layout';
 import {
   Card,
   EmptyState,
+  PageSkeleton,
   StatusChip,
   type StatusTone,
 } from '@/components/ui';
@@ -58,17 +59,27 @@ export default function MerchantApprovals() {
   const { merchantApprovals: demoApprovals } = useStore();
   const { configured, session } = useSupabaseAuth();
   const [liveApprovals, setLiveApprovals] = useState<MerchantApproval[] | null>(null);
+  const [liveLoading, setLiveLoading] = useState<boolean>(
+    () => configured && Boolean(session?.user?.id),
+  );
 
   useEffect(() => {
     const userId = session?.user?.id;
     if (!configured || !userId) {
       setLiveApprovals(null);
+      setLiveLoading(false);
       return;
     }
+    setLiveLoading(true);
     let cancelled = false;
     (async () => {
       const myMerchant = await fetchMyMerchant(userId).catch(() => null);
-      if (cancelled || !myMerchant) return;
+      if (cancelled) return;
+      if (!myMerchant) {
+        setLiveApprovals([]);
+        setLiveLoading(false);
+        return;
+      }
       const rows = await listMerchantInvoices(myMerchant.id, {
         status: 'issued',
       }).catch(() => []);
@@ -80,6 +91,7 @@ export default function MerchantApprovals() {
       setLiveApprovals(
         rows.map((r) => invoiceRowToApproval(r, profileMap.get(r.customer_user_id))),
       );
+      setLiveLoading(false);
     })();
     return () => {
       cancelled = true;
@@ -96,7 +108,9 @@ export default function MerchantApprovals() {
             {t('merchant.approvals.subtitle')}
           </p>
 
-          {merchantApprovals.length === 0 ? (
+          {configured && liveLoading ? (
+            <PageSkeleton rows={3} />
+          ) : merchantApprovals.length === 0 ? (
             <EmptyState
               icon={<InfoIcon size={22} />}
               title={t('merchant.approvals.empty')}

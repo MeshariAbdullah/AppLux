@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { Navigate, useNavigate, useParams } from 'react-router-dom';
 import { Header, Screen } from '@/components/layout';
 import { Button, Card, CardDivider, EmptyState, StatusChip } from '@/components/ui';
 import {
@@ -14,6 +14,7 @@ import {
 } from '@/components/icons';
 import { useI18n, useT } from '@/lib/i18n';
 import { useStore } from '@/lib/store';
+import { demoMode } from '@/lib/supabase';
 import { cn } from '@/lib/cn';
 import { StoreLogo } from '@/components/stores/StoreLogo';
 
@@ -33,6 +34,16 @@ export default function Tracking() {
   const record = token ? approvals[token] : undefined;
   const pkg = useMemo(() => scans.find((s) => s.token === token), [scans, token]);
   const store = useMemo(() => stores.find((s) => s.id === pkg?.storeId), [stores, pkg]);
+
+  // Phase 9: this token-based tracking page is a demo flow. The
+  // canonical live tracking lives at /track/contract/<id> and
+  // /track/invoice/<id> (real Supabase-backed routes). In live mode
+  // the seed scans/stores are empty so this page would otherwise
+  // render its "invalid token" empty state with no recoverable
+  // action. Send the user back to home instead.
+  if (!demoMode) {
+    return <Navigate to="/home" replace />;
+  }
 
   if (!pkg || !store) {
     return (

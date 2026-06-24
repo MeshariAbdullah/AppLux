@@ -5,6 +5,7 @@ import {
   Button,
   Card,
   CardDivider,
+  EmptyState,
   ImageLightbox,
   SectionHeader,
   StatusChip,
@@ -31,6 +32,7 @@ import {
 import { cn } from '@/lib/cn';
 import { useI18n, useT } from '@/lib/i18n';
 import { useStore } from '@/lib/store';
+import { useSupabaseAuth } from '@/lib/supabase';
 import type {
   MerchantDamageCase,
   MerchantDamageSeverity,
@@ -101,6 +103,7 @@ export default function MerchantDamageDetails() {
   const navigate = useNavigate();
   const { id } = useParams();
   const { merchantDamages, merchantRentals } = useStore();
+  const { configured } = useSupabaseAuth();
 
   const kase = useMemo(
     () => merchantDamages.find((d) => d.id === id),
@@ -109,7 +112,36 @@ export default function MerchantDamageDetails() {
 
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
 
+  // Phase 9: this page reads from the demo store today. In live mode
+  // the store returns an empty array, so a direct visit to a damage-case
+  // URL has no row to render. Until a Supabase fetch is wired, surface
+  // an explicit empty state instead of bouncing back to the list (which
+  // is what the old `<Navigate />` did — and looks like a 404 to the
+  // user).
   if (!kase) {
+    if (configured) {
+      return (
+        <>
+          <Header title={t('merchant.damageCase.eyebrow')} showBack />
+          <Screen className="bg-canvas">
+            <EmptyState
+              tone="warn"
+              icon={<AlertIcon size={22} />}
+              title={t('merchant.damageCase.notFound.title')}
+              description={t('merchant.damageCase.notFound.body')}
+              action={
+                <Button
+                  size="sm"
+                  onClick={() => navigate('/merchant/damages', { replace: true })}
+                >
+                  {t('merchant.damageCase.notFound.back')}
+                </Button>
+              }
+            />
+          </Screen>
+        </>
+      );
+    }
     return <Navigate to="/merchant/damages" replace />;
   }
 

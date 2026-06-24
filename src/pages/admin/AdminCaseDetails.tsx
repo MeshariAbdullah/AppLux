@@ -38,7 +38,7 @@ import {
 import { cn } from '@/lib/cn';
 import { useI18n, useT } from '@/lib/i18n';
 import { useStore } from '@/lib/store';
-import { useSupabaseAuth } from '@/lib/supabase';
+import { demoMode, useSupabaseAuth } from '@/lib/supabase';
 import {
   SEED_ADMIN_ACTIVE_CASES,
   SEED_ADMIN_OVERDUE,
@@ -269,7 +269,12 @@ type CaseHeader = {
 function findHeader(
   kind: AdminCaseKind,
   id: string,
+  demoMode: boolean,
 ): CaseHeader | null {
+  // Phase 9: SEED_ADMIN_* lookups are demo-only. In live mode the
+  // header comes back null and the page renders the case-not-found
+  // empty state until a live Supabase fetch is wired up.
+  if (!demoMode) return null;
   if (kind === 'damage') {
     const c: AdminActiveCase | undefined = SEED_ADMIN_ACTIVE_CASES.find(
       (x) => x.id === id,
@@ -320,7 +325,10 @@ export default function AdminCaseDetails() {
     () => adminCases.find((c) => c.id === detailKey) ?? null,
     [adminCases, detailKey],
   );
-  const header = useMemo(() => findHeader(kind, id), [kind, id]);
+  const header = useMemo(
+    () => findHeader(kind, id, demoMode),
+    [kind, id],
+  );
 
   const [noteDraft, setNoteDraft] = useState('');
   const [noteFlash, setNoteFlash] = useState(false);

@@ -9,6 +9,7 @@ import {
   EmptyState,
   FormField,
   Input,
+  PageSkeleton,
   ProgressBar,
   StatusChip,
   type StatusTone,
@@ -115,20 +116,30 @@ export default function AdminUserDetails() {
   } = useStore();
   const { configured } = useSupabaseAuth();
   const [liveUser, setLiveUser] = useState<AdminUserRecord | null>(null);
+  const [liveLoading, setLiveLoading] = useState<boolean>(
+    () => configured && Boolean(id),
+  );
 
   useEffect(() => {
     if (!configured || !id) {
       setLiveUser(null);
+      setLiveLoading(false);
       return;
     }
+    // Phase 9 entity-leak fix — clear previous user before fetching.
+    setLiveUser(null);
+    setLiveLoading(true);
     let cancelled = false;
     (async () => {
       const [profile, eligibility] = await Promise.all([
         fetchProfile(id).catch(() => null),
         fetchEligibility(id).catch(() => null),
       ]);
-      if (cancelled || !profile) return;
-      setLiveUser(adaptUserRecord(profile, eligibility));
+      if (cancelled) return;
+      if (profile) {
+        setLiveUser(adaptUserRecord(profile, eligibility));
+      }
+      setLiveLoading(false);
     })();
     return () => {
       cancelled = true;
@@ -163,6 +174,22 @@ export default function AdminUserDetails() {
     const id = window.setTimeout(() => setToast(null), 2800);
     return () => window.clearTimeout(id);
   }, [toast]);
+
+  // Phase 9: loading first so we never flash the "not found" empty
+  // state while the live fetch is still in flight (or after the :id
+  // route param has just changed).
+  if (configured && liveLoading) {
+    return (
+      <>
+        <Header title={t('admin.user.title')} showBack />
+        <Screen padded={false} className="bg-canvas">
+          <div className="px-4 pt-6">
+            <PageSkeleton rows={4} />
+          </div>
+        </Screen>
+      </>
+    );
+  }
 
   if (!user) {
     return (

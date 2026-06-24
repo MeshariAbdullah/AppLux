@@ -80,6 +80,12 @@ export default function MerchantRentalContract() {
       return;
     }
     let cancelled = false;
+    // Phase 9 entity-leak fix — clear the previous contract's state
+    // before the new :id fetch starts.
+    setLiveRental(null);
+    setLiveClauses(null);
+    setLiveMerchant(null);
+    setLiveRentalDays(null);
     setResolving(true);
     (async () => {
       const contract = await fetchContractById(id).catch(() => null);

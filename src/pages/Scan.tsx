@@ -5,6 +5,7 @@ import { Button } from '@/components/ui';
 import { QrIcon, ShieldIcon, SparkleIcon } from '@/components/icons';
 import { useT } from '@/lib/i18n';
 import { useStore } from '@/lib/store';
+import { demoMode } from '@/lib/supabase';
 import { cn } from '@/lib/cn';
 
 type Phase = 'idle' | 'scanning' | 'matched';
@@ -14,6 +15,14 @@ export default function Scan() {
   const navigate = useNavigate();
   const { scans } = useStore();
   const [phase, setPhase] = useState<Phase>('idle');
+
+  // Phase 9: the "simulate scan" path navigates to /review/<token>
+  // where <token> is read from seeded demo scans. In live mode the
+  // seed array is empty, so the simulator would hang silently. Only
+  // enable simulation when demoMode is on; otherwise the user must
+  // scan a real QR from a merchant device (the same /review/:token
+  // route, but token comes from the live merchant flow).
+  const simulationEnabled = demoMode && scans.length > 0;
 
   useEffect(() => {
     if (phase !== 'scanning') return;
@@ -89,7 +98,7 @@ export default function Scan() {
               size="lg"
               block
               onClick={() => setPhase('scanning')}
-              disabled={phase !== 'idle'}
+              disabled={phase !== 'idle' || !simulationEnabled}
               leading={<QrIcon size={18} />}
             >
               {t('qr.simulate')}

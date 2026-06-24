@@ -185,6 +185,10 @@ export default function MerchantRentalDetails() {
       return;
     }
     let cancelled = false;
+    // Clear the previous entity's data before the new fetch starts so
+    // the page never renders rental A while the user is navigating to
+    // rental B (Phase 9 follow-up — entity leak fix).
+    setLiveRental(null);
     setResolving(true);
     (async () => {
       const contract = await fetchContractById(id).catch(() => null);
