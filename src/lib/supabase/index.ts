@@ -71,7 +71,6 @@ export {
   fetchProfileByMobile,
   fetchProfilesByIds,
   listProfiles,
-  recordIdentityVerification,
   updateProfile,
 } from './queries/profile';
 export {

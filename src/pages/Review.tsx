@@ -39,7 +39,6 @@ import { ReviewStepper, type ReviewStepKey } from '@/components/review/ReviewSte
 import { RentalJourneyTimeline } from '@/components/rental/RentalJourneyTimeline';
 import { deriveJourneyFromInvoice, type JourneyStep } from '@/lib/rentalJourney';
 import { StoreLogo } from '@/components/stores/StoreLogo';
-import { IdentityVerificationSheet } from '@/components/identity/IdentityVerificationSheet';
 import { cn } from '@/lib/cn';
 
 export default function Review() {
@@ -48,7 +47,7 @@ export default function Review() {
   const { token } = useParams();
   const navigate = useNavigate();
   const { scans, stores, session, approvePackage } = useStore();
-  const { configured, profile, refresh } = useSupabaseAuth();
+  const { configured } = useSupabaseAuth();
   const demoPkg = useMemo(
     () => scans.find((s) => s.token === token),
     [scans, token],
@@ -100,10 +99,6 @@ export default function Review() {
 
   const [step, setStep] = useState<ReviewStepKey>('invoice');
   const [acceptError, setAcceptError] = useState<string | null>(null);
-  // Identity verification — opens the bottom sheet when the customer
-  // tries to commit but their profile isn't identity_verified yet. The
-  // sheet's onVerified callback retries the original acceptance.
-  const [identityOpen, setIdentityOpen] = useState(false);
 
   // Loading first — never show the "invalid code" empty state while
   // the live invoice fetch is still resolving (Phase 9 production
@@ -143,57 +138,20 @@ export default function Review() {
     );
   }
 
-  // Tries to flip the invoice to 'accepted' (creating the contract).
-  // The DB-side gate (Phase 8e) raises P0004 if the customer isn't
-  // identity-verified — we surface that as the IdentityVerificationSheet
-  // instead of a generic error, so the customer can complete Nafath
-  // inline and retry without losing context.
-  const tryAccept = async () => {
-    if (!configured || !liveInvoiceId) {
-      approvePackage(pkg.token);
-      navigate(`/approval/${pkg.token}`, { replace: true });
-      return;
-    }
-    try {
-      await acceptRentalInvoice(liveInvoiceId);
-      navigate(`/approval/${pkg.token}`, { replace: true });
-    } catch (err) {
-      // Postgres raises P0004 from accept_rental_invoice when the
-      // caller's profile isn't identity_verified yet. Route the
-      // customer through the Nafath sheet, then retry.
-      const code = (err as { code?: string } | null)?.code;
-      if (code === 'P0004') {
-        setIdentityOpen(true);
-        return;
-      }
-      const msg = err instanceof Error ? err.message : 'Failed to accept invoice.';
-      setAcceptError(msg);
-    }
-  };
-
   const handleApproved = async () => {
     setAcceptError(null);
-    // Fast path — skip the RPC round-trip if the local profile already
-    // says the customer is unverified. Same UX, less server chatter.
-    if (configured && profile && !profile.identity_verified) {
-      setIdentityOpen(true);
+    if (configured && liveInvoiceId) {
+      try {
+        await acceptRentalInvoice(liveInvoiceId);
+        navigate(`/approval/${pkg.token}`, { replace: true });
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : 'Failed to accept invoice.';
+        setAcceptError(msg);
+      }
       return;
     }
-    await tryAccept();
-  };
-
-  const handleIdentityVerified = async () => {
-    setAcceptError(null);
-    // Pull the freshly-updated identity_verified flag onto the client
-    // so any other gate (profile chip, etc.) re-renders, then retry
-    // the acceptance.
-    try {
-      await refresh();
-    } catch (err) {
-      // eslint-disable-next-line no-console
-      console.error('[lend] profile refresh after identity verification failed', err);
-    }
-    await tryAccept();
+    approvePackage(pkg.token);
+    navigate(`/approval/${pkg.token}`, { replace: true });
   };
 
   const journeySteps: JourneyStep[] = deriveJourneyFromInvoice(
@@ -235,9 +193,6 @@ export default function Review() {
             <ConfirmStep
               pkg={pkg}
               userName={session?.fullName}
-              identityRequired={
-                configured && profile ? !profile.identity_verified : false
-              }
               onApproved={handleApproved}
             />
           )}
@@ -248,12 +203,6 @@ export default function Review() {
           )}
         </div>
       </Screen>
-
-      <IdentityVerificationSheet
-        open={identityOpen}
-        onClose={() => setIdentityOpen(false)}
-        onVerified={handleIdentityVerified}
-      />
 
       <StepFooter
         step={step}
@@ -724,12 +673,10 @@ function DarkField({ label, value }: { label: ReactNode; value: ReactNode }) {
 function ConfirmStep({
   pkg,
   userName,
-  identityRequired,
   onApproved,
 }: {
   pkg: ScannedPackage;
   userName: string | undefined;
-  identityRequired: boolean;
   onApproved: () => void;
 }) {
   const t = useT();
@@ -760,27 +707,6 @@ function ConfirmStep({
 
   return (
     <>
-      {identityRequired && (
-        <section
-          className="rounded-xl3 bg-warn-50 ring-1 ring-warn-500/30 p-4 animate-reveal-up"
-          role="status"
-        >
-          <div className="flex items-start gap-3">
-            <span className="h-10 w-10 shrink-0 rounded-2xl bg-white text-warn-700 grid place-items-center ring-1 ring-warn-500/30">
-              <ShieldIcon size={18} />
-            </span>
-            <div className="min-w-0">
-              <div className="text-[13.5px] font-semibold text-warn-700 tracking-tight">
-                {t('identity.required.title')}
-              </div>
-              <p className="mt-1 text-[12.5px] text-ink-700 leading-relaxed">
-                {t('identity.required.body')}
-              </p>
-            </div>
-          </div>
-        </section>
-      )}
-
       {/* Commitment headline — names the decision. */}
       <section
         className={cn(
@@ -865,17 +791,9 @@ function ConfirmStep({
           onClick={handleSign}
           disabled={!allAccepted || processing}
           loading={processing}
-          leading={
-            !processing ? (
-              identityRequired ? <ShieldIcon size={18} /> : <SignatureIcon size={18} />
-            ) : undefined
-          }
+          leading={!processing ? <SignatureIcon size={18} /> : undefined}
         >
-          {processing
-            ? t('review.confirm.processing')
-            : identityRequired
-              ? t('identity.required.cta')
-              : t('review.confirm.commitAction')}
+          {processing ? t('review.confirm.processing') : t('review.confirm.commitAction')}
         </Button>
         {processing ? (
           <p

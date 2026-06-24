@@ -7,7 +7,7 @@ import { useStore, emptyRegistration, type RegistrationDraft } from '@/lib/store
 import { useSupabaseAuth, updateProfile } from '@/lib/supabase';
 import { classifyMobile, type MobileIssue } from '@/lib/mobile';
 import { cn } from '@/lib/cn';
-import { ArrowIcon, BadgeCheckIcon, ShieldIcon } from '@/components/icons';
+import { ArrowIcon, BadgeCheckIcon } from '@/components/icons';
 import {
   isMisconfiguredProduction,
   ProductionConfigError,
@@ -25,13 +25,8 @@ const PROFESSION_KEYS = [
 type FieldKey = keyof RegistrationDraft;
 type Errors = Partial<Record<FieldKey, string>>;
 
-// Identity fields (national ID, date of birth, document references) are
-// intentionally NOT collected at signup. Identity verification happens
-// later via Nafath, the first time the customer accepts a rental
-// (see `record_identity_verification` RPC + the rental review screen).
-// Signup stays to the smallest set the platform needs to open an account.
 const STEPS: { key: FieldKey[]; titleKey: string; subKey: string }[] = [
-  { key: ['fullName'], titleKey: 'register.step1', subKey: 'register.step1Sub' },
+  { key: ['fullName', 'nationalId'], titleKey: 'register.step1', subKey: 'register.step1Sub' },
   { key: ['mobile', 'email', 'city', 'address'], titleKey: 'register.step2', subKey: 'register.step2Sub' },
   { key: ['profession', 'employer', 'income'], titleKey: 'register.step3', subKey: 'register.step3Sub' },
 ];
@@ -81,6 +76,7 @@ export default function Register() {
         next[k] = req;
         continue;
       }
+      if (k === 'nationalId' && !/^[12]\d{9}$/.test(v)) next[k] = t('register.errors.nationalId');
       if (k === 'mobile' && !/^5\d{8}$/.test(v)) next[k] = t('register.errors.mobile');
       if (k === 'email' && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)) next[k] = t('register.errors.email');
       if (k === 'income' && !(Number(v) > 0)) next[k] = t('register.errors.income');
@@ -182,12 +178,18 @@ export default function Register() {
                   autoComplete="name"
                 />
               </FormField>
-              <div className="rounded-xl3 bg-canvas-100/70 ring-1 ring-canvas-200 p-3.5 flex items-start gap-3 text-[12px] text-ink-500 leading-relaxed">
-                <span className="h-7 w-7 shrink-0 rounded-full bg-white text-lavender-700 grid place-items-center hairline">
-                  <ShieldIcon size={13} />
-                </span>
-                <span>{t('register.identityLater')}</span>
-              </div>
+              <FormField label={t('register.nationalId')} required error={errors.nationalId}>
+                <Input
+                  inputMode="numeric"
+                  maxLength={10}
+                  placeholder={t('register.nationalIdPh')}
+                  value={values.nationalId}
+                  onChange={onChange('nationalId')}
+                  invalid={Boolean(errors.nationalId)}
+                  className="num"
+                  autoComplete="off"
+                />
+              </FormField>
             </>
           )}
 
@@ -284,19 +286,6 @@ export default function Register() {
                 />
               </FormField>
 
-              <div className="rounded-xl3 bg-gold-50 p-4 flex items-start gap-3.5">
-                <span className="h-10 w-10 shrink-0 rounded-2xl bg-white text-gold-700 grid place-items-center hairline">
-                  <ShieldIcon size={18} />
-                </span>
-                <div className="min-w-0">
-                  <div className="text-[13px] font-semibold text-brand-900">
-                    {t('register.identityLaterTitle')}
-                  </div>
-                  <div className="mt-0.5 text-[12px] text-brand-800/80 leading-relaxed">
-                    {t('register.identityLaterBody')}
-                  </div>
-                </div>
-              </div>
             </>
           )}
 
@@ -369,6 +358,7 @@ function SupabaseRegister() {
   const { signUp, configured, status } = useSupabaseAuth();
 
   const [fullName, setFullName] = useState('');
+  const [nationalId, setNationalId] = useState('');
   const [mobile, setMobile] = useState('');
   const [mobileTouched, setMobileTouched] = useState(false);
   const [email, setEmail] = useState('');
@@ -386,6 +376,7 @@ function SupabaseRegister() {
   const [pendingEmailConfirmation, setPendingEmailConfirmation] = useState(false);
   const [errors, setErrors] = useState<{
     fullName?: string;
+    nationalId?: string;
     mobile?: string;
     email?: string;
     password?: string;
@@ -422,6 +413,10 @@ function SupabaseRegister() {
     e.preventDefault();
     const next: typeof errors = {};
     if (!fullName.trim()) next.fullName = t('auth.errors.fullNameRequired');
+    const nationalIdTrimmed = nationalId.trim();
+    if (!nationalIdTrimmed) next.nationalId = t('auth.errors.nationalIdRequired');
+    else if (!/^[12]\d{9}$/.test(nationalIdTrimmed))
+      next.nationalId = t('register.errors.nationalId');
     if (!mobile.trim()) next.mobile = t('auth.errors.mobileRequired');
     else if (mobileClassification.kind === 'invalid')
       next.mobile = mobileIssueToMessage(mobileClassification.issue, t);
@@ -444,6 +439,7 @@ function SupabaseRegister() {
         password,
         fullName: fullName.trim(),
         mobile: normalizedMobile!.canonical,
+        nationalId: nationalIdTrimmed,
       });
       // Two outcomes from Supabase signUp:
       //  (a) project has email-confirmation enabled → result.session is
@@ -464,8 +460,13 @@ function SupabaseRegister() {
       // and is now defensive on the DB side too.
       if (result.session?.user) {
         try {
+          // Belt-and-suspenders: persist mobile + National ID even
+          // if the handle_new_auth_user trigger isn't up to date on
+          // this project. The trigger (20260502121900) IS the primary
+          // path; this UPDATE is the safety net.
           await updateProfile(result.session.user.id, {
             mobile: normalizedMobile!.canonical,
+            national_id: nationalIdTrimmed,
           });
         } catch (err) {
           // SCRUM-42 Bug 15: a unique-violation on profiles.mobile
@@ -560,6 +561,26 @@ function SupabaseRegister() {
               onChange={(e) => setFullName(e.target.value)}
               invalid={Boolean(errors.fullName)}
               autoComplete="name"
+            />
+          </FormField>
+          <FormField
+            label={t('register.nationalId')}
+            required
+            error={errors.nationalId}
+          >
+            <Input
+              inputMode="numeric"
+              maxLength={10}
+              placeholder={t('register.nationalIdPh')}
+              value={nationalId}
+              onChange={(e) => {
+                setNationalId(e.target.value);
+                if (errors.nationalId)
+                  setErrors((p) => ({ ...p, nationalId: undefined }));
+              }}
+              invalid={Boolean(errors.nationalId)}
+              className="num"
+              autoComplete="off"
             />
           </FormField>
           <FormField
