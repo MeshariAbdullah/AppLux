@@ -252,12 +252,15 @@
   "register": {
     "title": "Create account",
     "step": "Step {current} of {total}",
-    "step1": "Personal information",
-    "step1Sub": "We need these details to verify your identity.",
+    "step1": "Basic information",
+    "step1Sub": "Just your name to open the account — identity verification happens later, when you start your first rental.",
     "step2": "Contact details",
     "step2Sub": "Used for contract updates and notifications.",
     "step3": "Work & income",
     "step3Sub": "Helps us evaluate rental requests.",
+    "identityLater": "No National ID or Nafath details at this step. We verify your identity officially via Nafath when you accept your first rental.",
+    "identityLaterTitle": "Identity check happens at rental time",
+    "identityLaterBody": "A Nafath step appears automatically before you sign the promissory note — no need to enter any identity details now.",
     "fullName": "Full name",
     "fullNamePh": "As shown on National ID",
     "nationalId": "National ID",
@@ -328,6 +331,36 @@
     "verified": "Verified successfully",
     "optional": "Optional",
     "pill": "Government verified"
+  },
+  "identity": {
+    "simulationPill": "Simulation — testing only",
+    "required": {
+      "title": "Identity verification required",
+      "body": "Before you can accept this rental, we need to verify your identity through Nafath. It takes under a minute and you will not need to type any ID number manually.",
+      "cta": "Continue with Nafath"
+    },
+    "verifying": {
+      "title": "Opening Nafath",
+      "body": "Open the Nafath app on your phone and pick the number that matches the code below.",
+      "codeLabel": "Number to select",
+      "hint": "Waiting for your approval in Nafath…"
+    },
+    "recording": {
+      "title": "Recording verification",
+      "body": "Saving the verification result to your account so we never need to ask again.",
+      "hint": "A moment…"
+    },
+    "verified": {
+      "title": "Identity verified",
+      "body": "Your identity is confirmed. You can now complete the rental and sign the promissory note.",
+      "continue": "Continue rental"
+    },
+    "chip": {
+      "verified": "Identity verified",
+      "notVerified": "Identity not verified yet",
+      "notVerifiedHint": "Nafath verification will be requested automatically when you start your first rental."
+    },
+    "error": "Could not record verification. Please try again."
   },
   "success": {
     "title": "Account created",

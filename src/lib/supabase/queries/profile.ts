@@ -72,6 +72,26 @@ export async function fetchProfileByMobile(
   if (error) throw error;
   return data;
 }
+/**
+ * Phase 8e — flip the caller's profile to identity_verified=true.
+ * Only the caller's own profile is updated (the RPC reads auth.uid()).
+ * `provider` defaults to 'nafath'; the DB validates it against an
+ * allow-list and raises P0061 on anything else. Idempotent — calling
+ * this on an already-verified profile leaves the original timestamps
+ * intact.
+ */
+export async function recordIdentityVerification(input?: {
+  provider?: 'nafath' | 'simulation' | 'admin' | 'legacy';
+  referenceId?: string | null;
+}): Promise<void> {
+  const sb = requireSupabase();
+  const { error } = await sb.rpc('record_identity_verification', {
+    p_provider: input?.provider ?? 'nafath',
+    p_reference_id: input?.referenceId ?? null,
+  });
+  if (error) throw error;
+}
+
 export async function listProfiles(filter?: {
   role?: AppRole;
   limit?: number;

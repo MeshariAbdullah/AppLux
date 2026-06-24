@@ -35,8 +35,13 @@ export default function Profile() {
   const email = configured
     ? profile?.email ?? realSession?.user?.email ?? '—'
     : demoSession?.email ?? '—';
-  const nafathVerified = configured
-    ? Boolean(profile?.nafath_verified_at)
+  // Identity gate is the new source of truth (Phase 8e). Customers
+  // sign up unverified; the flag flips inside the rental flow via
+  // record_identity_verification. Legacy live profiles that only have
+  // nafath_verified_at populated still surface as verified.
+  const identityVerified = configured
+    ? profile?.identity_verified === true ||
+      Boolean(profile?.nafath_verified_at)
     : Boolean(demoSession?.nafathVerified);
 
   const onSignOut = async () => {
@@ -66,12 +71,19 @@ export default function Profile() {
                 {fullName}
               </div>
               <div className="text-[12.5px] text-ink-400 truncate mt-0.5">{email}</div>
-              <div className="mt-2 flex items-center gap-1.5">
+              <div className="mt-2 flex items-center gap-1.5 flex-wrap">
                 <StatusChip tone="gold" label={t('app.name')} />
-                {nafathVerified && (
-                  <StatusChip tone="gold" label={t('nafath.verified')} />
+                {identityVerified ? (
+                  <StatusChip tone="gold" label={t('identity.chip.verified')} />
+                ) : (
+                  <StatusChip tone="neutral" label={t('identity.chip.notVerified')} />
                 )}
               </div>
+              {!identityVerified && (
+                <p className="mt-2 text-[11.5px] text-ink-500 leading-relaxed">
+                  {t('identity.chip.notVerifiedHint')}
+                </p>
+              )}
             </div>
           </div>
         </Card>

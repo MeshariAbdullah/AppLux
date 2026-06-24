@@ -24,6 +24,13 @@ export type ProfileRow = {
   role: AppRole;
   account_status: AccountStatus;
   nafath_verified_at: string | null;
+  // Phase 8e — first-class identity verification state. Customers
+  // start as unverified and flip to verified inside the rental flow
+  // (see record_identity_verification RPC).
+  identity_verified: boolean;
+  identity_verified_at: string | null;
+  identity_provider: string | null;
+  identity_reference_id: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -426,6 +433,10 @@ export type Database = {
       verify_and_activate_rental: {
         Args: { p_note_id: string };
         Returns: string;
+      };
+      record_identity_verification: {
+        Args: { p_provider?: string; p_reference_id?: string | null };
+        Returns: void;
       };
       next_invoice_number: { Args: Record<string, never>; Returns: string };
       next_contract_number: { Args: Record<string, never>; Returns: string };
