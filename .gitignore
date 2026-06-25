@@ -5,8 +5,24 @@ dist-ssr
 *.log
 .env
 .env.local
+.env.production
+.env.*.local
 .vite
 coverage
 *.tsbuildinfo
 vite.config.js
 vite.config.d.ts
+
+# Capacitor / iOS — the `ios/` folder itself IS committed (Xcode
+# project, Info.plist, app config). These are the generated /
+# per-developer files that should never be committed.
+ios/App/Pods/
+ios/App/Podfile.lock.bak
+ios/DerivedData/
+ios/build/
+*.xcuserstate
+*.xcuserdata
+xcuserdata/
+*.mode1v3
+*.mode2v3
+*.perspectivev3

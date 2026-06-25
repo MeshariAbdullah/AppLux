@@ -1,10 +1,8 @@
-import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Header, Screen } from '@/components/layout';
 import {
   Card,
   EmptyState,
-  PageSkeleton,
   StatusChip,
   type StatusTone,
 } from '@/components/ui';
@@ -12,13 +10,6 @@ import { AlertIcon, ChevronIcon, GavelIcon, InfoIcon } from '@/components/icons'
 import { cn } from '@/lib/cn';
 import { useI18n, useT } from '@/lib/i18n';
 import { useStore } from '@/lib/store';
-import {
-  adaptDamageCase,
-  fetchMyMerchant,
-  fetchProfilesByIds,
-  listMerchantDamageCases,
-  useSupabaseAuth,
-} from '@/lib/supabase';
 import type {
   MerchantDamageCase,
   MerchantDamageSeverity,
@@ -36,61 +27,16 @@ function toneForSeverity(severity: MerchantDamageSeverity): StatusTone {
   return 'warn';
 }
 
+// Phase 9: no merchant-shaped damages adapter exists yet
+// (adaptDamageCase returns the admin-shaped AdminActiveCase, not
+// MerchantDamageCase). Until a merchant-specific Supabase fetch +
+// adapter pair lands, this list reads from the demo store only —
+// which is `[]` in live mode, so the page renders an empty state.
+// Mirrors the same temporary state as MerchantHistoryPage.
 export default function MerchantDamages() {
   const t = useT();
-  const { merchantDamages: demoDamages } = useStore();
-  const { configured, session } = useSupabaseAuth();
-  const [liveDamages, setLiveDamages] = useState<MerchantDamageCase[] | null>(null);
-  const [liveLoading, setLiveLoading] = useState<boolean>(
-    () => configured && Boolean(session?.user?.id),
-  );
+  const { merchantDamages } = useStore();
 
-  useEffect(() => {
-    const userId = session?.user?.id;
-    if (!configured || !userId) {
-      setLiveDamages(null);
-      setLiveLoading(false);
-      return;
-    }
-    setLiveLoading(true);
-    let cancelled = false;
-    (async () => {
-      const myMerchant = await fetchMyMerchant(userId).catch(() => null);
-      if (cancelled) return;
-      if (!myMerchant) {
-        setLiveDamages([]);
-        setLiveLoading(false);
-        return;
-      }
-      const rows = await listMerchantDamageCases(myMerchant.id).catch(() => []);
-      if (cancelled) return;
-      const profileMap = await fetchProfilesByIds(
-        rows.map((r) => r.customer_user_id),
-      ).catch(() => new Map());
-      if (cancelled) return;
-      setLiveDamages(
-        rows.map((r) => {
-          const customer = profileMap.get(r.customer_user_id);
-          const customerName = customer?.full_name ?? '—';
-          const initials =
-            customerName.trim().split(/\s+/).slice(0, 2)
-              .map((p) => p[0]?.toUpperCase() ?? '')
-              .join('') || '—';
-          return adaptDamageCase(r, {
-            customerName,
-            customerInitials: initials,
-            headlineItem: `Case ${r.case_number}`,
-          });
-        }),
-      );
-      setLiveLoading(false);
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [configured, session?.user?.id]);
-
-  const merchantDamages = liveDamages ?? demoDamages;
   const open = merchantDamages.filter((d) => d.status !== 'settled');
   const settled = merchantDamages.filter((d) => d.status === 'settled');
 
@@ -103,9 +49,7 @@ export default function MerchantDamages() {
             {t('merchant.damages.subtitle')}
           </p>
 
-          {configured && liveLoading ? (
-            <PageSkeleton rows={3} />
-          ) : merchantDamages.length === 0 ? (
+          {merchantDamages.length === 0 ? (
             <EmptyState
               icon={<InfoIcon size={22} />}
               title={t('merchant.damages.empty')}

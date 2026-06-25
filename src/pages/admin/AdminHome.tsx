@@ -97,14 +97,34 @@ export default function AdminHome() {
     }
   };
 
-  // Phase 9: SEED_* arrays are demo dashboard data. In live mode this
+  // Phase 9: SEED_* dashboard inputs are demo data. In live mode this
   // page surfaces zeroed counts until proper Supabase queries are
   // wired; demo mode keeps the original seeded story for screenshots
-  // and stakeholder previews.
+  // and stakeholder previews. The shape must match each constant's
+  // original type — arrays stay arrays, summaries stay typed objects.
   const pendingMerchants = demoMode ? SEED_ADMIN_PENDING_MERCHANTS : [];
-  const users = demoMode ? SEED_ADMIN_USERS : [];
-  const merchants = demoMode ? SEED_ADMIN_MERCHANTS : [];
-  const limits = demoMode ? SEED_ADMIN_LIMITS : [];
+  const users = demoMode
+    ? SEED_ADMIN_USERS
+    : {
+        totalUsers: 0,
+        verifiedUsers: 0,
+        newThisMonth: 0,
+        suspended: 0,
+        monthlyTrend: 0,
+      };
+  const merchants = demoMode
+    ? SEED_ADMIN_MERCHANTS
+    : { totalActive: 0, pending: 0, suspended: 0 };
+  const limits = demoMode
+    ? SEED_ADMIN_LIMITS
+    : {
+        totalCap: 0,
+        allocated: 0,
+        utilization: 0,
+        merchantsAtCap: 0,
+        pendingRequests: 0,
+        avgLimitPerUser: 0,
+      };
   const activeCases = demoMode ? SEED_ADMIN_ACTIVE_CASES : [];
   const overdueCases = demoMode ? SEED_ADMIN_OVERDUE : [];
   const buckets = demoMode ? SEED_ADMIN_OVERDUE_BUCKETS : [];
