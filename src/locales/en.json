@@ -576,9 +576,30 @@
     "appearance": "Settings",
     "security": "Privacy & security",
     "support": "Help & support",
+    "supportEmailLabel": "Email support",
+    "supportPageLabel": "Visit help centre",
+    "supportUnconfigured": "Support contact has not been set up for this build.",
+    "privacyPolicy": "Privacy policy",
+    "privacyUnconfigured": "Privacy policy URL has not been set up for this build.",
     "about": "About Lend",
     "version": "Version",
-    "signOut": "Sign out"
+    "signOut": "Sign out",
+    "dangerSection": "Account control",
+    "deleteAccount": {
+      "row": "Delete my account",
+      "rowHint": "Permanently removes your data after a 30-day grace window.",
+      "title": "Delete your account?",
+      "body": "We'll mark your account for deletion. You won't be able to start new rentals, and after a 30-day grace window all your data — profile, contracts, and rental history — is permanently removed. Any active rental must be returned before the account can be fully deleted.",
+      "confirm": "Yes, delete my account",
+      "cancel": "Keep my account",
+      "submitting": "Submitting request…",
+      "success": "Deletion request submitted. You're being signed out.",
+      "error": "Could not submit the request. Please try again or contact support.",
+      "pendingTitle": "Account deletion in progress",
+      "pendingBody": "We received your deletion request on {date}. Your account will be fully removed within 30 days. You can still cancel below if you change your mind.",
+      "cancelRequest": "Cancel deletion request",
+      "cancelling": "Cancelling…"
+    }
   },
   "form": {
     "required": "Required",

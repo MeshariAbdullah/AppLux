@@ -31,6 +31,10 @@ export type ProfileRow = {
   identity_verified_at: string | null;
   identity_provider: string | null;
   identity_reference_id: string | null;
+  // App Store readiness — set by request_account_deletion(). When
+  // non-null, account_status is forced to 'suspended' for the grace
+  // window; cancel_account_deletion() clears the timestamp.
+  deletion_requested_at: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -436,6 +440,14 @@ export type Database = {
       };
       record_identity_verification: {
         Args: { p_provider?: string; p_reference_id?: string | null };
+        Returns: void;
+      };
+      request_account_deletion: {
+        Args: Record<string, never>;
+        Returns: void;
+      };
+      cancel_account_deletion: {
+        Args: Record<string, never>;
         Returns: void;
       };
       next_invoice_number: { Args: Record<string, never>; Returns: string };

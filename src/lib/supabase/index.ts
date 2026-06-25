@@ -67,10 +67,12 @@ export {
 export type { SignInInput, SignUpInput } from './auth';
 
 export {
+  cancelAccountDeletion,
   fetchProfile,
   fetchProfileByMobile,
   fetchProfilesByIds,
   listProfiles,
+  requestAccountDeletion,
   updateProfile,
 } from './queries/profile';
 export {

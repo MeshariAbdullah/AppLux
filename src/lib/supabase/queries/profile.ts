@@ -72,6 +72,29 @@ export async function fetchProfileByMobile(
   if (error) throw error;
   return data;
 }
+/**
+ * App Store readiness — request soft-deletion of the caller's account.
+ * Wraps the SECURITY DEFINER RPC; the DB validates that the caller is
+ * authenticated and a 'customer' (merchants/admins go through
+ * back-office offboarding instead). Idempotent — calling on an
+ * already-pending profile leaves the original timestamp intact.
+ *
+ * After this resolves the caller should sign out — their account_status
+ * is now 'suspended' for the grace window.
+ */
+export async function requestAccountDeletion(): Promise<void> {
+  const sb = requireSupabase();
+  const { error } = await sb.rpc('request_account_deletion');
+  if (error) throw error;
+}
+
+/** Reverts a pending deletion request during the grace window. */
+export async function cancelAccountDeletion(): Promise<void> {
+  const sb = requireSupabase();
+  const { error } = await sb.rpc('cancel_account_deletion');
+  if (error) throw error;
+}
+
 export async function listProfiles(filter?: {
   role?: AppRole;
   limit?: number;
