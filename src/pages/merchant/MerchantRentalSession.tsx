@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { Header, Screen } from '@/components/layout';
 import { Button, FormField, Input, Select } from '@/components/ui';
 import {
@@ -10,12 +10,9 @@ import {
   ClockIcon,
   DocIcon,
   InfoIcon,
-  PhoneIcon,
-  ReceiptIcon,
   ShieldIcon,
   SparkleIcon,
   UserIcon,
-  WalletIcon,
 } from '@/components/icons';
 import { useI18n, useT } from '@/lib/i18n';
 import {

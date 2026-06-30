@@ -7,7 +7,6 @@ import {
   ProgressBar,
   SectionHeader,
   StatusChip,
-  type StatusTone,
 } from '@/components/ui';
 import { LangToggle } from '@/components/auth/LangToggle';
 import { demoMode, useSupabaseAuth } from '@/lib/supabase';
@@ -29,6 +28,11 @@ import {
   WalletIcon,
 } from '@/components/icons';
 import { cn } from '@/lib/cn';
+import {
+  caseSeverityTone as severityTone,
+  caseStageTone as stageTone,
+  overdueBucketTone as bucketTone,
+} from '@/lib/format/statusTones';
 import { useI18n, useT } from '@/lib/i18n';
 import {
   SEED_ADMIN_ACTIVE_CASES,
@@ -39,31 +43,11 @@ import {
   SEED_ADMIN_PENDING_MERCHANTS,
   SEED_ADMIN_USERS,
   type AdminActiveCase,
-  type AdminCaseSeverity,
-  type AdminCaseStage,
   type AdminOverdueBucket,
   type AdminOverdueCase,
   type AdminPendingMerchant,
 } from '@/lib/data';
 
-function severityTone(s: AdminCaseSeverity): StatusTone {
-  if (s === 'partial') return 'warn';
-  return 'danger';
-}
-
-function stageTone(s: AdminCaseStage): StatusTone {
-  if (s === 'review') return 'brand';
-  if (s === 'settlement') return 'gold';
-  if (s === 'nafith') return 'warn';
-  return 'danger';
-}
-
-function bucketTone(b: AdminOverdueBucket): StatusTone {
-  if (b === '1-7') return 'warn';
-  if (b === '8-30') return 'warn';
-  if (b === '31-60') return 'danger';
-  return 'danger';
-}
 
 export default function AdminHome() {
   const t = useT();
@@ -91,7 +75,7 @@ export default function AdminHome() {
       navigate('/welcome', { replace: true });
     } catch (err) {
       // eslint-disable-next-line no-console
-      console.error('[applux] admin signOut failed', err);
+      console.error('[lend] admin signOut failed', err);
       setSignOutError(t('admin.home.signOutFailed'));
       setSigningOut(false);
     }

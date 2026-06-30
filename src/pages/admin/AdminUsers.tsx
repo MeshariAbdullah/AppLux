@@ -7,7 +7,6 @@ import {
   Input,
   PageSkeleton,
   StatusChip,
-  type StatusTone,
 } from '@/components/ui';
 import { LangToggle } from '@/components/auth/LangToggle';
 import {
@@ -21,6 +20,7 @@ import {
   WalletIcon,
 } from '@/components/icons';
 import { cn } from '@/lib/cn';
+import { adminUserStatusTone as statusTone } from '@/lib/format/statusTones';
 import { useI18n, useT } from '@/lib/i18n';
 import { useStore } from '@/lib/store';
 import {
@@ -34,11 +34,6 @@ import type { AdminUserRecord, AdminUserStatus } from '@/lib/data';
 type TabKey = 'all' | AdminUserStatus;
 const TABS: TabKey[] = ['all', 'active', 'pending', 'suspended'];
 
-function statusTone(s: AdminUserStatus): StatusTone {
-  if (s === 'active') return 'success';
-  if (s === 'pending') return 'warn';
-  return 'danger';
-}
 
 export default function AdminUsers() {
   const t = useT();

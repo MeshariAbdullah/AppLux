@@ -17,15 +17,10 @@ import type {
   ContractStatusDB,
   InvoiceStatus,
   NoteStatus,
-  RentalContractRow,
-  RentalInvoiceRow,
-  PromissoryNoteRow,
 } from '@/lib/supabase';
 import type {
   ContractStatus as UIContractStatus,
   MerchantRental,
-  MerchantRentalStatus,
-  ScannedPackage,
 } from '@/lib/data';
 
 export type RentalStage =

@@ -33,6 +33,7 @@ import {
   WalletIcon,
 } from '@/components/icons';
 import { cn } from '@/lib/cn';
+import { adminUserStatusTone as statusTone } from '@/lib/format/statusTones';
 import { useI18n, useT } from '@/lib/i18n';
 import { useStore } from '@/lib/store';
 import {
@@ -50,12 +51,6 @@ import type {
   AdminUserRiskTier,
   AdminUserStatus,
 } from '@/lib/data';
-
-function statusTone(s: AdminUserStatus): StatusTone {
-  if (s === 'active') return 'success';
-  if (s === 'pending') return 'warn';
-  return 'danger';
-}
 
 function riskTone(r: AdminUserRiskTier): StatusTone {
   if (r === 'gold') return 'gold';
@@ -250,7 +245,7 @@ export default function AdminUserDetails() {
       });
     } catch (err) {
       // eslint-disable-next-line no-console
-      console.error('[applux] upsertEligibility failed', err);
+      console.error('[lend] upsertEligibility failed', err);
       setToast({
         tone: 'danger',
         title: t('admin.user.toast.limitFailed.title'),
@@ -298,7 +293,7 @@ export default function AdminUserDetails() {
       });
     } catch (err) {
       // eslint-disable-next-line no-console
-      console.error('[applux] admin status update failed', err);
+      console.error('[lend] admin status update failed', err);
       setToast({
         tone: 'danger',
         title: t('admin.user.toast.statusFailed.title'),

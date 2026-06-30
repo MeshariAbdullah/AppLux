@@ -85,7 +85,7 @@ export default function MerchantPending() {
         await supabaseAuth.signOut();
       } catch (err) {
         // eslint-disable-next-line no-console
-        console.error('[applux] merchant signOut failed', err);
+        console.error('[lend] merchant signOut failed', err);
       }
     }
     signOutMerchant();

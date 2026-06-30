@@ -4,28 +4,16 @@ import {
   Card,
   EmptyState,
   StatusChip,
-  type StatusTone,
 } from '@/components/ui';
 import { AlertIcon, ChevronIcon, GavelIcon, InfoIcon } from '@/components/icons';
 import { cn } from '@/lib/cn';
 import { useI18n, useT } from '@/lib/i18n';
 import { useStore } from '@/lib/store';
-import type {
-  MerchantDamageCase,
-  MerchantDamageSeverity,
-  MerchantDamageStatus,
-} from '@/lib/data';
-
-function toneForStatus(status: MerchantDamageStatus): StatusTone {
-  if (status === 'settled') return 'success';
-  if (status === 'investigating') return 'warn';
-  return 'danger';
-}
-
-function toneForSeverity(severity: MerchantDamageSeverity): StatusTone {
-  if (severity === 'total' || severity === 'non-return') return 'danger';
-  return 'warn';
-}
+import {
+  damageSeverityTone as toneForSeverity,
+  damageStatusTone as toneForStatus,
+} from '@/lib/format/statusTones';
+import type { MerchantDamageCase } from '@/lib/data';
 
 // Phase 9: no merchant-shaped damages adapter exists yet
 // (adaptDamageCase returns the admin-shaped AdminActiveCase, not

@@ -18,10 +18,11 @@ import {
   ShieldIcon,
   SignatureIcon,
   SparkleIcon,
-  TimelineIcon,
   UsersIcon,
 } from '@/components/icons';
 import { cn } from '@/lib/cn';
+import { getInitials } from '@/lib/format/initials';
+import { rentalStatusTone as toneForStatus } from '@/lib/format/statusTones';
 import { useI18n, useT } from '@/lib/i18n';
 import {
   MerchantStatusStrip,
@@ -40,7 +41,6 @@ import type {
   MerchantNafithState,
   MerchantRental,
   MerchantRentalDocState,
-  MerchantRentalStatus,
   MerchantRentalTimelineEvent,
   MerchantRentalTimelineKey,
 } from '@/lib/data';
@@ -64,12 +64,6 @@ const STAGE_ORDER: StageKey[] = [
   'activated',
 ];
 
-function toneForStatus(status: MerchantRentalStatus): StatusTone {
-  if (status === 'overdue') return 'danger';
-  if (status === 'due-soon') return 'warn';
-  if (status === 'returned') return 'neutral';
-  return 'success';
-}
 
 function toneForDocState(state: MerchantRentalDocState): StatusTone {
   if (state === 'signed') return 'success';
@@ -209,12 +203,10 @@ export default function MerchantRentalDetails() {
       ]);
       if (cancelled) return;
       const customerName = customer?.full_name ?? '—';
-      const initialsSource = customerName.trim().split(/\s+/).slice(0, 2);
       setLiveRental(
         adaptContractToMerchantRental(contract, {
           customerName,
-          customerInitials:
-            initialsSource.map((p) => p[0]?.toUpperCase() ?? '').join('') || '—',
+          customerInitials: getInitials(customerName),
           customerCity: customer?.city ?? '',
           customerMobile: customer?.mobile ?? '',
           headlineItem: `Rental ${contract.contract_number}`,
@@ -864,5 +856,7 @@ function eventVisual(key: MerchantRentalTimelineKey): {
   }
 }
 
-// re-exported for other rental-related pages
-export { toneForStatus as rentalStatusTone, toneForDocState, toneForNafith };
+// re-exported for other rental-related pages. The "MerchantRentalStatus"
+// tone helper lives in @/lib/format/statusTones (rentalStatusTone);
+// doc-state + Nafith helpers are unique to this page so they stay here.
+export { toneForDocState, toneForNafith };

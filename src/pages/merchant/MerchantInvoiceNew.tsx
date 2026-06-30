@@ -489,7 +489,7 @@ export default function MerchantInvoiceNew() {
         // retry. The previous demo-fallback behaviour was a silent
         // success masquerading as a real one.
         // eslint-disable-next-line no-console
-        console.error('[applux] createInvoiceWithItems failed', caught);
+        console.error('[lend] createInvoiceWithItems failed', caught);
         const message =
           caught instanceof Error ? caught.message : 'Failed to issue invoice.';
         setSubmitWarning(message);

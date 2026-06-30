@@ -6,7 +6,6 @@ import {
   EmptyState,
   PageSkeleton,
   StatusChip,
-  type StatusTone,
 } from '@/components/ui';
 import { LangToggle } from '@/components/auth/LangToggle';
 import {
@@ -20,6 +19,12 @@ import {
   ShieldIcon,
 } from '@/components/icons';
 import { cn } from '@/lib/cn';
+import { getInitials } from '@/lib/format/initials';
+import {
+  caseSeverityTone as severityTone,
+  caseStageTone as stageTone,
+  overdueBucketTone as bucketTone,
+} from '@/lib/format/statusTones';
 import { useI18n, useT } from '@/lib/i18n';
 import { useStore } from '@/lib/store';
 import {
@@ -35,7 +40,6 @@ import {
   SEED_ADMIN_OVERDUE,
   SEED_ADMIN_OVERDUE_BUCKETS,
   type AdminActiveCase,
-  type AdminCaseSeverity,
   type AdminCaseStage,
   type AdminOverdueBucket,
   type AdminOverdueCase,
@@ -57,22 +61,6 @@ const EMPTY_META: CaseMeta = {
   hasUpdates: false,
 };
 
-function severityTone(s: AdminCaseSeverity): StatusTone {
-  if (s === 'partial') return 'warn';
-  return 'danger';
-}
-
-function stageTone(s: AdminCaseStage): StatusTone {
-  if (s === 'review') return 'brand';
-  if (s === 'settlement') return 'gold';
-  if (s === 'nafith') return 'warn';
-  return 'danger';
-}
-
-function bucketTone(b: AdminOverdueBucket): StatusTone {
-  if (b === '1-7' || b === '8-30') return 'warn';
-  return 'danger';
-}
 
 export default function AdminCases() {
   const t = useT();
@@ -103,10 +91,7 @@ export default function AdminCases() {
         rows.map((r) => {
           const customer = profileMap.get(r.customer_user_id);
           const customerName = customer?.full_name ?? '—';
-          const initials =
-            customerName.trim().split(/\s+/).slice(0, 2)
-              .map((p) => p[0]?.toUpperCase() ?? '')
-              .join('') || '—';
+          const initials = getInitials(customerName);
           return adaptDamageCase(r, {
             customerName,
             customerInitials: initials,

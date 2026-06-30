@@ -36,6 +36,10 @@ import {
   WalletIcon,
 } from '@/components/icons';
 import { cn } from '@/lib/cn';
+import {
+  caseSeverityTone as severityTone,
+  caseStageTone as stageTone,
+} from '@/lib/format/statusTones';
 import { useI18n, useT } from '@/lib/i18n';
 import { useStore } from '@/lib/store';
 import { demoMode, useSupabaseAuth } from '@/lib/supabase';
@@ -57,17 +61,6 @@ import {
   type AdminOverdueCase,
 } from '@/lib/data';
 
-function severityTone(s: AdminCaseSeverity): StatusTone {
-  if (s === 'partial') return 'warn';
-  return 'danger';
-}
-
-function stageTone(s: AdminCaseStage): StatusTone {
-  if (s === 'review') return 'brand';
-  if (s === 'settlement') return 'gold';
-  if (s === 'nafith') return 'warn';
-  return 'danger';
-}
 
 function invoiceTone(s: AdminCaseInvoiceStatus): StatusTone {
   if (s === 'paid') return 'success';

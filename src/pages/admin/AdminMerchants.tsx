@@ -6,7 +6,6 @@ import {
   EmptyState,
   PageSkeleton,
   StatusChip,
-  type StatusTone,
 } from '@/components/ui';
 import { LangToggle } from '@/components/auth/LangToggle';
 import {
@@ -19,6 +18,7 @@ import {
   ShieldIcon,
 } from '@/components/icons';
 import { cn } from '@/lib/cn';
+import { adminMerchantDecisionTone as statusTone } from '@/lib/format/statusTones';
 import { useI18n, useT } from '@/lib/i18n';
 import { useStore, type AdminMerchantRequest } from '@/lib/store';
 import {
@@ -31,11 +31,6 @@ import type { AdminMerchantDecisionStatus } from '@/lib/data';
 type TabKey = 'all' | AdminMerchantDecisionStatus;
 const TABS: TabKey[] = ['all', 'pending', 'approved', 'rejected'];
 
-function statusTone(status: AdminMerchantDecisionStatus): StatusTone {
-  if (status === 'approved') return 'success';
-  if (status === 'rejected') return 'danger';
-  return 'warn';
-}
 
 export default function AdminMerchants() {
   const t = useT();
@@ -63,7 +58,7 @@ export default function AdminMerchants() {
       })
       .catch((err) => {
         // eslint-disable-next-line no-console
-        console.error('[applux] listMerchantApplications failed', err);
+        console.error('[lend] listMerchantApplications failed', err);
         // Phase 9: in live mode, do NOT fall back to demo seeds on error.
         // Empty list with an error pill is the right signal.
         if (!cancelled) {
