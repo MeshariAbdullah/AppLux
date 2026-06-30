@@ -7,13 +7,14 @@ import {
   PageSkeleton,
   SectionHeader,
   StatusChip,
-  type StatusTone,
 } from '@/components/ui';
 import {
   CarIcon,
   ChevronIcon,
   InfoIcon,
 } from '@/components/icons';
+import { getInitials } from '@/lib/format/initials';
+import { rentalStatusTone as toneForStatus } from '@/lib/format/statusTones';
 import { useI18n, useT } from '@/lib/i18n';
 import { useStore } from '@/lib/store';
 import {
@@ -23,7 +24,7 @@ import {
   listMerchantContracts,
   useSupabaseAuth,
 } from '@/lib/supabase';
-import type { MerchantRental, MerchantRentalStatus } from '@/lib/data';
+import type { MerchantRental } from '@/lib/data';
 import { cn } from '@/lib/cn';
 
 type Filter = 'all' | 'active' | 'due-soon' | 'overdue';
@@ -77,10 +78,7 @@ export default function MerchantRentals() {
         contractRows.map((r) => {
           const customer = profileMap.get(r.customer_user_id);
           const name = customer?.full_name ?? '—';
-          const initials =
-            name.trim().split(/\s+/).slice(0, 2)
-              .map((p) => p[0]?.toUpperCase() ?? '')
-              .join('') || '—';
+          const initials = getInitials(name);
           return adaptContractToMerchantRental(r, {
             category: myMerchant.primary_category,
             customerName: name,
@@ -181,12 +179,6 @@ export default function MerchantRentals() {
   );
 }
 
-function toneForStatus(status: MerchantRentalStatus): StatusTone {
-  if (status === 'overdue') return 'danger';
-  if (status === 'due-soon') return 'warn';
-  if (status === 'returned') return 'neutral';
-  return 'success';
-}
 
 function rentalPeriodDays(start: string, end: string): number {
   const s = new Date(start).getTime();

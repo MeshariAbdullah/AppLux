@@ -176,7 +176,7 @@ function ConfiguredProvider({ children }: { children: ReactNode }) {
     } catch (err) {
       if (loadIdRef.current !== loadId) return null;
       // eslint-disable-next-line no-console
-      console.error('[applux] failed to load profile', err);
+      console.error('[lend] failed to load profile', err);
       setProfile(null);
       setProfileError(err instanceof Error ? err : new Error('Profile load failed'));
       return null;
@@ -199,7 +199,7 @@ function ConfiguredProvider({ children }: { children: ReactNode }) {
     } catch (err) {
       if (loadIdRef.current !== loadId) return;
       // eslint-disable-next-line no-console
-      console.error('[applux] failed to load eligibility (non-fatal)', err);
+      console.error('[lend] failed to load eligibility (non-fatal)', err);
       setEligibility(null);
     } finally {
       if (loadIdRef.current === loadId) setEligibilityLoading(false);
@@ -239,7 +239,7 @@ function ConfiguredProvider({ children }: { children: ReactNode }) {
       if (cancelled) return;
       if (error) {
         // eslint-disable-next-line no-console
-        console.error('[applux] supabase getSession error', error);
+        console.error('[lend] supabase getSession error', error);
         setStatus('anonymous');
         return;
       }

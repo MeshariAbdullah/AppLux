@@ -17,6 +17,7 @@ import {
   ShieldIcon,
   SignatureIcon,
 } from '@/components/icons';
+import { getInitials } from '@/lib/format/initials';
 import { useI18n, useT } from '@/lib/i18n';
 import { useStore } from '@/lib/store';
 import {
@@ -81,8 +82,7 @@ export default function MerchantRentalNote() {
       setLiveRental(
         adaptContractToMerchantRental(contract, {
           customerName,
-          customerInitials:
-            customerName.trim().split(/\s+/).slice(0, 2).map((p) => p[0]?.toUpperCase() ?? '').join('') || '—',
+          customerInitials: getInitials(customerName),
           customerCity: c?.city ?? '',
           customerMobile: c?.mobile ?? '',
           headlineItem: `Rental ${contract.contract_number}`,

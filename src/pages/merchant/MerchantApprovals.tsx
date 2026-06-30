@@ -24,6 +24,7 @@ import {
   type ProfileRow,
   type RentalInvoiceRow,
 } from '@/lib/supabase';
+import { getInitials } from '@/lib/format/initials';
 import type { MerchantApproval, MerchantApprovalStage } from '@/lib/data';
 
 function toneForStage(stage: MerchantApprovalStage): StatusTone {
@@ -37,10 +38,7 @@ function invoiceRowToApproval(
   customer?: ProfileRow,
 ): MerchantApproval {
   const customerName = customer?.full_name ?? '—';
-  const initials =
-    customerName.trim().split(/\s+/).slice(0, 2)
-      .map((p) => p[0]?.toUpperCase() ?? '')
-      .join('') || '—';
+  const initials = getInitials(customerName);
   return {
     id: row.id,
     customerName,

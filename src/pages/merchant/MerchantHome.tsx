@@ -18,6 +18,7 @@ import {
   ReceiptIcon,
   SparkleIcon,
 } from '@/components/icons';
+import { getInitials } from '@/lib/format/initials';
 import { useI18n, useT } from '@/lib/i18n';
 import { useStore } from '@/lib/store';
 import { cn } from '@/lib/cn';
@@ -103,7 +104,7 @@ export default function MerchantHome() {
       .catch((err) => {
         if (cancelled) return;
         // eslint-disable-next-line no-console
-        console.error('[applux] fetchMyMerchant failed', err);
+        console.error('[lend] fetchMyMerchant failed', err);
         setLiveMerchant(null);
       })
       .finally(() => {
@@ -127,7 +128,7 @@ export default function MerchantHome() {
           'listMerchantContracts',
         ).catch((err) => {
           // eslint-disable-next-line no-console
-          console.error('[applux] listMerchantContracts failed', err);
+          console.error('[lend] listMerchantContracts failed', err);
           return [];
         }),
         withTimeout(
@@ -136,7 +137,7 @@ export default function MerchantHome() {
           'listMerchantInvoices',
         ).catch((err) => {
           // eslint-disable-next-line no-console
-          console.error('[applux] listMerchantInvoices failed', err);
+          console.error('[lend] listMerchantInvoices failed', err);
           return [];
         }),
       ]);
@@ -148,7 +149,7 @@ export default function MerchantHome() {
         'fetchProfilesByIds',
       ).catch((err) => {
         // eslint-disable-next-line no-console
-        console.error('[applux] fetchProfilesByIds failed', err);
+        console.error('[lend] fetchProfilesByIds failed', err);
         return new Map<string, never>();
       });
       if (cancelled) return;
@@ -156,10 +157,7 @@ export default function MerchantHome() {
         contractRows.map((r) => {
           const customer = profileMap.get(r.customer_user_id);
           const name = customer?.full_name ?? '—';
-          const initials =
-            name.trim().split(/\s+/).slice(0, 2)
-              .map((p) => p[0]?.toUpperCase() ?? '')
-              .join('') || '—';
+          const initials = getInitials(name);
           return adaptContractToMerchantRental(r, {
             category: liveMerchant.primary_category,
             customerName: name,
@@ -405,7 +403,7 @@ export default function MerchantHome() {
                     await supabaseAuth.signOut();
                   } catch (err) {
                     // eslint-disable-next-line no-console
-                    console.error('[applux] merchant signOut failed', err);
+                    console.error('[lend] merchant signOut failed', err);
                   }
                 }
                 signOutMerchant();

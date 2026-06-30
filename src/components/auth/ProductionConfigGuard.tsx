@@ -52,7 +52,7 @@ export function ProductionConfigError() {
             <li>
               Engineers: open DevTools and look for the{' '}
               <code className="px-1 py-0.5 rounded bg-canvas-100 text-ink-800 num">
-                [applux] Supabase env vars not inlined…
+                [lend] Supabase env vars not inlined…
               </code>{' '}
               warning.
             </li>

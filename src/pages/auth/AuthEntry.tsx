@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import { Header, Screen } from '@/components/layout';
-import { Button, Card } from '@/components/ui';
+import { Card } from '@/components/ui';
 import {
   BadgeCheckIcon,
   BuildingIcon,

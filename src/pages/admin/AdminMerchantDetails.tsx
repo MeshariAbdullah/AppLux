@@ -27,6 +27,7 @@ import {
   WalletIcon,
 } from '@/components/icons';
 import { cn } from '@/lib/cn';
+import { adminMerchantDecisionTone as statusTone } from '@/lib/format/statusTones';
 import { useI18n, useT } from '@/lib/i18n';
 import { useStore, type AdminMerchantRequest } from '@/lib/store';
 import {
@@ -41,11 +42,6 @@ import type {
   AdminMerchantDocStatus,
 } from '@/lib/data';
 
-function statusTone(status: AdminMerchantDecisionStatus): StatusTone {
-  if (status === 'approved') return 'success';
-  if (status === 'rejected') return 'danger';
-  return 'warn';
-}
 
 function docTone(s: AdminMerchantDocStatus): StatusTone {
   if (s === 'verified') return 'success';
@@ -58,7 +54,7 @@ const DOC_KEYS = ['commercialReg', 'vat', 'bankLetter', 'authorizedId'] as const
 export default function AdminMerchantDetails() {
   const t = useT();
   const navigate = useNavigate();
-  const { dir, formatCurrency, formatDate } = useI18n();
+  const { formatCurrency, formatDate } = useI18n();
   const { id = '' } = useParams<{ id: string }>();
   const {
     adminMerchantRequests,
@@ -97,7 +93,7 @@ export default function AdminMerchantDetails() {
       })
       .catch((err) => {
         // eslint-disable-next-line no-console
-        console.error('[applux] fetchMerchantApplication failed', err);
+        console.error('[lend] fetchMerchantApplication failed', err);
         if (!cancelled) setLiveLoading(false);
       });
     return () => {
@@ -170,7 +166,7 @@ export default function AdminMerchantDetails() {
           await provisionMerchantFromApplication(request.id);
         } catch (provErr) {
           // eslint-disable-next-line no-console
-          console.error('[applux] provisionMerchantFromApplication failed', provErr);
+          console.error('[lend] provisionMerchantFromApplication failed', provErr);
           setDecisionError(
             provErr instanceof Error
               ? `Application approved, but provisioning failed: ${provErr.message}`

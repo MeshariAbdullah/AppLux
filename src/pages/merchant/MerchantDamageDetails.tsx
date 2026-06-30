@@ -9,7 +9,6 @@ import {
   ImageLightbox,
   SectionHeader,
   StatusChip,
-  type StatusTone,
 } from '@/components/ui';
 import {
   AlertIcon,
@@ -31,29 +30,18 @@ import {
 } from '@/components/icons';
 import { cn } from '@/lib/cn';
 import { useI18n, useT } from '@/lib/i18n';
+import {
+  damageSeverityTone as toneForSeverity,
+  damageStatusTone as toneForStatus,
+} from '@/lib/format/statusTones';
 import { useStore } from '@/lib/store';
 import { useSupabaseAuth } from '@/lib/supabase';
-import type {
-  MerchantDamageCase,
-  MerchantDamageSeverity,
-  MerchantDamageStatus,
-} from '@/lib/data';
+import type { MerchantDamageCase } from '@/lib/data';
 
 type StepKey = 'review' | 'settlement' | 'nafith' | 'execution';
 type StepState = 'done' | 'current' | 'pending';
 
 const STEP_ORDER: StepKey[] = ['review', 'settlement', 'nafith', 'execution'];
-
-function toneForStatus(s: MerchantDamageStatus): StatusTone {
-  if (s === 'settled') return 'success';
-  if (s === 'investigating') return 'warn';
-  return 'danger';
-}
-
-function toneForSeverity(s: MerchantDamageSeverity): StatusTone {
-  if (s === 'partial') return 'warn';
-  return 'danger';
-}
 
 function computeSteps(c: MerchantDamageCase): Record<StepKey, StepState> {
   const out: Record<StepKey, StepState> = {

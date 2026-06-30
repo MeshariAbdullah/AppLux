@@ -52,7 +52,7 @@ if (supabaseConfigured) {
 } else if (import.meta.env.DEV) {
   // eslint-disable-next-line no-console
   console.info(
-    '[applux] Supabase env not set — running in demo mode. Copy .env.example to .env.local to enable the real backend.',
+    '[lend] Supabase env not set — running in demo mode. Copy .env.example to .env.local to enable the real backend.',
   );
 } else {
   // PRODUCTION-VISIBLE diagnostic. Fires at module load on any deployed
@@ -67,7 +67,7 @@ if (supabaseConfigured) {
   // above is unchanged.
   // eslint-disable-next-line no-console
   console.warn(
-    '[applux] Supabase env vars not inlined in this build. ' +
+    '[lend] Supabase env vars not inlined in this build. ' +
       'VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY were undefined at `vite build` time, ' +
       'so the client falls back to the demo path and the merchant session ' +
       'flow will surface "backendRequired". ' +

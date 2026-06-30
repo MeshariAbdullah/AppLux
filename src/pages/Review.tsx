@@ -23,7 +23,6 @@ import {
   ReceiptIcon,
   ShieldIcon,
   SignatureIcon,
-  SparkleIcon,
 } from '@/components/icons';
 import { useI18n, useT } from '@/lib/i18n';
 import { useStore } from '@/lib/store';
@@ -84,7 +83,7 @@ export default function Review() {
       })
       .catch((err) => {
         // eslint-disable-next-line no-console
-        console.error('[applux] fetchInvoiceByToken failed', err);
+        console.error('[lend] fetchInvoiceByToken failed', err);
       })
       .finally(() => {
         if (!cancelled) setResolving(false);
