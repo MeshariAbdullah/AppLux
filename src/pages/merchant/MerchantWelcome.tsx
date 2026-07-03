@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { LangToggle } from '@/components/auth/LangToggle';
+import { BrandSlogan } from '@/components/brand/BrandSlogan';
 import {
   BadgeCheckIcon,
   BuildingIcon,
@@ -77,6 +78,7 @@ export default function MerchantWelcome() {
           <p className="mt-3 text-[14px] leading-relaxed text-white/70 max-w-[34ch]">
             {t('merchant.entry.subtitle')}
           </p>
+          <BrandSlogan size="sm" tone="dark" className="mt-5" />
         </div>
 
         <ul className="mt-8 space-y-2.5">

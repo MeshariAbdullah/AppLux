@@ -3,6 +3,14 @@
     "name": "Lend",
     "tagline": "استأجر ما تحتاجه، ووثّقه بعقد رسمي"
   },
+  "brand": {
+    "slogan": {
+      "line1": "استأجر بثقة.",
+      "line2Prefix": "ووثّق ",
+      "line2Keyword": "حقك",
+      "line2Suffix": "."
+    }
+  },
   "nav": {
     "home": "الرئيسية",
     "stores": "المتاجر",

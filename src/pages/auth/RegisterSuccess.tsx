@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui';
 import { CheckIcon } from '@/components/icons';
+import { BrandSlogan } from '@/components/brand/BrandSlogan';
 import { useT } from '@/lib/i18n';
 import { useStore } from '@/lib/store';
 
@@ -43,6 +44,8 @@ export default function RegisterSuccess() {
             {session.fullName}
           </div>
         )}
+
+        <BrandSlogan size="sm" tone="dark" className="mt-8" />
       </div>
 
       <div className="relative px-6 pb-[calc(env(safe-area-inset-bottom)+24px)]">

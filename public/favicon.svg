@@ -1,5 +1,6 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
-  <rect width="64" height="64" rx="14" fill="#0D1224"/>
-  <path d="M21 18 v23 a3 3 0 0 0 3 3 h19" fill="none" stroke="#D4A857" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
-  <circle cx="44" cy="44" r="2.5" fill="#A48DD6"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40" width="40" height="40" fill="none">
+  <!-- Lend brand mark. Reconstructed from Brand Guidelines V1.0. -->
+  <path d="M 5 20 A 15 15 0 0 1 35 20" stroke="#1B2951" stroke-width="4" stroke-linecap="round"/>
+  <path d="M 35 20 A 15 15 0 0 1 5 20" stroke="#12A67E" stroke-width="4" stroke-linecap="round"/>
+  <circle cx="20" cy="20" r="3" fill="#1B2951"/>
 </svg>

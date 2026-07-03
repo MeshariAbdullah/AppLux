@@ -2,20 +2,54 @@
 @tailwind components;
 @tailwind utilities;
 
+/* =====================================================================
+ * Lend 2026 brand refresh — global styles
+ * ---------------------------------------------------------------------
+ * Palette anchors (see tailwind.config.js for the full ramps):
+ *   Deep Navy       #1B2951  primary, key text
+ *   Vibrant Green   #12A67E  secondary, verified
+ *   Warm Beige      #F5F5F0  page background
+ *   Green Tint      #E1F5EE  verified background
+ *   Navy Tint       #EEF2F9  info background
+ *
+ * Focus ring is Vibrant Green (brand secondary), selection is Green
+ * Tint. The old `--applux-*` CSS variables are kept as aliases for
+ * one release so any external stylesheet or dev tool that referenced
+ * them still resolves — the app itself uses the new `--lend-*`
+ * variables everywhere.
+ * ===================================================================== */
+
 :root {
   color-scheme: light;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
-  /* Soft lavender→ivory shell outside the mobile frame — boutique-luxury feel. */
-  --applux-shell: radial-gradient(
+
+  /* Lend brand tokens. Prefer these in new CSS. */
+  --lend-navy: #1B2951;
+  --lend-green: #12A67E;
+  --lend-beige: #F5F5F0;
+  --lend-green-tint: #E1F5EE;
+  --lend-navy-tint: #EEF2F9;
+
+  /* Page shell — warm-beige radial that fades to a paler stop so the
+     mobile frame still reads as a "canvas". Replaces the AppLux
+     lavender radial. */
+  --lend-shell: radial-gradient(
       120% 90% at 50% -10%,
-      #EDE6F8 0%,
-      #F6F1FB 40%,
-      #FBFAFD 100%
+      #EEF2F9 0%,
+      #F5F5F0 45%,
+      #FBFBF7 100%
     );
-  --applux-canvas: #FBFAFD;
-  --applux-ink: #161220;
+  --lend-canvas: #F5F5F0;
+  --lend-ink: #1B2951;
+
+  /* Backward-compat aliases (one release only — remove after the
+     next brand pass). Any legacy `var(--applux-*)` reference will
+     still resolve to the new brand value. */
+  --applux-shell: var(--lend-shell);
+  --applux-canvas: var(--lend-canvas);
+  --applux-ink: var(--lend-ink);
 }
 
 html,
@@ -26,12 +60,13 @@ body,
 
 body {
   margin: 0;
-  background: var(--applux-shell);
-  color: var(--applux-ink);
+  background: var(--lend-shell);
+  color: var(--lend-ink);
   font-synthesis-weight: none;
 }
 
-/* Arabic: slightly looser rhythm and tightened weight range for luxury legibility. */
+/* Arabic — line-height and weight tuning stay untouched; only the
+   fallback family list is trimmed. */
 html[dir='rtl'] body {
   font-family: 'IBM Plex Sans Arabic', 'Noto Naskh Arabic', system-ui, sans-serif;
   line-height: 1.65;
@@ -41,7 +76,6 @@ html[dir='rtl'] :where(h1, h2, h3, h4, h5, h6) {
   font-weight: 700;
   letter-spacing: 0;
 }
-/* Tailwind tracking-* utilities shouldn't affect Arabic shaping. */
 html[dir='rtl'] :where([class*='tracking-']) {
   letter-spacing: 0 !important;
 }
@@ -57,23 +91,31 @@ html[dir='ltr'] body {
 
 @layer utilities {
   /* Canvas surface + logical-property helpers */
-  .bg-canvas { background-color: var(--applux-canvas); }
+  .bg-canvas { background-color: var(--lend-canvas); }
   .ps-safe { padding-inline-start: env(safe-area-inset-left); }
   .pe-safe { padding-inline-end: env(safe-area-inset-right); }
-  .divide-border > * + * { border-top: 1px solid rgba(60, 45, 20, 0.06); }
-  .hairline { box-shadow: inset 0 0 0 1px rgba(60, 45, 20, 0.06); }
+  .divide-border > * + * { border-top: 1px solid rgba(19, 30, 61, 0.06); }
+  .hairline { box-shadow: inset 0 0 0 1px rgba(19, 30, 61, 0.08); }
   .fade-edge-y {
     mask-image: linear-gradient(to bottom, transparent 0, #000 24px, #000 calc(100% - 24px), transparent 100%);
   }
   .animate-slide-in-right { animation: slideInRight 300ms cubic-bezier(0.22, 1, 0.36, 1); }
   .animate-pop-in { animation: popIn 260ms cubic-bezier(0.22, 1, 0.36, 1); }
 
-  /* Editorial display utility — uses the display family + tighter tracking */
-  .font-display { font-family: 'Playfair Display', 'IBM Plex Sans Arabic', Georgia, serif; }
+  /* Editorial display utility — Playfair Display DROPPED in the 2026
+     brand refresh. The brand explicitly rejects an editorial-serif
+     tone ("not a government app. not a paper contract."). Both
+     .editorial-title and .font-display now resolve to Inter Bold
+     with brand-preserved letter spacing. RTL headings unchanged —
+     IBM Plex Sans Arabic 700 is already the correct family. */
+  .font-display {
+    font-family: 'Inter', 'IBM Plex Sans Arabic', system-ui, sans-serif;
+    font-weight: 700;
+  }
   .editorial-title {
-    font-family: 'Playfair Display', 'IBM Plex Sans Arabic', Georgia, serif;
-    font-weight: 600;
-    letter-spacing: -0.01em;
+    font-family: 'Inter', 'IBM Plex Sans Arabic', system-ui, sans-serif;
+    font-weight: 700;
+    letter-spacing: -0.015em;
   }
   html[dir='rtl'] .editorial-title { font-weight: 700; letter-spacing: 0; }
 }
@@ -87,18 +129,12 @@ html[dir='ltr'] body {
   100% { transform: scale(1); opacity: 1; }
 }
 
-/* Calm, one-shot reveal — used for moments where the system has just
-   recorded something. Faster than a hero animation, slower than a button
-   press. Same cubic-bezier as ease-plush. */
 @keyframes revealUp {
   0% { transform: translateY(6px); opacity: 0; }
   100% { transform: translateY(0); opacity: 1; }
 }
 .animate-reveal-up { animation: revealUp 460ms cubic-bezier(0.22, 1, 0.36, 1) both; }
 
-/* Stamp-in — used by the Documented / Signed / Verified badges. Small
-   scale settle, no bounce, holds at the end. Feels like a stamp pressing
-   onto paper rather than a UI element fading in. */
 @keyframes stampIn {
   0% { transform: scale(0.86); opacity: 0; }
   60% { transform: scale(1.02); opacity: 1; }
@@ -106,7 +142,6 @@ html[dir='ltr'] body {
 }
 .animate-stamp-in { animation: stampIn 420ms cubic-bezier(0.22, 1, 0.36, 1) both; }
 
-/* Soft halo — for the approval ring once, then quiet. Single sweep. */
 @keyframes haloSweep {
   0% { transform: scale(0.94); opacity: 0; }
   40% { opacity: 1; }
@@ -114,21 +149,18 @@ html[dir='ltr'] body {
 }
 .animate-halo-sweep { animation: haloSweep 1400ms cubic-bezier(0.22, 1, 0.36, 1) both; }
 
-/* Backdrop fade — for modal/sheet overlays. */
 @keyframes fadeIn {
   0% { opacity: 0; }
   100% { opacity: 1; }
 }
 .animate-fade-in { animation: fadeIn 220ms cubic-bezier(0.22, 1, 0.36, 1) both; }
 
-/* Soft sheet rise — for bottom-anchored modal panels. */
 @keyframes sheetUp {
   0% { transform: translateY(100%); }
   100% { transform: translateY(0); }
 }
 .animate-slide-up-soft { animation: sheetUp 260ms cubic-bezier(0.22, 1, 0.36, 1) both; }
 
-/* Reduce motion respectfully. */
 @media (prefers-reduced-motion: reduce) {
   .animate-reveal-up,
   .animate-stamp-in,
@@ -140,21 +172,21 @@ html[dir='ltr'] body {
   }
 }
 
-/* Tap highlight off, soft lavender selection tone. */
+/* Tap highlight off + selection retinted to brand green tint. */
 button, [role='button'], a {
   -webkit-tap-highlight-color: transparent;
 }
 ::selection {
-  background: #EDE6F8;
-  color: #161220;
+  background: var(--lend-green-tint);
+  color: var(--lend-navy);
 }
 
-/* Brand focus ring — soft lavender. */
+/* Focus ring — Vibrant Green (brand secondary) on Warm Beige canvas. */
 :focus-visible {
   outline: none;
 }
 :where(button, a, [role='button']):focus-visible {
-  box-shadow: 0 0 0 2px var(--applux-canvas), 0 0 0 4px #A48DDA;
+  box-shadow: 0 0 0 2px var(--lend-canvas), 0 0 0 4px var(--lend-green);
   border-radius: 14px;
 }
 
@@ -165,7 +197,7 @@ button, [role='button'], a {
   unicode-bidi: plaintext;
 }
 
-/* Dotted + grid overlays used on dark hero cards */
+/* Dotted + grid overlays used on dark navy hero cards */
 .pattern-dots {
   background-image: radial-gradient(rgba(255, 255, 255, 0.14) 1px, transparent 1px);
   background-size: 18px 18px;

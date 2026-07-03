@@ -26,10 +26,11 @@ const config: CapacitorConfig = {
     // areas (notch / home indicator). Our Tailwind layout already
     // uses env(safe-area-inset-*); this turns those CSS vars on.
     contentInset: 'always',
-    // Lock the WebView background to the same dark ink the splash
-    // screen + theme-color meta tag use. Prevents a white flash
-    // between launch and first React render.
-    backgroundColor: '#0D1224',
+    // Lock the WebView background to Deep Navy (Lend 2026 brand
+    // refresh). Matches the <meta name="theme-color"> in index.html
+    // so there is no colour flash between launch, splash, and first
+    // React render.
+    backgroundColor: '#1B2951',
   },
 };
 

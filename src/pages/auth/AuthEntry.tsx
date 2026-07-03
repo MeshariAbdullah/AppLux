@@ -11,6 +11,7 @@ import {
 } from '@/components/icons';
 import { useI18n, useT } from '@/lib/i18n';
 import { useSupabaseAuth } from '@/lib/supabase';
+import { BrandSlogan } from '@/components/brand/BrandSlogan';
 import { cn } from '@/lib/cn';
 
 export default function AuthEntry() {
@@ -33,6 +34,7 @@ export default function AuthEntry() {
             <p className="mt-2.5 text-[14px] text-ink-500 leading-relaxed">
               {t('auth.entry.subtitle')}
             </p>
+            <BrandSlogan size="sm" className="mt-4" />
           </div>
 
           <div className="space-y-3">

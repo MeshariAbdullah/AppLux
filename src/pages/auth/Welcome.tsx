@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { LangToggle } from '@/components/auth/LangToggle';
+import { BrandSlogan } from '@/components/brand/BrandSlogan';
 import {
   ArrowIcon,
   BadgeCheckIcon,
@@ -151,6 +152,13 @@ export default function Welcome() {
                 : 'welcome.subtitle',
             )}
           </p>
+
+          {/* Core brand slogan — 2026 refresh. Renders in the active
+              locale with the keyword ("right" / "حقك") in Vibrant
+              Green per the brand guideline. */}
+          <div className="mt-6 flex justify-center">
+            <BrandSlogan size="sm" />
+          </div>
         </header>
 
         {/* ======== AUDIENCE TOGGLE ========

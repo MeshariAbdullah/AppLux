@@ -3,6 +3,14 @@
     "name": "Lend",
     "tagline": "Rent what you need, contract it properly"
   },
+  "brand": {
+    "slogan": {
+      "line1": "Rent with confidence.",
+      "line2Prefix": "Document your ",
+      "line2Keyword": "right",
+      "line2Suffix": "."
+    }
+  },
   "nav": {
     "home": "Home",
     "stores": "Stores",
