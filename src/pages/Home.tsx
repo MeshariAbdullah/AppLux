@@ -311,15 +311,12 @@ export default function Home() {
         }
       />
       <Screen className="bg-canvas">
-        {/* Compact eligibility — always shown, never dominates. */}
-        <EligibilityCompact
-          eligibility={eligibility}
-          tierLabel={t(`eligibility.tiers.${eligibility.tier}`)}
-          onOpen={() => navigate('/eligibility')}
-          formatCurrency={formatCurrency}
-          t={t}
-          dir={dir}
-        />
+        {/* Customer-facing eligibility surface hidden per product
+            decision — the database + backend eligibility logic still
+            runs, but the compact hero card is suppressed until we
+            decide to expose it again. The EligibilityCompact
+            component is retained below (dead-code) so re-enabling
+            is a one-line JSX change. */}
 
         {/* Mode-driven hero block. */}
         {mode === 'attention' && (
@@ -906,10 +903,11 @@ function HistoryStrip({
 // ---------------------------------------------------------------------
 
 function QuickLinks({ t }: { t: (k: string) => string }) {
+  // Eligibility quick-link removed while the customer-facing
+  // eligibility UI is suppressed. Two columns render cleanly.
   return (
-    <div className="grid grid-cols-3 gap-2.5">
+    <div className="grid grid-cols-2 gap-2.5">
       <QuickLink to="/stores" icon={<BuildingIcon size={16} />} label={t('home.quickLinks.stores')} />
-      <QuickLink to="/eligibility" icon={<ShieldIcon size={16} />} label={t('home.quickLinks.eligibility')} />
       <QuickLink to="/profile" icon={<UserIcon size={16} />} label={t('home.quickLinks.profile')} />
     </div>
   );

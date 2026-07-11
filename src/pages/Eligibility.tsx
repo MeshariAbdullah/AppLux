@@ -1,299 +1,51 @@
-import { useEffect, useState, type ReactNode } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Header, Screen } from '@/components/layout';
-import { Card, ProgressBar, StatCard, StatusChip } from '@/components/ui';
-import { InfoIcon, ShieldIcon, SparkleIcon, WalletIcon } from '@/components/icons';
-import { useI18n, useT } from '@/lib/i18n';
-import { useStore } from '@/lib/store';
-import { cn } from '@/lib/cn';
-import {
-  adaptContract,
-  adaptEligibility,
-  adaptInvoice,
-  listCustomerContracts,
-  listCustomerInvoices,
-  useSupabaseAuth,
-} from '@/lib/supabase';
-import type {
-  Contract,
-  Invoice,
-  RentalEligibility,
-} from '@/lib/data';
+import { Button, EmptyState } from '@/components/ui';
+import { ClockIcon } from '@/components/icons';
+import { useT } from '@/lib/i18n';
 
 // =====================================================================
-// Eligibility — reads LIVE data from Supabase when configured.
+// Eligibility — customer-facing UI HIDDEN.
+// =====================================================================
+// The eligibility data model, backend RPCs, admin-side assignment
+// flow, and the merchant-side rental-session eligibility check all
+// remain fully wired. This page is deliberately empty so that if a
+// customer navigates to `/eligibility` (from a stale link, deep
+// link, or history) they see a clean "coming soon" state instead
+// of the previous balance / limit / used / remaining dashboard.
 //
-// Previously this page read everything from `useStore()` (the demo
-// store), so a real logged-in customer saw stale demo numbers
-// regardless of their actual eligibility row. Home.tsx was already
-// correct; this page was the outlier.
+// To re-enable the full eligibility screen, restore the previous
+// implementation from commit b50e70b (or earlier) — the `Home.tsx`
+// EligibilityCompact hero is preserved dead-code above the hero
+// block, so re-enabling is a one-line JSX change there.
 //
-// Sources (mirrors Home.tsx's rules):
-//   * configured + DB row present  → adaptEligibility(dbEligibility)
-//   * configured + DB row missing  → empty eligibility (0 / 0)
-//   * !configured                  → demo store eligibility
-// Breakdown rows (contracts + outstanding invoices) are also live
-// when configured, falling back to the demo store otherwise.
+// Nothing else in this file — no live Supabase calls, no store
+// reads, no numbers. The customer-facing eligibility surface stays
+// hidden until product signs off on the design refresh.
 // =====================================================================
 
 export default function Eligibility() {
   const t = useT();
-  const { formatCurrency, formatDate } = useI18n();
-  const {
-    eligibility: demoEligibility,
-    contracts: demoContracts,
-    invoices: demoInvoices,
-  } = useStore();
-  const { configured, eligibility: dbEligibility, session } = useSupabaseAuth();
-
-  const emptyEligibility: RentalEligibility = {
-    limit: 0,
-    used: 0,
-    remaining: 0,
-    tier: 'standard',
-    assignedBy: '',
-    assignedAt: new Date(0).toISOString(),
-  };
-  const eligibility: RentalEligibility = configured
-    ? dbEligibility
-      ? adaptEligibility(dbEligibility)
-      : emptyEligibility
-    : demoEligibility;
-
-  const [liveContracts, setLiveContracts] = useState<Contract[] | null>(null);
-  const [liveInvoices, setLiveInvoices] = useState<Invoice[] | null>(null);
-
-  useEffect(() => {
-    const userId = session?.user?.id;
-    if (!configured || !userId) {
-      setLiveContracts(null);
-      setLiveInvoices(null);
-      return;
-    }
-    let cancelled = false;
-    (async () => {
-      const [contractRows, invoiceRows] = await Promise.all([
-        listCustomerContracts(userId).catch(() => []),
-        listCustomerInvoices(userId).catch(() => []),
-      ]);
-      if (cancelled) return;
-      setLiveContracts(contractRows.map((r) => adaptContract(r)));
-      setLiveInvoices(invoiceRows.map((r) => adaptInvoice(r)));
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [configured, session?.user?.id]);
-
-  const contracts = liveContracts ?? demoContracts;
-  const invoices = liveInvoices ?? demoInvoices;
-
-  const usagePct =
-    eligibility.limit > 0
-      ? Math.min(100, Math.round((eligibility.used / eligibility.limit) * 100))
-      : 0;
-  const contractCommitments = contracts
-    .filter((c) => c.status === 'active')
-    .reduce((sum, c) => sum + c.monthlyAmount, 0);
-  const outstandingInvoices = invoices
-    .filter((i) => i.status !== 'paid')
-    .reduce((sum, i) => sum + i.amount, 0);
-
+  const navigate = useNavigate();
   return (
     <>
       <Header title={t('eligibility.title')} showBack />
       <Screen className="bg-canvas">
-        <div className="space-y-6">
-          {/* Hero eligibility card */}
-          <div className="relative overflow-hidden rounded-xl3 bg-gradient-to-br from-ink-900 via-ink-800 to-ink-900 text-white p-6 shadow-plush">
-            <div aria-hidden className="pointer-events-none absolute inset-0 pattern-dots opacity-25" />
-            <div
-              aria-hidden
-              className="pointer-events-none absolute -top-12 end-[-18%] h-56 w-56 rounded-full bg-gold-400/22 blur-[100px]"
-            />
-            <div
-              aria-hidden
-              className="pointer-events-none absolute -bottom-16 start-[-10%] h-48 w-48 rounded-full bg-gold-500/12 blur-[100px]"
-            />
-
-            <div className="relative flex items-center justify-between gap-2">
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-white/10 ring-1 ring-white/15 px-2.5 py-1 text-[11px] font-semibold">
-                <SparkleIcon size={12} />
-                {t(`eligibility.tiers.${eligibility.tier}`)}
-              </span>
-              <span className="text-[11.5px] text-white/55">
-                {t('eligibility.usageOfLimit')} · <span className="num">{usagePct}%</span>
-              </span>
-            </div>
-
-            <div className="relative mt-7">
-              <div className="text-[11.5px] text-white/55 uppercase tracking-[0.08em]">
-                {t('eligibility.remaining')}
-              </div>
-              <div className="mt-2 editorial-title text-[40px] leading-none num text-white">
-                {formatCurrency(eligibility.remaining)}
-              </div>
-              <div className="mt-2 text-[12.5px] text-white/55">
-                {t('home.of')}{' '}
-                <span className="num text-white/85">{formatCurrency(eligibility.limit)}</span>
-              </div>
-            </div>
-
-            <div className="relative mt-6">
-              <ProgressBar
-                value={eligibility.used}
-                max={Math.max(eligibility.limit, 1)}
-                tone="white"
-                className="bg-white/12"
-              />
-              <div className="mt-3 flex justify-between text-[11.5px] text-white/65">
-                <span>
-                  {t('eligibility.used')}{' '}
-                  <span className="font-semibold text-white num">
-                    {formatCurrency(eligibility.used)}
-                  </span>
-                </span>
-                <span>
-                  {t('eligibility.limit')}{' '}
-                  <span className="font-semibold text-white num">
-                    {formatCurrency(eligibility.limit)}
-                  </span>
-                </span>
-              </div>
-            </div>
-          </div>
-
-          {/* KPI cards */}
-          <div className="grid grid-cols-3 gap-2.5">
-            <StatCard
-              tone="default"
-              label={t('eligibility.limit')}
-              value={formatCurrency(eligibility.limit)}
-              icon={<ShieldIcon size={18} />}
-            />
-            <StatCard
-              tone="warn"
-              label={t('eligibility.used')}
-              value={formatCurrency(eligibility.used)}
-              icon={<WalletIcon size={18} />}
-            />
-            <StatCard
-              tone="gold"
-              label={t('eligibility.remaining')}
-              value={formatCurrency(eligibility.remaining)}
-              icon={<SparkleIcon size={18} />}
-            />
-          </div>
-
-          {/* Breakdown */}
-          <Card padded>
-            <div className="flex items-center justify-between">
-              <h3 className="text-[14px] font-semibold text-ink-900 tracking-tight">
-                {t('eligibility.breakdown')}
-              </h3>
-              <StatusChip tone="neutral" dot={false} label={t(`eligibility.tiers.${eligibility.tier}`)} />
-            </div>
-
-            {eligibility.used === 0 ? (
-              <div className="mt-4 text-[12.5px] text-ink-400">{t('eligibility.noUsage')}</div>
-            ) : (
-              <div className="mt-5 space-y-4">
-                <BreakdownRow
-                  label={t('eligibility.contractsShare')}
-                  value={formatCurrency(contractCommitments)}
-                  percent={
-                    eligibility.limit > 0
-                      ? Math.round(Math.min(100, (contractCommitments / eligibility.limit) * 100))
-                      : 0
-                  }
-                  tone="brand"
-                />
-                <BreakdownRow
-                  label={t('eligibility.invoicesShare')}
-                  value={formatCurrency(outstandingInvoices)}
-                  percent={
-                    eligibility.limit > 0
-                      ? Math.round(Math.min(100, (outstandingInvoices / eligibility.limit) * 100))
-                      : 0
-                  }
-                  tone="gold"
-                />
-              </div>
-            )}
-          </Card>
-
-          {/* Admin notice */}
-          <Card padded className="bg-gold-50">
-            <div className="flex items-start gap-3.5">
-              <span className="h-10 w-10 rounded-2xl bg-white text-gold-700 grid place-items-center hairline shrink-0">
-                <InfoIcon size={18} />
-              </span>
-              <div className="min-w-0">
-                <div className="text-[13.5px] font-semibold text-ink-900 tracking-tight">
-                  {t('eligibility.adminNotice')}
-                </div>
-                <dl className="mt-3.5 grid grid-cols-2 gap-3 text-[12px]">
-                  <InfoPair
-                    label={t('eligibility.assignedBy')}
-                    value={eligibility.assignedBy || 'Lend'}
-                  />
-                  <InfoPair
-                    label={t('eligibility.assignedOn')}
-                    value={
-                      eligibility.assignedAt &&
-                      eligibility.assignedAt !== new Date(0).toISOString()
-                        ? formatDate(eligibility.assignedAt)
-                        : '—'
-                    }
-                  />
-                </dl>
-              </div>
-            </div>
-          </Card>
-        </div>
+        <EmptyState
+          tone="brand"
+          icon={<ClockIcon size={22} />}
+          title={t('eligibility.comingSoonTitle')}
+          description={t('eligibility.comingSoonBody')}
+          action={
+            <Button
+              size="sm"
+              onClick={() => navigate('/home', { replace: true })}
+            >
+              {t('eligibility.backHome')}
+            </Button>
+          }
+        />
       </Screen>
     </>
-  );
-}
-
-function BreakdownRow({
-  label,
-  value,
-  percent,
-  tone,
-}: {
-  label: ReactNode;
-  value: ReactNode;
-  percent: number;
-  tone: 'brand' | 'gold';
-}) {
-  return (
-    <div>
-      <div className="flex items-center justify-between">
-        <span className="text-[12.5px] text-ink-600 font-medium">{label}</span>
-        <span className="text-[12.5px] font-semibold text-ink-900 num">{value}</span>
-      </div>
-      <div className="mt-2 flex items-center gap-2.5">
-        <ProgressBar value={percent} tone={tone} size="sm" />
-        <span
-          className={cn(
-            'text-[11px] font-semibold num w-10 text-end',
-            tone === 'brand' ? 'text-ink-700' : 'text-gold-700',
-          )}
-        >
-          {percent}%
-        </span>
-      </div>
-    </div>
-  );
-}
-
-function InfoPair({ label, value }: { label: ReactNode; value: ReactNode }) {
-  return (
-    <div>
-      <dt className="text-[10.5px] text-ink-500 uppercase tracking-[0.08em] font-semibold">
-        {label}
-      </dt>
-      <dd className="mt-1 text-[13px] font-semibold text-ink-900">{value}</dd>
-    </div>
   );
 }

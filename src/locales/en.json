@@ -505,6 +505,9 @@
   },
   "eligibility": {
     "title": "Rental eligibility",
+    "comingSoonTitle": "Coming soon",
+    "comingSoonBody": "This section isn't available yet.",
+    "backHome": "Back to home",
     "subtitle": "Your approved financial ceiling for rental contracts.",
     "limit": "Total limit",
     "used": "Used",
