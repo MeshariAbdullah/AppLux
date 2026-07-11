@@ -29,6 +29,7 @@ import {
 } from '@/components/icons';
 import { cn } from '@/lib/cn';
 import { getInitials } from '@/lib/format/initials';
+import { isRentalFinalized } from '@/lib/format/rentalFinalization';
 import { useI18n, useT } from '@/lib/i18n';
 import { useStore } from '@/lib/store';
 import {
@@ -226,7 +227,10 @@ export default function MerchantDamageNew() {
     );
   }
 
-  if (rental.closureStatus === 'closed' || rental.closureStatus === 'damaged') {
+  // Guard against opening a new damage case on an already-finalised
+  // rental. Uses the shared helper so status='returned' AND
+  // closureStatus='closed'/'damaged' all redirect out.
+  if (isRentalFinalized(rental)) {
     return <Navigate to={`/merchant/rentals/${rental.id}`} replace />;
   }
 

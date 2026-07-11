@@ -995,6 +995,18 @@
         "mobileHint": "9 digits, starts with 5. We'll send a one-time code.",
         "mobileAccepted": "Number accepted · {e164}",
         "lookupCta": "Look up renter",
+        "nationalId": {
+          "missingTitle": "Missing National ID",
+          "missingHint": "This renter's profile is missing a National ID. Read it from the customer's card and enter it below — it will be saved to their profile so they don't need to give it again.",
+          "label": "Customer National ID",
+          "placeholder": "10 digits",
+          "invalid": "National ID must be 10 digits and start with 1 or 2.",
+          "required": "Enter the customer's National ID to continue.",
+          "saveCta": "Save National ID",
+          "saving": "Saving…",
+          "saved": "National ID saved",
+          "capturedChip": "National ID on file"
+        },
         "idLast4Label": "Last 4 digits of renter's National ID",
         "idLast4Hint": "Ask the renter to read out the last 4 digits of their National ID. The merchant should confirm against the physical card.",
         "confirmCta": "Confirm and continue",
@@ -1383,6 +1395,10 @@
         "damagedTitle": "Damage case opened",
         "damagedHint": "This rental has an open damage case under review.",
         "openCase": "Open case"
+      },
+      "finalizedBanner": {
+        "title": "Contract closed",
+        "hint": "This rental has been finalised. No further actions can be taken. Contract, note and history remain viewable above."
       },
       "contract": {
         "title": "Rental contract",

@@ -329,6 +329,16 @@ export function adaptContractToMerchantRental(
     timeline.push({ key: 'returned', at: row.ended_at });
   }
 
+  // When the contract is in a final state (ended / cancelled) the
+  // UI needs a truthy closureStatus so its "active" branches (Close
+  // + Damage buttons, direct-navigation guards on those pages) fall
+  // through to the read-only path. The demo store already populates
+  // this field; the live adapter was missing it — bug source for
+  // "closed rental still shows Close/Damage buttons."
+  const closureStatus =
+    row.status === 'ended' || row.status === 'cancelled' ? 'closed' : undefined;
+  const closedAt = row.ended_at ?? null;
+
   return {
     id: row.id,
     customerName: ctx.customerName ?? '—',
@@ -347,6 +357,8 @@ export function adaptContractToMerchantRental(
     paidInstallments: 0,
     totalInstallments: 1,
     status,
+    closureStatus,
+    closedAt: closedAt ?? undefined,
     contractRef: row.contract_number,
     noteRef: ctx.noteRef ?? note?.reference_number ?? row.contract_number,
     customerApproved,

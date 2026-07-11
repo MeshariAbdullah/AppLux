@@ -22,6 +22,7 @@ import {
 } from '@/components/icons';
 import { cn } from '@/lib/cn';
 import { getInitials } from '@/lib/format/initials';
+import { isRentalFinalized } from '@/lib/format/rentalFinalization';
 import { rentalStatusTone as toneForStatus } from '@/lib/format/statusTones';
 import { useI18n, useT } from '@/lib/i18n';
 import {
@@ -268,11 +269,15 @@ export default function MerchantRentalDetails() {
   }
 
   const statusTone = toneForStatus(rental.status);
+  // Belt-and-suspenders: prefer the explicit closureStatus (populated
+  // by the adapter for status='ended'/'cancelled' and by the demo
+  // store's reportDamage). Fall back to isRentalFinalized so any
+  // 'returned' status without closureStatus also lands here.
   const closureState: 'active' | 'closed' | 'damaged' =
-    rental.closureStatus === 'closed'
-      ? 'closed'
-      : rental.closureStatus === 'damaged'
-        ? 'damaged'
+    rental.closureStatus === 'damaged'
+      ? 'damaged'
+      : rental.closureStatus === 'closed' || isRentalFinalized(rental)
+        ? 'closed'
         : 'active';
   const rentalDays = (() => {
     const s = new Date(rental.startDate).getTime();
@@ -605,6 +610,21 @@ export default function MerchantRentalDetails() {
                   {t('merchant.rental.actions.reportDamage')}
                 </Button>
               </>
+            )}
+            {closureState === 'closed' && (
+              <div className="rounded-xl3 bg-canvas-100 ring-1 ring-canvas-200 p-4 flex items-start gap-3">
+                <span className="h-10 w-10 shrink-0 rounded-2xl bg-white text-ink-700 grid place-items-center hairline">
+                  <CheckIcon size={18} />
+                </span>
+                <div className="min-w-0">
+                  <div className="text-[13.5px] font-semibold text-ink-900 tracking-tight">
+                    {t('merchant.rental.finalizedBanner.title')}
+                  </div>
+                  <p className="mt-1 text-[12px] text-ink-500 leading-relaxed">
+                    {t('merchant.rental.finalizedBanner.hint')}
+                  </p>
+                </div>
+              </div>
             )}
             {closureState === 'damaged' && rental.damageCaseId && (
               <Button

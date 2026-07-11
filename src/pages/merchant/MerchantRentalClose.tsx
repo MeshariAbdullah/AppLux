@@ -24,6 +24,7 @@ import {
   UsersIcon,
 } from '@/components/icons';
 import { getInitials } from '@/lib/format/initials';
+import { isRentalFinalized } from '@/lib/format/rentalFinalization';
 import { useI18n, useT } from '@/lib/i18n';
 import { useStore } from '@/lib/store';
 import {
@@ -137,8 +138,12 @@ export default function MerchantRentalClose() {
     );
   }
 
-  const alreadyClosed = rental.closureStatus === 'closed';
   const damaged = rental.closureStatus === 'damaged';
+  // Combined "already finalised" check — a live contract with
+  // status='ended'/'cancelled' now flows into closureStatus='closed'
+  // via the adapter fix, but we also check rental.status directly
+  // to defend against any adapter drift.
+  const alreadyClosed = isRentalFinalized(rental) && !damaged;
 
   if (damaged) {
     return <Navigate to={`/merchant/rentals/${rental.id}`} replace />;

@@ -19,6 +19,7 @@ import {
   createInvoiceWithItems,
   fetchRenterEligibility,
   fetchMyMerchant,
+  merchantSetCustomerNationalId,
   useSupabaseAuth,
   type MerchantRow,
   type ProfileRow,
@@ -116,6 +117,26 @@ type VerifyState = {
   challenge: string;
   status: VerificationStatus;
   renter: ProfileRow | null;
+  /** Customer profile id captured from `lookup_renter_by_mobile`. Kept
+   *  separately from `renter` (which stays null until confirmation) so
+   *  the merchant-side national-id write RPC can address the profile
+   *  without exposing name/city to the merchant pre-confirmation. */
+  renterId: string | null;
+  /** true when the matched profile already has profiles.national_id,
+   *  false when the merchant must fill it in before continuing to
+   *  confirm_renter_presence. null while the lookup hasn't fired
+   *  (or for legacy demo fallbacks). */
+  hasNationalId: boolean | null;
+  /** Draft input for the missing-national-id capture. Cleared once
+   *  the RPC succeeds. */
+  nationalIdInput: string;
+  /** Independent submit flag for the national-id save; the main
+   *  `status` machine keeps its meaning ('found' is a stable state
+   *  the merchant can dwell on while filling the missing id). */
+  nationalIdSaving: boolean;
+  /** Optional inline error line for the national-id capture (invalid
+   *  format, RPC error, etc.). */
+  nationalIdError: string | null;
   error: string | null;
 };
 
@@ -168,6 +189,11 @@ const INITIAL_SESSION: SessionState = {
     challenge: '',
     status: 'unverified',
     renter: null,
+    renterId: null,
+    hasNationalId: null,
+    nationalIdInput: '',
+    nationalIdSaving: false,
+    nationalIdError: null,
     error: null,
   },
   operation: {
@@ -386,21 +412,16 @@ export default function MerchantRentalSession() {
       // Production path requires the live backend. The dev fallback below
       // is intentionally minimal and is tree-shaken out of production builds.
       if (DEV_DEMO_FALLBACK) {
+        // Simulate the missing-national-id path so the merchant flow can
+        // be exercised without a live backend. Real IDs are never written
+        // in this branch — the "Save" button no-ops when Supabase is off.
         updateVerify({
           status: 'found',
-          renter: {
-            id: 'dev-renter',
-            full_name: '[dev] Renter',
-            mobile: normalized.canonical,
-            email: null,
-            national_id: null,
-            city: 'riyadh',
-            role: 'customer',
-            account_status: 'active',
-            nafath_verified_at: null,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-          } as ProfileRow,
+          renter: null,
+          renterId: 'dev-renter',
+          hasNationalId: false,
+          nationalIdInput: '',
+          nationalIdError: null,
         });
         return;
       }
@@ -415,14 +436,32 @@ export default function MerchantRentalSession() {
     try {
       const existence = await lookupRenterByMobile(normalized.canonical);
       if (!existence) {
-        updateVerify({ status: 'not_found', renter: null });
+        updateVerify({
+          status: 'not_found',
+          renter: null,
+          renterId: null,
+          hasNationalId: null,
+        });
         return;
       }
       // EXISTENCE-ONLY at this point — by policy we do NOT surface the
       // renter's name, city, or other details to the merchant until the
       // OTP succeeds. The renter object stays null; the verify card
       // shows a generic "Renter is registered" panel.
-      updateVerify({ status: 'found', renter: null });
+      //
+      // `renterId` IS retained so we can address the profile for the
+      // merchant-side national-id write when has_national_id is false.
+      // The RPC still guards mobile match + role server-side, so exposing
+      // just the id here doesn't leak anything the merchant couldn't
+      // already infer from the successful lookup.
+      updateVerify({
+        status: 'found',
+        renter: null,
+        renterId: existence.id,
+        hasNationalId: existence.has_national_id,
+        nationalIdInput: '',
+        nationalIdError: null,
+      });
     } catch (err) {
       // Backend or network error — don't surface the raw provider message;
       // give the merchant a calm, actionable line.
@@ -434,12 +473,83 @@ export default function MerchantRentalSession() {
     }
   };
 
+  // Merchant fills a missing customer National ID during the verify
+  // step. Only reachable when `hasNationalId === false` — the UI hides
+  // the input as soon as the RPC succeeds.
+  //
+  // Client-side format check is defence-in-depth; the RPC is the
+  // authoritative validator (Saudi ID format, role check, mobile match,
+  // "must-be-empty" guard, active merchant/admin check).
+  const handleSaveCustomerNationalId = async () => {
+    const raw = session.verify.nationalIdInput.trim();
+    if (!/^[12]\d{9}$/.test(raw)) {
+      updateVerify({
+        nationalIdError: t('merchant.session.verify.nationalId.invalid'),
+      });
+      return;
+    }
+    const classification = classifyMobile(session.verify.mobile);
+    if (classification.kind !== 'valid') {
+      updateVerify({ error: verifyMobileIssueMessage(classification.issue, t) });
+      return;
+    }
+    if (!session.verify.renterId) {
+      updateVerify({
+        nationalIdError: t('merchant.session.verify.errors.mobileVerifyFailed'),
+      });
+      return;
+    }
+
+    if (!supabaseAuth.configured) {
+      // Dev-only path — no live backend, so we simulate a successful
+      // save. The tree-shake guard means production never enters here.
+      if (DEV_DEMO_FALLBACK) {
+        updateVerify({
+          hasNationalId: true,
+          nationalIdInput: '',
+          nationalIdSaving: false,
+          nationalIdError: null,
+        });
+        return;
+      }
+      updateVerify({
+        nationalIdError: t('merchant.session.verify.errors.backendRequired'),
+      });
+      return;
+    }
+
+    updateVerify({ nationalIdSaving: true, nationalIdError: null });
+    try {
+      await merchantSetCustomerNationalId({
+        customerId: session.verify.renterId,
+        mobile: classification.canonical,
+        nationalId: raw,
+      });
+      updateVerify({
+        hasNationalId: true,
+        nationalIdInput: '',
+        nationalIdSaving: false,
+        nationalIdError: null,
+      });
+    } catch (err) {
+      console.error('[verify] merchantSetCustomerNationalId failed', err);
+      updateVerify({
+        nationalIdSaving: false,
+        nationalIdError: t('merchant.session.verify.errors.mobileVerifyFailed'),
+      });
+    }
+  };
+
   // Interim renter-presence confirmation. Replaces the OTP send/verify
   // pair until Twilio Verify edge functions are deployed. Returns the
   // renter's safe profile fields only when the canonical mobile AND the
   // last 4 of their National ID both match server-side.
   const handleConfirmPresence = async () => {
     if (session.verify.status !== 'found') return;
+    // Block confirmation until the merchant has captured the customer's
+    // National ID. UI already hides the challenge input in that state,
+    // but this defence-in-depth guard keeps handler + view in sync.
+    if (session.verify.hasNationalId === false) return;
     // Re-classify the mobile (defense-in-depth — lookup normally catches
     // this first, but the field could be edited after lookup succeeded).
     const classification = classifyMobile(session.verify.mobile);
@@ -726,6 +836,8 @@ export default function MerchantRentalSession() {
               setMobile={(v) => {
                 // Editing the mobile invalidates a prior lookup, but keep
                 // the field stable when the user is just typing characters.
+                // Any renterId / national-id draft is dropped so the next
+                // lookup starts from a clean slate.
                 updateVerify({
                   mobile: v,
                   status:
@@ -737,12 +849,33 @@ export default function MerchantRentalSession() {
                     session.verify.status === 'looking_up'
                       ? session.verify.renter
                       : null,
+                  renterId:
+                    session.verify.status === 'looking_up'
+                      ? session.verify.renterId
+                      : null,
+                  hasNationalId:
+                    session.verify.status === 'looking_up'
+                      ? session.verify.hasNationalId
+                      : null,
+                  nationalIdInput: '',
+                  nationalIdError: null,
                   error: null,
                 });
               }}
               renter={session.verify.renter}
               challenge={session.verify.challenge}
               setChallenge={(v) => updateVerify({ challenge: v })}
+              hasNationalId={session.verify.hasNationalId}
+              nationalIdInput={session.verify.nationalIdInput}
+              setNationalIdInput={(v) =>
+                updateVerify({
+                  nationalIdInput: v.replace(/\D/g, '').slice(0, 10),
+                  nationalIdError: null,
+                })
+              }
+              nationalIdSaving={session.verify.nationalIdSaving}
+              nationalIdError={session.verify.nationalIdError}
+              onSaveNationalId={handleSaveCustomerNationalId}
               verifyError={session.verify.error}
               onLookup={handleLookupRenter}
               onConfirmPresence={handleConfirmPresence}
@@ -974,6 +1107,12 @@ function VerifyCard({
   renter,
   challenge,
   setChallenge,
+  hasNationalId,
+  nationalIdInput,
+  setNationalIdInput,
+  nationalIdSaving,
+  nationalIdError,
+  onSaveNationalId,
   verifyError,
   onLookup,
   onConfirmPresence,
@@ -989,6 +1128,12 @@ function VerifyCard({
   renter: ProfileRow | null;
   challenge: string;
   setChallenge: (v: string) => void;
+  hasNationalId: boolean | null;
+  nationalIdInput: string;
+  setNationalIdInput: (v: string) => void;
+  nationalIdSaving: boolean;
+  nationalIdError: string | null;
+  onSaveNationalId: () => void;
   verifyError: string | null;
   onLookup: () => void;
   onConfirmPresence: () => void;
@@ -1088,7 +1233,13 @@ function VerifyCard({
           {/* Pending — renter exists, verification in progress.
               By policy, renter identity is NOT shown to the merchant
               at this stage. The challenge (last 4 of National ID) is
-              what reveals the renter's profile. */}
+              what reveals the renter's profile.
+
+              When `hasNationalId === false`, the customer's profile
+              was created without a National ID (e.g. legacy sign-ups
+              from before Register captured the field). The merchant
+              must fill it in first — the challenge input is hidden
+              until the RPC succeeds. */}
           {status === 'found' && (
             <>
               <VerificationBanner macro="pending" t={t}>
@@ -1110,40 +1261,99 @@ function VerifyCard({
                   </div>
                 </div>
               </VerificationBanner>
-              <FormField
-                label={t('merchant.session.verify.idLast4Label')}
-                hint={t('merchant.session.verify.idLast4Hint')}
-              >
-                <Input
-                  inputMode="numeric"
-                  placeholder="1234"
-                  value={challenge}
-                  onChange={(e) =>
-                    setChallenge(e.target.value.replace(/\D/g, '').slice(0, 4))
-                  }
-                  maxLength={4}
-                  leading={<ShieldIcon size={14} className="text-lavender-600" />}
-                  className="num tracking-[0.4em] text-center"
-                />
-              </FormField>
-              {verifyError && (
-                <div className="rounded-xl2 bg-danger-50 ring-1 ring-danger-500/25 px-3.5 py-2.5 text-[12.5px] text-danger-700">
-                  {verifyError}
-                </div>
+
+              {hasNationalId === false ? (
+                <>
+                  <div className="rounded-xl2 bg-warn-50 ring-1 ring-warn-500/25 px-3.5 py-3">
+                    <div className="text-[12.5px] font-semibold text-warn-700 leading-tight">
+                      {t('merchant.session.verify.nationalId.missingTitle')}
+                    </div>
+                    <p className="mt-1 text-[11.5px] text-ink-600 leading-relaxed">
+                      {t('merchant.session.verify.nationalId.missingHint')}
+                    </p>
+                  </div>
+                  <FormField
+                    label={t('merchant.session.verify.nationalId.label')}
+                    error={nationalIdError ?? undefined}
+                  >
+                    <Input
+                      inputMode="numeric"
+                      placeholder={t(
+                        'merchant.session.verify.nationalId.placeholder',
+                      )}
+                      value={nationalIdInput}
+                      onChange={(e) => setNationalIdInput(e.target.value)}
+                      maxLength={10}
+                      invalid={Boolean(nationalIdError)}
+                      leading={<UserIcon size={14} className="text-lavender-600" />}
+                      className="num tracking-[0.2em]"
+                    />
+                  </FormField>
+                  <Button
+                    variant="primary"
+                    size="lg"
+                    block
+                    onClick={onSaveNationalId}
+                    loading={nationalIdSaving}
+                    disabled={
+                      nationalIdSaving ||
+                      !/^[12]\d{9}$/.test(nationalIdInput)
+                    }
+                  >
+                    {nationalIdSaving
+                      ? t('merchant.session.verify.nationalId.saving')
+                      : t('merchant.session.verify.nationalId.saveCta')}
+                  </Button>
+                </>
+              ) : (
+                <>
+                  {hasNationalId === true && (
+                    <div
+                      className="rounded-xl2 bg-success-50 ring-1 ring-success-500/25 px-3.5 py-2 text-[11.5px] text-success-700 flex items-center gap-1.5"
+                      aria-live="polite"
+                    >
+                      <BadgeCheckIcon size={12} className="shrink-0" />
+                      <span>
+                        {t('merchant.session.verify.nationalId.capturedChip')}
+                      </span>
+                    </div>
+                  )}
+                  <FormField
+                    label={t('merchant.session.verify.idLast4Label')}
+                    hint={t('merchant.session.verify.idLast4Hint')}
+                  >
+                    <Input
+                      inputMode="numeric"
+                      placeholder="1234"
+                      value={challenge}
+                      onChange={(e) =>
+                        setChallenge(e.target.value.replace(/\D/g, '').slice(0, 4))
+                      }
+                      maxLength={4}
+                      leading={<ShieldIcon size={14} className="text-lavender-600" />}
+                      className="num tracking-[0.4em] text-center"
+                    />
+                  </FormField>
+                  {verifyError && (
+                    <div className="rounded-xl2 bg-danger-50 ring-1 ring-danger-500/25 px-3.5 py-2.5 text-[12.5px] text-danger-700">
+                      {verifyError}
+                    </div>
+                  )}
+                  <Button
+                    variant="primary"
+                    size="lg"
+                    block
+                    onClick={onConfirmPresence}
+                    disabled={challenge.replace(/\D/g, '').length !== 4}
+                  >
+                    {t('merchant.session.verify.confirmCta')}
+                    <ArrowIcon
+                      size={14}
+                      className={cn('ms-1', dir === 'rtl' ? 'rotate-180' : '')}
+                    />
+                  </Button>
+                </>
               )}
-              <Button
-                variant="primary"
-                size="lg"
-                block
-                onClick={onConfirmPresence}
-                disabled={challenge.replace(/\D/g, '').length !== 4}
-              >
-                {t('merchant.session.verify.confirmCta')}
-                <ArrowIcon
-                  size={14}
-                  className={cn('ms-1', dir === 'rtl' ? 'rotate-180' : '')}
-                />
-              </Button>
             </>
           )}
 

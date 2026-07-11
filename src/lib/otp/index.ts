@@ -99,6 +99,11 @@ export async function verifyOtp(mobileInput: string, code: string): Promise<OtpV
 export type RenterExistenceCheck = {
   id: string;
   has_nafath: boolean;
+  /** True when profiles.national_id is populated. When false the
+   *  merchant session UI prompts for it before advancing to the
+   *  confirm_renter_presence step. Added by
+   *  20260502122300_merchant_national_id_write.sql. */
+  has_national_id: boolean;
 };
 
 export async function lookupRenterByMobile(
@@ -112,7 +117,16 @@ export async function lookupRenterByMobile(
   });
   if (error) throw error;
   const row = Array.isArray(data) ? data[0] : null;
-  return row ? { id: row.id, has_nafath: row.has_nafath } : null;
+  return row
+    ? {
+        id: row.id,
+        has_nafath: row.has_nafath,
+        // Legacy DB versions of the RPC won't return this column; when
+        // absent, assume the id IS present so we don't force a prompt
+        // on projects that haven't run the new migration yet.
+        has_national_id: row.has_national_id ?? true,
+      }
+    : null;
 }
 
 // Re-export role type so callers don't need a second import.

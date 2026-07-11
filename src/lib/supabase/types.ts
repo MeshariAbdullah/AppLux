@@ -407,7 +407,21 @@ export type Database = {
         Returns: Array<{
           id: string;
           has_nafath: boolean;
+          /** True when profiles.national_id is populated for the
+           *  matched customer. Added by
+           *  20260502122300_merchant_national_id_write.sql so the
+           *  merchant session UI knows whether to prompt for the
+           *  missing id before the confirm step. */
+          has_national_id: boolean;
         }>;
+      };
+      merchant_set_customer_national_id: {
+        Args: {
+          p_customer_id: string;
+          p_mobile: string;
+          p_national_id: string;
+        };
+        Returns: void;
       };
       confirm_renter_presence: {
         Args: { p_mobile: string; p_id_last4: string };

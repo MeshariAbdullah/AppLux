@@ -72,6 +72,7 @@ export {
   fetchProfileByMobile,
   fetchProfilesByIds,
   listProfiles,
+  merchantSetCustomerNationalId,
   requestAccountDeletion,
   updateProfile,
 } from './queries/profile';
