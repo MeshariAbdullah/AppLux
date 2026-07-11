@@ -28,6 +28,10 @@ export type CreateInvoiceInput = {
   lateReturnMultiplier?: number;
   notes?: string | null;
   expiresAt?: string | null;
+  /** Merchant-set rental start moment (ISO timestamptz). When null
+   *  the contract's start_date defaults to the customer's
+   *  acceptance day (legacy behaviour). */
+  startsAt?: string | null;
   items: Array<Omit<RentalInvoiceItemInsert, 'invoice_id'>>;
 };
 
@@ -69,6 +73,7 @@ export async function createInvoiceWithItems(
       status: 'issued' satisfies InvoiceStatus,
       issued_at: new Date().toISOString(),
       expires_at: input.expiresAt ?? null,
+      starts_at: input.startsAt ?? null,
       scan_token: scanToken,
       notes: input.notes ?? null,
     })

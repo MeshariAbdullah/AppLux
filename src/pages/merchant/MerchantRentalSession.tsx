@@ -122,6 +122,11 @@ type VerifyState = {
 type OperationDraft = {
   itemName: string;
   category: RentalCategoryDB;
+  /** `<input type="datetime-local">` value — local-timezone
+   *  "YYYY-MM-DDTHH:MM" (no timezone suffix). Converted to ISO
+   *  UTC when the invoice is created. Default seeded at wizard
+   *  entry to "now". Required per Phase 8f validation. */
+  startsAt: string;
   rentalDays: string;     // strings for input ergonomics; coerced on use
   dailyRate: string;
   originalItemValue: string;
@@ -168,6 +173,11 @@ const INITIAL_SESSION: SessionState = {
   operation: {
     itemName: '',
     category: 'dress',
+    // startsAt is set at wizard entry via useEffect below so the
+    // default reflects the merchant's local timezone at the exact
+    // moment they open the flow — INITIAL_SESSION is captured at
+    // module load and would otherwise be stale.
+    startsAt: '',
     rentalDays: '1',
     dailyRate: '',
     originalItemValue: '',
@@ -210,6 +220,36 @@ function readOriginalItemValue(draft: OperationDraft): number {
   return Number(draft.originalItemValue) || 0;
 }
 
+/** Local-timezone "YYYY-MM-DDTHH:MM" for <input type="datetime-local">. */
+function nowForDateTimeInput(): string {
+  const d = new Date();
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(
+    d.getHours(),
+  )}:${pad(d.getMinutes())}`;
+}
+
+/**
+ * Parse a datetime-local string ("YYYY-MM-DDTHH:MM") into a Date in
+ * the merchant's local timezone. Returns null if the value is empty
+ * or unparseable.
+ */
+function parseDateTimeLocal(value: string): Date | null {
+  if (!value) return null;
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+}
+
+/** Rental end = start + rentalDays. Returns null when start is invalid. */
+function computeRentalEnd(startsAt: string, rentalDays: string): Date | null {
+  const start = parseDateTimeLocal(startsAt);
+  if (!start) return null;
+  const days = Math.max(Number(rentalDays) || 1, 1);
+  const end = new Date(start);
+  end.setDate(end.getDate() + days);
+  return end;
+}
+
 /** Availability check against the renter's existing eligibility — NOT a
  *  new risk score. Compares remaining limit against the ORIGINAL ITEM
  *  VALUE, not the rental fee, because the eligibility hold mirrors
@@ -237,7 +277,7 @@ function deriveVerdict(
 
 export default function MerchantRentalSession() {
   const t = useT();
-  const { dir, formatCurrency } = useI18n();
+  const { dir, formatCurrency, formatDate, locale } = useI18n();
   const navigate = useNavigate();
   const supabaseAuth = useSupabaseAuth();
 
@@ -259,6 +299,21 @@ export default function MerchantRentalSession() {
     setSession((s) => ({ ...s, eligibility: { ...s.eligibility, ...patch } }));
   const updateIssue = (patch: Partial<IssueState>) =>
     setSession((s) => ({ ...s, issue: { ...s.issue, ...patch } }));
+
+  // Seed `operation.startsAt` to the merchant's local "now" once,
+  // when they first land on the wizard. Doing it in an effect
+  // (rather than in INITIAL_SESSION) means the default reflects
+  // the actual moment they open the flow, not the moment the
+  // module first loaded. Only fires when the field is empty so
+  // going back-and-forth through the wizard never clobbers a
+  // merchant-typed value.
+  useEffect(() => {
+    setSession((s) =>
+      s.operation.startsAt
+        ? s
+        : { ...s, operation: { ...s.operation, startsAt: nowForDateTimeInput() } },
+    );
+  }, []);
 
   // Pull the signed-in merchant once.
   useEffect(() => {
@@ -300,6 +355,20 @@ export default function MerchantRentalSession() {
   // ---------------- Step actions ----------------
 
   const handleStart = () => setStep('verify');
+
+  // Wizard back navigation. Preserves every field in `session` — only
+  // `session.step` moves. On the first step (`start`) the button
+  // exits the wizard entirely via the browser stack; on any other
+  // step it walks one entry back in the STEPS list. Explicit cancel
+  // remains the only mechanism that wipes the draft.
+  const handleBack = () => {
+    const idx = STEPS.indexOf(session.step);
+    if (idx <= 0) {
+      navigate(-1);
+      return;
+    }
+    setStep(STEPS[idx - 1]);
+  };
 
   const handleLookupRenter = async () => {
     updateVerify({ error: null });
@@ -546,6 +615,8 @@ export default function MerchantRentalSession() {
           status: 'issued',
           issued_at: now,
           expires_at: null,
+          starts_at:
+            parseDateTimeLocal(session.operation.startsAt)?.toISOString() ?? null,
           scan_token: token,
           notes: null,
           created_at: now,
@@ -585,6 +656,13 @@ export default function MerchantRentalSession() {
         originalItemValue: itemValue,
         lightDamageFraction,
         lateReturnMultiplier,
+        // Merchant-set rental start moment. `parseDateTimeLocal`
+        // interprets the datetime-local input in the browser's
+        // (i.e. the merchant's) timezone; `.toISOString()` normalises
+        // to UTC for storage. The DB column is timestamptz, so the
+        // instant is preserved regardless of viewer timezone.
+        startsAt:
+          parseDateTimeLocal(session.operation.startsAt)?.toISOString() ?? null,
         items: [
           {
             position: 0,
@@ -616,7 +694,22 @@ export default function MerchantRentalSession() {
 
   return (
     <>
-      <Header title={t('merchant.session.title')} showBack />
+      <Header
+        title={t('merchant.session.title')}
+        leading={
+          <button
+            type="button"
+            onClick={handleBack}
+            aria-label={t('merchant.session.back')}
+            className="h-10 w-10 grid place-items-center rounded-full bg-white text-ink-800 hairline hover:bg-canvas-100 transition-[background-color,transform] duration-200 ease-plush active:scale-95"
+          >
+            <ArrowIcon
+              size={18}
+              className={cn(dir === 'rtl' ? '' : 'rotate-180')}
+            />
+          </button>
+        }
+      />
       <Screen padded={false} className="bg-canvas">
         <div className="px-5 pt-5 pb-10 space-y-5">
           <SessionEyebrow stepIndex={stepIndex} t={t} />
@@ -670,6 +763,8 @@ export default function MerchantRentalSession() {
               rentalAmount={rentalAmount}
               originalItemValue={originalItemValue}
               formatCurrency={formatCurrency}
+              formatDate={formatDate}
+              locale={locale}
               active={session.step === 'operation'}
               locked={
                 session.step === 'eligibility' ||
@@ -1177,6 +1272,8 @@ function OperationCard({
   rentalAmount,
   originalItemValue,
   formatCurrency,
+  formatDate,
+  locale,
   active,
   locked,
   loading,
@@ -1190,12 +1287,17 @@ function OperationCard({
   rentalAmount: number;
   originalItemValue: number;
   formatCurrency: (n: number) => string;
+  formatDate: (v: string) => string;
+  locale: 'ar' | 'en';
   active: boolean;
   locked: boolean;
   loading: boolean;
   error: string | null;
   onContinue: () => void;
 }) {
+  // Computed end. Recomputes every render (cheap) — no memo needed.
+  const rentalEnd = computeRentalEnd(operation.startsAt, operation.rentalDays);
+  const startInvalid = !parseDateTimeLocal(operation.startsAt);
   return (
     <StepShell
       number={2}
@@ -1217,6 +1319,13 @@ function OperationCard({
               .replace('{days}', String(Math.max(Number(operation.rentalDays) || 1, 1)))
               .replace('{rate}', formatCurrency(Number(operation.dailyRate) || 0))}
           </div>
+          {parseDateTimeLocal(operation.startsAt) && rentalEnd && (
+            <div className="text-[11.5px] text-ink-500 num">
+              {formatDate(parseDateTimeLocal(operation.startsAt)!.toISOString())}
+              {' → '}
+              {formatDate(rentalEnd.toISOString())}
+            </div>
+          )}
           <div className="text-[11.5px] text-ink-500 num pt-1">
             {t('merchant.session.operation.itemValueSummary').replace(
               '{value}',
@@ -1235,6 +1344,41 @@ function OperationCard({
               placeholder={t('merchant.session.operation.itemPlaceholder')}
             />
           </FormField>
+
+          <FormField
+            label={t('merchant.session.operation.startsAtLabel')}
+            required
+            hint={
+              startInvalid
+                ? t('merchant.session.operation.startsAtRequired')
+                : t('merchant.session.operation.startsAtHint')
+            }
+            error={startInvalid ? t('merchant.session.operation.startsAtRequired') : undefined}
+          >
+            <Input
+              type="datetime-local"
+              value={operation.startsAt}
+              onChange={(e) => setOperation({ startsAt: e.target.value })}
+              className="num"
+            />
+          </FormField>
+
+          {rentalEnd && (
+            <div className="rounded-xl2 bg-canvas-100 ring-1 ring-canvas-200 px-4 py-3">
+              <div className="text-[10px] font-semibold uppercase tracking-[0.12em] text-ink-500">
+                {t('merchant.session.operation.endsAtLabel')}
+              </div>
+              <div className="mt-0.5 text-[14px] font-semibold num text-ink-900 leading-tight">
+                {rentalEnd.toLocaleString(locale === 'ar' ? 'ar-SA' : 'en-GB', {
+                  dateStyle: 'medium',
+                  timeStyle: 'short',
+                })}
+              </div>
+              <div className="mt-1 text-[10.5px] text-ink-400">
+                {t('merchant.session.operation.endsAtHint')}
+              </div>
+            </div>
+          )}
 
           <div className="grid grid-cols-2 gap-3">
             <FormField label={t('merchant.session.operation.categoryLabel')} required>
@@ -1343,7 +1487,11 @@ function OperationCard({
               !operation.itemName.trim() ||
               !(Number(operation.dailyRate) > 0) ||
               !(Number(operation.rentalDays) >= 1) ||
-              !(Number(operation.originalItemValue) > 0)
+              !(Number(operation.originalItemValue) > 0) ||
+              startInvalid ||
+              !rentalEnd ||
+              (rentalEnd?.getTime() ?? 0) <=
+                (parseDateTimeLocal(operation.startsAt)?.getTime() ?? 0)
             }
           >
             {t('merchant.session.operation.continueCta')}
@@ -1560,6 +1708,7 @@ function ContractCard({
       status: 'issued',
       issued_at: new Date().toISOString(),
       expires_at: null,
+      starts_at: null,
       scan_token: null,
       notes: null,
       created_at: new Date().toISOString(),

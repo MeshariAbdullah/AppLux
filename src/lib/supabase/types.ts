@@ -162,6 +162,12 @@ export type RentalInvoiceRow = {
   status: InvoiceStatus;
   issued_at: string | null;
   expires_at: string | null;
+  /** Merchant-set rental start moment (timestamptz). When non-null,
+   *  accept_rental_invoice uses `starts_at::date` as the contract's
+   *  `start_date`. Null preserves the legacy behaviour (contract
+   *  starts on the customer's acceptance day). See
+   *  20260502122200_add_rental_invoice_starts_at.sql. */
+  starts_at: string | null;
   scan_token: string | null;
   notes: string | null;
   created_at: string;
