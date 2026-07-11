@@ -85,14 +85,24 @@ function invoiceRefFromContract(contractRef: string): string {
   return `INV-${contractRef.replace('CN-', '')}-LATEST`;
 }
 
+// Business rule (see damage/non-return claim policy):
+//   * partial      → 30% of the item's ORIGINAL VALUE (repairable
+//                    damage; the merchant can override this default)
+//   * total        → the item's ORIGINAL VALUE (irreparable damage)
+//   * non-return   → the item's ORIGINAL VALUE (customer kept the item)
+// Rental fee is DELIBERATELY not used for any of these — the item's
+// underlying value is the correct anchor per the promissory note
+// principal + eligibility hold logic (see 20260502120500).
+// `_liabilityTotal` is kept in the signature purely to preserve the
+// existing call site's shape; a future cleanup can drop it once
+// every caller is updated.
 function suggestedClaim(
   severity: MerchantDamageSeverity,
   itemValue: number,
-  liabilityTotal: number,
+  _liabilityTotal: number,
 ): number {
   if (severity === 'partial') return Math.round(itemValue * 0.3);
-  if (severity === 'total') return itemValue;
-  return liabilityTotal || itemValue;
+  return itemValue; // total AND non-return both anchor on item value
 }
 
 export default function MerchantDamageNew() {
@@ -145,7 +155,15 @@ export default function MerchantDamageNew() {
           customerMobile: c?.mobile ?? '',
           headlineItem: `Rental ${contract.contract_number}`,
           category: m?.primary_category,
-          itemValue: Number(contract.total_amount),
+          // Damage claim math is anchored on the item's ORIGINAL
+          // VALUE — never the rental fee. `original_item_value`
+          // was added by 20260502120500 and is mirrored onto the
+          // contract row at signing. If a legacy contract has it
+          // at 0 (default fallback), fall through to total_amount
+          // so demo scenarios don't render a zero cap; the primary
+          // path is the item value.
+          itemValue:
+            Number(contract.original_item_value) || Number(contract.total_amount),
         }),
       );
     })()

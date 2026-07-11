@@ -1521,7 +1521,7 @@
         "claim": {
           "title": "Claim amount",
           "label": "Amount requested",
-          "hint": "Sets the binding amount to be collected from the customer.",
+          "hint": "Based on the item's original value — not the rental fee. Sets the binding amount to be collected from the customer.",
           "suggested": "Suggested: {amount}",
           "cap": "Capped at the original item value ({amount}). Total damage equals the item value; partial damage must be lower.",
           "overCap": "Claim can't exceed the original item value ({amount}). Lower the amount or change severity to total."
