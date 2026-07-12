@@ -24,6 +24,7 @@ import {
   ShieldIcon,
   SignatureIcon,
 } from '@/components/icons';
+import { useSensitiveFlow } from '@/lib/session/flowGuard';
 import { useI18n, useT } from '@/lib/i18n';
 import { useStore } from '@/lib/store';
 import {
@@ -45,6 +46,10 @@ export default function Review() {
   const { locale } = useI18n();
   const { token } = useParams();
   const navigate = useNavigate();
+  // Session hardening: the whole contract-review/signing page is a
+  // sensitive flow — never idle-logout a customer while they read or
+  // sign the contract (see src/lib/session/flowGuard.ts).
+  useSensitiveFlow(true);
   const { scans, stores, session, approvePackage } = useStore();
   const { configured } = useSupabaseAuth();
   const demoPkg = useMemo(

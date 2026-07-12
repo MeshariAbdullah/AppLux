@@ -30,6 +30,7 @@ import {
 import { cn } from '@/lib/cn';
 import { getInitials } from '@/lib/format/initials';
 import { isRentalFinalized } from '@/lib/format/rentalFinalization';
+import { useSensitiveFlow } from '@/lib/session/flowGuard';
 import { useI18n, useT } from '@/lib/i18n';
 import { useStore } from '@/lib/store';
 import {
@@ -190,6 +191,9 @@ export default function MerchantDamageNew() {
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
+  // Session hardening: never idle-logout while the damage-case create
+  // (+ evidence upload) is in flight (see src/lib/session/flowGuard.ts).
+  useSensitiveFlow(submitting);
 
   if (!rental) {
     if (resolving) {

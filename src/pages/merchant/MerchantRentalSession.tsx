@@ -39,6 +39,7 @@ import {
 } from '@/lib/mobile';
 import { MerchantStatusStrip } from '@/components/merchant/MerchantStatusStrip';
 import { buildContractFromTemplate } from '@/lib/contractTemplate';
+import { useSensitiveFlow } from '@/lib/session/flowGuard';
 import { cn } from '@/lib/cn';
 
 // =====================================================================
@@ -308,6 +309,11 @@ export default function MerchantRentalSession() {
   const supabaseAuth = useSupabaseAuth();
 
   const [session, setSession] = useState<SessionState>(INITIAL_SESSION);
+  // Session hardening: an in-store rental session past the start step
+  // means a customer is standing at the counter — never idle-logout
+  // mid-wizard (see src/lib/session/flowGuard.ts). Wizard state is
+  // in-memory only, so a forced logout would discard the whole draft.
+  useSensitiveFlow(session.step !== 'start');
   const [merchantId, setMerchantId] = useState<string | null>(null);
   const [merchantPrimaryCategory, setMerchantPrimaryCategory] =
     useState<RentalCategoryDB | null>(null);

@@ -28,6 +28,7 @@ import {
   UsersIcon,
 } from '@/components/icons';
 import { cn } from '@/lib/cn';
+import { useSensitiveFlow } from '@/lib/session/flowGuard';
 import { useI18n, useT } from '@/lib/i18n';
 import { useStore } from '@/lib/store';
 import { SEED_SCANS } from '@/lib/data';
@@ -173,6 +174,9 @@ export default function MerchantInvoiceNew() {
   const supabaseAuth = useSupabaseAuth();
   const [submitting, setSubmitting] = useState(false);
   const [submitWarning, setSubmitWarning] = useState<string | null>(null);
+  // Session hardening: never idle-logout while the invoice create RPC
+  // is in flight (see src/lib/session/flowGuard.ts).
+  useSensitiveFlow(submitting);
   const [values, setValues] = useState<Draft>(() => ({
     ...emptyDraft,
     clauses: defaultClauses(locale),

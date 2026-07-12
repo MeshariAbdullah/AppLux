@@ -1,5 +1,9 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import type { Database } from './types';
+import {
+  AUTH_STORAGE_KEY,
+  migrateLegacyAuthStorage,
+} from '@/lib/session/storage';
 
 // Vite injects these at build time. Either both are present (real backend)
 // or both are missing (demo mode — fall back to localStorage store).
@@ -41,12 +45,16 @@ export const demoMode: boolean = isDemoMode();
 let client: SupabaseClient<Database> | null = null;
 
 if (supabaseConfigured) {
+  // Brand rename: sessions used to live under 'applux.auth'. Move any
+  // existing session to 'lend.auth' BEFORE the client is created so
+  // currently signed-in users survive the key change. Idempotent.
+  migrateLegacyAuthStorage();
   client = createClient<Database>(url!, anonKey!, {
     auth: {
       persistSession: true,
       autoRefreshToken: true,
       detectSessionInUrl: true,
-      storageKey: 'applux.auth',
+      storageKey: AUTH_STORAGE_KEY,
     },
   });
 } else if (import.meta.env.DEV) {

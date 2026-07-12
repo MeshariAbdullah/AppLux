@@ -3,6 +3,8 @@ import {
   isMisconfiguredProduction,
   ProductionConfigError,
 } from '@/components/auth/ProductionConfigGuard';
+import { OfflineBanner } from '@/components/system/OfflineBanner';
+import { SessionTimeoutManager } from '@/components/system/SessionTimeoutManager';
 import { AppRoutes } from '@/routes';
 import { isDemoMode, supabaseConfigured } from '@/lib/supabase';
 
@@ -24,6 +26,11 @@ export default function App() {
   return (
     <MobileShell>
       <AppRoutes />
+      {/* Phase 1 session hardening — app-wide, render-null when idle-
+          healthy. Mounted outside AppRoutes so the timers and the
+          offline banner survive every navigation. */}
+      <SessionTimeoutManager />
+      <OfflineBanner />
     </MobileShell>
   );
 }

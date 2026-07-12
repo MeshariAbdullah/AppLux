@@ -1,5 +1,6 @@
 import type { Session, User } from '@supabase/supabase-js';
 import { requireSupabase } from './client';
+import { clearAppStorage } from '@/lib/session/storage';
 
 export type SignUpInput = {
   email: string;
@@ -53,10 +54,35 @@ export async function signInWithPassword({
   return { user: data.user, session: data.session };
 }
 
+/**
+ * Phase 1 logout hardening. Two guarantees callers can rely on:
+ *
+ *   1. The LOCAL session always dies. When the global sign-out (which
+ *      revokes the refresh token server-side) fails — offline, Supabase
+ *      hiccup — we fall back to a local-scope sign-out instead of
+ *      leaving the app authenticated. This function no longer throws
+ *      on network failure.
+ *   2. Storage is swept. Every app-owned localStorage key (`applux.*`,
+ *      `lend.*`, locale preserved) is removed, so no token, demo
+ *      profile, or session anchor survives a logout.
+ */
 export async function signOut(): Promise<void> {
   const sb = requireSupabase();
-  const { error } = await sb.auth.signOut();
-  if (error) throw error;
+  try {
+    const { error } = await sb.auth.signOut();
+    if (error) throw error;
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.warn('[lend] global sign-out failed — falling back to local sign-out', err);
+    try {
+      await sb.auth.signOut({ scope: 'local' });
+    } catch {
+      // Storage-level failure — the sweep below still clears the
+      // persisted session, which is what actually logs the app out.
+    }
+  } finally {
+    clearAppStorage();
+  }
 }
 
 /**

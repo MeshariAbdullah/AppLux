@@ -8,6 +8,7 @@ import {
 } from '@/components/icons';
 import { useI18n, useT } from '@/lib/i18n';
 import { cn } from '@/lib/cn';
+import { useSensitiveFlow } from '@/lib/session/flowGuard';
 import {
   recordNafathSigning,
   recordRentalPayment,
@@ -90,6 +91,11 @@ export function PaymentSimulationSheet({
   const navigate = useNavigate();
   const { configured } = useSupabaseAuth();
   const [phase, setPhase] = useState<Phase>('pay');
+  // Session hardening: the payment walkthrough drives the RPC chain
+  // (record_rental_payment → record_nafath_signing →
+  // verify_and_activate_rental) — never idle-logout while it's open
+  // (see src/lib/session/flowGuard.ts).
+  useSensitiveFlow(open);
   // Note id created by record_rental_payment in phase 'pay'.
   // Carried through phases 'nafath' (signing) and 'verify' (activation).
   const [noteId, setNoteId] = useState<string | null>(null);

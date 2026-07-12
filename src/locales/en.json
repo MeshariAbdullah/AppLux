@@ -40,6 +40,27 @@
     "skip": "Skip",
     "clear": "Clear"
   },
+  "session": {
+    "timeout": {
+      "warningTitle": "Are you still there?",
+      "warningBody": "To protect your account, you'll be signed out shortly unless you choose to stay.",
+      "warningCountdown": "Signing out in {seconds} seconds",
+      "stayCta": "Stay signed in",
+      "signOutCta": "Sign out now",
+      "signedOut": {
+        "idleTitle": "Signed out due to inactivity",
+        "idleBody": "You were signed out automatically after a period of inactivity to keep your account safe. Sign in again to continue.",
+        "absoluteTitle": "Session ended",
+        "absoluteBody": "Your session reached its maximum duration and was closed to protect your account. Sign in again to continue.",
+        "expiredTitle": "Session expired",
+        "expiredBody": "Your session is no longer valid. Sign in again to continue.",
+        "dismissCta": "OK"
+      }
+    },
+    "offline": {
+      "banner": "No internet connection — some actions are unavailable"
+    }
+  },
   "welcome": {
     "eyebrow": "Lend",
     "brandLatin": "LEND",

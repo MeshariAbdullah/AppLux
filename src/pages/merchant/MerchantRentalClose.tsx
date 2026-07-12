@@ -25,6 +25,7 @@ import {
 } from '@/components/icons';
 import { getInitials } from '@/lib/format/initials';
 import { isRentalFinalized } from '@/lib/format/rentalFinalization';
+import { useSensitiveFlow } from '@/lib/session/flowGuard';
 import { useI18n, useT } from '@/lib/i18n';
 import { useStore } from '@/lib/store';
 import {
@@ -51,6 +52,9 @@ export default function MerchantRentalClose() {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [closeError, setCloseError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  // Session hardening: never idle-logout while the close RPC is
+  // in flight (see src/lib/session/flowGuard.ts).
+  useSensitiveFlow(busy);
 
   const demoRental = useMemo(
     () => merchantRentals.find((r) => r.id === id),

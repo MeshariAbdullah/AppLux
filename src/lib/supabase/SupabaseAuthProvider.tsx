@@ -25,6 +25,7 @@ import {
   type SignUpInput,
 } from './auth';
 import { withTimeout } from '@/lib/withTimeout';
+import { clearAppStorage } from '@/lib/session/storage';
 
 // =====================================================================
 // Lend auth provider — single source of truth for: auth session,
@@ -253,7 +254,7 @@ function ConfiguredProvider({ children }: { children: ReactNode }) {
       }
     });
 
-    const { data: sub } = supabase.auth.onAuthStateChange((_event, s) => {
+    const { data: sub } = supabase.auth.onAuthStateChange((event, s) => {
       setSession(s);
       if (s?.user) {
         startUserContextLoad(s.user.id);
@@ -266,6 +267,12 @@ function ConfiguredProvider({ children }: { children: ReactNode }) {
         setEligibility(null);
         setEligibilityLoading(false);
         setStatus('anonymous');
+        // Belt-and-braces storage sweep for sign-outs that don't route
+        // through auth.ts signOut() — e.g. supabase-js discarding an
+        // invalid refresh token on its own. Scoped to SIGNED_OUT so an
+        // anonymous boot (INITIAL_SESSION with no user) doesn't wipe
+        // harmless preferences like lend.welcomeAudience.
+        if (event === 'SIGNED_OUT') clearAppStorage();
       }
     });
 
