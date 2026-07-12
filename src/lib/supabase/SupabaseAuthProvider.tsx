@@ -26,6 +26,7 @@ import {
 } from './auth';
 import { withTimeout } from '@/lib/withTimeout';
 import { clearAppStorage } from '@/lib/session/storage';
+import { cacheClearAll } from '@/lib/cache/memoryCache';
 
 // =====================================================================
 // Lend auth provider — single source of truth for: auth session,
@@ -272,7 +273,12 @@ function ConfiguredProvider({ children }: { children: ReactNode }) {
         // invalid refresh token on its own. Scoped to SIGNED_OUT so an
         // anonymous boot (INITIAL_SESSION with no user) doesn't wipe
         // harmless preferences like lend.welcomeAudience.
-        if (event === 'SIGNED_OUT') clearAppStorage();
+        // The memory cache is wiped alongside so no cached rows can
+        // outlive their user (Phase 3A).
+        if (event === 'SIGNED_OUT') {
+          clearAppStorage();
+          cacheClearAll();
+        }
       }
     });
 

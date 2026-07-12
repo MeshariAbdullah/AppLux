@@ -1,6 +1,7 @@
 import type { Session, User } from '@supabase/supabase-js';
 import { requireSupabase } from './client';
 import { clearAppStorage } from '@/lib/session/storage';
+import { cacheClearAll } from '@/lib/cache/memoryCache';
 
 export type SignUpInput = {
   email: string;
@@ -82,6 +83,12 @@ export async function signOut(): Promise<void> {
     }
   } finally {
     clearAppStorage();
+    // Memory cache dies with the session (Phase 3A). Runs here as well
+    // as on the SIGNED_OUT event so a failed network sign-out (which
+    // may not emit the event) still wipes cached rows. This covers the
+    // session-timeout sign-out too — useSessionTimeout routes through
+    // this function.
+    cacheClearAll();
   }
 }
 
