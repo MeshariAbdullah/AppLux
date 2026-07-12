@@ -68,6 +68,20 @@ export default function MerchantRentals() {
   // the list settles on empty exactly like the old .catch(() => null).
   const myMerchant = merchantError ? null : myMerchantData;
 
+  // Phase 4A: the contracts list reads through the memory cache —
+  // 2-min TTL + focus refetch, SAME key MerchantHome uses, and
+  // invalidated by close/damage mutations so returning here after
+  // closing a rental shows the closed state immediately. Errors map
+  // to an empty list like the old .catch(() => []).
+  const { data: contractRowsData, error: contractsError } = useCachedQuery(
+    configured && userId && myMerchant
+      ? cacheKeys.merchantContracts(userId)
+      : null,
+    () => listMerchantContracts(myMerchant!.id),
+    { ttlMs: CACHE_TTL.merchantLists, refetchOnFocus: true },
+  );
+  const contractRows = contractsError ? [] : contractRowsData;
+
   useEffect(() => {
     if (!configured || !userId) {
       setLiveRentals(null);
@@ -83,10 +97,13 @@ export default function MerchantRentals() {
       setLiveLoading(false);
       return;
     }
+    if (contractRows === undefined) {
+      setLiveLoading(true); // contracts list still resolving
+      return;
+    }
     setLiveLoading(true);
     let cancelled = false;
     (async () => {
-      const contractRows = await listMerchantContracts(myMerchant.id).catch(() => []);
       if (cancelled) return;
       const profileMap = await fetchProfilesByIds(
         contractRows.map((c) => c.customer_user_id),
@@ -112,7 +129,7 @@ export default function MerchantRentals() {
     return () => {
       cancelled = true;
     };
-  }, [configured, userId, myMerchant]);
+  }, [configured, userId, myMerchant, contractRows]);
 
   const merchantRentals = liveRentals ?? demoRentals;
 

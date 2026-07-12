@@ -76,6 +76,11 @@ export const cacheKeys = {
   // ---- single-entity ----
   contract: (contractId: string) => `entity:contract:${contractId}`,
   noteByContract: (contractId: string) => `entity:note:byContract:${contractId}`,
+  /** Invoice row + items — consumed by MerchantRentalContract's
+   *  template regeneration (immutable post-issuance; 1-min rentalBundle
+   *  TTL is over-conservative there by design). */
+  invoice: (invoiceId: string) => `entity:invoice:${invoiceId}`,
+  invoiceItems: (invoiceId: string) => `entity:invoiceItems:${invoiceId}`,
   eligibility: (uid: string) => `eligibility:${uid}`,
 
   // ---- admin-scoped (memory only — rows include PII; NEVER persist) ----

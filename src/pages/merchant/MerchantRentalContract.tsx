@@ -17,6 +17,8 @@ import {
   InfoIcon,
   ShieldIcon,
 } from '@/components/icons';
+import { CACHE_TTL, cacheKeys } from '@/lib/cache/keys';
+import { cachedFetch } from '@/lib/cache/memoryCache';
 import { getInitials } from '@/lib/format/initials';
 import { useI18n, useT } from '@/lib/i18n';
 import { useStore } from '@/lib/store';
@@ -89,17 +91,41 @@ export default function MerchantRentalContract() {
     setLiveRentalDays(null);
     setResolving(true);
     (async () => {
-      const contract = await fetchContractById(id).catch(() => null);
+      // Phase 4A: cached bundle reads (see MerchantRentalDetails note).
+      // Invoice + items are immutable post-issuance, so the 1-min TTL
+      // is over-conservative there by design. Customer profile stays
+      // live (full row includes national_id).
+      const contract = await cachedFetch(
+        cacheKeys.contract(id),
+        CACHE_TTL.rentalBundle,
+        () => fetchContractById(id),
+      ).catch(() => null);
       if (cancelled || !contract) return;
       const [m, c, note, invoice] = await Promise.all([
-        fetchMerchant(contract.merchant_id).catch(() => null),
+        cachedFetch(
+          cacheKeys.merchantEntity(contract.merchant_id),
+          CACHE_TTL.merchantEntity,
+          () => fetchMerchant(contract.merchant_id),
+        ).catch(() => null),
         fetchProfile(contract.customer_user_id).catch(() => null),
-        fetchNoteByContractId(contract.id).catch(() => null),
-        fetchInvoiceById(contract.invoice_id).catch(() => null),
+        cachedFetch(
+          cacheKeys.noteByContract(contract.id),
+          CACHE_TTL.rentalBundle,
+          () => fetchNoteByContractId(contract.id),
+        ).catch(() => null),
+        cachedFetch(
+          cacheKeys.invoice(contract.invoice_id),
+          CACHE_TTL.rentalBundle,
+          () => fetchInvoiceById(contract.invoice_id),
+        ).catch(() => null),
       ]);
       if (cancelled) return;
       const items = invoice
-        ? await listInvoiceItems(invoice.id).catch(() => [])
+        ? await cachedFetch(
+            cacheKeys.invoiceItems(invoice.id),
+            CACHE_TTL.rentalBundle,
+            () => listInvoiceItems(invoice.id),
+          ).catch(() => [])
         : [];
       if (cancelled) return;
       const customerName = c?.full_name ?? '—';

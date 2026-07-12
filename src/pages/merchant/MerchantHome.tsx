@@ -109,40 +109,57 @@ export default function MerchantHome() {
   }, [merchantError]);
 
   const [liveRentals, setLiveRentals] = useState<MerchantRental[] | null>(null);
-  const [livePendingInvoices, setLivePendingInvoices] = useState<number | null>(null);
-  // Phase 9: in live mode the dashboard must render a skeleton until
-  // the second-stage fetch (rentals + pending invoices) resolves —
-  // otherwise the seeded demo rentals would flash before real data.
-  const [dataLoading, setDataLoading] = useState(false);
 
+  // Stage 2 (Phase 4A): both merchant lists read through the memory
+  // cache — 2-min TTL + focus refetch. The keys are invalidated by
+  // invoice creation (invoices) and close/damage (contracts), so
+  // returning to the dashboard after those actions shows fresh counts
+  // immediately. MerchantRentals shares merchant:{uid}:contracts.
+  // Errors map to empty lists, matching the previous .catch(() => []).
+  const merchantId = liveMerchant?.id ?? null;
+  const { data: contractRowsData, error: contractsError } = useCachedQuery(
+    userId && merchantId ? cacheKeys.merchantContracts(userId) : null,
+    () =>
+      withTimeout(
+        listMerchantContracts(merchantId!),
+        MERCHANT_DATA_TIMEOUT_MS,
+        'listMerchantContracts',
+      ),
+    { ttlMs: CACHE_TTL.merchantLists, refetchOnFocus: true },
+  );
+  const { data: issuedInvoicesData, error: invoicesError } = useCachedQuery(
+    userId && merchantId ? cacheKeys.merchantInvoices(userId, 'issued') : null,
+    () =>
+      withTimeout(
+        listMerchantInvoices(merchantId!, { status: 'issued' }),
+        MERCHANT_DATA_TIMEOUT_MS,
+        'listMerchantInvoices',
+      ),
+    { ttlMs: CACHE_TTL.merchantLists, refetchOnFocus: true },
+  );
   useEffect(() => {
-    if (!supabaseAuth.configured) return;
-    if (!liveMerchant) return;
+    if (contractsError) {
+      // eslint-disable-next-line no-console
+      console.error('[lend] listMerchantContracts failed', contractsError);
+    }
+    if (invoicesError) {
+      // eslint-disable-next-line no-console
+      console.error('[lend] listMerchantInvoices failed', invoicesError);
+    }
+  }, [contractsError, invoicesError]);
+  const contractRows = contractsError ? [] : contractRowsData;
+  const livePendingInvoices = invoicesError
+    ? 0
+    : (issuedInvoicesData?.length ?? null);
+
+  // Stage 3: customer display names. DELIBERATELY UNCACHED — the
+  // profile rows include national_id (Phase 3B sensitivity ruling);
+  // one live batch query per dashboard load is the accepted cost.
+  useEffect(() => {
+    if (!supabaseAuth.configured || !liveMerchant) return;
+    if (contractRows === undefined) return; // contracts list still resolving
     let cancelled = false;
-    setDataLoading(true);
     (async () => {
-      const [contractRows, pendingInvoices] = await Promise.all([
-        withTimeout(
-          listMerchantContracts(liveMerchant.id),
-          MERCHANT_DATA_TIMEOUT_MS,
-          'listMerchantContracts',
-        ).catch((err) => {
-          // eslint-disable-next-line no-console
-          console.error('[lend] listMerchantContracts failed', err);
-          return [];
-        }),
-        withTimeout(
-          listMerchantInvoices(liveMerchant.id, { status: 'issued' }),
-          MERCHANT_DATA_TIMEOUT_MS,
-          'listMerchantInvoices',
-        ).catch((err) => {
-          // eslint-disable-next-line no-console
-          console.error('[lend] listMerchantInvoices failed', err);
-          return [];
-        }),
-      ]);
-      if (cancelled) return;
-      setLivePendingInvoices(pendingInvoices.length);
       const profileMap = await withTimeout(
         fetchProfilesByIds(contractRows.map((c) => c.customer_user_id)),
         MERCHANT_DATA_TIMEOUT_MS,
@@ -168,12 +185,21 @@ export default function MerchantHome() {
           });
         }),
       );
-      if (!cancelled) setDataLoading(false);
     })();
     return () => {
       cancelled = true;
     };
-  }, [supabaseAuth.configured, liveMerchant]);
+  }, [supabaseAuth.configured, liveMerchant, contractRows]);
+
+  // Phase 9 skeleton gate, now derived: lists resolving OR the first
+  // profile join not yet landed (liveRentals stays populated across
+  // focus revalidations, so refreshes never flash the skeleton).
+  const dataLoading =
+    supabaseAuth.configured && Boolean(liveMerchant)
+      ? contractRows === undefined ||
+        livePendingInvoices === null ||
+        liveRentals === null
+      : false;
 
   const merchantRentals = liveRentals ?? demoRentals;
 

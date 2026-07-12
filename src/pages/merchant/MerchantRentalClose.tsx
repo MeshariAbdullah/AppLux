@@ -23,6 +23,8 @@ import {
   SignatureIcon,
   UsersIcon,
 } from '@/components/icons';
+import { CACHE_TTL, cacheKeys } from '@/lib/cache/keys';
+import { cachedFetch, cacheInvalidate } from '@/lib/cache/memoryCache';
 import { translateError } from '@/lib/errors';
 import { getInitials } from '@/lib/format/initials';
 import { isRentalFinalized } from '@/lib/format/rentalFinalization';
@@ -46,7 +48,7 @@ export default function MerchantRentalClose() {
   const navigate = useNavigate();
   const { id } = useParams();
   const { merchantRentals, closeRental } = useStore();
-  const { configured } = useSupabaseAuth();
+  const { configured, session } = useSupabaseAuth();
   const [notes, setNotes] = useState('');
   const [confirm, setConfirm] = useState(false);
   const [submitted, setSubmitted] = useState(false);
@@ -76,12 +78,26 @@ export default function MerchantRentalClose() {
     setLiveRental(null);
     setResolving(true);
     (async () => {
-      const contract = await fetchContractById(id).catch(() => null);
+      // Phase 4A: cached bundle reads (see MerchantRentalDetails note);
+      // customer profile stays live.
+      const contract = await cachedFetch(
+        cacheKeys.contract(id),
+        CACHE_TTL.rentalBundle,
+        () => fetchContractById(id),
+      ).catch(() => null);
       if (cancelled || !contract) return;
       const [m, c, note] = await Promise.all([
-        fetchMerchant(contract.merchant_id).catch(() => null),
+        cachedFetch(
+          cacheKeys.merchantEntity(contract.merchant_id),
+          CACHE_TTL.merchantEntity,
+          () => fetchMerchant(contract.merchant_id),
+        ).catch(() => null),
         fetchProfile(contract.customer_user_id).catch(() => null),
-        fetchNoteByContractId(contract.id).catch(() => null),
+        cachedFetch(
+          cacheKeys.noteByContract(contract.id),
+          CACHE_TTL.rentalBundle,
+          () => fetchNoteByContractId(contract.id),
+        ).catch(() => null),
       ]);
       if (cancelled) return;
       const customerName = c?.full_name ?? '—';
@@ -173,6 +189,16 @@ export default function MerchantRentalClose() {
         // damage_cases — that path raises a case AND closes the
         // contract in one server-side transaction.
         await closeRentalContract(rental.id);
+        // Phase 4A invalidation — IMMEDIATELY after mutation success,
+        // before any navigation: drop the cached contract, its note
+        // (settled server-side), and the merchant contracts list, so
+        // the rentals list and every sibling detail page show the
+        // closed state on next render with zero manual reload. The
+        // 2c92172 finalized-rental guards then read fresh state.
+        cacheInvalidate(cacheKeys.contract(rental.id));
+        cacheInvalidate(cacheKeys.noteByContract(rental.id));
+        const uid = session?.user?.id;
+        if (uid) cacheInvalidate(cacheKeys.merchantContracts(uid));
       } else {
         // Demo mode only — mutate the seeded store so demo screens
         // reflect the closure. In live mode this call was a no-op on

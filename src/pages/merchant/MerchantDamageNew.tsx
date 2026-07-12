@@ -28,6 +28,8 @@ import {
   UsersIcon,
 } from '@/components/icons';
 import { cn } from '@/lib/cn';
+import { CACHE_TTL, cacheKeys } from '@/lib/cache/keys';
+import { cachedFetch, cacheInvalidate } from '@/lib/cache/memoryCache';
 import { translateError } from '@/lib/errors';
 import { getInitials } from '@/lib/format/initials';
 import { isRentalFinalized } from '@/lib/format/rentalFinalization';
@@ -142,10 +144,21 @@ export default function MerchantDamageNew() {
     setLiveRental(null);
     setResolving(true);
     (async () => {
-      const contract = await fetchContractById(id).catch(() => null);
+      // Phase 4A: cached bundle reads (see MerchantRentalDetails note);
+      // customer profile stays live. The SUBMIT-path contract re-read
+      // further down stays live too.
+      const contract = await cachedFetch(
+        cacheKeys.contract(id),
+        CACHE_TTL.rentalBundle,
+        () => fetchContractById(id),
+      ).catch(() => null);
       if (cancelled || !contract) return;
       const [m, c] = await Promise.all([
-        fetchMerchant(contract.merchant_id).catch(() => null),
+        cachedFetch(
+          cacheKeys.merchantEntity(contract.merchant_id),
+          CACHE_TTL.merchantEntity,
+          () => fetchMerchant(contract.merchant_id),
+        ).catch(() => null),
         fetchProfile(contract.customer_user_id).catch(() => null),
       ]);
       if (cancelled) return;
@@ -312,6 +325,9 @@ export default function MerchantDamageNew() {
     // docs/mvp-phase5-operational.md (one-time Supabase dashboard task).
     if (supabaseAuth.configured) {
       try {
+        // DELIBERATELY UNCACHED (Phase 4A): point-in-time contract
+        // re-read on the WRITE path, immediately before the legally
+        // sensitive damage-case insert. Never serve this from cache.
         const contract = await fetchContractById(rental.id);
         if (!contract) throw new Error('Contract not found for this rental.');
         const created = await createDamageCase({
@@ -323,6 +339,19 @@ export default function MerchantDamageNew() {
           claim_amount: claimValue,
           description: notes || `Damage report for ${rental.contractRef}`,
         });
+
+        // Phase 4A invalidation — IMMEDIATELY after mutation success,
+        // before the navigate below: the AFTER-INSERT trigger closed
+        // the contract server-side, so drop the cached contract, note,
+        // and merchant contracts list. Lists + sibling detail pages
+        // (and the 2c92172 finalized guards) read fresh state next
+        // render.
+        cacheInvalidate(cacheKeys.contract(contract.id));
+        cacheInvalidate(cacheKeys.noteByContract(contract.id));
+        {
+          const uid = supabaseAuth.session?.user?.id;
+          if (uid) cacheInvalidate(cacheKeys.merchantContracts(uid));
+        }
 
         // Best-effort evidence upload — failures are logged but don't
         // unwind the case creation (the merchant already has the row).

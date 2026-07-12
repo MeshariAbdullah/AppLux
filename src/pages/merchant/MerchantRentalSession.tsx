@@ -39,6 +39,7 @@ import {
 } from '@/lib/mobile';
 import { MerchantStatusStrip } from '@/components/merchant/MerchantStatusStrip';
 import { CACHE_TTL, cacheKeys } from '@/lib/cache/keys';
+import { cacheInvalidatePrefix } from '@/lib/cache/memoryCache';
 import { useCachedQuery } from '@/lib/cache/useCachedQuery';
 import { buildContractFromTemplate } from '@/lib/contractTemplate';
 import { translateError } from '@/lib/errors';
@@ -806,6 +807,12 @@ export default function MerchantRentalSession() {
           },
         ],
       });
+      // Phase 4A invalidation: a new issued invoice exists — drop every
+      // cached merchant:{uid}:invoices* variant so MerchantHome's
+      // pending count refetches fresh on next visit.
+      if (wizardUserId) {
+        cacheInvalidatePrefix(cacheKeys.merchantInvoices(wizardUserId));
+      }
       updateIssue({ invoice: result.invoice, submitting: false, error: null });
       setStep('issued');
     } catch (err) {

@@ -21,6 +21,8 @@ import {
   UsersIcon,
 } from '@/components/icons';
 import { cn } from '@/lib/cn';
+import { CACHE_TTL, cacheKeys } from '@/lib/cache/keys';
+import { cachedFetch } from '@/lib/cache/memoryCache';
 import { getInitials } from '@/lib/format/initials';
 import { isRentalFinalized } from '@/lib/format/rentalFinalization';
 import { rentalStatusTone as toneForStatus } from '@/lib/format/statusTones';
@@ -186,7 +188,16 @@ export default function MerchantRentalDetails() {
     setLiveRental(null);
     setResolving(true);
     (async () => {
-      const contract = await fetchContractById(id).catch(() => null);
+      // Phase 4A: contract / merchant / note read through the memory
+      // cache (1-min bundle TTL; merchant reuses the 15-min entity
+      // key), so hopping Details ↔ Close ↔ Damage within the TTL is
+      // instant. Close/damage mutations invalidate these keys. The
+      // customer profile stays LIVE — full row includes national_id.
+      const contract = await cachedFetch(
+        cacheKeys.contract(id),
+        CACHE_TTL.rentalBundle,
+        () => fetchContractById(id),
+      ).catch(() => null);
       if (cancelled) return;
       if (!contract) {
         // No row (or RLS denied). Leave liveRental=null; the render
@@ -195,12 +206,20 @@ export default function MerchantRentalDetails() {
         return;
       }
       const [merchant, customer, note] = await Promise.all([
-        fetchMerchant(contract.merchant_id).catch(() => null),
+        cachedFetch(
+          cacheKeys.merchantEntity(contract.merchant_id),
+          CACHE_TTL.merchantEntity,
+          () => fetchMerchant(contract.merchant_id),
+        ).catch(() => null),
         fetchProfile(contract.customer_user_id).catch(() => null),
         // Linked promissory note — drives noteState, nafithState, and
         // the activity timeline. Without it the Nafath section was
         // stuck on "pending" even after the rental was fully verified.
-        fetchNoteByContractId(contract.id).catch(() => null),
+        cachedFetch(
+          cacheKeys.noteByContract(contract.id),
+          CACHE_TTL.rentalBundle,
+          () => fetchNoteByContractId(contract.id),
+        ).catch(() => null),
       ]);
       if (cancelled) return;
       const customerName = customer?.full_name ?? '—';

@@ -17,6 +17,8 @@ import {
   ShieldIcon,
   SignatureIcon,
 } from '@/components/icons';
+import { CACHE_TTL, cacheKeys } from '@/lib/cache/keys';
+import { cachedFetch } from '@/lib/cache/memoryCache';
 import { getInitials } from '@/lib/format/initials';
 import { useI18n, useT } from '@/lib/i18n';
 import { useStore } from '@/lib/store';
@@ -70,12 +72,26 @@ export default function MerchantRentalNote() {
     setLiveNote(null);
     setResolving(true);
     (async () => {
-      const contract = await fetchContractById(id).catch(() => null);
+      // Phase 4A: cached bundle reads (see MerchantRentalDetails note);
+      // customer profile stays live.
+      const contract = await cachedFetch(
+        cacheKeys.contract(id),
+        CACHE_TTL.rentalBundle,
+        () => fetchContractById(id),
+      ).catch(() => null);
       if (cancelled || !contract) return;
       const [m, c, note] = await Promise.all([
-        fetchMerchant(contract.merchant_id).catch(() => null),
+        cachedFetch(
+          cacheKeys.merchantEntity(contract.merchant_id),
+          CACHE_TTL.merchantEntity,
+          () => fetchMerchant(contract.merchant_id),
+        ).catch(() => null),
         fetchProfile(contract.customer_user_id).catch(() => null),
-        fetchNoteByContractId(contract.id).catch(() => null),
+        cachedFetch(
+          cacheKeys.noteByContract(contract.id),
+          CACHE_TTL.rentalBundle,
+          () => fetchNoteByContractId(contract.id),
+        ).catch(() => null),
       ]);
       if (cancelled) return;
       const customerName = c?.full_name ?? '—';

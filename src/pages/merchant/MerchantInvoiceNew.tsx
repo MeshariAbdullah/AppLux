@@ -28,6 +28,8 @@ import {
   UsersIcon,
 } from '@/components/icons';
 import { cn } from '@/lib/cn';
+import { cacheKeys } from '@/lib/cache/keys';
+import { cacheInvalidatePrefix } from '@/lib/cache/memoryCache';
 import { translateError } from '@/lib/errors';
 import { useSensitiveFlow } from '@/lib/session/flowGuard';
 import { useI18n, useT } from '@/lib/i18n';
@@ -483,6 +485,12 @@ export default function MerchantInvoiceNew() {
             notes: null,
           })),
         });
+
+        // Phase 4A invalidation: drop cached merchant:{uid}:invoices*
+        // so the MerchantHome pending count refetches fresh.
+        cacheInvalidatePrefix(
+          cacheKeys.merchantInvoices(supabaseAuth.session.user.id),
+        );
 
         const inv = result.invoice;
         setIssuance({

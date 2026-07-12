@@ -155,6 +155,27 @@ export function cacheFetch<T>(key: string, fetcher: () => Promise<T>): Promise<T
   return promise;
 }
 
+/**
+ * Read-through fetch for IMPERATIVE call sites (Phase 4A) — the rental
+ * detail pages resolve `contract → merchant/note` inside async effect
+ * chains where a hook per entity doesn't fit. Fresh-within-TTL resolves
+ * the cached value with zero network; stale/missing goes through
+ * cacheFetch (keeping in-flight dedupe and the epoch guard).
+ *
+ * Demo-mode note: every current caller sits inside a
+ * `supabaseAuth.configured` guard, so this never runs in demo mode;
+ * the fetchers themselves would throw via requireSupabase() otherwise.
+ */
+export function cachedFetch<T>(
+  key: string,
+  ttlMs: number,
+  fetcher: () => Promise<T>,
+): Promise<T> {
+  const hit = cacheRead<T>(key);
+  if (hit && hit.ageMs < ttlMs) return Promise.resolve(hit.value);
+  return cacheFetch(key, fetcher);
+}
+
 /** Subscribe to writes/invalidations of one key. Returns unsubscribe. */
 export function cacheSubscribe(key: string, cb: () => void): () => void {
   let subs = subscribers.get(key);
