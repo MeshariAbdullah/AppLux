@@ -458,6 +458,12 @@ export default function MerchantInvoiceNew() {
           // original_item_value semantic: underlying value of the
           // rented pieces. Eligibility + note principal hinge on this.
           originalItemValue: liability,
+          // Anchor the rental start at issuance. This form has no
+          // start-date input (the rental-session wizard does); without
+          // this the accept RPC falls back to the ACCEPTANCE date,
+          // silently shifting the contract period when the customer
+          // accepts a day later. Matches the wizard's "now" default.
+          startsAt: new Date().toISOString(),
           items: values.items.map((it, i) => ({
             position: i,
             item_name: it.name,

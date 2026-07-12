@@ -93,7 +93,6 @@ export default function MerchantRentalClose() {
           customerMobile: c?.mobile ?? '',
           headlineItem: `Rental ${contract.contract_number}`,
           category: m?.primary_category,
-          itemValue: Number(contract.total_amount),
           note,
         }),
       );
@@ -174,9 +173,14 @@ export default function MerchantRentalClose() {
         // damage_cases — that path raises a case AND closes the
         // contract in one server-side transaction.
         await closeRentalContract(rental.id);
+      } else {
+        // Demo mode only — mutate the seeded store so demo screens
+        // reflect the closure. In live mode this call was a no-op on
+        // empty store state, but it still exercised the demo mutation
+        // path on the production route (audit footgun); the RPC above
+        // is the single source of truth when configured.
+        closeRental(rental.id, { notes });
       }
-      // Always sync the demo store too so demo-only screens still reflect closure.
-      closeRental(rental.id, { notes });
       setConfirmOpen(false);
       setSubmitted(true);
     } catch (err) {

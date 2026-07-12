@@ -352,7 +352,15 @@ export function adaptContractToMerchantRental(
     endDate: row.end_date,
     nextDueDate: row.end_date,
     monthlyAmount: Number(row.rental_fee_amount),
-    itemValue: ctx.itemValue ?? Number(row.total_amount),
+    // Item value = the piece's underlying value (eligibility hold +
+    // promissory note principal), NOT the rental fee. The contract row
+    // mirrors invoices.original_item_value at signing; legacy rows
+    // predating that column fall back to total_amount. ctx.itemValue
+    // remains for callers with a better source (e.g. items[0]
+    // replacement_value on the contract page).
+    itemValue:
+      ctx.itemValue ??
+      (Number(row.original_item_value) || Number(row.total_amount)),
     liabilityTotal: Number(row.total_amount),
     paidInstallments: 0,
     totalInstallments: 1,

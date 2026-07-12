@@ -86,7 +86,6 @@ export default function MerchantRentals() {
             customerCity: customer?.city ?? '',
             customerMobile: customer?.mobile ?? '',
             headlineItem: `Rental ${r.contract_number}`,
-            itemValue: Number(r.total_amount),
           });
         }),
       );

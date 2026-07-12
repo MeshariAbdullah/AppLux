@@ -212,7 +212,6 @@ export default function MerchantRentalDetails() {
           customerMobile: customer?.mobile ?? '',
           headlineItem: `Rental ${contract.contract_number}`,
           category: merchant?.primary_category,
-          itemValue: Number(contract.total_amount),
           note,
         }),
       );

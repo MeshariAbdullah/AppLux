@@ -159,14 +159,9 @@ export default function MerchantDamageNew() {
           headlineItem: `Rental ${contract.contract_number}`,
           category: m?.primary_category,
           // Damage claim math is anchored on the item's ORIGINAL
-          // VALUE — never the rental fee. `original_item_value`
-          // was added by 20260502120500 and is mirrored onto the
-          // contract row at signing. If a legacy contract has it
-          // at 0 (default fallback), fall through to total_amount
-          // so demo scenarios don't render a zero cap; the primary
-          // path is the item value.
-          itemValue:
-            Number(contract.original_item_value) || Number(contract.total_amount),
+          // VALUE — never the rental fee. The adapter now defaults
+          // itemValue to contract.original_item_value (falling back
+          // to total_amount for legacy rows), so no override needed.
         }),
       );
     })()
