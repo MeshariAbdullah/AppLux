@@ -38,6 +38,8 @@ import {
   type MobileIssue,
 } from '@/lib/mobile';
 import { MerchantStatusStrip } from '@/components/merchant/MerchantStatusStrip';
+import { CACHE_TTL, cacheKeys } from '@/lib/cache/keys';
+import { useCachedQuery } from '@/lib/cache/useCachedQuery';
 import { buildContractFromTemplate } from '@/lib/contractTemplate';
 import { translateError } from '@/lib/errors';
 import { useSensitiveFlow } from '@/lib/session/flowGuard';
@@ -348,28 +350,35 @@ export default function MerchantRentalSession() {
     );
   }, []);
 
-  // Pull the signed-in merchant once.
+  // Merchant identity via the shared memory cache (Phase 3B) — same
+  // key MerchantHome/MerchantRentals use, so opening the wizard from
+  // the dashboard is instant. Safe for this flow: id + primary
+  // category are stable for the session; issuance still writes
+  // through live RPCs. Errors are ignored exactly like the previous
+  // .catch(() => {}) — the issue CTA stays disabled until merchantId
+  // resolves.
+  const wizardUserId = supabaseAuth.session?.user?.id ?? null;
+  const { data: myMerchantRow } = useCachedQuery(
+    supabaseAuth.configured && wizardUserId
+      ? cacheKeys.myMerchant(wizardUserId)
+      : null,
+    () => fetchMyMerchant(wizardUserId!),
+    { ttlMs: CACHE_TTL.myMerchant, refetchOnFocus: false },
+  );
   useEffect(() => {
-    const userId = supabaseAuth.session?.user?.id;
-    if (!supabaseAuth.configured || !userId) return;
-    let cancelled = false;
-    fetchMyMerchant(userId)
-      .then((m) => {
-        if (cancelled || !m) return;
-        setMerchantId(m.id);
-        setLiveMerchant(m);
-        setMerchantPrimaryCategory(m.primary_category);
-        setSession((s) =>
-          s.operation.category === 'dress'
-            ? { ...s, operation: { ...s.operation, category: m.primary_category } }
-            : s,
-        );
-      })
-      .catch(() => {});
-    return () => {
-      cancelled = true;
-    };
-  }, [supabaseAuth.configured, supabaseAuth.session?.user?.id]);
+    if (!myMerchantRow) return;
+    setMerchantId(myMerchantRow.id);
+    setLiveMerchant(myMerchantRow);
+    setMerchantPrimaryCategory(myMerchantRow.primary_category);
+    setSession((s) =>
+      s.operation.category === 'dress'
+        ? {
+            ...s,
+            operation: { ...s.operation, category: myMerchantRow.primary_category },
+          }
+        : s,
+    );
+  }, [myMerchantRow]);
 
   const rentalAmount = useMemo(
     () => computeRentalAmount(session.operation),

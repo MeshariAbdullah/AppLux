@@ -13,6 +13,8 @@ import {
   ChevronIcon,
   InfoIcon,
 } from '@/components/icons';
+import { CACHE_TTL, cacheKeys } from '@/lib/cache/keys';
+import { useCachedQuery } from '@/lib/cache/useCachedQuery';
 import { getInitials } from '@/lib/format/initials';
 import { rentalStatusTone as toneForStatus } from '@/lib/format/statusTones';
 import { useI18n, useT } from '@/lib/i18n';
@@ -51,23 +53,39 @@ export default function MerchantRentals() {
     FILTERS.some((f) => f.key === initialFilter) ? initialFilter : 'all',
   );
 
+  // Phase 3B: merchant identity comes from the shared memory cache
+  // (same key as MerchantHome / the rental-session wizard), so landing
+  // here from the dashboard no longer re-resolves it. The rentals list
+  // itself stays UNCACHED until Phase 4A wires mutation invalidation —
+  // caching it now would show stale rows after close/damage actions.
+  const userId = session?.user?.id ?? null;
+  const { data: myMerchantData, error: merchantError } = useCachedQuery(
+    configured && userId ? cacheKeys.myMerchant(userId) : null,
+    () => fetchMyMerchant(userId!),
+    { ttlMs: CACHE_TTL.myMerchant, refetchOnFocus: false },
+  );
+  // undefined = identity still resolving; error resolves it to null so
+  // the list settles on empty exactly like the old .catch(() => null).
+  const myMerchant = merchantError ? null : myMerchantData;
+
   useEffect(() => {
-    const userId = session?.user?.id;
     if (!configured || !userId) {
       setLiveRentals(null);
+      setLiveLoading(false);
+      return;
+    }
+    if (myMerchant === undefined) {
+      setLiveLoading(true); // merchant identity still resolving
+      return;
+    }
+    if (!myMerchant) {
+      setLiveRentals([]);
       setLiveLoading(false);
       return;
     }
     setLiveLoading(true);
     let cancelled = false;
     (async () => {
-      const myMerchant = await fetchMyMerchant(userId).catch(() => null);
-      if (cancelled) return;
-      if (!myMerchant) {
-        setLiveRentals([]);
-        setLiveLoading(false);
-        return;
-      }
       const contractRows = await listMerchantContracts(myMerchant.id).catch(() => []);
       if (cancelled) return;
       const profileMap = await fetchProfilesByIds(
@@ -94,7 +112,7 @@ export default function MerchantRentals() {
     return () => {
       cancelled = true;
     };
-  }, [configured, session?.user?.id]);
+  }, [configured, userId, myMerchant]);
 
   const merchantRentals = liveRentals ?? demoRentals;
 

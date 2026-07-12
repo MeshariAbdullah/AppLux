@@ -409,6 +409,9 @@ export default function MerchantInvoiceNew() {
     if (supabaseAuth.configured && supabaseAuth.session?.user?.id) {
       setSubmitting(true);
       try {
+        // DELIBERATELY UNCACHED (Phase 3B): this read sits on the
+        // write path of invoice creation — the merchant identity used
+        // for a legal document is always resolved live.
         const myMerchant = await fetchMyMerchant(supabaseAuth.session.user.id);
         if (!myMerchant) {
           throw new Error(

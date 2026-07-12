@@ -21,10 +21,12 @@ export const CACHE_TTL = {
   /** Partner store list + single merchant — changes only via admin. */
   storeList: 15 * MINUTE,
   merchantEntity: 15 * MINUTE,
-  /** Own merchant row — effectively session-lifetime; admin-side
-   *  changes are picked up on next sign-in (or focus revalidation
-   *  once a consumer opts in). */
-  myMerchant: Number.POSITIVE_INFINITY,
+  /** Own merchant row. Finite (not session-lifetime) because the row
+   *  legitimately changes once mid-session: admin provisioning flips a
+   *  pending merchant to active. 15 min self-heals that without
+   *  focus-refetch churn; the id/category consumers rely on are
+   *  otherwise stable. */
+  myMerchant: 15 * MINUTE,
   /** Display-only name/city lookups. */
   profileBatch: 10 * MINUTE,
   /** Customer + merchant working lists — short; cross-device actions
@@ -49,7 +51,13 @@ export const cacheKeys = {
   // ---- public / display-only ----
   publicMerchants: () => 'public:merchants',
   merchantEntity: (merchantId: string) => `entity:merchant:${merchantId}`,
+  /** NOT consumed yet (Phase 3B audit): fetchProfilesByIds selects
+   *  full profile rows INCLUDING national_id — do not cache until a
+   *  name-only select exists. Builder kept for that future variant. */
   profileBatch: (ids: readonly string[]) => `entity:profiles:${idsHash(ids)}`,
+  /** NOT consumed yet: deferred with the customer lists to Phase 4B —
+   *  its callers' parent lists are uncached, so caching the batch
+   *  alone buys nothing. */
   merchantBatch: (ids: readonly string[]) => `entity:merchants:${idsHash(ids)}`,
 
   // ---- customer-scoped ----

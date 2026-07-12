@@ -11,6 +11,8 @@ import {
   PhoneIcon,
   StarIcon,
 } from '@/components/icons';
+import { CACHE_TTL, cacheKeys } from '@/lib/cache/keys';
+import { useCachedQuery } from '@/lib/cache/useCachedQuery';
 import { useI18n, useT } from '@/lib/i18n';
 import { useStore } from '@/lib/store';
 import {
@@ -29,49 +31,54 @@ export default function StoreDetails() {
   const { stores } = useStore();
   const { configured } = useSupabaseAuth();
 
-  const [loading, setLoading] = useState(true);
-  const [store, setStore] = useState<PartnerStore | null>(null);
+  // Phase 3B: single-merchant read goes through the memory cache
+  // (15-min TTL, no focus refetch). The Phase 9 entity-leak fix is
+  // preserved structurally: the cache key embeds :id, so navigating to
+  // another store either serves THAT store's cached row instantly or
+  // shows the skeleton — the previous entity can never flash.
+  const {
+    data: liveMerchantRow,
+    loading: liveLoading,
+    error: liveError,
+  } = useCachedQuery(
+    configured && id ? cacheKeys.merchantEntity(id) : null,
+    () => fetchMerchant(id!),
+    { ttlMs: CACHE_TTL.merchantEntity, refetchOnFocus: false },
+  );
 
   useEffect(() => {
-    let cancelled = false;
-    // Clear previous entity + start loading on every :id change so the
-    // page never flashes the previous store's data while the new one
-    // resolves (Phase 9 entity-leak fix).
-    setStore(null);
-    setLoading(true);
-
-    if (configured && id) {
-      fetchMerchant(id)
-        .then((m) => {
-          if (cancelled) return;
-          setStore(m ? adaptMerchantToStore(m) : null);
-        })
-        .catch((err) => {
-          if (cancelled) return;
-          // eslint-disable-next-line no-console
-          console.error('[lend] fetchMerchant failed', err);
-          setStore(null);
-        })
-        .finally(() => {
-          if (!cancelled) setLoading(false);
-        });
-      return () => {
-        cancelled = true;
-      };
+    if (liveError) {
+      // eslint-disable-next-line no-console
+      console.error('[lend] fetchMerchant failed', liveError);
     }
+  }, [liveError]);
 
-    // Demo path — keeps the short delay so the skeleton flashes briefly
-    // even with synchronous store reads.
+  // Demo path — keeps the short delay so the skeleton flashes briefly
+  // even with synchronous store reads.
+  const [demoStore, setDemoStore] = useState<PartnerStore | null>(null);
+  const [demoLoading, setDemoLoading] = useState(!configured);
+  useEffect(() => {
+    if (configured) return;
+    let cancelled = false;
+    setDemoStore(null);
+    setDemoLoading(true);
     const tid = window.setTimeout(() => {
       if (cancelled) return;
-      setStore(stores.find((s) => s.id === id) ?? null);
-      setLoading(false);
+      setDemoStore(stores.find((s) => s.id === id) ?? null);
+      setDemoLoading(false);
     }, 450);
     return () => {
       cancelled = true;
       window.clearTimeout(tid);
     };
   }, [configured, id, stores]);
+
+  const store: PartnerStore | null = configured
+    ? liveMerchantRow
+      ? adaptMerchantToStore(liveMerchantRow)
+      : null
+    : demoStore;
+  const loading = configured ? liveLoading : demoLoading;
 
   if (loading) return <DetailsSkeleton />;
 

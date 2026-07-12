@@ -32,6 +32,8 @@ import {
   useSupabaseAuth,
   type MerchantRow,
 } from '@/lib/supabase';
+import { CACHE_TTL, cacheKeys } from '@/lib/cache/keys';
+import { useCachedQuery } from '@/lib/cache/useCachedQuery';
 import { withTimeout } from '@/lib/withTimeout';
 
 // Per-query timeouts so a single slow Supabase round-trip can't park
@@ -73,47 +75,45 @@ export default function MerchantHome() {
   } = useStore();
   const supabaseAuth = useSupabaseAuth();
 
-  // ---------- Data fetching (two stages, unchanged) ----------
-  const [liveMerchant, setLiveMerchant] = useState<MerchantRow | null>(null);
-  const [merchantLoading, setMerchantLoading] = useState(false);
+  // ---------- Data fetching (two stages) ----------
+  // Stage 1 (Phase 3B): own merchant identity reads through the memory
+  // cache (15-min TTL) — MerchantRentals and the rental-session wizard
+  // share the same key, so hopping between merchant screens no longer
+  // re-resolves the identity every mount. No focus refetch: the row is
+  // stable for the session and the second-stage fetch below keys off
+  // its object identity, so an unnecessary rewrite would re-trigger
+  // the whole dashboard load.
+  const userId = supabaseAuth.session?.user?.id ?? null;
+  const {
+    data: myMerchantData,
+    loading: merchantLoading,
+    error: merchantError,
+  } = useCachedQuery<MerchantRow | null>(
+    userId ? cacheKeys.myMerchant(userId) : null,
+    () =>
+      withTimeout(
+        fetchMyMerchant(userId!),
+        MERCHANT_IDENTITY_TIMEOUT_MS,
+        'fetchMyMerchant',
+      ),
+    { ttlMs: CACHE_TTL.myMerchant, refetchOnFocus: false },
+  );
+  // Error → null, matching the previous setLiveMerchant(null) path
+  // (dashboard renders the unknown-merchant fallback).
+  const liveMerchant: MerchantRow | null = myMerchantData ?? null;
+  useEffect(() => {
+    if (merchantError) {
+      // eslint-disable-next-line no-console
+      console.error('[lend] fetchMyMerchant failed', merchantError);
+    }
+  }, [merchantError]);
+
   const [liveRentals, setLiveRentals] = useState<MerchantRental[] | null>(null);
   const [livePendingInvoices, setLivePendingInvoices] = useState<number | null>(null);
   // Phase 9: in live mode the dashboard must render a skeleton until
   // the second-stage fetch (rentals + pending invoices) resolves —
   // otherwise the seeded demo rentals would flash before real data.
   const [dataLoading, setDataLoading] = useState(false);
-
-  useEffect(() => {
-    const userId = supabaseAuth.session?.user?.id;
-    if (!supabaseAuth.configured || !userId) {
-      setLiveMerchant(null);
-      setMerchantLoading(false);
-      return;
-    }
-    let cancelled = false;
-    setMerchantLoading(true);
-    withTimeout(
-      fetchMyMerchant(userId),
-      MERCHANT_IDENTITY_TIMEOUT_MS,
-      'fetchMyMerchant',
-    )
-      .then((m) => {
-        if (cancelled) return;
-        setLiveMerchant(m);
-      })
-      .catch((err) => {
-        if (cancelled) return;
-        // eslint-disable-next-line no-console
-        console.error('[lend] fetchMyMerchant failed', err);
-        setLiveMerchant(null);
-      })
-      .finally(() => {
-        if (!cancelled) setMerchantLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [supabaseAuth.configured, supabaseAuth.session?.user?.id]);
 
   useEffect(() => {
     if (!supabaseAuth.configured) return;

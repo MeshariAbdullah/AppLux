@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from 'react';
 import { Header, Screen } from '@/components/layout';
 import { EmptyState, Skeleton } from '@/components/ui';
 import { BadgeCheckIcon, BuildingIcon } from '@/components/icons';
+import { CACHE_TTL, cacheKeys } from '@/lib/cache/keys';
+import { useCachedQuery } from '@/lib/cache/useCachedQuery';
 import { useT } from '@/lib/i18n';
 import { useStore } from '@/lib/store';
 import type { PartnerStore } from '@/lib/data';
@@ -29,38 +31,46 @@ export default function Stores() {
   const t = useT();
   const { stores: demoStores } = useStore();
   const { configured } = useSupabaseAuth();
-  const [stores, setStores] = useState<PartnerStore[]>(demoStores);
-  const [loading, setLoading] = useState(true);
+
+  // Phase 3B: the partner list reads through the memory cache — 15-min
+  // TTL, no focus refetch (public display data). Revisiting the page
+  // within the TTL serves the cached rows instantly with zero network.
+  // The hook is inert in demo mode, so the demo path below is the same
+  // synchronous store read it always was.
+  const {
+    data: liveRows,
+    loading: liveLoading,
+    error: liveError,
+  } = useCachedQuery(cacheKeys.publicMerchants(), () => listMerchants(), {
+    ttlMs: CACHE_TTL.storeList,
+    refetchOnFocus: false,
+  });
 
   useEffect(() => {
-    let cancelled = false;
-    if (!configured) {
-      setStores(demoStores);
-      const id = window.setTimeout(() => setLoading(false), 250);
-      return () => window.clearTimeout(id);
+    if (liveError) {
+      // eslint-disable-next-line no-console
+      console.error('[lend] listMerchants failed', liveError);
     }
-    setLoading(true);
-    listMerchants()
-      .then((rows) => {
-        if (cancelled) return;
-        setStores(rows.map(adaptMerchantToStore));
-      })
-      .catch((err) => {
-        if (cancelled) return;
-        // eslint-disable-next-line no-console
-        console.error('[lend] listMerchants failed', err);
-        // Phase 9: do NOT fall back to demo seeds in live mode. Surface
-        // an empty list — the per-sector "Partners coming soon" copy
-        // already reads correctly when sectorCounts is all zeros.
-        setStores([]);
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [configured, demoStores]);
+  }, [liveError]);
+
+  // Demo-mode visual parity: the brief skeleton beat the page always had.
+  const [demoSettled, setDemoSettled] = useState(configured);
+  useEffect(() => {
+    if (configured) return;
+    const id = window.setTimeout(() => setDemoSettled(true), 250);
+    return () => window.clearTimeout(id);
+  }, [configured]);
+
+  const stores = useMemo<PartnerStore[]>(() => {
+    if (!configured) return demoStores;
+    // Phase 9 rule preserved: never fall back to demo seeds in live
+    // mode. Error or pre-load renders as an empty list behind the
+    // skeleton — the per-sector "Partners coming soon" copy already
+    // reads correctly when sectorCounts is all zeros.
+    return (liveRows ?? []).map(adaptMerchantToStore);
+  }, [configured, demoStores, liveRows]);
+
+  const loading = configured ? liveLoading : !demoSettled;
 
   const sectorCounts = useMemo(() => {
     const counts: Record<string, number> = {};
