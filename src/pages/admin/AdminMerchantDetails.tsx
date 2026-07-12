@@ -27,6 +27,7 @@ import {
   WalletIcon,
 } from '@/components/icons';
 import { cn } from '@/lib/cn';
+import { translateError } from '@/lib/errors';
 import { adminMerchantDecisionTone as statusTone } from '@/lib/format/statusTones';
 import { useI18n, useT } from '@/lib/i18n';
 import { useStore, type AdminMerchantRequest } from '@/lib/store';
@@ -167,17 +168,17 @@ export default function AdminMerchantDetails() {
         } catch (provErr) {
           // eslint-disable-next-line no-console
           console.error('[lend] provisionMerchantFromApplication failed', provErr);
-          setDecisionError(
-            provErr instanceof Error
-              ? `Application approved, but provisioning failed: ${provErr.message}`
-              : 'Application approved, but provisioning failed.',
-          );
+          // Provisioning is idempotent server-side — re-approving
+          // safely retries it, which is exactly what this copy says.
+          setDecisionError(t('errors.approvedButProvisioningFailed'));
         }
       } else {
         approveMerchantRequest(request.id, notes);
       }
     } catch (err) {
-      setDecisionError(err instanceof Error ? err.message : 'Failed to approve.');
+      // eslint-disable-next-line no-console
+      console.error('[lend] decideMerchantApplication(approve) failed', err);
+      setDecisionError(translateError(err, t));
     } finally {
       setBusy(null);
     }
@@ -193,7 +194,9 @@ export default function AdminMerchantDetails() {
         rejectMerchantRequest(request.id, notes);
       }
     } catch (err) {
-      setDecisionError(err instanceof Error ? err.message : 'Failed to reject.');
+      // eslint-disable-next-line no-console
+      console.error('[lend] decideMerchantApplication(reject) failed', err);
+      setDecisionError(translateError(err, t));
     } finally {
       setBusy(null);
       setRejectConfirmOpen(false);

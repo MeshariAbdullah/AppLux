@@ -61,6 +61,30 @@
       "banner": "No internet connection — some actions are unavailable"
     }
   },
+  "errors": {
+    "generic": "Something went wrong. Please try again.",
+    "genericWithCode": "Something went wrong (code {code}). Please try again.",
+    "network": "Connection problem — check your internet and try again.",
+    "unauthorized": "You don't have permission to perform this action.",
+    "conflict": "This action was already completed or is no longer available. Refresh to see the latest state.",
+    "validation": "Some of the submitted details are invalid. Review them and try again.",
+    "timeout": "The request took too long. Please try again.",
+    "approvedButProvisioningFailed": "The application was approved, but merchant provisioning failed. Approve again to retry — provisioning is safe to re-run.",
+    "boundary": {
+      "title": "Something went wrong",
+      "body": "The app hit an unexpected error. Reload to continue — your rentals, contracts, and account data are safe on the server.",
+      "reloadCta": "Reload the app",
+      "supportIdLabel": "Support code",
+      "copyCta": "Copy",
+      "copiedCta": "Copied"
+    },
+    "profileLoad": {
+      "title": "We couldn't load your profile",
+      "body": "Your session is active, but the profile fetch failed. Check your connection and try again.",
+      "retryCta": "Try again",
+      "signOutCta": "Sign out"
+    }
+  },
   "welcome": {
     "eyebrow": "Lend",
     "brandLatin": "LEND",

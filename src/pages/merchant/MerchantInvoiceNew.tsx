@@ -28,6 +28,7 @@ import {
   UsersIcon,
 } from '@/components/icons';
 import { cn } from '@/lib/cn';
+import { translateError } from '@/lib/errors';
 import { useSensitiveFlow } from '@/lib/session/flowGuard';
 import { useI18n, useT } from '@/lib/i18n';
 import { useStore } from '@/lib/store';
@@ -494,9 +495,7 @@ export default function MerchantInvoiceNew() {
         // success masquerading as a real one.
         // eslint-disable-next-line no-console
         console.error('[lend] createInvoiceWithItems failed', caught);
-        const message =
-          caught instanceof Error ? caught.message : 'Failed to issue invoice.';
-        setSubmitWarning(message);
+        setSubmitWarning(translateError(caught, t));
       } finally {
         setSubmitting(false);
       }

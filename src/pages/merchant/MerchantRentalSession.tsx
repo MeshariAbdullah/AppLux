@@ -39,6 +39,7 @@ import {
 } from '@/lib/mobile';
 import { MerchantStatusStrip } from '@/components/merchant/MerchantStatusStrip';
 import { buildContractFromTemplate } from '@/lib/contractTemplate';
+import { translateError } from '@/lib/errors';
 import { useSensitiveFlow } from '@/lib/session/flowGuard';
 import { cn } from '@/lib/cn';
 
@@ -689,9 +690,11 @@ export default function MerchantRentalSession() {
       updateEligibility({ row, loading: false, error: null });
       setStep('eligibility');
     } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error('[lend] fetchRenterEligibility failed', err);
       updateEligibility({
         loading: false,
-        error: err instanceof Error ? err.message : t('merchant.session.eligibility.errors.fetch'),
+        error: translateError(err, t, 'merchant.session.eligibility.errors.fetch'),
       });
     }
   };
@@ -797,9 +800,11 @@ export default function MerchantRentalSession() {
       updateIssue({ invoice: result.invoice, submitting: false, error: null });
       setStep('issued');
     } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error('[lend] createInvoiceWithItems failed', err);
       updateIssue({
         submitting: false,
-        error: err instanceof Error ? err.message : 'Failed to issue rental package.',
+        error: translateError(err, t),
       });
     }
   };

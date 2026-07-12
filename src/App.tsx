@@ -3,6 +3,7 @@ import {
   isMisconfiguredProduction,
   ProductionConfigError,
 } from '@/components/auth/ProductionConfigGuard';
+import { AppErrorBoundary } from '@/components/system/AppErrorBoundary';
 import { OfflineBanner } from '@/components/system/OfflineBanner';
 import { SessionTimeoutManager } from '@/components/system/SessionTimeoutManager';
 import { AppRoutes } from '@/routes';
@@ -25,12 +26,17 @@ export default function App() {
 
   return (
     <MobileShell>
-      <AppRoutes />
-      {/* Phase 1 session hardening — app-wide, render-null when idle-
-          healthy. Mounted outside AppRoutes so the timers and the
-          offline banner survive every navigation. */}
-      <SessionTimeoutManager />
-      <OfflineBanner />
+      {/* Phase 2: one boundary around the routed tree AND the session
+          overlays — an uncaught render error shows the translated
+          crash screen with a support code instead of a blank page. */}
+      <AppErrorBoundary>
+        <AppRoutes />
+        {/* Phase 1 session hardening — app-wide, render-null when idle-
+            healthy. Mounted outside AppRoutes so the timers and the
+            offline banner survive every navigation. */}
+        <SessionTimeoutManager />
+        <OfflineBanner />
+      </AppErrorBoundary>
     </MobileShell>
   );
 }

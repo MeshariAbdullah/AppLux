@@ -24,6 +24,7 @@ import {
   ShieldIcon,
   SignatureIcon,
 } from '@/components/icons';
+import { translateError } from '@/lib/errors';
 import { useSensitiveFlow } from '@/lib/session/flowGuard';
 import { useI18n, useT } from '@/lib/i18n';
 import { useStore } from '@/lib/store';
@@ -149,8 +150,11 @@ export default function Review() {
         await acceptRentalInvoice(liveInvoiceId);
         navigate(`/approval/${pkg.token}`, { replace: true });
       } catch (err) {
-        const msg = err instanceof Error ? err.message : 'Failed to accept invoice.';
-        setAcceptError(msg);
+        // Raw error stays in the console for diagnosis; the user sees
+        // calm translated copy (Phase 2 error hygiene).
+        // eslint-disable-next-line no-console
+        console.error('[lend] acceptRentalInvoice failed', err);
+        setAcceptError(translateError(err, t));
       }
       return;
     }
@@ -681,7 +685,9 @@ function ConfirmStep({
 }: {
   pkg: ScannedPackage;
   userName: string | undefined;
-  onApproved: () => void;
+  /** May reject (live accept RPC) — handleSign awaits it so the
+   *  processing flag resets when acceptance fails. */
+  onApproved: () => void | Promise<void>;
 }) {
   const t = useT();
   const { formatCurrency } = useI18n();
@@ -706,7 +712,14 @@ function ConfirmStep({
     // the halo + stamp animations fire. Long enough to feel deliberate,
     // short enough that the user doesn't wait. Sits in the 0.3–0.6s sweet
     // spot called out by the design brief.
-    window.setTimeout(onApproved, 600);
+    //
+    // `processing` MUST reset when onApproved rejects or returns after a
+    // failed accept — otherwise the sign button stays disabled until a
+    // manual reload. On success the navigate() unmounts this component,
+    // making the reset a harmless no-op.
+    window.setTimeout(() => {
+      void Promise.resolve(onApproved()).finally(() => setProcessing(false));
+    }, 600);
   };
 
   return (

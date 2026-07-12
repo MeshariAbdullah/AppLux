@@ -23,6 +23,7 @@ import {
   SignatureIcon,
   UsersIcon,
 } from '@/components/icons';
+import { translateError } from '@/lib/errors';
 import { getInitials } from '@/lib/format/initials';
 import { isRentalFinalized } from '@/lib/format/rentalFinalization';
 import { useSensitiveFlow } from '@/lib/session/flowGuard';
@@ -179,7 +180,9 @@ export default function MerchantRentalClose() {
       setConfirmOpen(false);
       setSubmitted(true);
     } catch (err) {
-      setCloseError(err instanceof Error ? err.message : 'Failed to close rental.');
+      // eslint-disable-next-line no-console
+      console.error('[lend] closeRentalContract failed', err);
+      setCloseError(translateError(err, t));
     } finally {
       setBusy(false);
     }

@@ -28,6 +28,7 @@ import {
   UsersIcon,
 } from '@/components/icons';
 import { cn } from '@/lib/cn';
+import { translateError } from '@/lib/errors';
 import { getInitials } from '@/lib/format/initials';
 import { isRentalFinalized } from '@/lib/format/rentalFinalization';
 import { useSensitiveFlow } from '@/lib/session/flowGuard';
@@ -356,11 +357,7 @@ export default function MerchantDamageNew() {
         // the merchant retry.
         // eslint-disable-next-line no-console
         console.error('[lend] createDamageCase failed', err);
-        setSubmitError(
-          err instanceof Error
-            ? err.message
-            : 'Could not submit the damage report. Please try again.',
-        );
+        setSubmitError(translateError(err, t));
         setSubmitting(false);
         setConfirmOpen(false);
         return;

@@ -1,6 +1,7 @@
 import type { ReactElement } from 'react';
 import { Navigate, Route, Routes } from 'react-router-dom';
 import { AppLayout, AuthLayout } from '@/components/layout';
+import { useT } from '@/lib/i18n';
 import { useStore } from '@/lib/store';
 import { useSupabaseAuth } from '@/lib/supabase';
 import { RequireRole } from '@/components/auth/RequireRole';
@@ -127,15 +128,15 @@ function ProfileLoadError({
   onRetry: () => Promise<void>;
   onSignOut: () => Promise<void>;
 }) {
+  const t = useT();
   return (
     <div className="min-h-screen grid place-items-center px-6 py-10 bg-canvas">
       <div className="max-w-sm w-full rounded-xl3 bg-white ring-1 ring-canvas-200 p-6 shadow-soft text-center space-y-3">
         <h1 className="editorial-title text-[20px] text-ink-900">
-          We couldn't load your profile
+          {t('errors.profileLoad.title')}
         </h1>
         <p className="text-[13px] text-ink-500 leading-relaxed">
-          Your session is active, but a profile fetch failed. Check your
-          connection and try again.
+          {t('errors.profileLoad.body')}
         </p>
         <div className="flex flex-col gap-2 pt-2">
           <button
@@ -143,14 +144,14 @@ function ProfileLoadError({
             onClick={() => void onRetry()}
             className="w-full rounded-xl2 bg-lavender-600 text-white text-[13.5px] font-semibold py-2.5 hover:bg-lavender-700"
           >
-            Try again
+            {t('errors.profileLoad.retryCta')}
           </button>
           <button
             type="button"
             onClick={() => void onSignOut()}
             className="w-full text-[12.5px] text-ink-500 underline underline-offset-4 decoration-canvas-300"
           >
-            Sign out
+            {t('errors.profileLoad.signOutCta')}
           </button>
         </div>
       </div>
