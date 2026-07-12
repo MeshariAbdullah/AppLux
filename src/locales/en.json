@@ -445,11 +445,6 @@
     "historyStrip": {
       "title": "Recent rentals",
       "viewAll": "View all rentals"
-    },
-    "quickLinks": {
-      "stores": "Partners",
-      "eligibility": "Eligibility",
-      "profile": "Profile"
     }
   },
   "sections": {

@@ -17,10 +17,8 @@ import {
   ChevronIcon,
   DocIcon,
   ReceiptIcon,
-  ShieldIcon,
   SparkleIcon,
   BuildingIcon,
-  UserIcon,
   WalletIcon,
 } from '@/components/icons';
 import { useI18n, useT } from '@/lib/i18n';
@@ -311,12 +309,18 @@ export default function Home() {
         }
       />
       <Screen className="bg-canvas">
-        {/* Customer-facing eligibility surface hidden per product
-            decision — the database + backend eligibility logic still
-            runs, but the compact hero card is suppressed until we
-            decide to expose it again. The EligibilityCompact
-            component is retained below (dead-code) so re-enabling
-            is a one-line JSX change. */}
+        {/* Compact eligibility — always shown, never dominates.
+            Restored after 417c0ec removed it unintentionally; the
+            /eligibility DETAIL page stays "coming soon", so tapping
+            the card lands on that friendly placeholder. */}
+        <EligibilityCompact
+          eligibility={eligibility}
+          tierLabel={t(`eligibility.tiers.${eligibility.tier}`)}
+          onOpen={() => navigate('/eligibility')}
+          formatCurrency={formatCurrency}
+          t={t}
+          dir={dir}
+        />
 
         {/* Mode-driven hero block. */}
         {mode === 'attention' && (
@@ -369,8 +373,9 @@ export default function Home() {
           />
         )}
 
-        {/* Quick links — always present, lightweight. */}
-        <QuickLinks t={t} />
+        {/* The middle quick-link cards (Partners / Eligibility /
+            Account) are removed — every destination is one tap away
+            in the bottom navigation, which is unchanged. */}
       </Screen>
     </>
   );
@@ -897,46 +902,6 @@ function HistoryStrip({
         ))}
       </Card>
     </section>
-  );
-}
-
-// ---------------------------------------------------------------------
-
-function QuickLinks({ t }: { t: (k: string) => string }) {
-  // Eligibility quick-link removed while the customer-facing
-  // eligibility UI is suppressed. Two columns render cleanly.
-  return (
-    <div className="grid grid-cols-2 gap-2.5">
-      <QuickLink to="/stores" icon={<BuildingIcon size={16} />} label={t('home.quickLinks.stores')} />
-      <QuickLink to="/profile" icon={<UserIcon size={16} />} label={t('home.quickLinks.profile')} />
-    </div>
-  );
-}
-
-function QuickLink({
-  to,
-  icon,
-  label,
-}: {
-  to: string;
-  icon: ReactNode;
-  label: string;
-}) {
-  return (
-    <Link
-      to={to}
-      className={cn(
-        'rounded-xl2 bg-white hairline p-3 flex flex-col gap-2 shadow-soft',
-        'transition-colors hover:bg-canvas-100/40 active:bg-canvas-100',
-      )}
-    >
-      <span className="h-8 w-8 rounded-xl bg-lavender-50 text-lavender-700 grid place-items-center">
-        {icon}
-      </span>
-      <div className="text-[12px] font-semibold text-ink-900 tracking-tight">
-        {label}
-      </div>
-    </Link>
   );
 }
 
