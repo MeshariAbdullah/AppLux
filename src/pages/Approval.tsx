@@ -16,6 +16,7 @@ import { useStore } from '@/lib/store';
 import {
   fetchInvoiceByToken,
   fetchMerchant,
+  getSupabase,
   synthesizePackageFromInvoice,
   useSupabaseAuth,
 } from '@/lib/supabase';
@@ -66,7 +67,11 @@ export default function Approval() {
         const [merchant, contractRow] = await Promise.all([
           fetchMerchant(res.invoice.merchant_id).catch(() => null),
           (async () => {
-            const sb = (await import('@/lib/supabase')).getSupabase();
+            // Static import (Phase 5A): the module is in the main chunk
+            // via ~50 static importers, so the previous dynamic import
+            // could never split — it only produced the recurring Vite
+            // mixed-import warning.
+            const sb = getSupabase();
             if (!sb) return null;
             const { data } = await sb
               .from('rental_contracts')
