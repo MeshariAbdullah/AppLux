@@ -739,26 +739,44 @@
       "commitAction": "Approve & continue to payment",
       "afterHint": "After approval you continue to payment, then we hand you off to Nafath to sign the promissory note.",
       "processing": "Recording your approval…",
-      "recording": "Confirming approval & continuing to payment"
+      "recording": "Confirming approval & continuing to payment",
+      "commitmentBodySimple": "Once you confirm, the rental activates immediately and the merchant is notified.",
+      "consent3Simple": "I agree to activate the rental and start its period per the contract above",
+      "commitActionSimple": "I agree — activate the rental",
+      "recordingSimple": "Confirming approval and activating the rental",
+      "afterHintSimple": "After approving, the rental starts immediately and its details appear on the tracking page.",
+      "footerSimple": "Approving activates the rental immediately."
     },
     "framing": {
       "eyebrow": "Entering a rental",
       "title": "You're about to enter a documented rental with {boutique}",
       "boutiqueFallback": "the boutique",
-      "body": "We take you through the contract, the promissory note and the agreement. Anything you sign is recorded on this rental's official record."
+      "body": "We take you through the contract, the promissory note and the agreement. Anything you sign is recorded on this rental's official record.",
+      "bodySimple": "We walk you calmly through the offer and the contract. Everything you approve here is recorded on this rental’s official record."
+    },
+    "activation": {
+      "failedTitle": "Approved, but the rental could not be activated",
+      "retryCta": "Retry activation"
     }
   },
   "journey": {
     "title": "Rental Journey",
     "step": "Step {current} of {total}",
     "stages": {
-      "request": "Offer & contract issued",
-      "review": "Customer Review",
+      "request": "Offer and contract issued",
+      "review": "Customer review",
       "agreement": "Payment & Nafath signing",
-      "started": "Rental Started",
+      "started": "Rental started",
       "tracking": "Active Tracking",
       "return": "Return",
-      "closed": "Contract & Note Closed"
+      "closed": "Contract & Note Closed",
+      "closure": "Return and contract closure"
+    },
+    "simpleDescriptions": {
+      "request": "The merchant issued the offer and contract and sent them to you in-app.",
+      "review": "Review the offer and contract, then approve to start the rental.",
+      "started": "The contract is active — the rental period has begun.",
+      "closure": "The piece is returned to the merchant and the contract is closed."
     },
     "descriptions": {
       "request": "The merchant issued the offer and contract and sent them to you in-app.",
@@ -873,7 +891,8 @@
       "title": "This approval link is invalid or expired",
       "hint": "We couldn't find a signing request for this link. Ask the merchant for a fresh QR code and scan it again.",
       "rescan": "Scan a new code"
-    }
+    },
+    "documentedSubtitleSimple": "Your approval is recorded and the rental is now active. Follow its details on the tracking page."
   },
   "tracking": {
     "title": "Contract tracking",
@@ -939,7 +958,10 @@
         "overdue": "Past due",
         "paid": "Payment received",
         "escalated": "Escalated to collections"
-      }
+      },
+      "rentalValue": "Rental value",
+      "startsOn": "Start date",
+      "acceptedBanner": "The offer was approved and the rental is active."
     },
     "contract": {
       "monthly": "Rental fee",
@@ -1044,9 +1066,15 @@
         "confirmCta": "Confirm and continue",
         "nafathBadge": "Nafath verified",
         "macro": {
-          "verified": { "label": "Renter verified" },
-          "pending":  { "label": "Verification in progress" },
-          "not_found": { "label": "Renter not registered" }
+          "verified": {
+            "label": "Renter verified"
+          },
+          "pending": {
+            "label": "Verification in progress"
+          },
+          "not_found": {
+            "label": "Renter not registered"
+          }
         },
         "privacy": {
           "title": "Renter is registered",

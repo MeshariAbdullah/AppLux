@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { Navigate, useNavigate, useParams } from 'react-router-dom';
+import { ENABLE_PAYMENTS_AND_NOTES } from '@/lib/featureFlags';
 import { Header, Screen } from '@/components/layout';
 import {
   Button,
@@ -102,6 +103,28 @@ export default function NoteTracking() {
   const linkedContract =
     liveContract ??
     (note ? contracts.find((c) => c.counterparty === note.counterparty) : undefined);
+
+  // Current phase (ENABLE_PAYMENTS_AND_NOTES = false): the note surface
+  // is hidden. Redirect to the linked contract's tracking page when it
+  // resolves (the effect above still fetches it), otherwise fall back
+  // to the rentals list. Normal navigation no longer links here — this
+  // covers deep links and stale history entries.
+  if (!ENABLE_PAYMENTS_AND_NOTES) {
+    if (linkedContract) {
+      return <Navigate to={`/track/contract/${linkedContract.id}`} replace />;
+    }
+    if (!resolving) {
+      return <Navigate to="/contracts" replace />;
+    }
+    return (
+      <>
+        <Header title={t('track.contractTitle')} showBack />
+        <Screen>
+          <CardSkeleton />
+        </Screen>
+      </>
+    );
+  }
 
   if (!note && resolving) {
     return (

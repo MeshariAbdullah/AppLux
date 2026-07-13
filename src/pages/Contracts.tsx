@@ -10,6 +10,7 @@ import {
   DocIcon,
   ReceiptIcon,
 } from '@/components/icons';
+import { ENABLE_PAYMENTS_AND_NOTES } from '@/lib/featureFlags';
 import { useI18n, useT } from '@/lib/i18n';
 import { useStore } from '@/lib/store';
 import {
@@ -320,7 +321,8 @@ function RentalBundleCard({
         </div>
       </div>
 
-      {/* Two-pill artifact summary */}
+      {/* Artifact summary — note pill hidden in the current phase
+          (ENABLE_PAYMENTS_AND_NOTES). */}
       <div className="mt-4 grid grid-cols-2 gap-2">
         <ArtifactPill
           icon={<DocIcon size={13} />}
@@ -328,12 +330,14 @@ function RentalBundleCard({
           state={contract.status === 'active' ? 'signed' : 'pending'}
           t={t}
         />
-        <ArtifactPill
-          icon={<BadgeCheckIcon size={13} />}
-          label={t('home.current.notePill')}
-          state={note?.status === 'signed' ? 'signed' : 'pending'}
-          t={t}
-        />
+        {ENABLE_PAYMENTS_AND_NOTES && (
+          <ArtifactPill
+            icon={<BadgeCheckIcon size={13} />}
+            label={t('home.current.notePill')}
+            state={note?.status === 'signed' ? 'signed' : 'pending'}
+            t={t}
+          />
+        )}
       </div>
 
       {/* Period + amount */}

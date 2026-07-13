@@ -31,6 +31,7 @@ import { cn } from '@/lib/cn';
 import { cacheKeys } from '@/lib/cache/keys';
 import { cacheInvalidatePrefix } from '@/lib/cache/memoryCache';
 import { translateError } from '@/lib/errors';
+import { ENABLE_PAYMENTS_AND_NOTES } from '@/lib/featureFlags';
 import { useSensitiveFlow } from '@/lib/session/flowGuard';
 import { useI18n, useT } from '@/lib/i18n';
 import { useStore } from '@/lib/store';
@@ -793,43 +794,47 @@ export default function MerchantInvoiceNew() {
               </ol>
             </Card>
 
-            <Card padded className="space-y-3">
-              <div className="flex items-center gap-2">
-                <span className="h-8 w-8 rounded-xl bg-gold-50 text-gold-700 grid place-items-center">
-                  <SignatureIcon size={14} />
-                </span>
-                <div className="min-w-0">
-                  <div className="text-[13.5px] font-semibold text-ink-900">
-                    {t('merchant.invoice.reviewNote')}
-                  </div>
-                  <div className="mt-0.5 text-[11.5px] text-ink-400 num truncate">
-                    {t('merchant.invoice.noteRef')} · {issuance.noteRef}
+            {/* Promissory-note summary card — hidden in the current
+                phase (ENABLE_PAYMENTS_AND_NOTES): no note exists. */}
+            {ENABLE_PAYMENTS_AND_NOTES && (
+              <Card padded className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <span className="h-8 w-8 rounded-xl bg-gold-50 text-gold-700 grid place-items-center">
+                    <SignatureIcon size={14} />
+                  </span>
+                  <div className="min-w-0">
+                    <div className="text-[13.5px] font-semibold text-ink-900">
+                      {t('merchant.invoice.reviewNote')}
+                    </div>
+                    <div className="mt-0.5 text-[11.5px] text-ink-400 num truncate">
+                      {t('merchant.invoice.noteRef')} · {issuance.noteRef}
+                    </div>
                   </div>
                 </div>
-              </div>
-              <CardDivider />
-              <Field
-                label={t('merchant.invoice.principal')}
-                value={<span className="num">{formatCurrency(principal)}</span>}
-              />
-              <CardDivider />
-              <Field
-                label={t('merchant.invoice.beneficiary')}
-                value={merchant?.companyName ?? ''}
-              />
-              <CardDivider />
-              <Field
-                label={t('merchant.invoice.dueDate')}
-                value={<span className="num">{formatDate(issuance.dueDate, { dateStyle: 'medium' })}</span>}
-              />
-              <CardDivider />
-              <Field label={t('merchant.invoice.place')} value={place} />
-              <CardDivider />
-              <Field
-                label={t('merchant.invoice.purpose')}
-                value={t('merchant.invoice.defaultPurpose')}
-              />
-            </Card>
+                <CardDivider />
+                <Field
+                  label={t('merchant.invoice.principal')}
+                  value={<span className="num">{formatCurrency(principal)}</span>}
+                />
+                <CardDivider />
+                <Field
+                  label={t('merchant.invoice.beneficiary')}
+                  value={merchant?.companyName ?? ''}
+                />
+                <CardDivider />
+                <Field
+                  label={t('merchant.invoice.dueDate')}
+                  value={<span className="num">{formatDate(issuance.dueDate, { dateStyle: 'medium' })}</span>}
+                />
+                <CardDivider />
+                <Field label={t('merchant.invoice.place')} value={place} />
+                <CardDivider />
+                <Field
+                  label={t('merchant.invoice.purpose')}
+                  value={t('merchant.invoice.defaultPurpose')}
+                />
+              </Card>
+            )}
 
             <div className="space-y-2.5 pt-2">
               <Button

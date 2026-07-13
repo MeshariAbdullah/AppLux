@@ -21,6 +21,7 @@ import {
   BuildingIcon,
   WalletIcon,
 } from '@/components/icons';
+import { ENABLE_PAYMENTS_AND_NOTES } from '@/lib/featureFlags';
 import { useI18n, useT } from '@/lib/i18n';
 import { useStore } from '@/lib/store';
 import {
@@ -637,12 +638,16 @@ function ActiveStack({
                 state={contract.status === 'active' ? 'signed' : 'pending'}
                 t={t}
               />
-              <ArtifactPill
-                icon={<WalletIcon size={13} />}
-                label={t('home.current.notePill')}
-                state={note?.status === 'signed' ? 'signed' : 'pending'}
-                t={t}
-              />
+              {/* Promissory-note pill — hidden in the current phase
+                  (ENABLE_PAYMENTS_AND_NOTES). */}
+              {ENABLE_PAYMENTS_AND_NOTES && (
+                <ArtifactPill
+                  icon={<WalletIcon size={13} />}
+                  label={t('home.current.notePill')}
+                  state={note?.status === 'signed' ? 'signed' : 'pending'}
+                  t={t}
+                />
+              )}
             </div>
 
             <div className="mt-4 flex items-end justify-between gap-3">

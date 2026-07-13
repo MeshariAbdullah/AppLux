@@ -23,6 +23,7 @@ import {
 import { cn } from '@/lib/cn';
 import { CACHE_TTL, cacheKeys } from '@/lib/cache/keys';
 import { cachedFetch } from '@/lib/cache/memoryCache';
+import { ENABLE_PAYMENTS_AND_NOTES } from '@/lib/featureFlags';
 import { getInitials } from '@/lib/format/initials';
 import { isRentalFinalized } from '@/lib/format/rentalFinalization';
 import { rentalStatusTone as toneForStatus } from '@/lib/format/statusTones';
@@ -525,53 +526,63 @@ export default function MerchantRentalDetails() {
               to={`/merchant/rentals/${rental.id}/contract`}
               dir={dir}
             />
-            <CardDivider />
-            <DocRow
-              icon={<SignatureIcon size={18} />}
-              tone="bg-gold-50 text-gold-700"
-              label={t('merchant.rental.docs.note')}
-              refValue={rental.noteRef}
-              state={rental.noteState}
-              to={`/merchant/rentals/${rental.id}/note`}
-              dir={dir}
-            />
+            {/* Promissory-note document row — hidden in the current
+                phase (ENABLE_PAYMENTS_AND_NOTES); the note page itself
+                redirects back here while the flag is off. */}
+            {ENABLE_PAYMENTS_AND_NOTES && (
+              <>
+                <CardDivider />
+                <DocRow
+                  icon={<SignatureIcon size={18} />}
+                  tone="bg-gold-50 text-gold-700"
+                  label={t('merchant.rental.docs.note')}
+                  refValue={rental.noteRef}
+                  state={rental.noteState}
+                  to={`/merchant/rentals/${rental.id}/note`}
+                  dir={dir}
+                />
+              </>
+            )}
           </Card>
 
-          {/* Nafith placeholders */}
-          <Card padded className="space-y-3">
-            <SectionHeader
-              title={t('merchant.rental.nafith.title')}
-              className="mb-0"
-            />
-            <p className="text-[12px] text-ink-500 leading-relaxed">
-              {t('merchant.rental.nafith.hint')}
-            </p>
-            <NafithRow
-              stepLabel={t('merchant.rental.nafith.submit')}
-              stepSub={t('merchant.rental.nafith.submitSub')}
-              state={
-                rental.nafithState === 'pending' ? 'pending' : 'done'
-              }
-              at={stageAt(rental, 'nafith-submitted')}
-              formatDate={formatDate}
-              t={t}
-            />
-            <CardDivider />
-            <NafithRow
-              stepLabel={t('merchant.rental.nafith.approve')}
-              stepSub={t('merchant.rental.nafith.approveSub')}
-              state={
-                rental.nafithState === 'approved'
-                  ? 'done'
-                  : rental.nafithState === 'submitted'
-                    ? 'current'
-                    : 'pending'
-              }
-              at={stageAt(rental, 'nafith-approved')}
-              formatDate={formatDate}
-              t={t}
-            />
-          </Card>
+          {/* Nafith placeholders — whole card hidden in the current
+              phase (ENABLE_PAYMENTS_AND_NOTES). */}
+          {ENABLE_PAYMENTS_AND_NOTES && (
+            <Card padded className="space-y-3">
+              <SectionHeader
+                title={t('merchant.rental.nafith.title')}
+                className="mb-0"
+              />
+              <p className="text-[12px] text-ink-500 leading-relaxed">
+                {t('merchant.rental.nafith.hint')}
+              </p>
+              <NafithRow
+                stepLabel={t('merchant.rental.nafith.submit')}
+                stepSub={t('merchant.rental.nafith.submitSub')}
+                state={
+                  rental.nafithState === 'pending' ? 'pending' : 'done'
+                }
+                at={stageAt(rental, 'nafith-submitted')}
+                formatDate={formatDate}
+                t={t}
+              />
+              <CardDivider />
+              <NafithRow
+                stepLabel={t('merchant.rental.nafith.approve')}
+                stepSub={t('merchant.rental.nafith.approveSub')}
+                state={
+                  rental.nafithState === 'approved'
+                    ? 'done'
+                    : rental.nafithState === 'submitted'
+                      ? 'current'
+                      : 'pending'
+                }
+                at={stageAt(rental, 'nafith-approved')}
+                formatDate={formatDate}
+                t={t}
+              />
+            </Card>
+          )}
 
           {/* The bespoke status timeline used to live here. It's been
               consolidated into the Rental Journey Timeline at the top of

@@ -25,6 +25,7 @@
 // every render site.
 // =====================================================================
 
+import { ENABLE_PAYMENTS_AND_NOTES } from '@/lib/featureFlags';
 import type {
   ContractClause,
   Localized,
@@ -144,10 +145,19 @@ export function buildContractFromTemplate({
     {
       id: 'fee',
       title: { ar: 'رسوم الإيجار', en: 'Rental fee' },
-      body: {
-        ar: `${SARAr(rentalFee)} (الإجمالي مع الضريبة: ${SARAr(total)}). تُسدَّد قبل الاستلام.`,
-        en: `${SAR(rentalFee)} (incl. VAT: ${SAR(total)}). Payable before pickup.`,
-      },
+      // Current phase (ENABLE_PAYMENTS_AND_NOTES = false): neutral
+      // wording that states the rental value only — no payment
+      // mechanism, timing, or destination is implied. The legacy
+      // "payable before pickup" wording is preserved for restoration.
+      body: ENABLE_PAYMENTS_AND_NOTES
+        ? {
+            ar: `${SARAr(rentalFee)} (الإجمالي مع الضريبة: ${SARAr(total)}). تُسدَّد قبل الاستلام.`,
+            en: `${SAR(rentalFee)} (incl. VAT: ${SAR(total)}). Payable before pickup.`,
+          }
+        : {
+            ar: `قيمة الإيجار: ${SARAr(rentalFee)}، والإجمالي شامل الضريبة: ${SARAr(total)}.`,
+            en: `Rental value: ${SAR(rentalFee)}. Total including VAT: ${SAR(total)}.`,
+          },
     },
     ...(deposit > 0
       ? [
@@ -193,14 +203,22 @@ export function buildContractFromTemplate({
         en: 'Cancellation is free before pickup. No cancellation after pickup.',
       },
     },
-    {
-      id: 'note',
-      title: { ar: 'سند الأمر', en: 'Promissory note' },
-      body: {
-        ar: 'يُنشأ السند تلقائياً بعد الدفع، ويُوقَّع عبر نفاذ خارج التطبيق. يصبح ملزماً عند تأكيد Lend.',
-        en: 'The promissory note is generated after payment and signed via Nafath outside the app. It becomes binding once Lend verifies.',
-      },
-    },
+    // Promissory-note clause — OMITTED ENTIRELY in the current phase
+    // (ENABLE_PAYMENTS_AND_NOTES = false): no note exists, so the
+    // customer-approved contract must not bind one. The clause text is
+    // preserved here for flag restoration.
+    ...(ENABLE_PAYMENTS_AND_NOTES
+      ? [
+          {
+            id: 'note',
+            title: { ar: 'سند الأمر', en: 'Promissory note' },
+            body: {
+              ar: 'يُنشأ السند تلقائياً بعد الدفع، ويُوقَّع عبر نفاذ خارج التطبيق. يصبح ملزماً عند تأكيد Lend.',
+              en: 'The promissory note is generated after payment and signed via Nafath outside the app. It becomes binding once Lend verifies.',
+            },
+          },
+        ]
+      : []),
   ];
 
   return {

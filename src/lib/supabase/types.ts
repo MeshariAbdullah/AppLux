@@ -458,6 +458,12 @@ export type Database = {
         Args: { p_note_id: string };
         Returns: string;
       };
+      /** Current-phase activation without payment/note/Nafath — see
+       *  20260502122400_activate_rental_without_payment_and_note.sql. */
+      activate_rental_without_payment_and_note: {
+        Args: { p_contract_id: string };
+        Returns: string;
+      };
       record_identity_verification: {
         Args: { p_provider?: string; p_reference_id?: string | null };
         Returns: void;

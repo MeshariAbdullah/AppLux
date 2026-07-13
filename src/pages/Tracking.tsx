@@ -12,6 +12,7 @@ import {
   SparkleIcon,
   SupportIcon,
 } from '@/components/icons';
+import { ENABLE_PAYMENTS_AND_NOTES } from '@/lib/featureFlags';
 import { useI18n, useT } from '@/lib/i18n';
 import { useStore } from '@/lib/store';
 import { demoMode } from '@/lib/supabase';
@@ -112,12 +113,16 @@ export default function Tracking() {
                 </div>
                 <div className="mt-0.5 font-semibold num truncate">{pkg.contract.reference}</div>
               </div>
-              <div>
-                <div className="text-white/55 uppercase tracking-wide text-[11px]">
-                  {t('tracking.refNote')}
+              {/* Note reference — hidden in the current phase
+                  (ENABLE_PAYMENTS_AND_NOTES). */}
+              {ENABLE_PAYMENTS_AND_NOTES && (
+                <div>
+                  <div className="text-white/55 uppercase tracking-wide text-[11px]">
+                    {t('tracking.refNote')}
+                  </div>
+                  <div className="mt-0.5 font-semibold num truncate">{pkg.note.reference}</div>
                 </div>
-                <div className="mt-0.5 font-semibold num truncate">{pkg.note.reference}</div>
-              </div>
+              )}
             </div>
           </div>
 
@@ -158,7 +163,8 @@ export default function Tracking() {
             </Card>
           </section>
 
-          {/* Documents */}
+          {/* Documents — note + Nafith rows hidden in the current
+              phase (ENABLE_PAYMENTS_AND_NOTES). */}
           <Card padded className="space-y-3">
             <DocRow
               icon={<DocIcon size={18} />}
@@ -166,20 +172,24 @@ export default function Tracking() {
               label={t('tracking.downloadContract')}
               ref={pkg.contract.reference}
             />
-            <CardDivider />
-            <DocRow
-              icon={<GavelIcon size={18} />}
-              tone="bg-gold-50 text-gold-700"
-              label={t('tracking.downloadNote')}
-              ref={pkg.note.reference}
-            />
-            <CardDivider />
-            <DocRow
-              icon={<BadgeCheckIcon size={18} />}
-              tone="bg-success-50 text-success-600"
-              label={t('review.confirm.nafith')}
-              ref={t('nafath.verified')}
-            />
+            {ENABLE_PAYMENTS_AND_NOTES && (
+              <>
+                <CardDivider />
+                <DocRow
+                  icon={<GavelIcon size={18} />}
+                  tone="bg-gold-50 text-gold-700"
+                  label={t('tracking.downloadNote')}
+                  ref={pkg.note.reference}
+                />
+                <CardDivider />
+                <DocRow
+                  icon={<BadgeCheckIcon size={18} />}
+                  tone="bg-success-50 text-success-600"
+                  label={t('review.confirm.nafith')}
+                  ref={t('nafath.verified')}
+                />
+              </>
+            )}
           </Card>
 
           <Button

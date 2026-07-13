@@ -42,7 +42,12 @@ import type {
 import type { Contract, Invoice, PromissoryNote } from '@/lib/data';
 import { ContractStatusChip } from '@/components/rental/StatusChips';
 import { RentalJourneyTimeline } from '@/components/rental/RentalJourneyTimeline';
-import { deriveJourneyFromUIContract } from '@/lib/rentalJourney';
+import { ENABLE_PAYMENTS_AND_NOTES } from '@/lib/featureFlags';
+import {
+  deriveJourneyFromUIContract,
+  deriveSimpleJourney,
+  simpleCurrentFromUIContract,
+} from '@/lib/rentalJourney';
 import {
   buildContractFromTemplate,
   type ContractTemplateOutput,
@@ -255,14 +260,23 @@ export default function ContractTracking() {
             </div>
           </div>
 
-          {/* Journey is the primary structural element — leads the page. */}
+          {/* Journey is the primary structural element — leads the page.
+              Current phase: the approved 4-stage reference journey. */}
           <RentalJourneyTimeline
             variant="lead"
-            steps={deriveJourneyFromUIContract(
-              contract,
-              linkedInvoices[0] ? { issuedAt: linkedInvoices[0].issuedAt } : null,
-              linkedNote ? { status: linkedNote.status } : null,
-            )}
+            steps={
+              ENABLE_PAYMENTS_AND_NOTES
+                ? deriveJourneyFromUIContract(
+                    contract,
+                    linkedInvoices[0] ? { issuedAt: linkedInvoices[0].issuedAt } : null,
+                    linkedNote ? { status: linkedNote.status } : null,
+                  )
+                : deriveSimpleJourney({
+                    current: simpleCurrentFromUIContract(contract.status),
+                    requestAt: linkedInvoices[0]?.issuedAt ?? null,
+                    startedAt: contract.startDate,
+                  })
+            }
           />
 
           {/* Single calm "Record" card — parties + key terms merged. */}
@@ -309,7 +323,9 @@ export default function ContractTracking() {
           <section>
             <SectionHeader title={t('track.contract.linkedDocs')} />
             <div className="space-y-2.5">
-              {linkedNote && (
+              {/* Promissory-note document link — hidden in the current
+                  phase (ENABLE_PAYMENTS_AND_NOTES). */}
+              {ENABLE_PAYMENTS_AND_NOTES && linkedNote && (
                 <button
                   type="button"
                   onClick={() => navigate(`/track/note/${linkedNote.id}`)}

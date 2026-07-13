@@ -1,5 +1,6 @@
 import { CheckIcon } from '@/components/icons';
 import { cn } from '@/lib/cn';
+import { ENABLE_PAYMENTS_AND_NOTES } from '@/lib/featureFlags';
 import { useT } from '@/lib/i18n';
 
 // =====================================================================
@@ -24,14 +25,41 @@ export type MerchantStatusStep =
   | 'created'
   | 'customer-review'
   | 'payment-and-signing'
-  | 'notify';
+  | 'notify'
+  // Simplified-journey steps (ENABLE_PAYMENTS_AND_NOTES = false):
+  | 'started'
+  | 'closure';
 
-const ORDER: MerchantStatusStep[] = [
+const LEGACY_ORDER: MerchantStatusStep[] = [
   'created',
   'customer-review',
   'payment-and-signing',
   'notify',
 ];
+
+// Approved four-stage reference journey — labels pulled from the SHARED
+// journey.stages.* keys so merchant and customer read the exact same
+// four stages.
+const SIMPLE_ORDER: MerchantStatusStep[] = [
+  'created',
+  'customer-review',
+  'started',
+  'closure',
+];
+
+/** Legacy step names → simplified equivalent so call sites keep
+ *  passing the same values under either flag state. */
+const LEGACY_TO_SIMPLE: Partial<Record<MerchantStatusStep, MerchantStatusStep>> = {
+  'payment-and-signing': 'started',
+  notify: 'started',
+};
+
+const SIMPLE_LABEL_KEY: Record<string, string> = {
+  created: 'journey.stages.request',
+  'customer-review': 'journey.stages.review',
+  started: 'journey.stages.started',
+  closure: 'journey.stages.closure',
+};
 
 export function MerchantStatusStrip({
   currentStep,
@@ -43,7 +71,11 @@ export function MerchantStatusStrip({
 }) {
   const useTranslator = useT();
   const tr = t ?? useTranslator;
-  const activeIdx = ORDER.indexOf(currentStep);
+  const ORDER = ENABLE_PAYMENTS_AND_NOTES ? LEGACY_ORDER : SIMPLE_ORDER;
+  const normalizedStep = ENABLE_PAYMENTS_AND_NOTES
+    ? currentStep
+    : (LEGACY_TO_SIMPLE[currentStep] ?? currentStep);
+  const activeIdx = ORDER.indexOf(normalizedStep);
 
   return (
     <section className="rounded-xl3 bg-white hairline shadow-soft px-5 py-4">
@@ -79,7 +111,9 @@ export function MerchantStatusStrip({
                       : 'text-ink-500',
                 )}
               >
-                {tr(`merchant.status.steps.${step}`)}
+                {ENABLE_PAYMENTS_AND_NOTES
+                  ? tr(`merchant.status.steps.${step}`)
+                  : tr(SIMPLE_LABEL_KEY[step] ?? `merchant.status.steps.${step}`)}
               </div>
             </li>
           );

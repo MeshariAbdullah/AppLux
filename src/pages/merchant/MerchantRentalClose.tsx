@@ -26,6 +26,7 @@ import {
 import { CACHE_TTL, cacheKeys } from '@/lib/cache/keys';
 import { cachedFetch, cacheInvalidate } from '@/lib/cache/memoryCache';
 import { translateError } from '@/lib/errors';
+import { ENABLE_PAYMENTS_AND_NOTES } from '@/lib/featureFlags';
 import { getInitials } from '@/lib/format/initials';
 import { isRentalFinalized } from '@/lib/format/rentalFinalization';
 import { useSensitiveFlow } from '@/lib/session/flowGuard';
@@ -396,13 +397,19 @@ export default function MerchantRentalClose() {
                 label={t('merchant.rental.docs.contract')}
                 refValue={rental.contractRef}
               />
-              <CardDivider />
-              <LinkedRow
-                icon={<SignatureIcon size={16} />}
-                tone="bg-gold-50 text-gold-700"
-                label={t('merchant.rental.docs.note')}
-                refValue={rental.noteRef}
-              />
+              {/* Promissory-note row — hidden in the current phase
+                  (ENABLE_PAYMENTS_AND_NOTES). */}
+              {ENABLE_PAYMENTS_AND_NOTES && (
+                <>
+                  <CardDivider />
+                  <LinkedRow
+                    icon={<SignatureIcon size={16} />}
+                    tone="bg-gold-50 text-gold-700"
+                    label={t('merchant.rental.docs.note')}
+                    refValue={rental.noteRef}
+                  />
+                </>
+              )}
             </Card>
 
             {/* Notes */}

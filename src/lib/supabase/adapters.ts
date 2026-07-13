@@ -1,6 +1,7 @@
 // Adapters that map Supabase DB rows to the existing UI types,
 // so screens can switch data sources without changing their render code.
 
+import { ENABLE_PAYMENTS_AND_NOTES } from '@/lib/featureFlags';
 import type {
   AdminActiveCase,
   AdminCaseSeverity,
@@ -312,15 +313,20 @@ export function adaptContractToMerchantRental(
     timeline.push({ key: 'customer-approved', at: row.created_at });
     timeline.push({ key: 'contract-ready', at: row.created_at });
   }
-  if (note?.created_at) {
-    timeline.push({ key: 'payment-received', at: note.created_at });
-    timeline.push({ key: 'note-ready', at: note.created_at });
-  }
-  if (note?.signed_at) {
-    timeline.push({ key: 'nafith-submitted', at: note.signed_at });
-  }
-  if (note?.nafith_attested_at) {
-    timeline.push({ key: 'nafith-approved', at: note.nafith_attested_at });
+  // Payment / note / Nafith timeline events are hidden in the current
+  // phase (ENABLE_PAYMENTS_AND_NOTES = false) — the simplified journey
+  // has no such visible steps. Restored by flipping the flag.
+  if (ENABLE_PAYMENTS_AND_NOTES) {
+    if (note?.created_at) {
+      timeline.push({ key: 'payment-received', at: note.created_at });
+      timeline.push({ key: 'note-ready', at: note.created_at });
+    }
+    if (note?.signed_at) {
+      timeline.push({ key: 'nafith-submitted', at: note.signed_at });
+    }
+    if (note?.nafith_attested_at) {
+      timeline.push({ key: 'nafith-approved', at: note.nafith_attested_at });
+    }
   }
   if (row.signed_at) {
     timeline.push({ key: 'activated', at: row.signed_at });

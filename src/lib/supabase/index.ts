@@ -100,6 +100,7 @@ export {
 
 export {
   acceptRentalInvoice,
+  activateRentalWithoutPaymentAndNote,
   createInvoiceWithItems,
   fetchInvoiceByContractId,
   fetchInvoiceById,

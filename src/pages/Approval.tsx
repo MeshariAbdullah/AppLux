@@ -21,7 +21,8 @@ import {
   useSupabaseAuth,
 } from '@/lib/supabase';
 import { RentalJourneyTimeline } from '@/components/rental/RentalJourneyTimeline';
-import { deriveJourneyOnApproval } from '@/lib/rentalJourney';
+import { ENABLE_PAYMENTS_AND_NOTES } from '@/lib/featureFlags';
+import { deriveJourneyOnApproval, deriveSimpleJourney } from '@/lib/rentalJourney';
 import type { ScannedPackage } from '@/lib/data';
 import { PaymentSimulationSheet } from '@/components/payment/PaymentSimulationSheet';
 
@@ -185,7 +186,7 @@ export default function Approval() {
             {t('approval.documentedHeadline')}
           </h1>
           <p className="mt-2.5 text-[13.5px] text-ink-500 leading-relaxed max-w-xs mx-auto animate-reveal-up">
-            {t('approval.documentedSubtitle')}
+            {t(ENABLE_PAYMENTS_AND_NOTES ? 'approval.documentedSubtitle' : 'approval.documentedSubtitleSimple')}
           </p>
           <div className="mt-5 inline-flex items-center gap-2 rounded-full bg-white ring-1 ring-lavender-200 px-3 py-1.5 text-[10.5px] font-semibold uppercase tracking-[0.14em] text-lavender-700 animate-stamp-in">
             <BadgeCheckIcon size={11} />
@@ -197,13 +198,21 @@ export default function Approval() {
         </div>
 
         <div className="px-5 pt-2 pb-10 space-y-5">
-          {/* Journey is the primary structural element of this screen. */}
+          {/* Journey is the primary structural element of this screen.
+              Current phase: the approved 4-stage journey with the
+              rental already started (activation happened during the
+              review flow, no payment/note steps). */}
           <RentalJourneyTimeline
             variant="lead"
-            steps={deriveJourneyOnApproval(
-              { issuedAt: pkg.issuedAt },
-              approvedAt,
-            )}
+            steps={
+              ENABLE_PAYMENTS_AND_NOTES
+                ? deriveJourneyOnApproval({ issuedAt: pkg.issuedAt }, approvedAt)
+                : deriveSimpleJourney({
+                    current: 'started',
+                    requestAt: pkg.issuedAt,
+                    startedAt: approvedAt,
+                  })
+            }
           />
 
           {/* Documented record — the contract + note are now part of the
@@ -228,67 +237,102 @@ export default function Approval() {
                   {t('journey.badges.signed.label')}
                 </span>
               </div>
-              <div className="h-px bg-lavender-200/60" />
-              <div className="flex items-center gap-3">
-                <span className="h-9 w-9 shrink-0 rounded-2xl bg-white text-lavender-700 grid place-items-center ring-1 ring-lavender-200">
-                  <GavelIcon size={16} />
-                </span>
-                <div className="min-w-0 flex-1">
-                  <div className="text-[12px] text-ink-500">{t('approval.noteSigned')}</div>
-                  <div className="text-[13px] font-semibold text-ink-900 num truncate">
-                    {pkg.note.reference}
+              {/* Promissory-note row — hidden in the current phase
+                  (no note exists; ENABLE_PAYMENTS_AND_NOTES). */}
+              {ENABLE_PAYMENTS_AND_NOTES && (
+                <>
+                  <div className="h-px bg-lavender-200/60" />
+                  <div className="flex items-center gap-3">
+                    <span className="h-9 w-9 shrink-0 rounded-2xl bg-white text-lavender-700 grid place-items-center ring-1 ring-lavender-200">
+                      <GavelIcon size={16} />
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <div className="text-[12px] text-ink-500">{t('approval.noteSigned')}</div>
+                      <div className="text-[13px] font-semibold text-ink-900 num truncate">
+                        {pkg.note.reference}
+                      </div>
+                    </div>
+                    <span className="inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-[0.08em] text-lavender-700 bg-white ring-1 ring-inset ring-lavender-200 rounded-full px-1.5 py-0.5">
+                      <BadgeCheckIcon size={10} />
+                      {t('journey.badges.attested.label')}
+                    </span>
                   </div>
-                </div>
-                <span className="inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-[0.08em] text-lavender-700 bg-white ring-1 ring-inset ring-lavender-200 rounded-full px-1.5 py-0.5">
-                  <BadgeCheckIcon size={10} />
-                  {t('journey.badges.attested.label')}
-                </span>
-              </div>
+                </>
+              )}
             </div>
             <div className="mt-4 text-[11px] text-ink-500 num">
               {t('approval.documentedRecordTime', { time: approvedTime })}
             </div>
           </section>
 
-          {/* Nafith disclaimer band — quiet and calm. The official record
-              number lives on the seal above, so it's not repeated here. */}
-          <div className="rounded-xl2 bg-canvas-100 ring-1 ring-canvas-200 p-3.5 flex items-start gap-3 text-[11.5px] leading-relaxed text-ink-600">
-            <SparkleIcon size={14} className="mt-0.5 shrink-0 text-lavender-600" />
-            <div className="min-w-0 flex-1">{t('review.note.disclaimer')}</div>
-          </div>
+          {/* Nafith disclaimer band — current phase: no note exists,
+              so no disclaimer (ENABLE_PAYMENTS_AND_NOTES). */}
+          {ENABLE_PAYMENTS_AND_NOTES && (
+            <div className="rounded-xl2 bg-canvas-100 ring-1 ring-canvas-200 p-3.5 flex items-start gap-3 text-[11.5px] leading-relaxed text-ink-600">
+              <SparkleIcon size={14} className="mt-0.5 shrink-0 text-lavender-600" />
+              <div className="min-w-0 flex-1">{t('review.note.disclaimer')}</div>
+            </div>
+          )}
 
-          {/* Primary action — opens the temporary payment simulation
-              that walks the customer through pay → Nafath → verify →
-              activate. Replaces the live payment + Nafath integration
-              until those land. Secondary link skips the simulation
-              and just opens the existing tracking page. */}
+          {/* Primary action.
+              Flag ON: opens the payment simulation (pay → Nafath →
+              verify → activate).
+              Flag OFF (current phase): the rental is ALREADY active —
+              the primary action is simply opening the tracking page. */}
           <div className="pt-2 space-y-3">
-            <Button
-              variant="primary"
-              size="lg"
-              block
-              leading={<SparkleIcon size={18} />}
-              onClick={() => setPaySheetOpen(true)}
-            >
-              {t('payment.simulation.pay.cta', {
-                amount: formatCurrency(pkg.fees.grandTotal),
-              })}
-            </Button>
-            <div className="text-center text-[12.5px] text-ink-500 space-x-3 rtl:space-x-reverse">
-              <button
-                type="button"
+            {ENABLE_PAYMENTS_AND_NOTES ? (
+              <Button
+                variant="primary"
+                size="lg"
+                block
+                leading={<SparkleIcon size={18} />}
+                onClick={() => setPaySheetOpen(true)}
+              >
+                {t('payment.simulation.pay.cta', {
+                  amount: formatCurrency(pkg.fees.grandTotal),
+                })}
+              </Button>
+            ) : (
+              <Button
+                variant="primary"
+                size="lg"
+                block
+                leading={<BadgeCheckIcon size={18} />}
                 onClick={() => {
-                  if (configured && liveInvoiceId) {
+                  if (configured && liveContractId) {
+                    navigate(`/track/contract/${liveContractId}`, { replace: true });
+                  } else if (configured && liveInvoiceId) {
                     navigate(`/track/invoice/${liveInvoiceId}`, { replace: true });
                   } else {
                     navigate(`/tracking/${token}`, { replace: true });
                   }
                 }}
-                className="text-ink-700 hover:text-ink-900 underline underline-offset-4 decoration-canvas-300 hover:decoration-ink-700"
               >
                 {t('approval.viewTracking')}
-              </button>
-              <span aria-hidden className="text-ink-300">·</span>
+              </Button>
+            )}
+            <div className="text-center text-[12.5px] text-ink-500 space-x-3 rtl:space-x-reverse">
+              {/* Secondary tracking link only makes sense when the
+                  primary CTA is the payment sheet (flag on) — the
+                  current-phase primary IS the tracking button. */}
+              {ENABLE_PAYMENTS_AND_NOTES && (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (configured && liveInvoiceId) {
+                        navigate(`/track/invoice/${liveInvoiceId}`, { replace: true });
+                      } else {
+                        navigate(`/tracking/${token}`, { replace: true });
+                      }
+                    }}
+                    className="text-ink-700 hover:text-ink-900 underline underline-offset-4 decoration-canvas-300 hover:decoration-ink-700"
+                  >
+                    {t('approval.viewTracking')}
+                  </button>
+                  <span aria-hidden className="text-ink-300">·</span>
+                </>
+              )}
               <button
                 type="button"
                 onClick={() => navigate('/home', { replace: true })}
@@ -301,13 +345,17 @@ export default function Approval() {
         </div>
       </Screen>
 
-      <PaymentSimulationSheet
-        open={paySheetOpen}
-        onClose={() => setPaySheetOpen(false)}
-        amount={pkg.fees.grandTotal}
-        contractId={liveContractId}
-        invoiceId={liveInvoiceId}
-      />
+      {/* Payment simulation — gated off in the current phase; the
+          component is preserved for flag restoration. */}
+      {ENABLE_PAYMENTS_AND_NOTES && (
+        <PaymentSimulationSheet
+          open={paySheetOpen}
+          onClose={() => setPaySheetOpen(false)}
+          amount={pkg.fees.grandTotal}
+          contractId={liveContractId}
+          invoiceId={liveInvoiceId}
+        />
+      )}
     </>
   );
 }

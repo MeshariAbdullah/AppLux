@@ -1,10 +1,11 @@
 import type { ReactNode } from 'react';
 import { BadgeCheckIcon, CheckIcon, ShieldIcon } from '@/components/icons';
+import { ENABLE_PAYMENTS_AND_NOTES } from '@/lib/featureFlags';
 import { useI18n, useT } from '@/lib/i18n';
 import { cn } from '@/lib/cn';
 import type {
+  JourneyStageKey,
   JourneyStep,
-  RentalStage,
   StageBadge,
   StageStatus,
 } from '@/lib/rentalJourney';
@@ -169,10 +170,16 @@ function StageLabel({
   stage,
   status,
 }: {
-  stage: RentalStage;
+  stage: JourneyStageKey;
   status: StageStatus;
 }): ReactNode {
   const t = useT();
+  // Current phase uses the simplified description set — the legacy
+  // descriptions narrate payment / Nafath / note steps and are kept in
+  // the locale files for flag restoration.
+  const descriptionKey = ENABLE_PAYMENTS_AND_NOTES
+    ? `journey.descriptions.${stage}`
+    : `journey.simpleDescriptions.${stage}`;
   return (
     <div className="min-w-0">
       <div
@@ -189,7 +196,7 @@ function StageLabel({
           status === 'pending' ? 'text-ink-300' : 'text-ink-500',
         )}
       >
-        {t(`journey.descriptions.${stage}`)}
+        {t(descriptionKey)}
       </div>
     </div>
   );

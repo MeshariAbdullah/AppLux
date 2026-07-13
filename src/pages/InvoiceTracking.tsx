@@ -12,6 +12,7 @@ import {
   ReceiptIcon,
   SparkleIcon,
 } from '@/components/icons';
+import { ENABLE_PAYMENTS_AND_NOTES } from '@/lib/featureFlags';
 import { useI18n, useT } from '@/lib/i18n';
 import { useStore } from '@/lib/store';
 import {
@@ -41,6 +42,16 @@ function deriveContinuationStep(
   invoice: Invoice,
   contract: Contract | null | undefined,
 ): ContinuationStep {
+  if (!ENABLE_PAYMENTS_AND_NOTES) {
+    // Approved 4-stage mapping: pending contract = still customer
+    // review; active = rental started; ended = return/closure.
+    if (contract) {
+      if (contract.status === 'ended') return 'closure';
+      if (contract.status === 'active') return 'started';
+      return 'review';
+    }
+    return 'review';
+  }
   if (contract) {
     if (contract.status === 'active') return 'activation';
     return 'nafath';
@@ -191,7 +202,13 @@ export default function InvoiceTracking() {
             <div className="mt-4 grid grid-cols-2 gap-3">
               <div>
                 <div className="text-[10.5px] font-semibold text-ink-400 uppercase tracking-[0.08em]">
-                  {t('track.invoice.amountDue')}
+                  {/* Current phase: neutral "rental value" label — no
+                      payment mechanism is implied anywhere. */}
+                  {t(
+                    ENABLE_PAYMENTS_AND_NOTES
+                      ? 'track.invoice.amountDue'
+                      : 'track.invoice.rentalValue',
+                  )}
                 </div>
                 <div className="mt-0.5 num text-[18px] font-semibold text-ink-900 leading-none">
                   {formatCurrency(invoice.amount)}
@@ -199,7 +216,11 @@ export default function InvoiceTracking() {
               </div>
               <div>
                 <div className="text-[10.5px] font-semibold text-ink-400 uppercase tracking-[0.08em]">
-                  {t('track.invoice.dueOn')}
+                  {t(
+                    ENABLE_PAYMENTS_AND_NOTES
+                      ? 'track.invoice.dueOn'
+                      : 'track.invoice.startsOn',
+                  )}
                 </div>
                 <div className="mt-0.5 num text-[14px] font-semibold text-ink-900 leading-none">
                   {formatDate(invoice.dueDate)}
@@ -228,8 +249,10 @@ export default function InvoiceTracking() {
             )}
           </div>
 
-          {/* ====== STATE BANNERS ====== */}
-          {invoice.status === 'overdue' && (
+          {/* ====== STATE BANNERS ======
+              Payment-worded banners are flag-gated; the current phase
+              shows a neutral accepted banner only. */}
+          {ENABLE_PAYMENTS_AND_NOTES && invoice.status === 'overdue' && (
             <div className="rounded-xl2 bg-danger-50 ring-1 ring-danger-500/20 px-4 py-3 flex items-start gap-2.5 text-[12.5px] text-danger-600">
               <AlertIcon size={16} className="mt-0.5 shrink-0" />
               <span className="leading-relaxed">{t('track.invoice.overdueBanner')}</span>
@@ -238,7 +261,13 @@ export default function InvoiceTracking() {
           {invoice.status === 'paid' && (
             <div className="rounded-xl2 bg-success-50 ring-1 ring-success-500/20 px-4 py-3 flex items-start gap-2.5 text-[12.5px] text-success-600">
               <CheckIcon size={16} className="mt-0.5 shrink-0" />
-              <span className="leading-relaxed">{t('track.invoice.paidBanner')}</span>
+              <span className="leading-relaxed">
+                {t(
+                  ENABLE_PAYMENTS_AND_NOTES
+                    ? 'track.invoice.paidBanner'
+                    : 'track.invoice.acceptedBanner',
+                )}
+              </span>
             </div>
           )}
 

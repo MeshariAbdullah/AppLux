@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { Navigate, useNavigate, useParams } from 'react-router-dom';
+import { ENABLE_PAYMENTS_AND_NOTES } from '@/lib/featureFlags';
 import { Header, Screen } from '@/components/layout';
 import {
   Button,
@@ -42,6 +43,13 @@ export default function MerchantRentalNote() {
   const { id } = useParams();
   const { merchantRentals } = useStore();
   const { configured } = useSupabaseAuth();
+
+  // Current phase (ENABLE_PAYMENTS_AND_NOTES = false): the merchant
+  // note surface is hidden — redirect to the rental details page.
+  // Normal navigation no longer links here; this covers deep links.
+  if (!ENABLE_PAYMENTS_AND_NOTES) {
+    return <Navigate to={id ? `/merchant/rentals/${id}` : '/merchant/rentals'} replace />;
+  }
 
   const demoRental = useMemo(
     () => merchantRentals.find((r) => r.id === id),

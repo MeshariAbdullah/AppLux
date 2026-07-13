@@ -1,5 +1,6 @@
 import { CheckIcon } from '@/components/icons';
 import { cn } from '@/lib/cn';
+import { ENABLE_PAYMENTS_AND_NOTES } from '@/lib/featureFlags';
 import { useT } from '@/lib/i18n';
 
 // =====================================================================
@@ -28,9 +29,12 @@ export type ContinuationStep =
   | 'review'
   | 'payment'
   | 'nafath'
-  | 'activation';
+  | 'activation'
+  // Simplified-journey steps (ENABLE_PAYMENTS_AND_NOTES = false):
+  | 'started'
+  | 'closure';
 
-const ORDER: ContinuationStep[] = [
+const LEGACY_ORDER: ContinuationStep[] = [
   'offer-and-contract',
   'review',
   'payment',
@@ -38,13 +42,42 @@ const ORDER: ContinuationStep[] = [
   'activation',
 ];
 
+// Approved four-stage reference journey. Labels come from the SHARED
+// journey.stages.* keys so this strip, the merchant strip, and the
+// timeline always read identically.
+const SIMPLE_ORDER: ContinuationStep[] = [
+  'offer-and-contract',
+  'review',
+  'started',
+  'closure',
+];
+
+/** Legacy step names → their simplified equivalent, so existing call
+ *  sites keep passing the same values under either flag state. */
+const LEGACY_TO_SIMPLE: Partial<Record<ContinuationStep, ContinuationStep>> = {
+  payment: 'started',
+  nafath: 'started',
+  activation: 'started',
+};
+
+const SIMPLE_LABEL_KEY: Record<string, string> = {
+  'offer-and-contract': 'journey.stages.request',
+  review: 'journey.stages.review',
+  started: 'journey.stages.started',
+  closure: 'journey.stages.closure',
+};
+
 export function CustomerContinuationStrip({
   currentStep,
 }: {
   currentStep: ContinuationStep;
 }) {
   const t = useT();
-  const activeIdx = ORDER.indexOf(currentStep);
+  const ORDER = ENABLE_PAYMENTS_AND_NOTES ? LEGACY_ORDER : SIMPLE_ORDER;
+  const normalizedStep = ENABLE_PAYMENTS_AND_NOTES
+    ? currentStep
+    : (LEGACY_TO_SIMPLE[currentStep] ?? currentStep);
+  const activeIdx = ORDER.indexOf(normalizedStep);
   return (
     <section className="rounded-xl3 bg-white hairline shadow-soft px-5 py-4">
       <div className="text-[10.5px] font-semibold uppercase tracking-[0.12em] text-lavender-700">
@@ -79,7 +112,9 @@ export function CustomerContinuationStrip({
                       : 'text-ink-500',
                 )}
               >
-                {t(`continuation.steps.${step}`)}
+                {ENABLE_PAYMENTS_AND_NOTES
+                  ? t(`continuation.steps.${step}`)
+                  : t(SIMPLE_LABEL_KEY[step] ?? `continuation.steps.${step}`)}
               </div>
             </li>
           );

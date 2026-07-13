@@ -246,6 +246,28 @@ export async function verifyAndActivateRental(noteId: string): Promise<string> {
   return data as string;
 }
 
+/**
+ * CURRENT-PHASE activation (ENABLE_PAYMENTS_AND_NOTES = false): flips
+ * the customer's own pending contract to active and applies the
+ * eligibility hold (original item value) exactly once — WITHOUT
+ * creating payment records, promissory-note rows, or Nafath/Nafith
+ * stamps. Idempotent: re-calling on an already-active contract returns
+ * the id without a second hold, so the Review flow's "retry
+ * activation" is always safe. Errors P0090–P0093 (see
+ * 20260502122400_activate_rental_without_payment_and_note.sql).
+ */
+export async function activateRentalWithoutPaymentAndNote(
+  contractId: string,
+): Promise<string> {
+  const sb = requireSupabase();
+  const { data, error } = await sb.rpc(
+    'activate_rental_without_payment_and_note',
+    { p_contract_id: contractId },
+  );
+  if (error) throw error;
+  return data as string;
+}
+
 // ---------------------------------------------------------------------
 
 function makeScanToken(): string {

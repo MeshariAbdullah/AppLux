@@ -32,6 +32,15 @@ export type RentalStage =
   | 'return'       // 6. Return window — item being returned
   | 'closed';      // 7. Rental closed (clean or damage-settled)
 
+/**
+ * Simplified-journey stage keys (ENABLE_PAYMENTS_AND_NOTES = false):
+ * the approved four-stage reference journey. 'closure' is the merged
+ * "الإرجاع وإنهاء العقد" terminal stage; the other three reuse the
+ * legacy keys (their labels already match the approved copy). Kept as
+ * a separate union so the legacy 7-stage switches stay exhaustive.
+ */
+export type JourneyStageKey = RentalStage | 'closure';
+
 export type StageStatus = 'pending' | 'active' | 'completed';
 
 /**
@@ -42,7 +51,7 @@ export type StageStatus = 'pending' | 'active' | 'completed';
 export type StageBadge = 'documented' | 'signed' | 'verified' | 'attested';
 
 export type JourneyStep = {
-  stage: RentalStage;
+  stage: JourneyStageKey;
   status: StageStatus;
   /** ISO timestamp if the stage has a known moment; null otherwise. */
   at: string | null;
@@ -353,4 +362,80 @@ export function deriveJourneyOnApproval(
         return { stage, status: 'pending', at: null };
     }
   });
+}
+
+// =====================================================================
+// Simplified 4-stage journey — the approved reference journey for the
+// current phase (ENABLE_PAYMENTS_AND_NOTES = false):
+//
+//   1. request  — إصدار العرض والعقد   / Offer and contract issued
+//   2. review   — مراجعة العميل        / Customer review
+//   3. started  — بدء الإيجار          / Rental started
+//   4. closure  — الإرجاع وإنهاء العقد / Return and contract closure
+//
+// Every customer/merchant journey surface renders THESE four stages
+// from this single derivation. Operational chips (due soon, overdue,
+// damage) stay on cards where needed but never add main stages. The
+// legacy 7-stage derivations above are preserved for flag restoration.
+// =====================================================================
+
+export const SIMPLE_STAGES: JourneyStageKey[] = [
+  'request',
+  'review',
+  'started',
+  'closure',
+];
+
+export type SimpleJourneyCurrent = 'review' | 'started' | 'closed';
+
+/**
+ * Build the four-step journey from the current macro state:
+ *   'review'  — offer issued, awaiting/undergoing customer review
+ *               (invoice issued/viewed, or contract still pending)
+ *   'started' — contract active
+ *   'closed'  — ended / cancelled / returned / damage-closed
+ */
+export function deriveSimpleJourney(input: {
+  current: SimpleJourneyCurrent;
+  requestAt?: string | null;
+  startedAt?: string | null;
+  closedAt?: string | null;
+}): JourneyStep[] {
+  const idx = input.current === 'review' ? 1 : input.current === 'started' ? 2 : 3;
+  const closed = input.current === 'closed';
+  return SIMPLE_STAGES.map((stage, i): JourneyStep => {
+    if (i < idx) {
+      return {
+        stage,
+        status: 'completed',
+        at:
+          stage === 'request'
+            ? input.requestAt ?? null
+            : stage === 'started'
+              ? input.startedAt ?? null
+              : null,
+      };
+    }
+    if (i === idx) {
+      return {
+        stage,
+        status: closed ? 'completed' : 'active',
+        at: closed
+          ? input.closedAt ?? null
+          : stage === 'started'
+            ? input.startedAt ?? null
+            : null,
+      };
+    }
+    return { stage, status: 'pending', at: null };
+  });
+}
+
+/** Map a UI contract status to the simple journey's current state. */
+export function simpleCurrentFromUIContract(
+  status: UIContractStatus,
+): SimpleJourneyCurrent {
+  if (status === 'ended') return 'closed';
+  if (status === 'active') return 'started';
+  return 'review';
 }

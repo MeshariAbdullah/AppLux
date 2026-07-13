@@ -24,12 +24,16 @@ import {
   ShieldIcon,
   SignatureIcon,
 } from '@/components/icons';
+import { cacheKeys } from '@/lib/cache/keys';
+import { cacheInvalidate } from '@/lib/cache/memoryCache';
 import { translateError } from '@/lib/errors';
+import { ENABLE_PAYMENTS_AND_NOTES } from '@/lib/featureFlags';
 import { useSensitiveFlow } from '@/lib/session/flowGuard';
 import { useI18n, useT } from '@/lib/i18n';
 import { useStore } from '@/lib/store';
 import {
   acceptRentalInvoice,
+  activateRentalWithoutPaymentAndNote,
   fetchInvoiceByToken,
   fetchMerchant,
   synthesizePackageFromInvoice,
@@ -37,8 +41,6 @@ import {
 } from '@/lib/supabase';
 import type { ScannedPackage } from '@/lib/data';
 import { ReviewStepper, type ReviewStepKey } from '@/components/review/ReviewStepper';
-import { RentalJourneyTimeline } from '@/components/rental/RentalJourneyTimeline';
-import { deriveJourneyFromInvoice, type JourneyStep } from '@/lib/rentalJourney';
 import { StoreLogo } from '@/components/stores/StoreLogo';
 import { cn } from '@/lib/cn';
 
@@ -52,7 +54,12 @@ export default function Review() {
   // sign the contract (see src/lib/session/flowGuard.ts).
   useSensitiveFlow(true);
   const { scans, stores, session, approvePackage } = useStore();
-  const { configured } = useSupabaseAuth();
+  const {
+    configured,
+    session: supabaseSession,
+    refresh: refreshAuthContext,
+  } = useSupabaseAuth();
+  const supabaseUserId = supabaseSession?.user?.id ?? null;
   const demoPkg = useMemo(
     () => scans.find((s) => s.token === token),
     [scans, token],
@@ -104,6 +111,14 @@ export default function Review() {
 
   const [step, setStep] = useState<ReviewStepKey>('invoice');
   const [acceptError, setAcceptError] = useState<string | null>(null);
+  // Current-phase activation recovery: when acceptance SUCCEEDED but
+  // the follow-up activation RPC failed, the contract id is parked here
+  // and the customer gets an explicit "retry activation" action. Retry
+  // only calls the idempotent activation RPC — it never re-accepts the
+  // invoice, so no second contract and no duplicate eligibility hold.
+  const [pendingActivationId, setPendingActivationId] = useState<string | null>(null);
+  const [activationError, setActivationError] = useState<string | null>(null);
+  const [activating, setActivating] = useState(false);
 
   // Loading first — never show the "invalid code" empty state while
   // the live invoice fetch is still resolving (Phase 9 production
@@ -143,11 +158,52 @@ export default function Review() {
     );
   }
 
+  // Current-phase activation (ENABLE_PAYMENTS_AND_NOTES = false): flips
+  // the freshly accepted contract to active with NO payment / note /
+  // Nafath steps, then refreshes the caches that just changed so Home /
+  // tracking immediately show "بدء الإيجار". Idempotent server-side.
+  const activateContract = async (contractId: string) => {
+    setActivating(true);
+    setActivationError(null);
+    try {
+      await activateRentalWithoutPaymentAndNote(contractId);
+      const uid = supabaseUserId;
+      if (uid) {
+        cacheInvalidate(cacheKeys.customerInvoices(uid));
+        cacheInvalidate(cacheKeys.customerContracts(uid));
+        cacheInvalidate(cacheKeys.customerNotes(uid));
+        cacheInvalidate(cacheKeys.eligibility(uid));
+      }
+      cacheInvalidate(cacheKeys.contract(contractId));
+      // Eligibility hold changed — refresh the provider snapshot.
+      void refreshAuthContext();
+      setPendingActivationId(null);
+      navigate(`/approval/${pkg.token}`, { replace: true });
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error('[lend] activateRentalWithoutPaymentAndNote failed', err);
+      setPendingActivationId(contractId);
+      setActivationError(translateError(err, t));
+    } finally {
+      setActivating(false);
+    }
+  };
+
   const handleApproved = async () => {
     setAcceptError(null);
     if (configured && liveInvoiceId) {
+      // Acceptance already succeeded on a previous attempt — never
+      // re-accept; only retry the idempotent activation.
+      if (pendingActivationId) {
+        await activateContract(pendingActivationId);
+        return;
+      }
       try {
-        await acceptRentalInvoice(liveInvoiceId);
+        const contractId = await acceptRentalInvoice(liveInvoiceId);
+        if (!ENABLE_PAYMENTS_AND_NOTES) {
+          await activateContract(contractId);
+          return;
+        }
         navigate(`/approval/${pkg.token}`, { replace: true });
       } catch (err) {
         // Raw error stays in the console for diagnosis; the user sees
@@ -161,15 +217,6 @@ export default function Review() {
     approvePackage(pkg.token);
     navigate(`/approval/${pkg.token}`, { replace: true });
   };
-
-  const journeySteps: JourneyStep[] = deriveJourneyFromInvoice(
-    {
-      issued_at: pkg.issuedAt,
-      created_at: pkg.issuedAt,
-      status: 'issued',
-    },
-    { viewerIsReviewing: true },
-  );
 
   return (
     <>
@@ -190,11 +237,13 @@ export default function Review() {
               })}
             </p>
             <p className="mt-2 text-[12.5px] text-ink-500 leading-relaxed">
-              {t('review.framing.body')}
+              {t(ENABLE_PAYMENTS_AND_NOTES ? 'review.framing.body' : 'review.framing.bodySimple')}
             </p>
           </section>
 
-          <RentalJourneyTimeline variant="lead" steps={journeySteps} />
+          {/* The embedded rental-journey timeline was removed here —
+              the ReviewStepper above is the ONLY step indicator on the
+              review experience (approved journey simplification). */}
           {step === 'invoice' && <InvoiceStep pkg={pkg} />}
           {step === 'contract' && <ContractStep pkg={pkg} />}
           {step === 'confirm' && (
@@ -207,6 +256,29 @@ export default function Review() {
           {acceptError && (
             <div className="rounded-xl2 bg-danger-50 ring-1 ring-danger-500/25 px-3.5 py-2.5 text-[12.5px] text-danger-700 leading-relaxed">
               {acceptError}
+            </div>
+          )}
+          {/* Explicit activation recovery: acceptance succeeded but
+              activation failed — the customer retries the idempotent
+              activation only, never the whole review flow. */}
+          {pendingActivationId && activationError && (
+            <div className="rounded-xl2 bg-warn-50 ring-1 ring-warn-500/25 p-4 space-y-3">
+              <div className="text-[13px] font-semibold text-warn-700 leading-tight">
+                {t('review.activation.failedTitle')}
+              </div>
+              <p className="text-[12px] text-ink-600 leading-relaxed">
+                {activationError}
+              </p>
+              <Button
+                variant="primary"
+                size="md"
+                block
+                loading={activating}
+                disabled={activating}
+                onClick={() => void activateContract(pendingActivationId)}
+              >
+                {t('review.activation.retryCta')}
+              </Button>
             </div>
           )}
         </div>
@@ -743,7 +815,7 @@ function ConfirmStep({
               {t('review.confirm.commitmentTitle')}
             </div>
             <div className="mt-2 text-[12.5px] text-ink-500 leading-relaxed">
-              {t('review.confirm.commitmentBody')}
+              {t(ENABLE_PAYMENTS_AND_NOTES ? 'review.confirm.commitmentBody' : 'review.confirm.commitmentBodySimple')}
             </div>
           </div>
         </div>
@@ -793,7 +865,7 @@ function ConfirmStep({
         <ConsentRow
           checked={accepted[2]}
           onChange={() => toggle(2)}
-          label={t('review.confirm.consent3')}
+          label={t(ENABLE_PAYMENTS_AND_NOTES ? 'review.confirm.consent3' : 'review.confirm.consent3Simple')}
         />
       </Card>
 
@@ -810,18 +882,18 @@ function ConfirmStep({
           loading={processing}
           leading={!processing ? <SignatureIcon size={18} /> : undefined}
         >
-          {processing ? t('review.confirm.processing') : t('review.confirm.commitAction')}
+          {processing ? t('review.confirm.processing') : t(ENABLE_PAYMENTS_AND_NOTES ? 'review.confirm.commitAction' : 'review.confirm.commitActionSimple')}
         </Button>
         {processing ? (
           <p
             className="text-center text-[11px] font-semibold text-lavender-700 uppercase tracking-[0.14em] animate-reveal-up"
             aria-live="polite"
           >
-            {t('review.confirm.recording')}
+            {t(ENABLE_PAYMENTS_AND_NOTES ? 'review.confirm.recording' : 'review.confirm.recordingSimple')}
           </p>
         ) : (
           <p className="text-center text-[11.5px] text-ink-400 leading-relaxed px-4">
-            {t('review.confirm.afterHint')}
+            {t(ENABLE_PAYMENTS_AND_NOTES ? 'review.confirm.afterHint' : 'review.confirm.afterHintSimple')}
           </p>
         )}
       </div>
@@ -888,7 +960,7 @@ function StepFooter({
       <div className="sticky bottom-0 z-20 border-t border-ink-100 bg-white/95 backdrop-blur px-4 py-3 pb-[calc(env(safe-area-inset-bottom)+12px)]">
         <div className="flex items-center gap-2 text-[11.5px] text-ink-400">
           <ClockIcon size={14} />
-          <span>{t('review.confirm.nafithNote')}</span>
+          <span>{t(ENABLE_PAYMENTS_AND_NOTES ? 'review.confirm.nafithNote' : 'review.confirm.footerSimple')}</span>
         </div>
       </div>
     );
