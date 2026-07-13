@@ -1,57 +1,81 @@
-import type { ReactElement } from 'react';
+import { Suspense, useEffect, type ReactElement } from 'react';
 import { Navigate, Route, Routes } from 'react-router-dom';
 import { AppLayout, AuthLayout } from '@/components/layout';
 import { useT } from '@/lib/i18n';
+import { lazyWithReload } from '@/lib/lazyWithReload';
 import { useStore } from '@/lib/store';
 import { useSupabaseAuth } from '@/lib/supabase';
 import { RequireRole } from '@/components/auth/RequireRole';
+
+// =====================================================================
+// Phase 5B route loading strategy.
+//
+// EAGER (entry chunk) — the first-paint path for every role: Welcome,
+// AuthEntry, Login, Register, Home, RootRedirect, layouts, and guards.
+// No role's first screen ever waits on a second chunk request.
+//
+// LAZY — everything else, grouped by vite.config.ts manualChunks into
+// three role chunks (pages-customer-flows / pages-merchant /
+// pages-admin) so 40+ pages don't become 40+ requests. All lazy pages
+// load through lazyWithReload, which handles the stale-deploy chunk-
+// 404 with a one-shot reload; a second failure surfaces the Phase 2
+// crash screen. RootRedirect prefetches the signed-in role's group in
+// idle time, so the dashboard chunk is usually warm before first tap.
+// =====================================================================
+
 import Home from '@/pages/Home';
-import Eligibility from '@/pages/Eligibility';
-import Stores from '@/pages/Stores';
-import StoreDetails from '@/pages/StoreDetails';
-import Contracts from '@/pages/Contracts';
-import Notifications from '@/pages/Notifications';
-import Profile from '@/pages/Profile';
-import Scan from '@/pages/Scan';
-import Review from '@/pages/Review';
-import Approval from '@/pages/Approval';
-import Tracking from '@/pages/Tracking';
-import InvoiceTracking from '@/pages/InvoiceTracking';
-import ContractTracking from '@/pages/ContractTracking';
-import NoteTracking from '@/pages/NoteTracking';
 import Welcome from '@/pages/auth/Welcome';
 import AuthEntry from '@/pages/auth/AuthEntry';
 import Login from '@/pages/auth/Login';
 import Register from '@/pages/auth/Register';
-import Nafath from '@/pages/auth/Nafath';
-import RegisterSuccess from '@/pages/auth/RegisterSuccess';
-import ForgotPassword from '@/pages/auth/ForgotPassword';
-import ResetPassword from '@/pages/auth/ResetPassword';
-import MerchantWelcome from '@/pages/merchant/MerchantWelcome';
-import MerchantLogin from '@/pages/merchant/MerchantLogin';
-import MerchantRegister from '@/pages/merchant/MerchantRegister';
-import MerchantPending from '@/pages/merchant/MerchantPending';
-import MerchantHome from '@/pages/merchant/MerchantHome';
-import MerchantRentals from '@/pages/merchant/MerchantRentals';
-import MerchantRentalDetails from '@/pages/merchant/MerchantRentalDetails';
-import MerchantRentalContract from '@/pages/merchant/MerchantRentalContract';
-import MerchantRentalNote from '@/pages/merchant/MerchantRentalNote';
-import MerchantRentalClose from '@/pages/merchant/MerchantRentalClose';
-import MerchantApprovals from '@/pages/merchant/MerchantApprovals';
-import MerchantDamages from '@/pages/merchant/MerchantDamages';
-import MerchantDamageNew from '@/pages/merchant/MerchantDamageNew';
-import MerchantDamageDetails from '@/pages/merchant/MerchantDamageDetails';
-import MerchantHistoryPage from '@/pages/merchant/MerchantHistoryPage';
-import MerchantInvoiceNew from '@/pages/merchant/MerchantInvoiceNew';
-import MerchantRentalSession from '@/pages/merchant/MerchantRentalSession';
-import AdminHome from '@/pages/admin/AdminHome';
-import AdminMerchants from '@/pages/admin/AdminMerchants';
-import AdminMerchantDetails from '@/pages/admin/AdminMerchantDetails';
-import AdminUsers from '@/pages/admin/AdminUsers';
-import AdminUserDetails from '@/pages/admin/AdminUserDetails';
-import AdminCases from '@/pages/admin/AdminCases';
-import AdminCaseDetails from '@/pages/admin/AdminCaseDetails';
-import AdminModulePlaceholder from '@/pages/admin/AdminModulePlaceholder';
+
+// ---- Lazy: customer flows + secondary auth ----
+const Eligibility = lazyWithReload(() => import('@/pages/Eligibility'));
+const Stores = lazyWithReload(() => import('@/pages/Stores'));
+const StoreDetails = lazyWithReload(() => import('@/pages/StoreDetails'));
+const Contracts = lazyWithReload(() => import('@/pages/Contracts'));
+const Notifications = lazyWithReload(() => import('@/pages/Notifications'));
+const Profile = lazyWithReload(() => import('@/pages/Profile'));
+const Scan = lazyWithReload(() => import('@/pages/Scan'));
+const Review = lazyWithReload(() => import('@/pages/Review'));
+const Approval = lazyWithReload(() => import('@/pages/Approval'));
+const Tracking = lazyWithReload(() => import('@/pages/Tracking'));
+const InvoiceTracking = lazyWithReload(() => import('@/pages/InvoiceTracking'));
+const ContractTracking = lazyWithReload(() => import('@/pages/ContractTracking'));
+const NoteTracking = lazyWithReload(() => import('@/pages/NoteTracking'));
+const Nafath = lazyWithReload(() => import('@/pages/auth/Nafath'));
+const RegisterSuccess = lazyWithReload(() => import('@/pages/auth/RegisterSuccess'));
+const ForgotPassword = lazyWithReload(() => import('@/pages/auth/ForgotPassword'));
+const ResetPassword = lazyWithReload(() => import('@/pages/auth/ResetPassword'));
+
+// ---- Lazy: merchant area ----
+const MerchantWelcome = lazyWithReload(() => import('@/pages/merchant/MerchantWelcome'));
+const MerchantLogin = lazyWithReload(() => import('@/pages/merchant/MerchantLogin'));
+const MerchantRegister = lazyWithReload(() => import('@/pages/merchant/MerchantRegister'));
+const MerchantPending = lazyWithReload(() => import('@/pages/merchant/MerchantPending'));
+const MerchantHome = lazyWithReload(() => import('@/pages/merchant/MerchantHome'));
+const MerchantRentals = lazyWithReload(() => import('@/pages/merchant/MerchantRentals'));
+const MerchantRentalDetails = lazyWithReload(() => import('@/pages/merchant/MerchantRentalDetails'));
+const MerchantRentalContract = lazyWithReload(() => import('@/pages/merchant/MerchantRentalContract'));
+const MerchantRentalNote = lazyWithReload(() => import('@/pages/merchant/MerchantRentalNote'));
+const MerchantRentalClose = lazyWithReload(() => import('@/pages/merchant/MerchantRentalClose'));
+const MerchantApprovals = lazyWithReload(() => import('@/pages/merchant/MerchantApprovals'));
+const MerchantDamages = lazyWithReload(() => import('@/pages/merchant/MerchantDamages'));
+const MerchantDamageNew = lazyWithReload(() => import('@/pages/merchant/MerchantDamageNew'));
+const MerchantDamageDetails = lazyWithReload(() => import('@/pages/merchant/MerchantDamageDetails'));
+const MerchantHistoryPage = lazyWithReload(() => import('@/pages/merchant/MerchantHistoryPage'));
+const MerchantInvoiceNew = lazyWithReload(() => import('@/pages/merchant/MerchantInvoiceNew'));
+const MerchantRentalSession = lazyWithReload(() => import('@/pages/merchant/MerchantRentalSession'));
+
+// ---- Lazy: admin area ----
+const AdminHome = lazyWithReload(() => import('@/pages/admin/AdminHome'));
+const AdminMerchants = lazyWithReload(() => import('@/pages/admin/AdminMerchants'));
+const AdminMerchantDetails = lazyWithReload(() => import('@/pages/admin/AdminMerchantDetails'));
+const AdminUsers = lazyWithReload(() => import('@/pages/admin/AdminUsers'));
+const AdminUserDetails = lazyWithReload(() => import('@/pages/admin/AdminUserDetails'));
+const AdminCases = lazyWithReload(() => import('@/pages/admin/AdminCases'));
+const AdminCaseDetails = lazyWithReload(() => import('@/pages/admin/AdminCaseDetails'));
+const AdminModulePlaceholder = lazyWithReload(() => import('@/pages/admin/AdminModulePlaceholder'));
 
 function RequireCustomer({ children }: { children: ReactElement }) {
   return (
@@ -93,6 +117,25 @@ function RootRedirect() {
     signOut,
   } = useSupabaseAuth();
   const { session: demoSession } = useStore();
+
+  // Phase 5B: warm the signed-in role's page-group chunk in idle time
+  // so the first tap after the redirect doesn't wait on a request.
+  // Fire-and-forget — a failed prefetch is ignored; on-demand loading
+  // through lazyWithReload remains the real path.
+  useEffect(() => {
+    if (!configured || !role) return;
+    const prefetch =
+      role === 'admin'
+        ? () => import('@/pages/admin/AdminHome')
+        : role === 'merchant'
+          ? () => import('@/pages/merchant/MerchantHome')
+          : () => import('@/pages/Contracts');
+    const w = window as Window & {
+      requestIdleCallback?: (cb: () => void) => void;
+    };
+    const idle = w.requestIdleCallback ?? ((cb: () => void) => window.setTimeout(cb, 250));
+    idle(() => void prefetch().catch(() => {}));
+  }, [configured, role]);
 
   if (!configured) {
     return <Navigate to={demoSession ? '/home' : '/welcome'} replace />;
@@ -161,8 +204,14 @@ function ProfileLoadError({
 
 export function AppRoutes() {
   return (
-    <Routes>
-      <Route path="/" element={<RootRedirect />} />
+    // One Suspense boundary for every lazy route: a loading chunk shows
+    // the same RouteSpinner used for auth/profile waits — never a blank
+    // screen. Sits INSIDE AppErrorBoundary (App.tsx), so a chunk that
+    // fails even after lazyWithReload's one-shot reload renders the
+    // crash screen with a support code.
+    <Suspense fallback={<RouteSpinner />}>
+      <Routes>
+        <Route path="/" element={<RootRedirect />} />
 
       <Route element={<AuthLayout />}>
         {/* Public auth screens */}
@@ -416,6 +465,7 @@ export function AppRoutes() {
       </Route>
 
       <Route path="*" element={<Navigate to="/" replace />} />
-    </Routes>
+      </Routes>
+    </Suspense>
   );
 }
