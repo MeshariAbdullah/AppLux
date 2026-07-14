@@ -145,12 +145,64 @@ export async function decideMerchantApplication(
  *
  * Idempotent: calling twice for the same approved application returns
  * the existing merchant id without duplicating the row.
+ *
+ * SUPERSEDED by approveMerchantApplication (merchant separation M1) —
+ * kept only for rollback compatibility.
  */
 export async function provisionMerchantFromApplication(
   applicationId: string,
 ): Promise<string> {
   const sb = requireSupabase();
   const { data, error } = await sb.rpc('provision_merchant_from_application', {
+    p_application_id: applicationId,
+  });
+  if (error) throw error;
+  return data as string;
+}
+
+// ---------------------------------------------------------------------
+// Merchant separation M1/M3 — draft branches + dual-generation approval.
+// ---------------------------------------------------------------------
+
+export type MerchantApplicationBranchRow = {
+  id: string;
+  application_id: string;
+  name: string;
+  city: string;
+  address: string;
+  phone: string | null;
+  position: number;
+  created_at: string;
+  updated_at: string;
+};
+
+/** Branches submitted with an application. RLS: applicant (own) or
+ *  admin. Draft branches have NO public visibility pre-approval. */
+export async function listApplicationBranches(
+  applicationId: string,
+): Promise<MerchantApplicationBranchRow[]> {
+  const sb = requireSupabase();
+  const { data, error } = await sb
+    .from('merchant_application_branches')
+    .select('*')
+    .eq('application_id', applicationId)
+    .order('position', { ascending: true });
+  if (error) throw error;
+  return (data ?? []) as MerchantApplicationBranchRow[];
+}
+
+/**
+ * Admin-only, idempotent approval (SECURITY DEFINER). Creates/reuses
+ * the merchants row, stores the applicant-selected category, copies
+ * draft branches into merchant_branches exactly once, and activates
+ * the account. Handles both legacy customer applicants (role lift)
+ * and new merchant/pending applicants.
+ */
+export async function approveMerchantApplication(
+  applicationId: string,
+): Promise<string> {
+  const sb = requireSupabase();
+  const { data, error } = await sb.rpc('approve_merchant_application', {
     p_application_id: applicationId,
   });
   if (error) throw error;

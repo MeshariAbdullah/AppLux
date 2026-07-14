@@ -351,6 +351,32 @@ export type Database = {
         Update: MerchantApplicationUpdate;
         Relationships: [];
       };
+      /** Draft branches submitted with a merchant application
+       *  (merchant separation M1 — 20260502122600). Written only by
+       *  the signup trigger / admins; applicant read-only. */
+      merchant_application_branches: {
+        Row: {
+          id: string;
+          application_id: string;
+          name: string;
+          city: string;
+          address: string;
+          phone: string | null;
+          position: number;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          application_id: string;
+          name: string;
+          city: string;
+          address: string;
+          phone?: string | null;
+          position?: number;
+        };
+        Update: Record<string, never>;
+        Relationships: [];
+      };
       rental_invoices: {
         Row: RentalInvoiceRow;
         Insert: RentalInvoiceInsert;
@@ -395,6 +421,12 @@ export type Database = {
         Returns: string;
       };
       provision_merchant_from_application: {
+        Args: { p_application_id: string };
+        Returns: string;
+      };
+      /** Merchant separation M1 — idempotent dual-generation approval
+       *  (20260502122700). Supersedes provision_merchant_from_application. */
+      approve_merchant_application: {
         Args: { p_application_id: string };
         Returns: string;
       };

@@ -105,8 +105,13 @@ export {
   fetchMerchantApplication,
   decideMerchantApplication,
   provisionMerchantFromApplication,
+  listApplicationBranches,
+  approveMerchantApplication,
 } from './queries/merchant-applications';
-export type { MerchantApplicationPage } from './queries/merchant-applications';
+export type {
+  MerchantApplicationPage,
+  MerchantApplicationBranchRow,
+} from './queries/merchant-applications';
 
 export {
   acceptRentalInvoice,

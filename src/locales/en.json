@@ -2190,7 +2190,8 @@
       "footerNote": {
         "title": "Audit trail",
         "hint": "Approve and reject actions are logged with the reviewer, timestamp and notes."
-      }
+      },
+      "noBranches": "No branches were submitted with this application (legacy pre-separation flow)."
     },
     "users": {
       "title": "User management",

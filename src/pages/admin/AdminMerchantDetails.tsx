@@ -34,10 +34,12 @@ import { useI18n, useT } from '@/lib/i18n';
 import { useStore, type AdminMerchantRequest } from '@/lib/store';
 import {
   adaptMerchantApplication,
+  approveMerchantApplication,
   decideMerchantApplication,
   fetchMerchantApplication,
-  provisionMerchantFromApplication,
+  listApplicationBranches,
   useSupabaseAuth,
+  type MerchantApplicationBranchRow,
 } from '@/lib/supabase';
 import type {
   AdminMerchantDecisionStatus,
@@ -72,6 +74,9 @@ export default function AdminMerchantDetails() {
   );
 
   const [liveRequest, setLiveRequest] = useState<AdminMerchantRequest | null>(null);
+  // M3: draft branches submitted with the application (new-generation
+  // applications; legacy rows simply have none).
+  const [liveBranches, setLiveBranches] = useState<MerchantApplicationBranchRow[]>([]);
   const [liveLoading, setLiveLoading] = useState<boolean>(
     () => configured && Boolean(id),
   );
@@ -80,17 +85,42 @@ export default function AdminMerchantDetails() {
   useEffect(() => {
     if (!configured || !id) {
       setLiveRequest(null);
+      setLiveBranches([]);
       setLiveLoading(false);
       return;
     }
     // Phase 9 entity-leak fix.
     setLiveRequest(null);
+    setLiveBranches([]);
     setLiveLoading(true);
     let cancelled = false;
-    fetchMerchantApplication(id)
-      .then((row) => {
+    Promise.all([
+      fetchMerchantApplication(id),
+      listApplicationBranches(id).catch((err) => {
+        logEvent('rpc_failure', 'warn', { op: 'list_application_branches' }, err);
+        return [] as MerchantApplicationBranchRow[];
+      }),
+    ])
+      .then(([row, branches]) => {
         if (cancelled) return;
-        setLiveRequest(row ? adaptMerchantApplication(row) : null);
+        // Feed the submitted draft branches into the same view shape
+        // the demo store uses — the existing branches section renders
+        // them unchanged. Legacy applications simply have none.
+        setLiveRequest(
+          row
+            ? {
+                ...adaptMerchantApplication(row),
+                branches: branches.map((b) => ({
+                  id: b.id,
+                  name: b.name,
+                  city: b.city,
+                  address: b.address,
+                  phone: b.phone ?? '—',
+                })),
+              }
+            : null,
+        );
+        setLiveBranches(branches);
         setLiveLoading(false);
       })
       .catch((err) => {
@@ -160,15 +190,15 @@ export default function AdminMerchantDetails() {
       if (configured) {
         const updated = await decideMerchantApplication(request.id, 'approved', notes);
         setLiveRequest(adaptMerchantApplication(updated));
-        // Provisioning is the link that turns the approved application
-        // into a real merchant entity + lifts profiles.role to 'merchant'.
-        // Idempotent on the server side, so safe to retry.
+        // M3: the dual-generation approval RPC — creates/reuses the
+        // merchants row, stores the applicant-selected category,
+        // copies draft branches exactly once, activates the account,
+        // and (legacy applicants only) lifts the role. Idempotent, so
+        // re-approving safely retries.
         try {
-          await provisionMerchantFromApplication(request.id);
+          await approveMerchantApplication(request.id);
         } catch (provErr) {
-          logEvent('rpc_failure', 'warn', { op: 'provision_merchant_from_application' }, provErr);
-          // Provisioning is idempotent server-side — re-approving
-          // safely retries it, which is exactly what this copy says.
+          logEvent('rpc_failure', 'warn', { op: 'approve_merchant_application' }, provErr);
           setDecisionError(t('errors.approvedButProvisioningFailed'));
         }
       } else {
@@ -354,6 +384,11 @@ export default function AdminMerchantDetails() {
             icon={<BuildingIcon size={14} />}
           >
             <Card padded className="space-y-3">
+              {request.branches.length === 0 && (
+                <div className="text-[12px] text-ink-400">
+                  {t('admin.merchantRequest.noBranches')}
+                </div>
+              )}
               {request.branches.map((b, i) => (
                 <div key={b.id}>
                   <div className="flex items-start gap-3">
