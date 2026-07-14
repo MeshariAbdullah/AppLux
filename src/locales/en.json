@@ -306,8 +306,10 @@
       "weakPassword": "Password is too weak — use at least 8 characters.",
       "tooManyAttempts": "Too many attempts in a short time. Wait a moment and try again.",
       "linkExpired": "This link has expired. Request a new one and try again.",
-      "emailNotConfirmed": "Your email is not confirmed yet. Open the confirmation email we sent you, then sign in again."
-    }
+      "emailNotConfirmed": "Your email is not confirmed yet. Open the confirmation email we sent you, then sign in again.",
+      "merchantAccountOnCustomerLogin": "This is a merchant account. Use the merchant sign-in page."
+    },
+    "goToMerchantLogin": "Go to merchant sign-in"
   },
   "register": {
     "title": "Create account",
@@ -1257,8 +1259,10 @@
         "emailRequired": "Enter your account email.",
         "emailFormat": "Email format looks invalid.",
         "passwordRequired": "Enter your password to continue.",
-        "passwordShort": "Password is too short (use at least 4 characters)."
-      }
+        "passwordShort": "Password is too short (use at least 4 characters).",
+        "customerAccountOnMerchantLogin": "This is a customer account. Use the customer sign-in page."
+      },
+      "goToCustomerLogin": "Go to customer sign-in"
     },
     "register": {
       "title": "Merchant registration",
@@ -1274,7 +1278,11 @@
         "contact": "Contact details",
         "contactSub": "Used by our approvals team to coordinate with you.",
         "branches": "Branches",
-        "branchesSub": "Add branches that will serve customers via Lend."
+        "branchesSub": "Add branches that will serve customers via Lend.",
+        "credentials": "Sign-in details",
+        "credentialsSub": "The email and password you will use for the merchant dashboard.",
+        "review": "Review & submit",
+        "reviewSub": "Review everything before creating the account and submitting."
       },
       "companyName": "Company name",
       "companyNamePh": "Trade name as registered",
@@ -1312,7 +1320,50 @@
         "authorizedId": "Invalid National ID",
         "iban": "Invalid IBAN format",
         "email": "Invalid email address",
-        "mobile": "Must start with 5 and be 9 digits"
+        "mobile": "Must start with 5 and be 9 digits",
+        "passwordMin": "Password must be at least 6 characters",
+        "passwordMismatch": "Passwords do not match",
+        "categoryRequired": "Choose a business category",
+        "signupDbFailed": "Could not create the account. Check the commercial registration number — an application with the same CR may already be pending."
+      },
+      "email": "Email",
+      "emailPh": "you@company.com",
+      "password": "Password",
+      "confirmPassword": "Confirm password",
+      "category": "Business category",
+      "categoryPh": "Choose the primary category",
+      "categories": {
+        "dress": "Dresses & fashion",
+        "bag": "Bags",
+        "watch": "Watches",
+        "bisht": "Bishts"
+      },
+      "contactEmailHint": "Optional — the sign-in email is used when left empty.",
+      "review": {
+        "account": "Sign-in account",
+        "business": "Business",
+        "representative": "Authorized representative",
+        "branches": "Branches",
+        "categoryLabel": "Category"
+      },
+      "consent": {
+        "terms": "Terms of Use",
+        "privacy": "Privacy Policy",
+        "required": "You must agree to the Terms and Privacy Policy to continue",
+        "agreePrefix": "I agree to the",
+        "and": "and the"
+      },
+      "emailConfirm": {
+        "title": "Check your email",
+        "body": "We sent a confirmation link to {email}. After confirming, sign in from the merchant login to follow your application.",
+        "resend": "Resend confirmation email",
+        "resent": "Sent again ✓",
+        "toLogin": "Go to merchant login"
+      },
+      "signedIn": {
+        "title": "You are signed in with another account",
+        "body": "Creating a new merchant account requires signing out of the current account first.",
+        "cta": "Sign out and continue"
       }
     },
     "pending": {

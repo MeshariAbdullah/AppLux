@@ -45,6 +45,7 @@ export function RequireRole({
     configured,
     status,
     role: actualRole,
+    profile,
     profileLoading,
     profileError,
   } = useSupabaseAuth();
@@ -85,6 +86,25 @@ export function RequireRole({
     if (!allowed) {
       return <Navigate to={fallback} replace />;
     }
+  }
+  // Merchant separation M2: merchant accounts exist BEFORE approval
+  // (role='merchant', account_status='pending'). Operational merchant
+  // routes — role lists that include 'merchant' but NOT 'customer' —
+  // additionally require the account to be ACTIVE. The application-
+  // status page (/merchant/pending) includes 'customer' in its allow
+  // list (legacy applicants), so this gate deliberately skips it.
+  // account_status is admin/trigger-controlled and P0100-protected,
+  // which is what makes it a trustworthy client-side signal; the
+  // server-side equivalents are assert_merchant_active (P0110) + RLS.
+  const requiredRoles = Array.isArray(role) ? role : role ? [role] : [];
+  const isMerchantOperationalRoute =
+    requiredRoles.includes('merchant') && !requiredRoles.includes('customer');
+  if (
+    isMerchantOperationalRoute &&
+    actualRole === 'merchant' &&
+    profile?.account_status !== 'active'
+  ) {
+    return <Navigate to="/merchant/pending" replace />;
   }
   return children;
 }

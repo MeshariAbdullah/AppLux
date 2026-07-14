@@ -57,6 +57,8 @@ export type {
 
 export {
   signUpWithPassword,
+  signUpMerchant,
+  resendSignupConfirmation,
   signInWithPassword,
   signOut,
   getCurrentSession,
@@ -64,7 +66,12 @@ export {
   updatePassword,
 } from './auth';
 
-export type { SignInInput, SignUpInput } from './auth';
+export type {
+  SignInInput,
+  SignUpInput,
+  MerchantSignUpInput,
+  MerchantSignUpBranch,
+} from './auth';
 
 export {
   cancelAccountDeletion,

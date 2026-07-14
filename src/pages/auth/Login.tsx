@@ -39,7 +39,14 @@ export default function Login() {
   const navigate = useNavigate();
   const location = useLocation();
   const { completeRegistration, updateDraft } = useStore();
-  const { configured, signIn, status } = useSupabaseAuth();
+  const {
+    configured,
+    signIn,
+    signOut: supabaseSignOut,
+    status,
+    role,
+    profileLoading,
+  } = useSupabaseAuth();
   const [mobile, setMobile] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -47,6 +54,10 @@ export default function Login() {
   const [submitting, setSubmitting] = useState(false);
   const [errors, setErrors] = useState<FieldErrors>({});
   const [touched, setTouched] = useState<Record<string, boolean>>({});
+  // Merchant separation M2: merchant credentials on the CUSTOMER login
+  // are signed out with a clear wrong-account-type message (approved
+  // behavior — never silently routed).
+  const [wrongAccountType, setWrongAccountType] = useState(false);
 
   // Post-auth handoff — single redirect, driven by provider state.
   //
@@ -65,20 +76,27 @@ export default function Login() {
   // removes the race. The same effect also covers the case where the
   // user lands on /auth/login while already authenticated.
   useEffect(() => {
-    if (configured && status === 'authenticated') {
-      // Auth Hardening Phase 1: honor an internal return path (e.g. the
-      // merchant-register gate sends `state.from = '/merchant/register'`
-      // so the applicant lands back on the application after signing
-      // in). Only same-app absolute paths are accepted — anything else
-      // falls through to '/' and RootRedirect's role routing.
-      const from = (location.state as { from?: string } | null)?.from;
-      const target =
-        typeof from === 'string' && from.startsWith('/') && !from.startsWith('//')
-          ? from
-          : '/';
-      navigate(target, { replace: true });
+    if (!configured || status !== 'authenticated' || profileLoading) return;
+    // Merchant separation M2: this page releases CUSTOMER (and admin)
+    // sessions only. A merchant account is signed out with a clear
+    // message and a link to the merchant login.
+    if (role === 'merchant') {
+      void supabaseSignOut().finally(() => {
+        setWrongAccountType(true);
+        setSubmitting(false);
+      });
+      return;
     }
-  }, [configured, status, navigate, location.state]);
+    // Auth Hardening Phase 1: honor an internal return path. Only
+    // same-app absolute paths are accepted — anything else falls
+    // through to '/' and RootRedirect's role routing.
+    const from = (location.state as { from?: string } | null)?.from;
+    const target =
+      typeof from === 'string' && from.startsWith('/') && !from.startsWith('//')
+        ? from
+        : '/';
+    navigate(target, { replace: true });
+  }, [configured, status, profileLoading, role, navigate, location.state, supabaseSignOut]);
 
   const mobileError = useMemo(() => {
     if (configured) return undefined;
@@ -309,6 +327,18 @@ export default function Login() {
             {errors.form && (
               <div className="rounded-xl2 bg-danger-50 ring-1 ring-danger-500/25 px-3.5 py-2.5 text-[12.5px] text-danger-700 leading-relaxed">
                 {errors.form}
+              </div>
+            )}
+
+            {wrongAccountType && (
+              <div className="rounded-xl2 bg-warn-50 ring-1 ring-warn-500/25 px-3.5 py-2.5 text-[12.5px] text-warn-800 leading-relaxed">
+                {t('auth.errors.merchantAccountOnCustomerLogin')}{' '}
+                <Link
+                  to="/merchant/login"
+                  className="font-semibold text-lavender-700 underline underline-offset-4"
+                >
+                  {t('auth.goToMerchantLogin')}
+                </Link>
               </div>
             )}
 

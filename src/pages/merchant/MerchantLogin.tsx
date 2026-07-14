@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Header, Screen } from '@/components/layout';
 import { Button, Card, FormField, Input } from '@/components/ui';
@@ -15,7 +15,7 @@ import { translateAuthError } from '@/lib/errors';
 import { logEvent } from '@/lib/observability/log';
 import { useT } from '@/lib/i18n';
 import { useStore } from '@/lib/store';
-import { useSupabaseAuth } from '@/lib/supabase';
+import { listMerchantApplications, useSupabaseAuth } from '@/lib/supabase';
 import {
   isMisconfiguredProduction,
   ProductionConfigError,
@@ -34,30 +34,51 @@ export default function MerchantLogin() {
   const navigate = useNavigate();
   const { updateMerchantDraft, submitMerchantApproval, approveMerchant } =
     useStore();
-  const { configured, signIn, status, role, profileLoading } = useSupabaseAuth();
+  const {
+    configured,
+    signIn,
+    signOut: supabaseSignOut,
+    status,
+    role,
+    profileLoading,
+  } = useSupabaseAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [errors, setErrors] = useState<FieldErrors>({});
   const [touched, setTouched] = useState<Record<string, boolean>>({});
+  // Merchant separation M2: customer credentials on the MERCHANT login
+  // are signed out with a wrong-account-type message — EXCEPT legacy
+  // customer-based applicants (pre-separation queue), who are still
+  // routed to their application status page until the queue drains.
+  const [wrongAccountType, setWrongAccountType] = useState(false);
+  const routingRef = useRef(false);
 
-  // Post-auth handoff — see the matching block + architecture note in
-  // src/pages/auth/Login.tsx. Merchants release to '/' (RootRedirect
-  // sends them to /merchant/home). Auth Hardening Phase 1: a user who
-  // signs in HERE — i.e. explicitly through the merchant journey — but
-  // whose role is still 'customer' is routed to /merchant/pending,
-  // which shows their application status (pending / rejected) or
-  // bounces to /merchant/welcome when no application exists. Customers
-  // signing in through the normal /auth/login are unaffected.
+  // Post-auth handoff. Merchant accounts release to '/' — RootRedirect
+  // sends active merchants to the dashboard and pending/rejected ones
+  // to the application-status page. Customer credentials: legacy
+  // applicants (existing application) go to their status page; plain
+  // customers are signed out with the wrong-account-type message.
   useEffect(() => {
     if (!configured || status !== 'authenticated' || profileLoading) return;
+    if (routingRef.current) return;
+    routingRef.current = true;
     if (role === 'customer') {
-      navigate('/merchant/pending', { replace: true });
+      void (async () => {
+        const apps = await listMerchantApplications({ limit: 1 }).catch(() => []);
+        if (apps.length > 0) {
+          navigate('/merchant/pending', { replace: true });
+        } else {
+          await supabaseSignOut().catch(() => {});
+          setWrongAccountType(true);
+          setSubmitting(false);
+        }
+      })();
     } else {
       navigate('/', { replace: true });
     }
-  }, [configured, status, profileLoading, role, navigate]);
+  }, [configured, status, profileLoading, role, navigate, supabaseSignOut]);
 
   const emailError = useMemo(() => {
     if (!touched.email && !errors.email) return undefined;
@@ -83,6 +104,9 @@ export default function MerchantLogin() {
     e.preventDefault();
     setTouched({ email: true, password: true });
     setErrors((prev) => ({ ...prev, form: undefined }));
+    // Fresh attempt — allow the post-auth routing to run again.
+    routingRef.current = false;
+    setWrongAccountType(false);
 
     const next: FieldErrors = {};
     if (!email.trim()) next.email = t('merchant.login.errors.emailRequired');
@@ -272,6 +296,18 @@ export default function MerchantLogin() {
             {errors.form && (
               <div className="rounded-xl2 bg-danger-50 ring-1 ring-danger-500/25 px-3.5 py-2.5 text-[12.5px] text-danger-700 leading-relaxed">
                 {errors.form}
+              </div>
+            )}
+
+            {wrongAccountType && (
+              <div className="rounded-xl2 bg-warn-50 ring-1 ring-warn-500/25 px-3.5 py-2.5 text-[12.5px] text-warn-800 leading-relaxed">
+                {t('merchant.login.errors.customerAccountOnMerchantLogin')}{' '}
+                <Link
+                  to="/auth/login"
+                  className="font-semibold text-lavender-700 underline underline-offset-4"
+                >
+                  {t('merchant.login.goToCustomerLogin')}
+                </Link>
               </div>
             )}
 

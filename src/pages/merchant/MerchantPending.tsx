@@ -97,7 +97,7 @@ export default function MerchantPending() {
     signOutMerchant,
   } = useStore();
   const supabaseAuth = useSupabaseAuth();
-  const { configured, status, role } = supabaseAuth;
+  const { configured, status, role, profile } = supabaseAuth;
 
   // ---- LIVE source (Auth Hardening Phase 1) ----
   // The page previously rendered the DEMO store even in live mode, so a
@@ -155,12 +155,20 @@ export default function MerchantPending() {
     return () => document.removeEventListener('visibilitychange', onVisible);
   }, [configured, loadApp]);
 
-  // Provisioned → straight to the dashboard.
+  // Provisioned (merchant + ACTIVE) → straight to the dashboard.
+  // Merchant separation M2: merchant accounts now exist BEFORE approval
+  // with account_status='pending' — those stay here and see their
+  // application status.
   useEffect(() => {
-    if (configured && status === 'authenticated' && role === 'merchant') {
+    if (
+      configured &&
+      status === 'authenticated' &&
+      role === 'merchant' &&
+      profile?.account_status === 'active'
+    ) {
       navigate('/merchant/home', { replace: true });
     }
-  }, [configured, status, role, navigate]);
+  }, [configured, status, role, profile?.account_status, navigate]);
 
   // Live mode with NO application at all → nothing to show here.
   useEffect(() => {

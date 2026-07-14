@@ -152,7 +152,16 @@ function RootRedirect() {
     // /welcome rather than loop.
     return <Navigate to="/welcome" replace />;
   }
-  if (role === 'merchant') return <Navigate to="/merchant/home" replace />;
+  if (role === 'merchant') {
+    // Merchant separation M2: pending/rejected merchant accounts land
+    // on their application-status page, never the dashboard. The
+    // account_status flip to 'active' happens only at admin approval.
+    return profile.account_status === 'active' ? (
+      <Navigate to="/merchant/home" replace />
+    ) : (
+      <Navigate to="/merchant/pending" replace />
+    );
+  }
   if (role === 'admin') return <Navigate to="/admin/home" replace />;
   return <Navigate to="/home" replace />;
 }

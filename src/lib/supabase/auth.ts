@@ -24,6 +24,89 @@ export type SignInInput = {
   password: string;
 };
 
+// =====================================================================
+// Merchant signup — merchant separation M2. One auth.signUp call whose
+// metadata carries the application payload as a CONTROLLED INPUT only:
+// the DB's BEFORE INSERT trigger stashes it into a transaction-local
+// setting and strips auth metadata down to {account_type, full_name}
+// before the row is persisted, then the AFTER INSERT trigger creates
+// profile (merchant/pending) + application + draft branches atomically
+// with the auth user. Nothing sensitive remains in auth metadata.
+// =====================================================================
+
+export type MerchantSignUpBranch = {
+  name: string;
+  city: string;
+  address: string;
+  /** Canonical 5XXXXXXXX or omitted. */
+  phone?: string | null;
+};
+
+export type MerchantSignUpInput = {
+  email: string;
+  password: string;
+  application: {
+    companyName: string;
+    /** 10 digits. */
+    commercialReg: string;
+    authorizedName: string;
+    /** Saudi national id, [12] + 9 digits. */
+    authorizedNationalId: string;
+    /** rental_category enum value — applicant-selected, never defaulted. */
+    category: string;
+    /** Canonical 5XXXXXXXX. */
+    contactMobile: string;
+    /** Defaults to the login email server-side when empty. */
+    contactEmail?: string;
+    branches: MerchantSignUpBranch[];
+  };
+};
+
+export async function signUpMerchant({
+  email,
+  password,
+  application,
+}: MerchantSignUpInput): Promise<{ user: User | null; session: Session | null }> {
+  const sb = requireSupabase();
+  const { data, error } = await sb.auth.signUp({
+    email,
+    password,
+    options: {
+      // Confirmation links must return the merchant to the MERCHANT
+      // flow (login → pending), never the customer flow.
+      emailRedirectTo: `${window.location.origin}/merchant/login`,
+      data: {
+        account_type: 'merchant',
+        full_name: application.authorizedName,
+        merchant_application: {
+          company_name: application.companyName,
+          commercial_reg_number: application.commercialReg,
+          authorized_name: application.authorizedName,
+          authorized_national_id: application.authorizedNationalId,
+          category: application.category,
+          contact_mobile: application.contactMobile,
+          contact_email: application.contactEmail ?? '',
+          branches: application.branches.map((b) => ({
+            name: b.name,
+            city: b.city,
+            address: b.address,
+            phone: b.phone ?? '',
+          })),
+        },
+      },
+    },
+  });
+  if (error) throw error;
+  return { user: data.user, session: data.session };
+}
+
+/** Re-send the signup confirmation email (email-confirmation flows). */
+export async function resendSignupConfirmation(email: string): Promise<void> {
+  const sb = requireSupabase();
+  const { error } = await sb.auth.resend({ type: 'signup', email });
+  if (error) throw error;
+}
+
 export async function signUpWithPassword({
   email,
   password,
