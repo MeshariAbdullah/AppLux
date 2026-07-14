@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useMemo, type ReactNode } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Header, Screen } from '@/components/layout';
 import {
@@ -25,20 +25,19 @@ import { ENABLE_PAYMENTS_AND_NOTES } from '@/lib/featureFlags';
 import { useI18n, useT } from '@/lib/i18n';
 import { useStore } from '@/lib/store';
 import {
+  buildMerchantNameMap,
+  useCustomerRentalData,
+} from '@/lib/useCustomerRentalData';
+import {
   adaptContract,
   adaptContractToHistory,
   adaptEligibility,
   adaptInvoice,
   adaptNote,
-  fetchMerchantsByIds,
-  listCustomerContracts,
-  listCustomerInvoices,
-  listCustomerNotes,
   useSupabaseAuth,
 } from '@/lib/supabase';
 import type { Contract, HistoryItem, Invoice, PromissoryNote } from '@/lib/data';
 import { cn } from '@/lib/cn';
-import type { MerchantRow } from '@/lib/supabase';
 
 // =====================================================================
 // Customer home — mode-driven layout
@@ -107,83 +106,55 @@ export default function Home() {
   // Live data
   // ---------------------------------------------------------------------
 
-  const [liveInvoices, setLiveInvoices] = useState<Invoice[] | null>(null);
-  const [liveContracts, setLiveContracts] = useState<Contract[] | null>(null);
-  const [liveNotes, setLiveNotes] = useState<PromissoryNote[] | null>(null);
-  const [liveHistory, setLiveHistory] = useState<HistoryItem[] | null>(null);
-  // Live loading guard — true while the customer's invoices/contracts/
-  // notes are being fetched. Without this, configured mode would show
-  // the "new customer" empty state for a beat (since the seed arrays
-  // are now empty in live mode), then swap to real data. Phase 9: the
-  // page must render a skeleton while the fetch is in flight.
-  const [liveLoading, setLiveLoading] = useState<boolean>(
-    () => configured && Boolean(realSession?.user?.id),
+  // Phase 4B: the three customer lists + the merchant-name batch read
+  // through the memory cache (2-min TTL, refetch on focus). Revisiting
+  // Home within the TTL renders instantly with zero network; accept /
+  // activation invalidate the keys so lifecycle changes show at once.
+  // Demo mode: the hook is inert (null rows) and the demo store below
+  // remains the only data path, exactly as before.
+  const {
+    invoiceRows,
+    contractRows,
+    noteRows,
+    merchants,
+    loading: liveLoading,
+  } = useCustomerRentalData(configured, realSession?.user?.id);
+
+  const nameMap = useMemo(
+    () => buildMerchantNameMap(merchants, locale),
+    [merchants, locale],
   );
 
-  useEffect(() => {
-    const userId = realSession?.user?.id;
-    if (!configured || !userId) {
-      setLiveInvoices(null);
-      setLiveContracts(null);
-      setLiveNotes(null);
-      setLiveHistory(null);
-      setLiveLoading(false);
-      return;
-    }
-    setLiveLoading(true);
-    let cancelled = false;
-    (async () => {
-      const [invoiceRows, contractRows, noteRows] = await Promise.all([
-        listCustomerInvoices(userId).catch(() => []),
-        listCustomerContracts(userId).catch(() => []),
-        listCustomerNotes(userId).catch(() => []),
-      ]);
-      if (cancelled) return;
-
-      // Resolve merchant display names in one batch.
-      const merchantIds = Array.from(
-        new Set([
-          ...invoiceRows.map((r) => r.merchant_id),
-          ...contractRows.map((r) => r.merchant_id),
-          ...noteRows.map((r) => r.merchant_id),
-        ]),
-      );
-      const merchants = await fetchMerchantsByIds(merchantIds).catch(
-        () => [] as MerchantRow[],
-      );
-      if (cancelled) return;
-      const nameMap: Record<string, string> = {};
-      for (const m of merchants) {
-        const display =
-          (locale === 'ar' ? m.display_name?.ar : m.display_name?.en) ||
-          m.display_name?.ar ||
-          m.display_name?.en ||
-          m.company_name;
-        nameMap[m.id] = display;
-      }
-
-      setLiveInvoices(
-        invoiceRows.map((r) => adaptInvoice(r, [], nameMap[r.merchant_id])),
-      );
-      setLiveContracts(
-        contractRows
-          .filter((c) => c.status !== 'ended' && c.status !== 'cancelled')
-          .map((r) => adaptContract(r, nameMap[r.merchant_id])),
-      );
-      setLiveNotes(
-        noteRows.map((r) => adaptNote(r, nameMap[r.merchant_id])),
-      );
-      setLiveHistory(
-        contractRows
-          .filter((c) => c.status === 'ended' || c.status === 'cancelled')
-          .map((r) => adaptContractToHistory(r, nameMap[r.merchant_id])),
-      );
-      if (!cancelled) setLiveLoading(false);
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [configured, locale, realSession?.user?.id]);
+  const liveInvoices = useMemo<Invoice[] | null>(
+    () =>
+      invoiceRows
+        ? invoiceRows.map((r) => adaptInvoice(r, [], nameMap[r.merchant_id]))
+        : null,
+    [invoiceRows, nameMap],
+  );
+  const liveContracts = useMemo<Contract[] | null>(
+    () =>
+      contractRows
+        ? contractRows
+            .filter((c) => c.status !== 'ended' && c.status !== 'cancelled')
+            .map((r) => adaptContract(r, nameMap[r.merchant_id]))
+        : null,
+    [contractRows, nameMap],
+  );
+  const liveNotes = useMemo<PromissoryNote[] | null>(
+    () =>
+      noteRows ? noteRows.map((r) => adaptNote(r, nameMap[r.merchant_id])) : null,
+    [noteRows, nameMap],
+  );
+  const liveHistory = useMemo<HistoryItem[] | null>(
+    () =>
+      contractRows
+        ? contractRows
+            .filter((c) => c.status === 'ended' || c.status === 'cancelled')
+            .map((r) => adaptContractToHistory(r, nameMap[r.merchant_id]))
+        : null,
+    [contractRows, nameMap],
+  );
 
   const invoices = liveInvoices ?? demoInvoices;
   const contracts = liveContracts ?? demoContracts;

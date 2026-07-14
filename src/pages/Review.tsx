@@ -229,6 +229,14 @@ export default function Review() {
       }
       try {
         const contractId = await acceptRentalInvoice(liveInvoiceId);
+        // Phase 4B: acceptance flipped the invoice status and created
+        // the contract — drop the cached customer lists NOW, so even
+        // if the follow-up activation fails the lists never serve the
+        // stale pre-acceptance rows within their TTL.
+        if (supabaseUserId) {
+          cacheInvalidate(cacheKeys.customerInvoices(supabaseUserId));
+          cacheInvalidate(cacheKeys.customerContracts(supabaseUserId));
+        }
         if (!ENABLE_PAYMENTS_AND_NOTES) {
           await activateContract(contractId);
           return;

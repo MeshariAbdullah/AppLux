@@ -10,20 +10,22 @@ import {
   DocIcon,
   ReceiptIcon,
 } from '@/components/icons';
+import { cacheKeys } from '@/lib/cache/keys';
+import { cacheInvalidate } from '@/lib/cache/memoryCache';
 import { logEvent } from '@/lib/observability/log';
 import { ENABLE_PAYMENTS_AND_NOTES } from '@/lib/featureFlags';
 import { useI18n, useT } from '@/lib/i18n';
 import { useStore } from '@/lib/store';
 import {
+  buildMerchantNameMap,
+  useCustomerRentalData,
+} from '@/lib/useCustomerRentalData';
+import {
   adaptContract,
   adaptContractToHistory,
   adaptInvoice,
   adaptNote,
-  fetchMerchantsByIds,
   getHandoverPhotoUrl,
-  listCustomerContracts,
-  listCustomerInvoices,
-  listCustomerNotes,
   uploadAndRecordHandover,
   useSupabaseAuth,
 } from '@/lib/supabase';
@@ -34,7 +36,6 @@ import type {
   PromissoryNote,
 } from '@/lib/data';
 import { cn } from '@/lib/cn';
-import type { MerchantRow } from '@/lib/supabase';
 
 // =====================================================================
 // My rentals — three sections, one destination for the whole lifecycle.
@@ -63,79 +64,55 @@ export default function Contracts() {
   } = useStore();
   const { configured, session } = useSupabaseAuth();
 
-  const [livePending, setLivePending] = useState<Invoice[] | null>(null);
-  const [liveContracts, setLiveContracts] = useState<Contract[] | null>(null);
-  const [liveNotes, setLiveNotes] = useState<PromissoryNote[] | null>(null);
-  const [liveHistory, setLiveHistory] = useState<HistoryItem[] | null>(null);
-  const [liveLoading, setLiveLoading] = useState<boolean>(
-    () => configured && Boolean(session?.user?.id),
+  // Phase 4B: same cached working set as Home (2-min lists + 15-min
+  // merchant-name batch). Home → Contracts within the TTL is instant
+  // with zero network; the in-flight dedupe means a cold boot landing
+  // on either page fires each list request exactly once app-wide.
+  const {
+    invoiceRows,
+    contractRows,
+    noteRows,
+    merchants,
+    loading: liveLoading,
+  } = useCustomerRentalData(configured, session?.user?.id);
+
+  const nameMap = useMemo(
+    () => buildMerchantNameMap(merchants, locale),
+    [merchants, locale],
   );
 
-  useEffect(() => {
-    const userId = session?.user?.id;
-    if (!configured || !userId) {
-      setLivePending(null);
-      setLiveContracts(null);
-      setLiveNotes(null);
-      setLiveHistory(null);
-      setLiveLoading(false);
-      return;
-    }
-    setLiveLoading(true);
-    let cancelled = false;
-    (async () => {
-      const [invoiceRows, contractRows, noteRows] = await Promise.all([
-        listCustomerInvoices(userId).catch(() => []),
-        listCustomerContracts(userId).catch(() => []),
-        listCustomerNotes(userId).catch(() => []),
-      ]);
-      if (cancelled) return;
-
-      const merchantIds = Array.from(
-        new Set([
-          ...invoiceRows.map((r) => r.merchant_id),
-          ...contractRows.map((r) => r.merchant_id),
-          ...noteRows.map((r) => r.merchant_id),
-        ]),
-      );
-      const merchants = await fetchMerchantsByIds(merchantIds).catch(
-        () => [] as MerchantRow[],
-      );
-      if (cancelled) return;
-      const nameMap: Record<string, string> = {};
-      for (const m of merchants) {
-        const display =
-          (locale === 'ar' ? m.display_name?.ar : m.display_name?.en) ||
-          m.display_name?.ar ||
-          m.display_name?.en ||
-          m.company_name;
-        nameMap[m.id] = display;
-      }
-
-      setLivePending(
-        invoiceRows
-          .filter((r) => r.status === 'issued' || r.status === 'viewed')
-          .map((r) => adaptInvoice(r, [], nameMap[r.merchant_id])),
-      );
-      setLiveContracts(
-        contractRows
-          .filter((c) => c.status !== 'ended' && c.status !== 'cancelled')
-          .map((r) => adaptContract(r, nameMap[r.merchant_id])),
-      );
-      setLiveNotes(
-        noteRows.map((r) => adaptNote(r, nameMap[r.merchant_id])),
-      );
-      setLiveHistory(
-        contractRows
-          .filter((c) => c.status === 'ended' || c.status === 'cancelled')
-          .map((r) => adaptContractToHistory(r, nameMap[r.merchant_id])),
-      );
-      if (!cancelled) setLiveLoading(false);
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [configured, locale, session?.user?.id]);
+  const livePending = useMemo<Invoice[] | null>(
+    () =>
+      invoiceRows
+        ? invoiceRows
+            .filter((r) => r.status === 'issued' || r.status === 'viewed')
+            .map((r) => adaptInvoice(r, [], nameMap[r.merchant_id]))
+        : null,
+    [invoiceRows, nameMap],
+  );
+  const liveContracts = useMemo<Contract[] | null>(
+    () =>
+      contractRows
+        ? contractRows
+            .filter((c) => c.status !== 'ended' && c.status !== 'cancelled')
+            .map((r) => adaptContract(r, nameMap[r.merchant_id]))
+        : null,
+    [contractRows, nameMap],
+  );
+  const liveNotes = useMemo<PromissoryNote[] | null>(
+    () =>
+      noteRows ? noteRows.map((r) => adaptNote(r, nameMap[r.merchant_id])) : null,
+    [noteRows, nameMap],
+  );
+  const liveHistory = useMemo<HistoryItem[] | null>(
+    () =>
+      contractRows
+        ? contractRows
+            .filter((c) => c.status === 'ended' || c.status === 'cancelled')
+            .map((r) => adaptContractToHistory(r, nameMap[r.merchant_id]))
+        : null,
+    [contractRows, nameMap],
+  );
 
   // Demo fallback: the demo store keeps invoices with the UI 'due'
   // status which mirrors live 'issued'. Treat them as pending here.
@@ -514,7 +491,7 @@ function EmptyRentals() {
 
 function HandoverPhotoBanner({ contract }: { contract: Contract }) {
   const t = useT();
-  const { configured } = useSupabaseAuth();
+  const { configured, session } = useSupabaseAuth();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const previewCacheKey = `lend.handover.${contract.id}.dataUrl`;
@@ -566,6 +543,12 @@ function HandoverPhotoBanner({ contract }: { contract: Contract }) {
           contractId: contract.id,
           file,
         });
+        // Phase 4B: the contract row changed (handover photo path) —
+        // drop the cached list + entity so revisits within the TTL
+        // don't render the stale pre-handover row.
+        cacheInvalidate(cacheKeys.contract(contract.id));
+        const uid = session?.user?.id;
+        if (uid) cacheInvalidate(cacheKeys.customerContracts(uid));
         setOptimisticallyCaptured(true);
       } else {
         setOptimisticallyCaptured(true);
