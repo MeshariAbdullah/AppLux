@@ -3,11 +3,9 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Header, Screen } from '@/components/layout';
 import {
   Button,
-  Card,
   FormField,
   Input,
   Select,
-  Textarea,
 } from '@/components/ui';
 import { translateAuthError } from '@/lib/errors';
 import { logEvent } from '@/lib/observability/log';
@@ -15,44 +13,43 @@ import { useI18n, useT } from '@/lib/i18n';
 import {
   useStore,
   emptyMerchantDraft,
-  type MerchantBranchDraft,
   type MerchantDraft,
 } from '@/lib/store';
 import {
+  listMerchantApplications,
   submitMerchantApplication,
   useSupabaseAuth,
 } from '@/lib/supabase';
 import { cn } from '@/lib/cn';
-import {
-  ArrowIcon,
-  BuildingIcon,
-  PlusIcon,
-  ShieldIcon,
-} from '@/components/icons';
+import { ArrowIcon, BuildingIcon } from '@/components/icons';
 
 const CITY_KEYS = [
   'riyadh', 'jeddah', 'makkah', 'madinah', 'dammam', 'khobar', 'tabuk',
   'abha', 'taif', 'qassim', 'hail', 'najran', 'jazan', 'baha', 'yanbu',
 ] as const;
 
+// =====================================================================
+// Auth Hardening Phase 1 — the wizard collects ONLY what
+// merchant_applications actually persists. IBAN, free-text address,
+// and branch collection were removed: they were validated, then
+// silently discarded (the table has no columns for them), which is
+// unacceptable for bank data in particular. They return only together
+// with the schema work that stores them.
+// =====================================================================
+
 type FlatField =
   | 'companyName'
   | 'commercialReg'
   | 'authorizedName'
   | 'authorizedId'
-  | 'iban'
   | 'city'
-  | 'address'
   | 'contactEmail'
   | 'contactPhone';
 
-type BranchErrors = Partial<Record<keyof MerchantBranchDraft, string>>;
-type Errors = Partial<Record<FlatField, string>> & {
-  branches?: Record<string, BranchErrors>;
-};
+type Errors = Partial<Record<FlatField, string>>;
 
 type StepDef = {
-  key: FlatField[] | 'branches';
+  key: FlatField[];
   titleKey: string;
   subKey: string;
 };
@@ -69,31 +66,11 @@ const STEPS: StepDef[] = [
     subKey: 'merchant.register.steps.authorizedSub',
   },
   {
-    key: ['iban'],
-    titleKey: 'merchant.register.steps.banking',
-    subKey: 'merchant.register.steps.bankingSub',
-  },
-  {
-    key: ['city', 'address', 'contactEmail', 'contactPhone'],
+    key: ['city', 'contactEmail', 'contactPhone'],
     titleKey: 'merchant.register.steps.contact',
     subKey: 'merchant.register.steps.contactSub',
   },
-  {
-    key: 'branches',
-    titleKey: 'merchant.register.steps.branches',
-    subKey: 'merchant.register.steps.branchesSub',
-  },
 ];
-
-function newBranch(): MerchantBranchDraft {
-  return {
-    id: `BR-${Math.random().toString(36).slice(2, 8).toUpperCase()}`,
-    name: '',
-    city: '',
-    address: '',
-    phone: '',
-  };
-}
 
 export default function MerchantRegister() {
   const t = useT();
@@ -114,6 +91,40 @@ export default function MerchantRegister() {
     if (configured && status === 'authenticated' && role === 'merchant') {
       navigate('/merchant/home', { replace: true });
     }
+  }, [configured, status, role, navigate]);
+
+  // Auth Hardening Phase 1: sign-in is required BEFORE step 1 — the
+  // application row needs auth.uid(), and discovering that only after
+  // filling the whole wizard was a dead end. The login page honors
+  // `state.from` and returns the applicant here after signing in.
+  useEffect(() => {
+    if (configured && status === 'anonymous') {
+      navigate('/auth/login', {
+        replace: true,
+        state: { from: '/merchant/register' },
+      });
+    }
+  }, [configured, status, navigate]);
+
+  // A signed-in customer with an application already PENDING is sent
+  // to its status page instead of quietly filing a duplicate. RLS
+  // scopes the list to the caller's own applications; a failed check
+  // never blocks the wizard (the admin queue tolerates duplicates).
+  useEffect(() => {
+    if (!configured || status !== 'authenticated' || role !== 'customer') return;
+    let cancelled = false;
+    listMerchantApplications({ status: 'pending', limit: 1 })
+      .then((rows) => {
+        if (!cancelled && rows.length > 0) {
+          navigate('/merchant/pending', { replace: true });
+        }
+      })
+      .catch((err) => {
+        logEvent('rpc_failure', 'warn', { op: 'check_pending_application' }, err);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [configured, status, role, navigate]);
 
   const [values, setValues] = useState<MerchantDraft>(() =>
@@ -139,28 +150,6 @@ export default function MerchantRegister() {
       if (errors[key]) setErrors((prev) => ({ ...prev, [key]: undefined }));
     };
 
-  const patchBranch = (id: string, patch: Partial<MerchantBranchDraft>) => {
-    setValues((v) => ({
-      ...v,
-      branches: v.branches.map((b) => (b.id === id ? { ...b, ...patch } : b)),
-    }));
-    if (errors.branches?.[id]) {
-      setErrors((prev) => {
-        const nextBranches = { ...(prev.branches ?? {}) };
-        delete nextBranches[id];
-        return { ...prev, branches: nextBranches };
-      });
-    }
-  };
-
-  const addBranch = () => {
-    setValues((v) => ({ ...v, branches: [...v.branches, newBranch()] }));
-  };
-
-  const removeBranch = (id: string) => {
-    setValues((v) => ({ ...v, branches: v.branches.filter((b) => b.id !== id) }));
-  };
-
   const validateFlat = (keys: FlatField[]): Errors => {
     const next: Errors = {};
     const req = t('merchant.register.errors.required');
@@ -174,8 +163,6 @@ export default function MerchantRegister() {
         next[k] = t('merchant.register.errors.commercialReg');
       if (k === 'authorizedId' && !/^[12]\d{9}$/.test(v))
         next[k] = t('merchant.register.errors.authorizedId');
-      if (k === 'iban' && !/^SA\d{22}$/.test(v.toUpperCase().replace(/\s+/g, '')))
-        next[k] = t('merchant.register.errors.iban');
       if (k === 'contactEmail' && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v))
         next[k] = t('merchant.register.errors.email');
       if (k === 'contactPhone' && !/^5\d{8}$/.test(v))
@@ -184,31 +171,9 @@ export default function MerchantRegister() {
     return next;
   };
 
-  const validateBranches = (): Errors => {
-    const next: Errors = {};
-    const req = t('merchant.register.errors.required');
-    const branchErrs: Record<string, BranchErrors> = {};
-    for (const b of values.branches) {
-      const be: BranchErrors = {};
-      if (!b.name.trim()) be.name = req;
-      if (!b.city.trim()) be.city = req;
-      if (!b.address.trim()) be.address = req;
-      if (!b.phone.trim()) be.phone = req;
-      else if (!/^5\d{8}$/.test(b.phone.trim()))
-        be.phone = t('merchant.register.errors.mobile');
-      if (Object.keys(be).length) branchErrs[b.id] = be;
-    }
-    if (Object.keys(branchErrs).length) next.branches = branchErrs;
-    return next;
-  };
-
   const goNext = async () => {
-    const e: Errors =
-      current.key === 'branches' ? validateBranches() : validateFlat(current.key);
-    const hasErrors =
-      (current.key === 'branches' ? Boolean(e.branches) : false) ||
-      Object.keys(e).some((k) => k !== 'branches' && Boolean(e[k as FlatField]));
-    if (hasErrors) {
+    const e = validateFlat(current.key);
+    if (Object.keys(e).length > 0) {
       setErrors(e);
       return;
     }
@@ -236,9 +201,13 @@ export default function MerchantRegister() {
           authorized_name: values.authorizedName,
           authorized_national_id: values.authorizedId,
           city: values.city,
-          // The demo form doesn't collect a category yet; default to 'dress'
-          // so the row is valid. Admin can re-categorise on review (Phase 4
-          // adds an explicit category picker to the form).
+          // Constraint audit (Auth Hardening Phase 1): primary_category
+          // is `rental_category NOT NULL` and the enum has ONLY concrete
+          // verticals (dress|bag|watch|bisht) — no neutral member exists,
+          // and adding one is a schema change deferred with the category
+          // picker. 'dress' stays as the documented current-phase value:
+          // it is the platform's launch vertical, and the admin reviews
+          // every application before provisioning.
           primary_category: 'dress',
           contact_email: values.contactEmail || null,
           contact_phone: values.contactPhone || null,
@@ -368,34 +337,6 @@ export default function MerchantRegister() {
 
           {step === 2 && (
             <>
-              <FormField
-                label={t('merchant.register.iban')}
-                required
-                error={errors.iban}
-                hint={!errors.iban ? t('merchant.register.ibanHint') : undefined}
-              >
-                <Input
-                  placeholder={t('merchant.register.ibanPh')}
-                  value={values.iban}
-                  onChange={onFlat('iban')}
-                  invalid={Boolean(errors.iban)}
-                  maxLength={24}
-                  className="num uppercase"
-                />
-              </FormField>
-              <div className="rounded-xl2 bg-gold-50 hairline p-3.5 flex items-start gap-3">
-                <span className="h-9 w-9 shrink-0 rounded-xl bg-white text-gold-700 grid place-items-center ring-1 hairline">
-                  <ShieldIcon size={18} />
-                </span>
-                <div className="min-w-0 text-[12px] text-brand-800/80 leading-relaxed">
-                  {t('merchant.register.ibanHint')}
-                </div>
-              </div>
-            </>
-          )}
-
-          {step === 3 && (
-            <>
               <FormField label={t('merchant.register.city')} required error={errors.city}>
                 <Select
                   value={values.city}
@@ -411,15 +352,6 @@ export default function MerchantRegister() {
                     </option>
                   ))}
                 </Select>
-              </FormField>
-              <FormField label={t('merchant.register.address')} required error={errors.address}>
-                <Textarea
-                  placeholder={t('merchant.register.addressPh')}
-                  rows={3}
-                  value={values.address}
-                  onChange={onFlat('address')}
-                  invalid={Boolean(errors.address)}
-                />
               </FormField>
               <FormField label={t('merchant.register.contactEmail')} required error={errors.contactEmail}>
                 <Input
@@ -442,102 +374,6 @@ export default function MerchantRegister() {
                   leading={<span className="text-ink-500 text-[13px] font-medium num">+966</span>}
                 />
               </FormField>
-            </>
-          )}
-
-          {step === 4 && (
-            <>
-              {values.branches.length === 0 ? (
-                <Card padded className="text-center space-y-2">
-                  <div className="mx-auto h-11 w-11 rounded-xl bg-canvas-100 text-ink-500 grid place-items-center">
-                    <BuildingIcon size={20} />
-                  </div>
-                  <div className="text-[14px] font-semibold text-ink-900">
-                    {t('merchant.register.noBranches')}
-                  </div>
-                  <div className="text-[12.5px] text-ink-400 leading-relaxed">
-                    {t('merchant.register.noBranchesHint')}
-                  </div>
-                </Card>
-              ) : (
-                <div className="space-y-4">
-                  {values.branches.map((b, idx) => {
-                    const be: BranchErrors = errors.branches?.[b.id] ?? {};
-                    return (
-                      <Card key={b.id} padded className="space-y-3">
-                        <div className="flex items-center justify-between gap-2">
-                          <div className="text-[13.5px] font-semibold text-ink-900">
-                            {t('merchant.register.branchTitle', { index: idx + 1 })}
-                          </div>
-                          <button
-                            type="button"
-                            onClick={() => removeBranch(b.id)}
-                            className="text-[12px] font-medium text-danger-600 hover:underline"
-                          >
-                            {t('merchant.register.removeBranch')}
-                          </button>
-                        </div>
-                        <FormField label={t('merchant.register.branchName')} required error={be.name}>
-                          <Input
-                            placeholder={t('merchant.register.branchNamePh')}
-                            value={b.name}
-                            onChange={(e) => patchBranch(b.id, { name: e.target.value })}
-                            invalid={Boolean(be.name)}
-                          />
-                        </FormField>
-                        <FormField label={t('merchant.register.branchCity')} required error={be.city}>
-                          <Select
-                            value={b.city}
-                            onChange={(e) => patchBranch(b.id, { city: e.target.value })}
-                            invalid={Boolean(be.city)}
-                          >
-                            <option value="" disabled>
-                              {t('merchant.register.cityPh')}
-                            </option>
-                            {cities.map((c) => (
-                              <option key={c.key} value={c.key}>
-                                {c.label}
-                              </option>
-                            ))}
-                          </Select>
-                        </FormField>
-                        <FormField label={t('merchant.register.branchAddress')} required error={be.address}>
-                          <Textarea
-                            rows={2}
-                            placeholder={t('merchant.register.addressPh')}
-                            value={b.address}
-                            onChange={(e) => patchBranch(b.id, { address: e.target.value })}
-                            invalid={Boolean(be.address)}
-                          />
-                        </FormField>
-                        <FormField label={t('merchant.register.branchPhone')} required error={be.phone}>
-                          <Input
-                            inputMode="tel"
-                            maxLength={9}
-                            placeholder={t('merchant.register.contactPhonePh')}
-                            value={b.phone}
-                            onChange={(e) => patchBranch(b.id, { phone: e.target.value })}
-                            invalid={Boolean(be.phone)}
-                            leading={
-                              <span className="text-ink-500 text-[13px] font-medium num">+966</span>
-                            }
-                          />
-                        </FormField>
-                      </Card>
-                    );
-                  })}
-                </div>
-              )}
-
-              <Button
-                type="button"
-                variant="secondary"
-                block
-                leading={<PlusIcon size={16} />}
-                onClick={addBranch}
-              >
-                {t('merchant.register.addBranch')}
-              </Button>
             </>
           )}
 

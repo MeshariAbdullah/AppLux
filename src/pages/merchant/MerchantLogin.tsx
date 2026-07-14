@@ -34,7 +34,7 @@ export default function MerchantLogin() {
   const navigate = useNavigate();
   const { updateMerchantDraft, submitMerchantApproval, approveMerchant } =
     useStore();
-  const { configured, signIn, status } = useSupabaseAuth();
+  const { configured, signIn, status, role, profileLoading } = useSupabaseAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -43,15 +43,21 @@ export default function MerchantLogin() {
   const [touched, setTouched] = useState<Record<string, boolean>>({});
 
   // Post-auth handoff — see the matching block + architecture note in
-  // src/pages/auth/Login.tsx. This page does NOT route by role; it just
-  // releases the user to '/' once the provider hydrates. RootRedirect
-  // (routes.tsx) is the single role-routing point and sends merchants
-  // to /merchant/home.
+  // src/pages/auth/Login.tsx. Merchants release to '/' (RootRedirect
+  // sends them to /merchant/home). Auth Hardening Phase 1: a user who
+  // signs in HERE — i.e. explicitly through the merchant journey — but
+  // whose role is still 'customer' is routed to /merchant/pending,
+  // which shows their application status (pending / rejected) or
+  // bounces to /merchant/welcome when no application exists. Customers
+  // signing in through the normal /auth/login are unaffected.
   useEffect(() => {
-    if (configured && status === 'authenticated') {
+    if (!configured || status !== 'authenticated' || profileLoading) return;
+    if (role === 'customer') {
+      navigate('/merchant/pending', { replace: true });
+    } else {
       navigate('/', { replace: true });
     }
-  }, [configured, status, navigate]);
+  }, [configured, status, profileLoading, role, navigate]);
 
   const emailError = useMemo(() => {
     if (!touched.email && !errors.email) return undefined;
@@ -182,25 +188,28 @@ export default function MerchantLogin() {
             </div>
           </div>
 
-          {/* Demo hint */}
-          <div className="rounded-xl2 bg-gold-50 ring-1 ring-gold-400/30 p-3.5 flex items-start gap-3">
-            <span className="h-9 w-9 shrink-0 rounded-xl bg-white text-gold-600 grid place-items-center ring-1 ring-gold-400/30">
-              <InfoIcon size={16} />
-            </span>
-            <div className="min-w-0 flex-1 text-[12px] text-ink-700 leading-relaxed">
-              <div className="font-semibold mb-0.5 text-ink-900 text-[12.5px]">
-                {t('merchant.login.demoTitle')}
+          {/* Demo hint — DEMO MODE ONLY. Production merchants must
+              never see demo credentials or a demo-fill affordance. */}
+          {!configured && (
+            <div className="rounded-xl2 bg-gold-50 ring-1 ring-gold-400/30 p-3.5 flex items-start gap-3">
+              <span className="h-9 w-9 shrink-0 rounded-xl bg-white text-gold-600 grid place-items-center ring-1 ring-gold-400/30">
+                <InfoIcon size={16} />
+              </span>
+              <div className="min-w-0 flex-1 text-[12px] text-ink-700 leading-relaxed">
+                <div className="font-semibold mb-0.5 text-ink-900 text-[12.5px]">
+                  {t('merchant.login.demoTitle')}
+                </div>
+                <div>{t('merchant.login.demoHint')}</div>
+                <button
+                  type="button"
+                  onClick={fillDemoCredentials}
+                  className="mt-1.5 inline-flex items-center gap-1 text-[12.5px] font-semibold text-gold-600 hover:underline"
+                >
+                  {t('merchant.login.demoFill')}
+                </button>
               </div>
-              <div>{t('merchant.login.demoHint')}</div>
-              <button
-                type="button"
-                onClick={fillDemoCredentials}
-                className="mt-1.5 inline-flex items-center gap-1 text-[12.5px] font-semibold text-gold-600 hover:underline"
-              >
-                {t('merchant.login.demoFill')}
-              </button>
             </div>
-          </div>
+          )}
 
           <form className="space-y-4" onSubmit={onSubmit} noValidate>
             <FormField

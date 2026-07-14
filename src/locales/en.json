@@ -289,7 +289,7 @@
       "mobileFormat": "Doesn't look like a Saudi mobile. It must start with 5 and be 9 digits.",
       "mobileUnsupportedCountry": "Only Saudi mobile numbers (+966) are supported here.",
       "mobileVerifyFailed": "We couldn't verify this number right now. Please try again.",
-      "mobileTaken": "This mobile is already registered. Sign in instead, or use a different number.",
+      "mobileTaken": "This mobile number is already in use",
       "emailRequired": "Enter your email to continue.",
       "emailFormat": "That email doesn't look right.",
       "passwordRequired": "Enter your password to continue.",
@@ -305,7 +305,8 @@
       "emailTaken": "This email is already registered. Try signing in instead.",
       "weakPassword": "Password is too weak — use at least 8 characters.",
       "tooManyAttempts": "Too many attempts in a short time. Wait a moment and try again.",
-      "linkExpired": "This link has expired. Request a new one and try again."
+      "linkExpired": "This link has expired. Request a new one and try again.",
+      "emailNotConfirmed": "Your email is not confirmed yet. Open the confirmation email we sent you, then sign in again."
     }
   },
   "register": {
@@ -1362,7 +1363,8 @@
       "simulateRejection": "Simulate rejection (demo)",
       "continueToDashboard": "Go to merchant dashboard",
       "resubmit": "Resubmit application",
-      "signOut": "Sign out"
+      "signOut": "Sign out",
+      "refresh": "Refresh status"
     },
     "home": {
       "title": "Merchant dashboard",

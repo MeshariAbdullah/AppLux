@@ -51,6 +51,7 @@ const RPC_UNAUTHORIZED_CODES = new Set([
   'P0080', // merchant_set_customer_national_id — not authenticated
   'P0081', // merchant_set_customer_national_id — not authorised
   'P0085', // merchant_set_customer_national_id — target not customer
+  'P0100', // profiles guard — role/account_status self-change blocked
 ]);
 
 /** RPC guard codes that mean "the submitted details are invalid". */
@@ -142,6 +143,20 @@ export function translateAuthError(err: unknown, t: TranslateFn): string {
   }
   if (message.includes('password should be') || code === 'weak_password') {
     return t('auth.errors.weakPassword');
+  }
+  if (message.includes('email not confirmed') || code === 'email_not_confirmed') {
+    return t('auth.errors.emailNotConfirmed');
+  }
+  // GoTrue surfaces ANY failure inside the signup trigger as this one
+  // opaque message. Today the trigger has exactly one constraint that
+  // real input can violate: the customer-mobile unique index
+  // (profiles_mobile_customer_unique) — profile + eligibility inserts
+  // are `on conflict do nothing` and no other CHECK depends on user
+  // input shape the form hasn't already validated. So the safe,
+  // accurate translation is "mobile already in use". Revisit if the
+  // trigger ever gains another input-sensitive constraint.
+  if (message.includes('database error saving new user')) {
+    return t('auth.errors.mobileTaken');
   }
   if (
     status === 429 ||

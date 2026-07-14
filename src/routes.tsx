@@ -229,10 +229,15 @@ export function AppRoutes() {
         <Route path="/merchant/register" element={<MerchantRegister />} />
 
         {/* Merchant area — guarded by role */}
+        {/* Application-status page: in live mode the applicant is still
+            a CUSTOMER until the admin provisions the approved
+            application, so the guard must admit customers too — the
+            page itself routes provisioned merchants to the dashboard
+            and users with no application back to /merchant/welcome. */}
         <Route
           path="/merchant/pending"
           element={
-            <RequireRole role="merchant" fallback="/merchant/welcome">
+            <RequireRole role={['customer', 'merchant']} fallback="/merchant/welcome">
               <MerchantPending />
             </RequireRole>
           }

@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Navigate, useNavigate } from 'react-router-dom';
 import { Header, Screen } from '@/components/layout';
 import { Button, Card } from '@/components/ui';
 import { CheckIcon, ShieldIcon } from '@/components/icons';
 import { useT } from '@/lib/i18n';
 import { useStore } from '@/lib/store';
+import { useSupabaseAuth } from '@/lib/supabase';
 import { cn } from '@/lib/cn';
 
 type Phase = 'idle' | 'verifying' | 'verified';
@@ -13,6 +14,7 @@ export default function Nafath() {
   const t = useT();
   const navigate = useNavigate();
   const { completeRegistration } = useStore();
+  const { configured } = useSupabaseAuth();
   const [phase, setPhase] = useState<Phase>('idle');
 
   const code = useMemo(() => Math.floor(10 + Math.random() * 90), []);
@@ -36,6 +38,16 @@ export default function Nafath() {
     }, 900);
     return () => window.clearTimeout(id);
   }, [phase, completeRegistration, navigate]);
+
+  // Auth Hardening Phase 1: this simulated Nafath screen drives the
+  // DEMO registration store (completeRegistration fabricates a demo
+  // session). In a live Supabase build it must never run — a direct
+  // visit to /auth/nafath is bounced to the real sign-in entry. Demo
+  // behavior is unchanged. (Placed after every hook — the idle-phase
+  // effects above are no-ops when this returns.)
+  if (configured) {
+    return <Navigate to="/auth/login" replace />;
+  }
 
   const onSkip = () => {
     completeRegistration(false);

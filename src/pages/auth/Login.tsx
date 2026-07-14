@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Header, Screen } from '@/components/layout';
 import { Button, Card, FormField, Input } from '@/components/ui';
 import {
@@ -37,6 +37,7 @@ function isValidSaudiMobile(value: string): boolean {
 export default function Login() {
   const t = useT();
   const navigate = useNavigate();
+  const location = useLocation();
   const { completeRegistration, updateDraft } = useStore();
   const { configured, signIn, status } = useSupabaseAuth();
   const [mobile, setMobile] = useState('');
@@ -65,9 +66,19 @@ export default function Login() {
   // user lands on /auth/login while already authenticated.
   useEffect(() => {
     if (configured && status === 'authenticated') {
-      navigate('/', { replace: true });
+      // Auth Hardening Phase 1: honor an internal return path (e.g. the
+      // merchant-register gate sends `state.from = '/merchant/register'`
+      // so the applicant lands back on the application after signing
+      // in). Only same-app absolute paths are accepted — anything else
+      // falls through to '/' and RootRedirect's role routing.
+      const from = (location.state as { from?: string } | null)?.from;
+      const target =
+        typeof from === 'string' && from.startsWith('/') && !from.startsWith('//')
+          ? from
+          : '/';
+      navigate(target, { replace: true });
     }
-  }, [configured, status, navigate]);
+  }, [configured, status, navigate, location.state]);
 
   const mobileError = useMemo(() => {
     if (configured) return undefined;
@@ -195,25 +206,28 @@ export default function Login() {
             </div>
           </div>
 
-          {/* Demo hint */}
-          <div className="rounded-xl3 bg-gold-50 p-4 flex items-start gap-3.5">
-            <span className="h-10 w-10 shrink-0 rounded-2xl bg-white text-gold-700 grid place-items-center hairline">
-              <InfoIcon size={16} />
-            </span>
-            <div className="min-w-0 flex-1 text-[12.5px] text-ink-700 leading-relaxed">
-              <div className="font-semibold mb-0.5 text-ink-900 text-[13px] tracking-tight">
-                {t('auth.login.demoTitle')}
+          {/* Demo hint — DEMO MODE ONLY. Production users must never
+              see demo credentials or a demo-fill affordance. */}
+          {!configured && (
+            <div className="rounded-xl3 bg-gold-50 p-4 flex items-start gap-3.5">
+              <span className="h-10 w-10 shrink-0 rounded-2xl bg-white text-gold-700 grid place-items-center hairline">
+                <InfoIcon size={16} />
+              </span>
+              <div className="min-w-0 flex-1 text-[12.5px] text-ink-700 leading-relaxed">
+                <div className="font-semibold mb-0.5 text-ink-900 text-[13px] tracking-tight">
+                  {t('auth.login.demoTitle')}
+                </div>
+                <div>{t('auth.login.demoHint')}</div>
+                <button
+                  type="button"
+                  onClick={fillDemoCredentials}
+                  className="mt-2 inline-flex items-center gap-1 text-[12.5px] font-semibold text-gold-700 hover:text-gold-600"
+                >
+                  {t('auth.login.demoFill')}
+                </button>
               </div>
-              <div>{t('auth.login.demoHint')}</div>
-              <button
-                type="button"
-                onClick={fillDemoCredentials}
-                className="mt-2 inline-flex items-center gap-1 text-[12.5px] font-semibold text-gold-700 hover:text-gold-600"
-              >
-                {t('auth.login.demoFill')}
-              </button>
             </div>
-          </div>
+          )}
 
           <form className="space-y-5" onSubmit={onSubmit} noValidate>
             {configured ? (
