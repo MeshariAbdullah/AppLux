@@ -1891,6 +1891,11 @@
     }
   },
   "admin": {
+    "pagination": {
+      "prev": "السابق",
+      "next": "التالي",
+      "pageOf": "الصفحة {page} من {pages}"
+    },
     "home": {
       "title": "مركز الإدارة",
       "eyebrow": "مركز تحكم Lend",

@@ -24,7 +24,8 @@ import { useI18n, useT } from '@/lib/i18n';
 import { useStore, type AdminMerchantRequest } from '@/lib/store';
 import {
   adaptMerchantApplication,
-  listMerchantApplications,
+  countMerchantApplicationsByStatus,
+  listMerchantApplicationsPage,
   useSupabaseAuth,
 } from '@/lib/supabase';
 import type { AdminMerchantDecisionStatus } from '@/lib/data';
@@ -32,61 +33,107 @@ import type { AdminMerchantDecisionStatus } from '@/lib/data';
 type TabKey = 'all' | AdminMerchantDecisionStatus;
 const TABS: TabKey[] = ['all', 'pending', 'approved', 'rejected'];
 
+// Performance-only pagination (admin pagination phase): the list is
+// fetched 25 rows at a time server-side, in the SAME order the page
+// always showed (pending first — decided_at IS NULL — then newest
+// decision; stable id tiebreak). Tab counts come from exact HEAD
+// count queries, so badges/hero match the unpaginated behavior.
+const PAGE_SIZE = 25;
 
 export default function AdminMerchants() {
   const t = useT();
   const { dir, formatDate } = useI18n();
   const { adminMerchantRequests: demoRequests } = useStore();
   const { configured } = useSupabaseAuth();
-  const [requests, setRequests] = useState<AdminMerchantRequest[]>(demoRequests);
+  const [liveRows, setLiveRows] = useState<AdminMerchantRequest[] | null>(null);
+  const [liveTotal, setLiveTotal] = useState(0);
+  const [liveCounts, setLiveCounts] = useState<Record<AdminMerchantDecisionStatus, number> | null>(null);
+  const [liveError, setLiveError] = useState(false);
   const [liveLoading, setLiveLoading] = useState<boolean>(() => configured);
   const [tab, setTab] = useState<TabKey>('pending');
+  const [page, setPage] = useState(0);
+
+  // Filter change → back to page 1 (same rule for every future filter).
+  const selectTab = (k: TabKey) => {
+    setTab(k);
+    setPage(0);
+  };
+
+  // Exact per-status counts (three HEAD requests, no row payload).
+  useEffect(() => {
+    if (!configured) return;
+    let cancelled = false;
+    countMerchantApplicationsByStatus()
+      .then((c) => {
+        if (!cancelled) setLiveCounts(c);
+      })
+      .catch((err) => {
+        logEvent('rpc_failure', 'warn', { op: 'count_merchant_applications' }, err);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [configured]);
 
   useEffect(() => {
     if (!configured) {
-      setRequests(demoRequests);
+      setLiveRows(null);
       setLiveLoading(false);
       return;
     }
     setLiveLoading(true);
+    setLiveError(false);
     let cancelled = false;
-    listMerchantApplications()
-      .then((rows) => {
-        if (!cancelled) {
-          setRequests(rows.map(adaptMerchantApplication));
-          setLiveLoading(false);
-        }
+    listMerchantApplicationsPage({
+      status: tab === 'all' ? undefined : tab,
+      page,
+      pageSize: PAGE_SIZE,
+    })
+      .then(({ rows, total }) => {
+        if (cancelled) return;
+        setLiveRows(rows.map(adaptMerchantApplication));
+        setLiveTotal(total);
+        setLiveLoading(false);
       })
       .catch((err) => {
         logEvent('rpc_failure', 'warn', { op: 'list_merchant_applications' }, err);
         // Phase 9: in live mode, do NOT fall back to demo seeds on error.
-        // Empty list with an error pill is the right signal.
+        // Empty list with an error banner is the right signal.
         if (!cancelled) {
-          setRequests([]);
+          setLiveRows([]);
+          setLiveTotal(0);
+          setLiveError(true);
           setLiveLoading(false);
         }
       });
     return () => {
       cancelled = true;
     };
-  }, [configured, demoRequests]);
+  }, [configured, tab, page]);
 
-  const counts = useMemo(() => {
+  const counts = useMemo<Record<TabKey, number>>(() => {
+    if (configured) {
+      const c = liveCounts ?? { pending: 0, approved: 0, rejected: 0 };
+      return { all: c.pending + c.approved + c.rejected, ...c };
+    }
     const acc: Record<TabKey, number> = {
-      all: requests.length,
+      all: demoRequests.length,
       pending: 0,
       approved: 0,
       rejected: 0,
     };
-    for (const r of requests) acc[r.decision.status] += 1;
+    for (const r of demoRequests) acc[r.decision.status] += 1;
     return acc;
-  }, [requests]);
+  }, [configured, liveCounts, demoRequests]);
 
   const visible = useMemo(() => {
+    // Live mode: rows arrive pre-filtered, pre-sorted, and paged from
+    // the server. Demo mode keeps the original client-side behavior.
+    if (configured) return liveRows ?? [];
     const list =
       tab === 'all'
-        ? requests
-        : requests.filter((r) => r.decision.status === tab);
+        ? demoRequests
+        : demoRequests.filter((r) => r.decision.status === tab);
     // Sort: pending first, then by decidedAt desc
     return [...list].sort((a, b) => {
       if (a.decision.status === 'pending' && b.decision.status !== 'pending') return -1;
@@ -96,7 +143,9 @@ export default function AdminMerchants() {
         new Date(a.decision.decidedAt).getTime()
       );
     });
-  }, [requests, tab]);
+  }, [configured, liveRows, demoRequests, tab]);
+
+  const totalPages = configured ? Math.max(1, Math.ceil(liveTotal / PAGE_SIZE)) : 1;
 
   return (
     <>
@@ -163,7 +212,7 @@ export default function AdminMerchants() {
                   <button
                     key={k}
                     type="button"
-                    onClick={() => setTab(k)}
+                    onClick={() => selectTab(k)}
                     className={cn(
                       'inline-flex items-center gap-1.5 px-3 h-9 rounded-full text-[12.5px] font-semibold transition-colors whitespace-nowrap',
                       active
@@ -189,20 +238,27 @@ export default function AdminMerchants() {
           </div>
 
           {/* List */}
+          {liveError && (
+            <div className="rounded-xl2 bg-danger-50 ring-1 ring-danger-500/25 px-3.5 py-2.5 text-[12.5px] text-danger-700 leading-relaxed">
+              {t('errors.generic')}
+            </div>
+          )}
           {configured && liveLoading ? (
             <PageSkeleton rows={4} />
           ) : visible.length === 0 ? (
-            <EmptyState
-              icon={
-                tab === 'pending' ? (
-                  <BadgeCheckIcon size={22} />
-                ) : (
-                  <InfoIcon size={22} />
-                )
-              }
-              title={t(`admin.merchants.empty.${tab}.title`)}
-              description={t(`admin.merchants.empty.${tab}.hint`)}
-            />
+            !liveError && (
+              <EmptyState
+                icon={
+                  tab === 'pending' ? (
+                    <BadgeCheckIcon size={22} />
+                  ) : (
+                    <InfoIcon size={22} />
+                  )
+                }
+                title={t(`admin.merchants.empty.${tab}.title`)}
+                description={t(`admin.merchants.empty.${tab}.hint`)}
+              />
+            )
           ) : (
             <div className="space-y-2.5">
               {visible.map((r) => (
@@ -214,6 +270,44 @@ export default function AdminMerchants() {
                   t={t}
                 />
               ))}
+            </div>
+          )}
+
+          {/* Pager — live mode only; demo keeps its full list. */}
+          {configured && !liveLoading && totalPages > 1 && (
+            <div className="flex items-center justify-between gap-3 pt-1">
+              <button
+                type="button"
+                disabled={page === 0}
+                onClick={() => setPage((p) => Math.max(0, p - 1))}
+                className={cn(
+                  'h-9 px-4 rounded-full text-[12.5px] font-semibold ring-1 transition-colors',
+                  page === 0
+                    ? 'text-ink-300 ring-canvas-200 bg-white'
+                    : 'text-ink-800 ring-canvas-200 bg-white hover:bg-canvas-100',
+                )}
+              >
+                {t('admin.pagination.prev')}
+              </button>
+              <span className="text-[12px] text-ink-500 num">
+                {t('admin.pagination.pageOf', {
+                  page: page + 1,
+                  pages: totalPages,
+                })}
+              </span>
+              <button
+                type="button"
+                disabled={page >= totalPages - 1}
+                onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
+                className={cn(
+                  'h-9 px-4 rounded-full text-[12.5px] font-semibold ring-1 transition-colors',
+                  page >= totalPages - 1
+                    ? 'text-ink-300 ring-canvas-200 bg-white'
+                    : 'text-ink-800 ring-canvas-200 bg-white hover:bg-canvas-100',
+                )}
+              >
+                {t('admin.pagination.next')}
+              </button>
             </div>
           )}
         </div>

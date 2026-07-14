@@ -93,10 +93,13 @@ export type { ListMerchantsFilter } from './queries/merchants';
 export {
   submitMerchantApplication,
   listMerchantApplications,
+  listMerchantApplicationsPage,
+  countMerchantApplicationsByStatus,
   fetchMerchantApplication,
   decideMerchantApplication,
   provisionMerchantFromApplication,
 } from './queries/merchant-applications';
+export type { MerchantApplicationPage } from './queries/merchant-applications';
 
 export {
   acceptRentalInvoice,

@@ -1891,6 +1891,11 @@
     }
   },
   "admin": {
+    "pagination": {
+      "prev": "Previous",
+      "next": "Next",
+      "pageOf": "Page {page} of {pages}"
+    },
     "home": {
       "title": "Admin console",
       "eyebrow": "Lend control center",
