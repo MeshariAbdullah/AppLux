@@ -342,6 +342,32 @@ function buildInvoiceEvents(
   const overdueAt = addDays(invoice.dueDate, 3);
   const paidAt = addDays(invoice.dueDate, -1);
 
+  // Current phase (ENABLE_PAYMENTS_AND_NOTES = false): the activity
+  // narrates offer/contract issuance → sending → CUSTOMER APPROVAL.
+  // "Paid" must never be inferred from acceptance/activation — the UI
+  // status 'paid' maps from DB 'accepted', which in this phase means
+  // the customer approved, not that any payment happened. The legacy
+  // payment activity below is preserved for flag restoration.
+  if (!ENABLE_PAYMENTS_AND_NOTES) {
+    const base = [
+      evt('issued', t('track.invoice.events.offerIssued'), issued, 'done', 'brand', <ReceiptIcon size={15} />),
+      evt('sent', t('track.invoice.events.offerSent'), sent, 'done', 'brand', <ArrowIcon size={14} />),
+    ];
+    if (invoice.status === 'paid') {
+      return [
+        ...base,
+        evt('approved', t('track.invoice.events.approved'), null, 'current', 'success', <CheckIcon size={15} strokeWidth={2.6} />),
+      ];
+    }
+    // due AND overdue: awaiting the customer's review — no payment
+    // reminders / collections escalation copy in this phase.
+    return [
+      ...base,
+      evt('awaiting-review', t('track.invoice.events.awaitingReview'), null, 'current', 'warn', <ClockIcon size={14} />),
+      evt('approved', t('track.invoice.events.approved'), null, 'pending', 'success', <CheckIcon size={14} />),
+    ];
+  }
+
   if (invoice.status === 'paid') {
     return [
       evt('issued', t('track.invoice.events.issued'), issued, 'done', 'brand', <ReceiptIcon size={15} />),

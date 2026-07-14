@@ -31,6 +31,7 @@ import { ENABLE_PAYMENTS_AND_NOTES } from '@/lib/featureFlags';
 import { useSensitiveFlow } from '@/lib/session/flowGuard';
 import { useI18n, useT } from '@/lib/i18n';
 import { useStore } from '@/lib/store';
+import { resolveMerchantName } from '@/lib/merchantName';
 import {
   acceptRentalInvoice,
   activateRentalWithoutPaymentAndNote,
@@ -38,6 +39,7 @@ import {
   fetchMerchant,
   synthesizePackageFromInvoice,
   useSupabaseAuth,
+  type MerchantRow,
 } from '@/lib/supabase';
 import type { ScannedPackage } from '@/lib/data';
 import { ReviewStepper, type ReviewStepKey } from '@/components/review/ReviewStepper';
@@ -56,6 +58,7 @@ export default function Review() {
   const { scans, stores, session, approvePackage } = useStore();
   const {
     configured,
+    profile: supabaseProfile,
     session: supabaseSession,
     refresh: refreshAuthContext,
   } = useSupabaseAuth();
@@ -72,6 +75,10 @@ export default function Review() {
   // Live invoice resolution when configured. Falls back to demo if missing.
   const [livePkg, setLivePkg] = useState<ScannedPackage | null>(null);
   const [liveInvoiceId, setLiveInvoiceId] = useState<string | null>(null);
+  // Merchant row from the live fetch — kept so the contract "parties"
+  // card can show the real lessor name (the demo `stores` lookup is
+  // empty in live mode, which used to render "—").
+  const [liveMerchantRow, setLiveMerchantRow] = useState<MerchantRow | null>(null);
   const [resolving, setResolving] = useState(false);
 
   useEffect(() => {
@@ -91,6 +98,7 @@ export default function Review() {
         }
         const merchant = await fetchMerchant(res.invoice.merchant_id).catch(() => null);
         if (cancelled) return;
+        setLiveMerchantRow(merchant);
         setLivePkg(synthesizePackageFromInvoice(res.invoice, res.items, merchant));
         setLiveInvoiceId(res.invoice.id);
       })
@@ -108,6 +116,17 @@ export default function Review() {
 
   const pkg = livePkg ?? demoPkg;
   const store = demoStore; // Customer-side store lookup stays demo for now
+
+  // Contract parties — resolved from data that is ALREADY loaded:
+  //   lessor  ← live merchant row (this page's fetch) or demo store
+  //   lessee  ← Supabase profile (auth provider) or demo session
+  // Names only; no national ID / mobile / other profile fields.
+  const lessorName =
+    (liveMerchantRow ? resolveMerchantName(liveMerchantRow, locale, '') : '') ||
+    (store ? store.name[locale] : '') ||
+    null;
+  const lesseeName =
+    supabaseProfile?.full_name?.trim() || session?.fullName?.trim() || null;
 
   const [step, setStep] = useState<ReviewStepKey>('invoice');
   const [acceptError, setAcceptError] = useState<string | null>(null);
@@ -233,7 +252,7 @@ export default function Review() {
             </div>
             <p className="mt-2 editorial-title text-[17px] text-ink-900 leading-snug">
               {t('review.framing.title', {
-                boutique: store ? store.name[locale] : t('review.framing.boutiqueFallback'),
+                boutique: lessorName ?? t('review.framing.boutiqueFallback'),
               })}
             </p>
             <p className="mt-2 text-[12.5px] text-ink-500 leading-relaxed">
@@ -245,11 +264,17 @@ export default function Review() {
               the ReviewStepper above is the ONLY step indicator on the
               review experience (approved journey simplification). */}
           {step === 'invoice' && <InvoiceStep pkg={pkg} />}
-          {step === 'contract' && <ContractStep pkg={pkg} />}
+          {step === 'contract' && (
+            <ContractStep
+              pkg={pkg}
+              lessorName={lessorName}
+              lesseeName={lesseeName}
+            />
+          )}
           {step === 'confirm' && (
             <ConfirmStep
               pkg={pkg}
-              userName={session?.fullName}
+              userName={lesseeName ?? undefined}
               onApproved={handleApproved}
             />
           )}
@@ -506,10 +531,20 @@ function FeeRow({ label, amount, muted }: { label: string; amount: number; muted
 
 /* --------- Contract step --------- */
 
-function ContractStep({ pkg }: { pkg: ScannedPackage }) {
+function ContractStep({
+  pkg,
+  lessorName,
+  lesseeName,
+}: {
+  pkg: ScannedPackage;
+  /** Parties — resolved by the parent from live merchant + profile
+   *  data (demo store/session as demo-mode fallback). Names only. */
+  lessorName: string | null;
+  lesseeName: string | null;
+}) {
   const t = useT();
   const { locale, formatCurrency } = useI18n();
-  const { stores, session } = useStore();
+  const { stores } = useStore();
   const store = stores.find((s) => s.id === pkg.storeId);
   const [open, setOpen] = useState<string>(pkg.contract.clauses[0]?.id ?? '');
 
@@ -535,11 +570,14 @@ function ContractStep({ pkg }: { pkg: ScannedPackage }) {
       <section>
         <SectionHeader title={t('review.contract.parties')} />
         <Card padded className="space-y-3">
-          <Field label={t('review.contract.lessor')} value={store?.name[locale] ?? '—'} />
+          <Field
+            label={t('review.contract.lessor')}
+            value={lessorName ?? store?.name[locale] ?? '—'}
+          />
           <CardDivider />
           <Field
             label={t('review.contract.lessee')}
-            value={session?.fullName ?? '—'}
+            value={lesseeName ?? '—'}
           />
         </Card>
       </section>

@@ -468,7 +468,8 @@
     "invoice": {
       "due": "Due",
       "overdue": "Overdue",
-      "paid": "Paid"
+      "paid": "Paid",
+      "approvedSimple": "Approved"
     },
     "contract": {
       "active": "Active",
@@ -918,7 +919,7 @@
     }
   },
   "track": {
-    "invoiceTitle": "Invoice record",
+    "invoiceTitle": "Offer and contract details",
     "contractTitle": "Contract record",
     "noteTitle": "Promissory note record",
     "officialRecord": "Official record",
@@ -957,7 +958,10 @@
         "due": "Due date",
         "overdue": "Past due",
         "paid": "Payment received",
-        "escalated": "Escalated to collections"
+        "escalated": "Escalated to collections",
+        "offerIssued": "Offer and contract issued",
+        "offerSent": "Offer and contract sent to the customer",
+        "approved": "Customer approval completed"
       },
       "rentalValue": "Rental value",
       "startsOn": "Start date",

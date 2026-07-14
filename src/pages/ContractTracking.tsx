@@ -66,7 +66,7 @@ export default function ContractTracking() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { contracts, invoices, notes, session } = useStore();
-  const { configured } = useSupabaseAuth();
+  const { configured, profile: supabaseProfile } = useSupabaseAuth();
   const { formatCurrency, formatDate, locale } = useI18n();
 
   const demoContract = useMemo(() => contracts.find((c) => c.id === id), [contracts, id]);
@@ -291,7 +291,9 @@ export default function ContractTracking() {
               />
               <Field
                 label={t('review.contract.lessee')}
-                value={session?.fullName ?? '—'}
+                // Live mode: the demo session is null — the lessee name
+                // comes from the Supabase profile (name only, no PII).
+                value={supabaseProfile?.full_name ?? session?.fullName ?? '—'}
               />
               <Field
                 label={t('track.contract.startOn')}

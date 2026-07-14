@@ -468,7 +468,8 @@
     "invoice": {
       "due": "مستحقة",
       "overdue": "متأخرة",
-      "paid": "مدفوعة"
+      "paid": "مدفوعة",
+      "approvedSimple": "تمت الموافقة"
     },
     "contract": {
       "active": "نشِط",
@@ -918,7 +919,7 @@
     }
   },
   "track": {
-    "invoiceTitle": "سجل الفاتورة",
+    "invoiceTitle": "تفاصيل العرض والعقد",
     "contractTitle": "سجل العقد",
     "noteTitle": "سجل السند لأمر",
     "officialRecord": "السجل الرسمي",
@@ -957,7 +958,10 @@
         "due": "تاريخ الاستحقاق",
         "overdue": "تجاوزت موعد الاستحقاق",
         "paid": "تم السداد",
-        "escalated": "تم التصعيد للتحصيل"
+        "escalated": "تم التصعيد للتحصيل",
+        "offerIssued": "تم إصدار العرض والعقد",
+        "offerSent": "تم إرسال العرض والعقد للعميل",
+        "approved": "تمت موافقة العميل"
       },
       "rentalValue": "قيمة الإيجار",
       "startsOn": "تاريخ البدء",

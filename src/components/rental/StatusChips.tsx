@@ -1,4 +1,5 @@
 import { StatusChip, type StatusTone } from '@/components/ui';
+import { ENABLE_PAYMENTS_AND_NOTES } from '@/lib/featureFlags';
 import { useT } from '@/lib/i18n';
 import type {
   ContractStatus,
@@ -14,7 +15,14 @@ const invoiceTone: Record<InvoiceStatus, StatusTone> = {
 };
 export function InvoiceStatusChip({ status }: { status: InvoiceStatus }) {
   const t = useT();
-  return <StatusChip tone={invoiceTone[status]} label={t(`status.invoice.${status}`)} />;
+  // Current phase: UI status 'paid' maps from DB 'accepted' — the
+  // customer APPROVED; no payment happened. Show "approved" instead of
+  // "مدفوعة". Internal status values stay unchanged; label only.
+  const label =
+    !ENABLE_PAYMENTS_AND_NOTES && status === 'paid'
+      ? t('status.invoice.approvedSimple')
+      : t(`status.invoice.${status}`);
+  return <StatusChip tone={invoiceTone[status]} label={label} />;
 }
 
 const contractTone: Record<ContractStatus, StatusTone> = {
