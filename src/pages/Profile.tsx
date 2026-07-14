@@ -22,6 +22,8 @@ import {
 } from '@/components/icons';
 import { translateAuthError } from '@/lib/errors';
 import { logEvent } from '@/lib/observability/log';
+import { releaseInfo } from '@/lib/releaseInfo';
+import { useTapReveal } from '@/lib/useTapReveal';
 import { useI18n, useT } from '@/lib/i18n';
 import { useStore } from '@/lib/store';
 import { requestAccountDeletion, useSupabaseAuth } from '@/lib/supabase';
@@ -51,6 +53,8 @@ export default function Profile() {
     refresh,
   } = useSupabaseAuth();
   const navigate = useNavigate();
+  // Phase 6C hidden diagnostics gesture — seven taps on the version row.
+  const tapVersion = useTapReveal(() => navigate('/diagnostics'));
 
   const fullName = configured
     ? profile?.full_name ?? realSession?.user?.email ?? '—'
@@ -294,14 +298,19 @@ export default function Profile() {
               }
             />
             <Divider />
+            {/* Phase 6C: seven taps within the rolling window open the
+                hidden /diagnostics page. No chevron — the row must not
+                advertise itself as tappable. */}
             <Row
               icon={<InfoIcon size={18} />}
               tone="canvas"
               label={t('profile.about')}
               dir={dir}
+              onClick={tapVersion}
+              chevron={false}
               trailing={
                 <span className="text-[12px] text-ink-400 num">
-                  {t('profile.version')} 0.1.0
+                  {t('profile.version')} {releaseInfo.version}
                 </span>
               }
             />
@@ -395,6 +404,7 @@ function Row({
   dir,
   tone = 'canvas',
   onClick,
+  chevron = true,
 }: {
   icon: ReactNode;
   label: ReactNode;
@@ -402,6 +412,9 @@ function Row({
   dir: 'rtl' | 'ltr';
   tone?: 'lavender' | 'canvas';
   onClick?: () => void;
+  /** Hide the affordance for rows whose tap action is intentionally
+   *  undiscoverable (the 6C seven-tap version row). */
+  chevron?: boolean;
 }) {
   return (
     <button
@@ -410,7 +423,7 @@ function Row({
       disabled={!onClick}
       className={cn(
         'flex w-full items-center gap-3.5 px-5 py-4 text-start transition-colors',
-        onClick ? 'hover:bg-lavender-50' : 'cursor-default',
+        onClick && chevron ? 'hover:bg-lavender-50' : 'cursor-default',
       )}
     >
       <span
@@ -425,7 +438,7 @@ function Row({
       </span>
       <span className="flex-1 text-[14px] font-medium text-ink-800 tracking-tight">{label}</span>
       {trailing}
-      {onClick && (
+      {onClick && chevron && (
         <ChevronIcon size={16} className={cn('text-ink-300', dir === 'rtl' && 'rotate-180')} />
       )}
     </button>

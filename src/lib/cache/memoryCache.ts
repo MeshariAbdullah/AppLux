@@ -54,6 +54,18 @@ const epochs = new Map<string, number>();
 const inflight = new Map<string, Inflight>();
 const subscribers = new Map<string, Set<() => void>>();
 
+// Aggregate counters only — never keys or values. Consumed by the
+// Phase 6C diagnostics page; a "hit" is a fresh-within-TTL read that
+// skipped the network, a "miss" is a read that went to the fetcher.
+let hitCount = 0;
+let missCount = 0;
+
+/** Called by read paths that made a fresh/stale decision. */
+export function markCacheOutcome(hit: boolean): void {
+  if (hit) hitCount += 1;
+  else missCount += 1;
+}
+
 function epochOf(key: string): number {
   return epochs.get(key) ?? 0;
 }
@@ -172,7 +184,11 @@ export function cachedFetch<T>(
   fetcher: () => Promise<T>,
 ): Promise<T> {
   const hit = cacheRead<T>(key);
-  if (hit && hit.ageMs < ttlMs) return Promise.resolve(hit.value);
+  if (hit && hit.ageMs < ttlMs) {
+    markCacheOutcome(true);
+    return Promise.resolve(hit.value);
+  }
+  markCacheOutcome(false);
   return cacheFetch(key, fetcher);
 }
 
@@ -190,7 +206,18 @@ export function cacheSubscribe(key: string, cb: () => void): () => void {
   };
 }
 
-/** Diagnostics for smoke checks — not for product code. */
-export function cacheStats(): { entries: number; inflight: number } {
-  return { entries: store.size, inflight: inflight.size };
+/** Diagnostics for smoke checks + the 6C diagnostics page — aggregate
+ *  numbers only, never keys, prefixes, or values. */
+export function cacheStats(): {
+  entries: number;
+  inflight: number;
+  hits: number;
+  misses: number;
+} {
+  return {
+    entries: store.size,
+    inflight: inflight.size,
+    hits: hitCount,
+    misses: missCount,
+  };
 }

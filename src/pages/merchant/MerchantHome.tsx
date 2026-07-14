@@ -20,6 +20,8 @@ import {
 } from '@/components/icons';
 import { getInitials } from '@/lib/format/initials';
 import { logEvent } from '@/lib/observability/log';
+import { releaseInfo } from '@/lib/releaseInfo';
+import { useTapReveal } from '@/lib/useTapReveal';
 import { useI18n, useT } from '@/lib/i18n';
 import { useStore } from '@/lib/store';
 import { cn } from '@/lib/cn';
@@ -75,6 +77,8 @@ export default function MerchantHome() {
     merchantDamages,
   } = useStore();
   const supabaseAuth = useSupabaseAuth();
+  // Phase 6C hidden diagnostics gesture — seven taps on the version line.
+  const tapVersion = useTapReveal(() => navigate('/diagnostics'));
 
   // ---------- Data fetching (two stages) ----------
   // Stage 1 (Phase 3B): own merchant identity reads through the memory
@@ -433,6 +437,15 @@ export default function MerchantHome() {
             >
               {t('merchant.home.signOut')}
             </Button>
+            {/* Phase 6C: merchant version row — seven taps open the
+                hidden /diagnostics page. Reads as a plain build line. */}
+            <button
+              type="button"
+              onClick={tapVersion}
+              className="mt-3 w-full text-center text-[11px] text-ink-400 num cursor-default select-none"
+            >
+              {t('profile.version')} {releaseInfo.version}
+            </button>
           </div>
         </div>
       </Screen>

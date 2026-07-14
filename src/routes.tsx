@@ -43,6 +43,7 @@ const Tracking = lazyWithReload(() => import('@/pages/Tracking'));
 const InvoiceTracking = lazyWithReload(() => import('@/pages/InvoiceTracking'));
 const ContractTracking = lazyWithReload(() => import('@/pages/ContractTracking'));
 const NoteTracking = lazyWithReload(() => import('@/pages/NoteTracking'));
+const Diagnostics = lazyWithReload(() => import('@/pages/Diagnostics'));
 const Nafath = lazyWithReload(() => import('@/pages/auth/Nafath'));
 const RegisterSuccess = lazyWithReload(() => import('@/pages/auth/RegisterSuccess'));
 const ForgotPassword = lazyWithReload(() => import('@/pages/auth/ForgotPassword'));
@@ -463,6 +464,13 @@ export function AppRoutes() {
         <Route path="/track/contract/:id" element={<ContractTracking />} />
         <Route path="/track/note/:id" element={<NoteTracking />} />
       </Route>
+
+      {/* Phase 6C hidden diagnostics — reachable by direct URL or the
+          seven-tap version-row gesture. Deliberately outside every
+          layout and role guard: anonymous visitors get the release +
+          connectivity subset, signed-in users additionally see their
+          role. The page itself enforces that split. */}
+      <Route path="/diagnostics" element={<Diagnostics />} />
 
       <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

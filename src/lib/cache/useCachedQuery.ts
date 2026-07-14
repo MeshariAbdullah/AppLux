@@ -1,7 +1,12 @@
 import { useCallback, useEffect, useReducer, useRef, useState } from 'react';
 import { supabaseConfigured } from '@/lib/supabase/client';
 import { FOCUS_REVALIDATE_MIN_MS } from './keys';
-import { cacheFetch, cacheRead, cacheSubscribe } from './memoryCache';
+import {
+  cacheFetch,
+  cacheRead,
+  cacheSubscribe,
+  markCacheOutcome,
+} from './memoryCache';
 
 // =====================================================================
 // useCachedQuery — Phase 3A SWR-style read hook. NOT consumed by any
@@ -99,6 +104,7 @@ export function useCachedQuery<T>(
       return;
     }
     const entry = cacheRead<T>(key);
+    markCacheOutcome(Boolean(entry && entry.ageMs < opts.ttlMs));
     if (!entry || entry.ageMs >= opts.ttlMs) {
       revalidate(key);
     }

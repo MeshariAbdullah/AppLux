@@ -645,6 +645,60 @@
       "cancelling": "Cancelling…"
     }
   },
+  "diagnostics": {
+    "title": "Diagnostics",
+    "subtitle": "Safe technical info for support — contains no personal data",
+    "release": {
+      "title": "Release",
+      "version": "App version",
+      "commit": "Build commit",
+      "env": "Environment",
+      "builtAt": "Built at"
+    },
+    "connection": {
+      "title": "Connection",
+      "network": "Network",
+      "online": "Online",
+      "offline": "Offline",
+      "backend": "Backend",
+      "checking": "Checking…",
+      "reachable": "Reachable",
+      "unreachable": "Backend unreachable",
+      "notConfigured": "Demo mode — no backend configured",
+      "retry": "Re-check"
+    },
+    "auth": {
+      "title": "Account",
+      "state": "Sign-in state",
+      "authenticated": "Signed in",
+      "role": "Role"
+    },
+    "session": {
+      "title": "Session",
+      "state": "State",
+      "active": "Active",
+      "policy": "Timeout policy",
+      "idle": "idle",
+      "absolute": "max",
+      "minutesShort": "m",
+      "hoursShort": "h"
+    },
+    "cache": {
+      "title": "Cache",
+      "entries": "Entries",
+      "inflight": "In-flight requests",
+      "hitsMisses": "Hits / misses"
+    },
+    "events": {
+      "title": "Recent events",
+      "empty": "No events recorded this session"
+    },
+    "copy": {
+      "cta": "Copy diagnostics report",
+      "copied": "Copied ✓"
+    },
+    "footnote": "Everything shown here is safe to share with support: no tokens, no identifiers, no personal data. Events clear on refresh or sign-out."
+  },
   "form": {
     "required": "Required",
     "optional": "Optional"
