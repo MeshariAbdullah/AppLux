@@ -30,7 +30,8 @@ import {
 import { cn } from '@/lib/cn';
 import { CACHE_TTL, cacheKeys } from '@/lib/cache/keys';
 import { cachedFetch, cacheInvalidate } from '@/lib/cache/memoryCache';
-import { translateError } from '@/lib/errors';
+import { logEvent } from '@/lib/observability/log';
+import { translateError, withSupportId } from '@/lib/errors';
 import { getInitials } from '@/lib/format/initials';
 import { isRentalFinalized } from '@/lib/format/rentalFinalization';
 import { useSensitiveFlow } from '@/lib/session/flowGuard';
@@ -364,8 +365,7 @@ export default function MerchantDamageNew() {
                 evidenceType: 'photo',
                 uploadedByUserId: supabaseAuth.session?.user?.id,
               }).catch((err) => {
-                // eslint-disable-next-line no-console
-                console.error('[lend] uploadDamageEvidence failed', err);
+                logEvent('rpc_failure', 'warn', { op: 'upload_damage_evidence' }, err);
               }),
             ),
           );
@@ -379,9 +379,13 @@ export default function MerchantDamageNew() {
         // park a fake case id in local state while nothing exists on
         // the server). Surface the error, keep the form intact, let
         // the merchant retry.
-        // eslint-disable-next-line no-console
-        console.error('[lend] createDamageCase failed', err);
-        setSubmitError(translateError(err, t));
+        const eventId = logEvent(
+          'damage_case_failed',
+          'error',
+          { op: 'create_damage_case' },
+          err,
+        );
+        setSubmitError(withSupportId(translateError(err, t), eventId));
         setSubmitting(false);
         setConfirmOpen(false);
         return;

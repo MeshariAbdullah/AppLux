@@ -4,6 +4,7 @@ import { EmptyState, Skeleton } from '@/components/ui';
 import { BadgeCheckIcon, BuildingIcon } from '@/components/icons';
 import { CACHE_TTL, cacheKeys } from '@/lib/cache/keys';
 import { useCachedQuery } from '@/lib/cache/useCachedQuery';
+import { logEvent } from '@/lib/observability/log';
 import { useT } from '@/lib/i18n';
 import { useStore } from '@/lib/store';
 import type { PartnerStore } from '@/lib/data';
@@ -48,8 +49,7 @@ export default function Stores() {
 
   useEffect(() => {
     if (liveError) {
-      // eslint-disable-next-line no-console
-      console.error('[lend] listMerchants failed', liveError);
+      logEvent('rpc_failure', 'warn', { op: 'list_merchants' }, liveError);
     }
   }, [liveError]);
 

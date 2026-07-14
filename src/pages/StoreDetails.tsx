@@ -13,6 +13,7 @@ import {
 } from '@/components/icons';
 import { CACHE_TTL, cacheKeys } from '@/lib/cache/keys';
 import { useCachedQuery } from '@/lib/cache/useCachedQuery';
+import { logEvent } from '@/lib/observability/log';
 import { useI18n, useT } from '@/lib/i18n';
 import { useStore } from '@/lib/store';
 import {
@@ -48,8 +49,7 @@ export default function StoreDetails() {
 
   useEffect(() => {
     if (liveError) {
-      // eslint-disable-next-line no-console
-      console.error('[lend] fetchMerchant failed', liveError);
+      logEvent('rpc_failure', 'warn', { op: 'fetch_merchant' }, liveError);
     }
   }, [liveError]);
 

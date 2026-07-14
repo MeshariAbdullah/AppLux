@@ -1,5 +1,9 @@
 import { Component, useState, type ErrorInfo, type ReactNode } from 'react';
 import { useT } from '@/lib/i18n';
+import { noteBoundaryError } from '@/lib/observability/globalCapture';
+import { logEvent, newEventId } from '@/lib/observability/log';
+import { scrubText } from '@/lib/observability/sanitize';
+import { releaseLine } from '@/lib/releaseInfo';
 import { Button } from '@/components/ui';
 import { AlertIcon } from '@/components/icons';
 
@@ -22,12 +26,6 @@ import { AlertIcon } from '@/components/icons';
 //   modules exercised on every boot.
 // =====================================================================
 
-function makeSupportId(): string {
-  const stamp = Date.now().toString(36).toUpperCase().slice(-6);
-  const rand = Math.random().toString(36).slice(2, 6).toUpperCase();
-  return `LND-${stamp}${rand}`;
-}
-
 type BoundaryState = { error: Error | null; supportId: string };
 
 export class AppErrorBoundary extends Component<
@@ -37,17 +35,24 @@ export class AppErrorBoundary extends Component<
   state: BoundaryState = { error: null, supportId: '' };
 
   static getDerivedStateFromError(error: Error): BoundaryState {
-    return { error, supportId: makeSupportId() };
+    // Phase 6A: the crash-screen support code IS the logger event id —
+    // one stable id per crash, generated once (never per render).
+    return { error, supportId: newEventId() };
   }
 
   componentDidCatch(error: Error, info: ErrorInfo) {
-    // The RAW error stays in the console for diagnosis — only the UI
-    // copy is sanitised.
-    // eslint-disable-next-line no-console
-    console.error(
-      `[lend] uncaught render error (${this.state.supportId})`,
+    // Tell the global capture we handled this one so a window-level
+    // echo of the same error isn't double-reported.
+    noteBoundaryError(error?.message);
+    logEvent(
+      'app_crash',
+      'fatal',
+      {
+        // Component names only — no props, no values.
+        componentStack: scrubText(info.componentStack ?? '').slice(0, 240),
+      },
       error,
-      info.componentStack,
+      this.state.supportId,
     );
   }
 
@@ -115,6 +120,12 @@ function CrashScreen({ supportId }: { supportId: string }) {
           >
             {t('errors.boundary.reloadCta')}
           </Button>
+        </div>
+
+        {/* Release line (Phase 6A) — version · commit · environment.
+            No secrets; lets a support screenshot identify the build. */}
+        <div className="mt-4 text-[10.5px] text-ink-400 num" dir="ltr">
+          {releaseLine}
         </div>
       </div>
     </div>

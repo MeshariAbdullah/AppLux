@@ -9,6 +9,8 @@ import {
   Select,
   Textarea,
 } from '@/components/ui';
+import { translateAuthError } from '@/lib/errors';
+import { logEvent } from '@/lib/observability/log';
 import { useI18n, useT } from '@/lib/i18n';
 import {
   useStore,
@@ -243,8 +245,8 @@ export default function MerchantRegister() {
           notes: null,
         });
       } catch (err) {
-        const message = err instanceof Error ? err.message : 'Submission failed.';
-        setSubmitError(message);
+        logEvent('rpc_failure', 'warn', { op: 'submit_merchant_application' }, err);
+        setSubmitError(translateAuthError(err, t));
         setSubmitting(false);
         return;
       }

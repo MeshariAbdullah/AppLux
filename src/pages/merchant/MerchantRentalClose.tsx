@@ -25,7 +25,8 @@ import {
 } from '@/components/icons';
 import { CACHE_TTL, cacheKeys } from '@/lib/cache/keys';
 import { cachedFetch, cacheInvalidate } from '@/lib/cache/memoryCache';
-import { translateError } from '@/lib/errors';
+import { logEvent } from '@/lib/observability/log';
+import { translateError, withSupportId } from '@/lib/errors';
 import { ENABLE_PAYMENTS_AND_NOTES } from '@/lib/featureFlags';
 import { getInitials } from '@/lib/format/initials';
 import { isRentalFinalized } from '@/lib/format/rentalFinalization';
@@ -211,9 +212,13 @@ export default function MerchantRentalClose() {
       setConfirmOpen(false);
       setSubmitted(true);
     } catch (err) {
-      // eslint-disable-next-line no-console
-      console.error('[lend] closeRentalContract failed', err);
-      setCloseError(translateError(err, t));
+      const eventId = logEvent(
+        'rental_close_failed',
+        'error',
+        { op: 'close_rental_contract' },
+        err,
+      );
+      setCloseError(withSupportId(translateError(err, t), eventId));
     } finally {
       setBusy(false);
     }

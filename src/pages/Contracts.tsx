@@ -10,6 +10,7 @@ import {
   DocIcon,
   ReceiptIcon,
 } from '@/components/icons';
+import { logEvent } from '@/lib/observability/log';
 import { ENABLE_PAYMENTS_AND_NOTES } from '@/lib/featureFlags';
 import { useI18n, useT } from '@/lib/i18n';
 import { useStore } from '@/lib/store';
@@ -570,8 +571,7 @@ function HandoverPhotoBanner({ contract }: { contract: Contract }) {
         setOptimisticallyCaptured(true);
       }
     } catch (err) {
-      // eslint-disable-next-line no-console
-      console.error('[lend] handover photo persist failed', err);
+      logEvent('rpc_failure', 'warn', { op: 'handover_photo_persist' }, err);
       setUploadError(t('contracts.handover.uploadFailed'));
     } finally {
       setUploading(false);

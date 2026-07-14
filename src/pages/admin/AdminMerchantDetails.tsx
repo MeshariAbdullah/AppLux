@@ -29,6 +29,7 @@ import {
 import { cn } from '@/lib/cn';
 import { translateError } from '@/lib/errors';
 import { adminMerchantDecisionTone as statusTone } from '@/lib/format/statusTones';
+import { logEvent } from '@/lib/observability/log';
 import { useI18n, useT } from '@/lib/i18n';
 import { useStore, type AdminMerchantRequest } from '@/lib/store';
 import {
@@ -93,8 +94,7 @@ export default function AdminMerchantDetails() {
         setLiveLoading(false);
       })
       .catch((err) => {
-        // eslint-disable-next-line no-console
-        console.error('[lend] fetchMerchantApplication failed', err);
+        logEvent('rpc_failure', 'warn', { op: 'fetch_merchant_application' }, err);
         if (!cancelled) setLiveLoading(false);
       });
     return () => {
@@ -166,8 +166,7 @@ export default function AdminMerchantDetails() {
         try {
           await provisionMerchantFromApplication(request.id);
         } catch (provErr) {
-          // eslint-disable-next-line no-console
-          console.error('[lend] provisionMerchantFromApplication failed', provErr);
+          logEvent('rpc_failure', 'warn', { op: 'provision_merchant_from_application' }, provErr);
           // Provisioning is idempotent server-side — re-approving
           // safely retries it, which is exactly what this copy says.
           setDecisionError(t('errors.approvedButProvisioningFailed'));
@@ -176,8 +175,7 @@ export default function AdminMerchantDetails() {
         approveMerchantRequest(request.id, notes);
       }
     } catch (err) {
-      // eslint-disable-next-line no-console
-      console.error('[lend] decideMerchantApplication(approve) failed', err);
+      logEvent('rpc_failure', 'warn', { op: 'decide_merchant_application_approve' }, err);
       setDecisionError(translateError(err, t));
     } finally {
       setBusy(null);
@@ -194,8 +192,7 @@ export default function AdminMerchantDetails() {
         rejectMerchantRequest(request.id, notes);
       }
     } catch (err) {
-      // eslint-disable-next-line no-console
-      console.error('[lend] decideMerchantApplication(reject) failed', err);
+      logEvent('rpc_failure', 'warn', { op: 'decide_merchant_application_reject' }, err);
       setDecisionError(translateError(err, t));
     } finally {
       setBusy(null);

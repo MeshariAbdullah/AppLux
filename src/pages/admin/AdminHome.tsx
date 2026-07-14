@@ -33,6 +33,7 @@ import {
   caseStageTone as stageTone,
   overdueBucketTone as bucketTone,
 } from '@/lib/format/statusTones';
+import { logEvent } from '@/lib/observability/log';
 import { useI18n, useT } from '@/lib/i18n';
 import {
   SEED_ADMIN_ACTIVE_CASES,
@@ -74,8 +75,7 @@ export default function AdminHome() {
       }
       navigate('/welcome', { replace: true });
     } catch (err) {
-      // eslint-disable-next-line no-console
-      console.error('[lend] admin signOut failed', err);
+      logEvent('rpc_failure', 'warn', { op: 'admin_sign_out' }, err);
       setSignOutError(t('admin.home.signOutFailed'));
       setSigningOut(false);
     }

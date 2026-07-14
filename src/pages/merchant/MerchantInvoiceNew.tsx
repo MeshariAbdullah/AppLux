@@ -30,7 +30,8 @@ import {
 import { cn } from '@/lib/cn';
 import { cacheKeys } from '@/lib/cache/keys';
 import { cacheInvalidatePrefix } from '@/lib/cache/memoryCache';
-import { translateError } from '@/lib/errors';
+import { logEvent } from '@/lib/observability/log';
+import { translateError, withSupportId } from '@/lib/errors';
 import { ENABLE_PAYMENTS_AND_NOTES } from '@/lib/featureFlags';
 import { useSensitiveFlow } from '@/lib/session/flowGuard';
 import { useI18n, useT } from '@/lib/i18n';
@@ -511,9 +512,13 @@ export default function MerchantInvoiceNew() {
         // Show the error, keep the form intact, and let the merchant
         // retry. The previous demo-fallback behaviour was a silent
         // success masquerading as a real one.
-        // eslint-disable-next-line no-console
-        console.error('[lend] createInvoiceWithItems failed', caught);
-        setSubmitWarning(translateError(caught, t));
+        const eventId = logEvent(
+          'rpc_failure',
+          'error',
+          { op: 'create_invoice_with_items' },
+          caught,
+        );
+        setSubmitWarning(withSupportId(translateError(caught, t), eventId));
       } finally {
         setSubmitting(false);
       }

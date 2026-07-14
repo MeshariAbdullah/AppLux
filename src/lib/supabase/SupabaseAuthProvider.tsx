@@ -27,6 +27,7 @@ import {
 import { withTimeout } from '@/lib/withTimeout';
 import { clearAppStorage } from '@/lib/session/storage';
 import { cacheClearAll } from '@/lib/cache/memoryCache';
+import { clearEventBuffer, logEvent } from '@/lib/observability/log';
 
 // =====================================================================
 // Lend auth provider — single source of truth for: auth session,
@@ -177,8 +178,7 @@ function ConfiguredProvider({ children }: { children: ReactNode }) {
       return p;
     } catch (err) {
       if (loadIdRef.current !== loadId) return null;
-      // eslint-disable-next-line no-console
-      console.error('[lend] failed to load profile', err);
+      logEvent('rpc_failure', 'warn', { op: 'load_profile' }, err);
       setProfile(null);
       setProfileError(err instanceof Error ? err : new Error('Profile load failed'));
       return null;
@@ -200,8 +200,7 @@ function ConfiguredProvider({ children }: { children: ReactNode }) {
       setEligibility(e);
     } catch (err) {
       if (loadIdRef.current !== loadId) return;
-      // eslint-disable-next-line no-console
-      console.error('[lend] failed to load eligibility (non-fatal)', err);
+      logEvent('rpc_failure', 'warn', { op: 'load_eligibility', nonFatal: true }, err);
       setEligibility(null);
     } finally {
       if (loadIdRef.current === loadId) setEligibilityLoading(false);
@@ -240,8 +239,7 @@ function ConfiguredProvider({ children }: { children: ReactNode }) {
     supabase.auth.getSession().then(({ data, error }) => {
       if (cancelled) return;
       if (error) {
-        // eslint-disable-next-line no-console
-        console.error('[lend] supabase getSession error', error);
+        logEvent('auth_failure', 'warn', { op: 'get_session' }, error);
         setStatus('anonymous');
         return;
       }
@@ -278,6 +276,7 @@ function ConfiguredProvider({ children }: { children: ReactNode }) {
         if (event === 'SIGNED_OUT') {
           clearAppStorage();
           cacheClearAll();
+          clearEventBuffer();
         }
       }
     });

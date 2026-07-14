@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState, type ChangeEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Header, Screen } from '@/components/layout';
 import { Button, FormField, Input, Select, Textarea } from '@/components/ui';
+import { translateAuthError } from '@/lib/errors';
+import { logEvent } from '@/lib/observability/log';
 import { useI18n, useT } from '@/lib/i18n';
 import { useStore, emptyRegistration, type RegistrationDraft } from '@/lib/store';
 import { useSupabaseAuth, updateProfile } from '@/lib/supabase';
@@ -482,11 +484,7 @@ function SupabaseRegister() {
             setSubmitting(false);
             return;
           }
-          // eslint-disable-next-line no-console
-          console.error(
-            '[lend] post-signUp mobile persist failed (trigger should have set it)',
-            err,
-          );
+          logEvent('rpc_failure', 'warn', { op: 'post_signup_mobile_persist' }, err);
         }
       } else {
         setPendingEmailConfirmation(true);
@@ -504,8 +502,8 @@ function SupabaseRegister() {
         setSubmitting(false);
         return;
       }
-      const message = err instanceof Error ? err.message : t('auth.errors.signUpFailed');
-      setErrors({ form: message });
+      logEvent('auth_failure', 'warn', { op: 'sign_up' }, err);
+      setErrors({ form: translateAuthError(err, t) });
       setSubmitting(false);
     }
   };

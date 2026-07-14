@@ -14,6 +14,7 @@ import {
   SparkleIcon,
   UserIcon,
 } from '@/components/icons';
+import { logEvent } from '@/lib/observability/log';
 import { useI18n, useT } from '@/lib/i18n';
 import {
   createInvoiceWithItems,
@@ -482,7 +483,7 @@ export default function MerchantRentalSession() {
     } catch (err) {
       // Backend or network error — don't surface the raw provider message;
       // give the merchant a calm, actionable line.
-      console.error('[verify] lookupRenterByMobile failed', err);
+      logEvent('rpc_failure', 'warn', { op: 'lookup_renter_by_mobile' }, err);
       updateVerify({
         status: 'unverified',
         error: t('merchant.session.verify.errors.mobileVerifyFailed'),
@@ -549,7 +550,7 @@ export default function MerchantRentalSession() {
         nationalIdError: null,
       });
     } catch (err) {
-      console.error('[verify] merchantSetCustomerNationalId failed', err);
+      logEvent('rpc_failure', 'warn', { op: 'merchant_set_customer_national_id' }, err);
       updateVerify({
         nationalIdSaving: false,
         nationalIdError: t('merchant.session.verify.errors.mobileVerifyFailed'),
@@ -647,7 +648,7 @@ export default function MerchantRentalSession() {
             : err instanceof RenterPresenceError && err.code === 'invalid_id_last4'
               ? t('merchant.session.verify.errors.idLast4Length')
               : t('merchant.session.verify.errors.idLast4Failed');
-      console.error('[verify] confirmRenterPresence failed', err);
+      logEvent('rpc_failure', 'warn', { op: 'confirm_renter_presence' }, err);
       updateVerify({ error: message });
     }
   };
@@ -700,8 +701,7 @@ export default function MerchantRentalSession() {
       updateEligibility({ row, loading: false, error: null });
       setStep('eligibility');
     } catch (err) {
-      // eslint-disable-next-line no-console
-      console.error('[lend] fetchRenterEligibility failed', err);
+      logEvent('rpc_failure', 'warn', { op: 'fetch_renter_eligibility' }, err);
       updateEligibility({
         loading: false,
         error: translateError(err, t, 'merchant.session.eligibility.errors.fetch'),
@@ -816,8 +816,7 @@ export default function MerchantRentalSession() {
       updateIssue({ invoice: result.invoice, submitting: false, error: null });
       setStep('issued');
     } catch (err) {
-      // eslint-disable-next-line no-console
-      console.error('[lend] createInvoiceWithItems failed', err);
+      logEvent('rpc_failure', 'warn', { op: 'create_invoice_with_items' }, err);
       updateIssue({
         submitting: false,
         error: translateError(err, t),

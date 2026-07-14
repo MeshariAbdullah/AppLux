@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { Header, Screen } from '@/components/layout';
 import { Button, FormField, Input } from '@/components/ui';
 import { BadgeCheckIcon, ShieldIcon } from '@/components/icons';
+import { logEvent } from '@/lib/observability/log';
 import { useT } from '@/lib/i18n';
 import { sendPasswordResetEmail, useSupabaseAuth } from '@/lib/supabase';
 import {
@@ -44,8 +45,7 @@ export default function ForgotPassword() {
       });
       setSent(true);
     } catch (err) {
-      // eslint-disable-next-line no-console
-      console.error('[lend] sendPasswordResetEmail failed', err);
+      logEvent('auth_failure', 'warn', { op: 'send_password_reset' }, err);
       setError(t('auth.forgotPassword.errorGeneric'));
       setSubmitting(false);
     }

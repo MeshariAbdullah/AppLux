@@ -5,9 +5,9 @@
 // Why: several handlers used to surface raw `err.message` — Postgres
 // constraint names, column names, provider phrasing — straight into
 // the UI, English-only. This helper classifies the error and returns
-// an i18n string instead. The RAW error should still go to
-// console.error at the call site (with the `[lend]` prefix) so
-// diagnosis stays possible; only the USER copy is sanitised.
+// an i18n string instead. The raw error should still be reported at
+// the call site via logEvent() (Phase 6A — sanitized, with a support
+// id) so diagnosis stays possible; only the USER copy is translated.
 //
 // Classification sources:
 //   * Our SECURITY DEFINER RPCs raise with explicit errcodes in the
@@ -22,8 +22,8 @@
 //   * Network failures (fetch rejection / navigator offline).
 //
 // The generic fallback appends the machine `code` when one exists —
-// codes are non-sensitive and give support something to search for
-// until crash reporting (Phase 6) adds real trace ids.
+// codes are non-sensitive and give support something to search for,
+// alongside the LND- support ids added in Phase 6A (withSupportId).
 // =====================================================================
 
 export type TranslateFn = (
@@ -100,4 +100,68 @@ export function translateError(
   if (fallbackKey) return t(fallbackKey);
   if (code) return t('errors.genericWithCode', { code });
   return t('errors.generic');
+}
+
+/**
+ * Phase 6A: attach the observability event id to a user-visible
+ * TECHNICAL failure message, so a support report ("it failed, code
+ * LND-…") matches exactly one logged event. Not used for ordinary
+ * validation messages.
+ */
+export function withSupportId(message: string, eventId: string): string {
+  return `${message} (${eventId})`;
+}
+
+/**
+ * Phase 6A: auth-specific error translation. Supabase auth errors are
+ * semantically useful ("invalid credentials") so the generic
+ * translator is wrong for them — but raw `err.message` must never be
+ * rendered. Narrow map per the approved scope; everything else falls
+ * back to translateError.
+ */
+export function translateAuthError(err: unknown, t: TranslateFn): string {
+  const e = (err && typeof err === 'object' ? err : {}) as {
+    message?: unknown;
+    status?: unknown;
+    code?: unknown;
+  };
+  const message = typeof e.message === 'string' ? e.message.toLowerCase() : '';
+  const status = typeof e.status === 'number' ? e.status : undefined;
+  const code = typeof e.code === 'string' ? e.code : '';
+
+  if (message.includes('invalid login credentials') || code === 'invalid_credentials') {
+    return t('auth.errors.invalidCredentials');
+  }
+  if (
+    message.includes('already registered') ||
+    message.includes('already been registered') ||
+    code === 'user_already_exists' ||
+    code === 'email_exists'
+  ) {
+    return t('auth.errors.emailTaken');
+  }
+  if (message.includes('password should be') || code === 'weak_password') {
+    return t('auth.errors.weakPassword');
+  }
+  if (
+    status === 429 ||
+    message.includes('rate limit') ||
+    message.includes('too many requests') ||
+    code === 'over_request_rate_limit'
+  ) {
+    return t('auth.errors.tooManyAttempts');
+  }
+  if (
+    (message.includes('expired') || message.includes('invalid')) &&
+    (message.includes('token') || message.includes('link') || code === 'otp_expired')
+  ) {
+    return t('auth.errors.linkExpired');
+  }
+  if (
+    (typeof navigator !== 'undefined' && !navigator.onLine) ||
+    /failed to fetch|network\s?error|network request failed|load failed/i.test(message)
+  ) {
+    return t('errors.network');
+  }
+  return translateError(err, t);
 }

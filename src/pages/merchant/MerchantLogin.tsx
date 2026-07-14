@@ -11,6 +11,8 @@ import {
   LockIcon,
   ShieldIcon,
 } from '@/components/icons';
+import { translateAuthError } from '@/lib/errors';
+import { logEvent } from '@/lib/observability/log';
 import { useT } from '@/lib/i18n';
 import { useStore } from '@/lib/store';
 import { useSupabaseAuth } from '@/lib/supabase';
@@ -100,9 +102,8 @@ export default function MerchantLogin() {
         // Intentionally no navigate() here — see useEffect comment above.
         return;
       } catch (err) {
-        const message =
-          err instanceof Error ? err.message : t('auth.errors.signInFailed');
-        setErrors({ form: message });
+        logEvent('auth_failure', 'warn', { op: 'merchant_sign_in' }, err);
+        setErrors({ form: translateAuthError(err, t) });
         setSubmitting(false);
         return;
       }

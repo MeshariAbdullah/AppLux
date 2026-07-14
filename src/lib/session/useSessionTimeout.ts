@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { logEvent } from '@/lib/observability/log';
 import { getSupabase, useSupabaseAuth } from '@/lib/supabase';
 import { resolveSessionPolicy } from './policy';
 import {
@@ -81,20 +82,26 @@ export function useSessionTimeout(): {
       if (signingOutRef.current) return;
       signingOutRef.current = true;
       setWarningSecondsLeft(null);
-      if (reason) setNotice(reason);
+      if (reason) {
+        setNotice(reason);
+        logEvent(
+          reason === 'expired' ? 'auth_session_expired' : 'session_timeout_signout',
+          'info',
+          { reason, role: role ?? 'unknown' },
+        );
+      }
       try {
         // signOut() is hardened in auth.ts: a failed global sign-out
         // falls back to local sign-out, and the storage sweep always
         // runs. RequireRole redirects on the resulting auth flip.
         await signOut();
       } catch (err) {
-        // eslint-disable-next-line no-console
-        console.error('[lend] session-timeout sign-out failed', err);
+        logEvent('auth_failure', 'warn', { op: 'session_timeout_sign_out' }, err);
       } finally {
         signingOutRef.current = false;
       }
     },
-    [signOut],
+    [signOut, role],
   );
 
   // Seed the anchors whenever an authenticated user appears. startedAt

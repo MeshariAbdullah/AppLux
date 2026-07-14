@@ -19,6 +19,7 @@ import {
 } from '@/components/icons';
 import { cn } from '@/lib/cn';
 import { adminMerchantDecisionTone as statusTone } from '@/lib/format/statusTones';
+import { logEvent } from '@/lib/observability/log';
 import { useI18n, useT } from '@/lib/i18n';
 import { useStore, type AdminMerchantRequest } from '@/lib/store';
 import {
@@ -57,8 +58,7 @@ export default function AdminMerchants() {
         }
       })
       .catch((err) => {
-        // eslint-disable-next-line no-console
-        console.error('[lend] listMerchantApplications failed', err);
+        logEvent('rpc_failure', 'warn', { op: 'list_merchant_applications' }, err);
         // Phase 9: in live mode, do NOT fall back to demo seeds on error.
         // Empty list with an error pill is the right signal.
         if (!cancelled) {

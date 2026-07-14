@@ -18,6 +18,7 @@ import {
   ShieldIcon,
   WalletIcon,
 } from '@/components/icons';
+import { logEvent } from '@/lib/observability/log';
 import { useI18n, useT } from '@/lib/i18n';
 import { useStore, type MerchantStatus } from '@/lib/store';
 import { useSupabaseAuth } from '@/lib/supabase';
@@ -84,8 +85,7 @@ export default function MerchantPending() {
       try {
         await supabaseAuth.signOut();
       } catch (err) {
-        // eslint-disable-next-line no-console
-        console.error('[lend] merchant signOut failed', err);
+        logEvent('rpc_failure', 'warn', { op: 'merchant_sign_out' }, err);
       }
     }
     signOutMerchant();

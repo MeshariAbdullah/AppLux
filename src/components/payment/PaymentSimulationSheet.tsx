@@ -6,6 +6,8 @@ import {
   ShieldIcon,
   SparkleIcon,
 } from '@/components/icons';
+import { logEvent } from '@/lib/observability/log';
+import { translateError, withSupportId } from '@/lib/errors';
 import { useI18n, useT } from '@/lib/i18n';
 import { cn } from '@/lib/cn';
 import { useSensitiveFlow } from '@/lib/session/flowGuard';
@@ -37,12 +39,13 @@ import {
 type Phase = 'pay' | 'nafath' | 'verify' | 'done';
 
 // =====================================================================
-// Error helpers — surface the real Postgres error and detect the
-// specific "function does not exist" case (code 42883) so the
-// simulation can fall back to visual-only when the new lifecycle
-// migration (20260502121300_split_rental_lifecycle.sql) hasn't been
-// applied yet. Backend state advancement is then skipped but the
-// customer can still complete end-to-end testing.
+// Error helpers — detect the specific "function does not exist" case
+// (code 42883) so the simulation can fall back to visual-only when the
+// lifecycle migration (20260502121300_split_rental_lifecycle.sql)
+// hasn't been applied yet. Backend state advancement is then skipped
+// but the customer can still complete end-to-end testing. Raw error
+// details go to logEvent (sanitized); the user sees a translated
+// message with a support id.
 // =====================================================================
 
 type SupabaseErrorLike = {
@@ -63,13 +66,6 @@ function isFunctionMissing(err: unknown): boolean {
   return /function\s+[\w_.]+\s*\([^)]*\)\s+does not exist/i.test(
     e.message ?? '',
   );
-}
-
-function errorSummary(err: unknown): string {
-  const e = readErr(err);
-  const parts = [e.message, e.details, e.hint].filter(Boolean);
-  if (e.code) parts.push(`code ${e.code}`);
-  return parts.join(' — ') || 'Unknown error';
 }
 
 export function PaymentSimulationSheet({
@@ -140,15 +136,22 @@ export function PaymentSimulationSheet({
           }
         } catch (err) {
           if (cancelled) return;
-          // eslint-disable-next-line no-console
-          console.error('[lend] recordNafathSigning failed', err);
           if (isFunctionMissing(err)) {
-            // eslint-disable-next-line no-console
-            console.warn(
-              '[lend] record_nafath_signing RPC missing — continuing visual-only. Apply 20260502121300_split_rental_lifecycle.sql to enable backend state advancement.',
+            // Migration not applied — continue visual-only.
+            logEvent(
+              'rpc_failure',
+              'warn',
+              { op: 'record_nafath_signing', detail: 'function_missing', visualOnly: true },
+              err,
             );
           } else {
-            setError(`${t('payment.simulation.error')} (${errorSummary(err)})`);
+            const eventId = logEvent(
+              'rpc_failure',
+              'error',
+              { op: 'record_nafath_signing' },
+              err,
+            );
+            setError(withSupportId(translateError(err, t), eventId));
             return;
           }
         }
@@ -172,15 +175,22 @@ export function PaymentSimulationSheet({
           }
         } catch (err) {
           if (cancelled) return;
-          // eslint-disable-next-line no-console
-          console.error('[lend] verifyAndActivateRental failed', err);
           if (isFunctionMissing(err)) {
-            // eslint-disable-next-line no-console
-            console.warn(
-              '[lend] verify_and_activate_rental RPC missing — continuing visual-only. Apply 20260502121300_split_rental_lifecycle.sql to enable backend state advancement.',
+            // Migration not applied — continue visual-only.
+            logEvent(
+              'rpc_failure',
+              'warn',
+              { op: 'verify_and_activate_rental', detail: 'function_missing', visualOnly: true },
+              err,
             );
           } else {
-            setError(`${t('payment.simulation.error')} (${errorSummary(err)})`);
+            const eventId = logEvent(
+              'rpc_failure',
+              'error',
+              { op: 'verify_and_activate_rental' },
+              err,
+            );
+            setError(withSupportId(translateError(err, t), eventId));
             return;
           }
         }
@@ -202,22 +212,28 @@ export function PaymentSimulationSheet({
         const id = await recordRentalPayment(invoiceId);
         setNoteId(id);
       } catch (err) {
-        // eslint-disable-next-line no-console
-        console.error('[lend] recordRentalPayment failed', err);
         if (isFunctionMissing(err)) {
           // Most common cause: the lifecycle-split migration hasn't
           // been applied yet on this Supabase project. Continue the
           // simulation visually so the user can complete testing;
           // noteId stays null and the subsequent Nafath / verify
           // phases also fall through to visual-only.
-          // eslint-disable-next-line no-console
-          console.warn(
-            '[lend] record_rental_payment RPC missing — continuing visual-only. Apply 20260502121300_split_rental_lifecycle.sql to enable backend state advancement.',
+          logEvent(
+            'rpc_failure',
+            'warn',
+            { op: 'record_rental_payment', detail: 'function_missing', visualOnly: true },
+            err,
           );
           setPhase('nafath');
           return;
         }
-        setError(`${t('payment.simulation.error')} (${errorSummary(err)})`);
+        const eventId = logEvent(
+          'rpc_failure',
+          'error',
+          { op: 'record_rental_payment' },
+          err,
+        );
+        setError(withSupportId(translateError(err, t), eventId));
         return;
       }
     }

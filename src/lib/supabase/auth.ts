@@ -2,6 +2,7 @@ import type { Session, User } from '@supabase/supabase-js';
 import { requireSupabase } from './client';
 import { clearAppStorage } from '@/lib/session/storage';
 import { cacheClearAll } from '@/lib/cache/memoryCache';
+import { clearEventBuffer, logEvent } from '@/lib/observability/log';
 
 export type SignUpInput = {
   email: string;
@@ -73,8 +74,7 @@ export async function signOut(): Promise<void> {
     const { error } = await sb.auth.signOut();
     if (error) throw error;
   } catch (err) {
-    // eslint-disable-next-line no-console
-    console.warn('[lend] global sign-out failed — falling back to local sign-out', err);
+    logEvent('auth_failure', 'warn', { op: 'sign_out_global_fallback' }, err);
     try {
       await sb.auth.signOut({ scope: 'local' });
     } catch {
@@ -89,6 +89,8 @@ export async function signOut(): Promise<void> {
     // session-timeout sign-out too — useSessionTimeout routes through
     // this function.
     cacheClearAll();
+    // Observability ring buffer is session-scoped (Phase 6A).
+    clearEventBuffer();
   }
 }
 

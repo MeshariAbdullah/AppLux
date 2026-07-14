@@ -1,12 +1,52 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
+import { execSync } from 'node:child_process';
+import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = path.dirname(fileURLToPath(import.meta.url));
 
+// ---------------------------------------------------------------------
+// Phase 6A release metadata — injected as a compile-time constant (see
+// src/lib/releaseInfo.ts). Works with or without Vercel variables:
+//   commit — VERCEL_GIT_COMMIT_SHA on Vercel, local git otherwise
+//   env    — VERCEL_ENV normalized to production/preview, else local
+// No secrets: the short SHA and env name are the only values shipped.
+// ---------------------------------------------------------------------
+const pkg = JSON.parse(readFileSync(path.resolve(root, 'package.json'), 'utf8')) as {
+  version?: string;
+};
+
+function resolveCommit(): string {
+  const vercelSha = process.env.VERCEL_GIT_COMMIT_SHA;
+  if (vercelSha) return vercelSha.slice(0, 7);
+  try {
+    return execSync('git rev-parse --short=7 HEAD', { cwd: root })
+      .toString()
+      .trim();
+  } catch {
+    return 'unknown';
+  }
+}
+
+const releaseDefine = {
+  version: pkg.version ?? '0.0.0',
+  commit: resolveCommit(),
+  env:
+    process.env.VERCEL_ENV === 'production'
+      ? 'production'
+      : process.env.VERCEL_ENV === 'preview'
+        ? 'preview'
+        : 'local',
+  builtAt: new Date().toISOString(),
+};
+
 export default defineConfig({
   plugins: [react()],
+  define: {
+    __LEND_RELEASE__: JSON.stringify(releaseDefine),
+  },
   resolve: {
     alias: {
       '@': path.resolve(root, 'src'),

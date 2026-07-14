@@ -3,6 +3,8 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Header, Screen } from '@/components/layout';
 import { Button, FormField, Input } from '@/components/ui';
 import { AlertIcon, BadgeCheckIcon } from '@/components/icons';
+import { translateAuthError } from '@/lib/errors';
+import { logEvent } from '@/lib/observability/log';
 import { useT } from '@/lib/i18n';
 import { updatePassword, useSupabaseAuth } from '@/lib/supabase';
 import {
@@ -124,11 +126,8 @@ export default function ResetPassword() {
       await updatePassword(pwd);
       setDone(true);
     } catch (err) {
-      // eslint-disable-next-line no-console
-      console.error('[lend] updatePassword failed', err);
-      setError(
-        err instanceof Error ? err.message : t('auth.resetPassword.errorGeneric'),
-      );
+      logEvent('auth_failure', 'warn', { op: 'update_password' }, err);
+      setError(translateAuthError(err, t));
       setSubmitting(false);
     }
   };

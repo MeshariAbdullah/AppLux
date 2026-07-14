@@ -1,4 +1,5 @@
 import { lazy, type ComponentType, type LazyExoticComponent } from 'react';
+import { logEvent } from '@/lib/observability/log';
 
 // =====================================================================
 // lazyWithReload — Phase 5B. React.lazy with the standard SPA
@@ -46,11 +47,22 @@ export function lazyWithReload<T extends ComponentType<any>>(
       return mod;
     } catch (err) {
       if (!readFlag()) {
+        // Phase 6A: sanitized event (route pattern only — never the
+        // failed asset URL, which can carry query information).
+        logEvent('lazy_chunk_failure', 'warn', { reloadAttempted: true }, err);
         writeFlag(true);
         window.location.reload();
         // Reload takes over — suspend forever so nothing flashes.
         return new Promise<never>(() => {});
       }
+      // Second failure in the same session: recovery failed — the
+      // AppErrorBoundary shows the crash screen from the rethrow.
+      logEvent(
+        'lazy_chunk_failure',
+        'error',
+        { reloadAttempted: false, recoveryFailed: true },
+        err,
+      );
       throw err;
     }
   });

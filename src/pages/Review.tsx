@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Header, Screen } from '@/components/layout';
 import {
@@ -26,7 +26,8 @@ import {
 } from '@/components/icons';
 import { cacheKeys } from '@/lib/cache/keys';
 import { cacheInvalidate } from '@/lib/cache/memoryCache';
-import { translateError } from '@/lib/errors';
+import { translateError, withSupportId } from '@/lib/errors';
+import { logEvent } from '@/lib/observability/log';
 import { ENABLE_PAYMENTS_AND_NOTES } from '@/lib/featureFlags';
 import { useSensitiveFlow } from '@/lib/session/flowGuard';
 import { useI18n, useT } from '@/lib/i18n';
@@ -103,8 +104,7 @@ export default function Review() {
         setLiveInvoiceId(res.invoice.id);
       })
       .catch((err) => {
-        // eslint-disable-next-line no-console
-        console.error('[lend] fetchInvoiceByToken failed', err);
+        logEvent('rpc_failure', 'warn', { op: 'fetch_invoice_by_token' }, err);
       })
       .finally(() => {
         if (!cancelled) setResolving(false);
@@ -138,6 +138,7 @@ export default function Review() {
   const [pendingActivationId, setPendingActivationId] = useState<string | null>(null);
   const [activationError, setActivationError] = useState<string | null>(null);
   const [activating, setActivating] = useState(false);
+  const activationAttemptRef = useRef(0);
 
   // Loading first — never show the "invalid code" empty state while
   // the live invoice fetch is still resolving (Phase 9 production
@@ -184,6 +185,7 @@ export default function Review() {
   const activateContract = async (contractId: string) => {
     setActivating(true);
     setActivationError(null);
+    activationAttemptRef.current += 1;
     try {
       await activateRentalWithoutPaymentAndNote(contractId);
       const uid = supabaseUserId;
@@ -199,10 +201,18 @@ export default function Review() {
       setPendingActivationId(null);
       navigate(`/approval/${pkg.token}`, { replace: true });
     } catch (err) {
-      // eslint-disable-next-line no-console
-      console.error('[lend] activateRentalWithoutPaymentAndNote failed', err);
+      const eventId = logEvent(
+        'rental_activation_failed',
+        'error',
+        {
+          op: 'activate_rental_without_payment_and_note',
+          attempt: activationAttemptRef.current,
+          paymentsAndNotesEnabled: ENABLE_PAYMENTS_AND_NOTES,
+        },
+        err,
+      );
       setPendingActivationId(contractId);
-      setActivationError(translateError(err, t));
+      setActivationError(withSupportId(translateError(err, t), eventId));
     } finally {
       setActivating(false);
     }
@@ -225,11 +235,13 @@ export default function Review() {
         }
         navigate(`/approval/${pkg.token}`, { replace: true });
       } catch (err) {
-        // Raw error stays in the console for diagnosis; the user sees
-        // calm translated copy (Phase 2 error hygiene).
-        // eslint-disable-next-line no-console
-        console.error('[lend] acceptRentalInvoice failed', err);
-        setAcceptError(translateError(err, t));
+        const eventId = logEvent(
+          'rental_accept_failed',
+          'error',
+          { op: 'accept_rental_invoice', paymentsAndNotesEnabled: ENABLE_PAYMENTS_AND_NOTES },
+          err,
+        );
+        setAcceptError(withSupportId(translateError(err, t), eventId));
       }
       return;
     }

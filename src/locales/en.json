@@ -300,7 +300,12 @@
       "fullNameRequired": "Enter your full name to continue.",
       "nationalIdRequired": "Enter your National ID to continue.",
       "signInFailed": "Sign-in failed. Check your credentials and try again.",
-      "signUpFailed": "Could not create the account. Please try again."
+      "signUpFailed": "Could not create the account. Please try again.",
+      "invalidCredentials": "Incorrect sign-in details. Check your email and password.",
+      "emailTaken": "This email is already registered. Try signing in instead.",
+      "weakPassword": "Password is too weak — use at least 8 characters.",
+      "tooManyAttempts": "Too many attempts in a short time. Wait a moment and try again.",
+      "linkExpired": "This link has expired. Request a new one and try again."
     }
   },
   "register": {

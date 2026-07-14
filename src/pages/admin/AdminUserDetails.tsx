@@ -34,6 +34,7 @@ import {
 } from '@/components/icons';
 import { cn } from '@/lib/cn';
 import { adminUserStatusTone as statusTone } from '@/lib/format/statusTones';
+import { logEvent } from '@/lib/observability/log';
 import { useI18n, useT } from '@/lib/i18n';
 import { useStore } from '@/lib/store';
 import {
@@ -244,8 +245,7 @@ export default function AdminUserDetails() {
         }),
       });
     } catch (err) {
-      // eslint-disable-next-line no-console
-      console.error('[lend] upsertEligibility failed', err);
+      logEvent('rpc_failure', 'warn', { op: 'upsert_eligibility' }, err);
       setToast({
         tone: 'danger',
         title: t('admin.user.toast.limitFailed.title'),
@@ -292,8 +292,7 @@ export default function AdminUserDetails() {
         hint: t(successToast.hintKey),
       });
     } catch (err) {
-      // eslint-disable-next-line no-console
-      console.error('[lend] admin status update failed', err);
+      logEvent('rpc_failure', 'warn', { op: 'admin_status_update' }, err);
       setToast({
         tone: 'danger',
         title: t('admin.user.toast.statusFailed.title'),

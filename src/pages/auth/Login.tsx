@@ -10,6 +10,8 @@ import {
   LockIcon,
   ShieldIcon,
 } from '@/components/icons';
+import { translateAuthError } from '@/lib/errors';
+import { logEvent } from '@/lib/observability/log';
 import { useT } from '@/lib/i18n';
 import { cn } from '@/lib/cn';
 import { useStore } from '@/lib/store';
@@ -120,8 +122,8 @@ export default function Login() {
         // Navigating synchronously would race against `setStatus('authenticated')`
         // and bounce the user to /welcome (see RootRedirect in routes.tsx).
       } catch (err) {
-        const message = err instanceof Error ? err.message : t('auth.errors.signInFailed');
-        setErrors({ form: message });
+        logEvent('auth_failure', 'warn', { op: 'sign_in' }, err);
+        setErrors({ form: translateAuthError(err, t) });
         setSubmitting(false);
       }
       return;

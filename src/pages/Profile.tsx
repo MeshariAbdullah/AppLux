@@ -20,6 +20,8 @@ import {
   SupportIcon,
   UserIcon,
 } from '@/components/icons';
+import { translateAuthError } from '@/lib/errors';
+import { logEvent } from '@/lib/observability/log';
 import { useI18n, useT } from '@/lib/i18n';
 import { useStore } from '@/lib/store';
 import { requestAccountDeletion, useSupabaseAuth } from '@/lib/supabase';
@@ -72,8 +74,7 @@ export default function Profile() {
       try {
         await supabaseSignOut();
       } catch (err) {
-        // eslint-disable-next-line no-console
-        console.error('[lend] signOut failed', err);
+        logEvent('rpc_failure', 'warn', { op: 'sign_out' }, err);
       }
     } else {
       demoSignOut();
@@ -93,11 +94,8 @@ export default function Profile() {
       // the session. RootRedirect bounces to /welcome.
       await onSignOut();
     } catch (err) {
-      // eslint-disable-next-line no-console
-      console.error('[lend] requestAccountDeletion failed', err);
-      setDeletionError(
-        err instanceof Error ? err.message : t('profile.deleteAccount.error'),
-      );
+      logEvent('auth_failure', 'warn', { op: 'request_account_deletion' }, err);
+      setDeletionError(translateAuthError(err, t));
       setDeletionSubmitting(false);
     }
   };
@@ -108,8 +106,7 @@ export default function Profile() {
       await cancelAccountDeletion();
       await refresh();
     } catch (err) {
-      // eslint-disable-next-line no-console
-      console.error('[lend] cancelAccountDeletion failed', err);
+      logEvent('rpc_failure', 'warn', { op: 'cancel_account_deletion' }, err);
     } finally {
       setCancelSubmitting(false);
     }

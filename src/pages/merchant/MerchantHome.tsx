@@ -19,6 +19,7 @@ import {
   SparkleIcon,
 } from '@/components/icons';
 import { getInitials } from '@/lib/format/initials';
+import { logEvent } from '@/lib/observability/log';
 import { useI18n, useT } from '@/lib/i18n';
 import { useStore } from '@/lib/store';
 import { cn } from '@/lib/cn';
@@ -103,8 +104,7 @@ export default function MerchantHome() {
   const liveMerchant: MerchantRow | null = myMerchantData ?? null;
   useEffect(() => {
     if (merchantError) {
-      // eslint-disable-next-line no-console
-      console.error('[lend] fetchMyMerchant failed', merchantError);
+      logEvent('rpc_failure', 'warn', { op: 'fetch_my_merchant' }, merchantError);
     }
   }, [merchantError]);
 
@@ -139,12 +139,10 @@ export default function MerchantHome() {
   );
   useEffect(() => {
     if (contractsError) {
-      // eslint-disable-next-line no-console
-      console.error('[lend] listMerchantContracts failed', contractsError);
+      logEvent('rpc_failure', 'warn', { op: 'list_merchant_contracts' }, contractsError);
     }
     if (invoicesError) {
-      // eslint-disable-next-line no-console
-      console.error('[lend] listMerchantInvoices failed', invoicesError);
+      logEvent('rpc_failure', 'warn', { op: 'list_merchant_invoices' }, invoicesError);
     }
   }, [contractsError, invoicesError]);
   const contractRows = contractsError ? [] : contractRowsData;
@@ -165,8 +163,7 @@ export default function MerchantHome() {
         MERCHANT_DATA_TIMEOUT_MS,
         'fetchProfilesByIds',
       ).catch((err) => {
-        // eslint-disable-next-line no-console
-        console.error('[lend] fetchProfilesByIds failed', err);
+        logEvent('rpc_failure', 'warn', { op: 'fetch_profiles_by_ids' }, err);
         return new Map<string, never>();
       });
       if (cancelled) return;
@@ -427,8 +424,7 @@ export default function MerchantHome() {
                   try {
                     await supabaseAuth.signOut();
                   } catch (err) {
-                    // eslint-disable-next-line no-console
-                    console.error('[lend] merchant signOut failed', err);
+                    logEvent('rpc_failure', 'warn', { op: 'merchant_sign_out' }, err);
                   }
                 }
                 signOutMerchant();
