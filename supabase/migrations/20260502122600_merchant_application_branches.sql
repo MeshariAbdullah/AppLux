@@ -13,7 +13,9 @@
 -- application. Plain text fields at this stage; provisioning maps them
 -- into merchant_branches' jsonb {ar,en} shape.
 -- ---------------------------------------------------------------------
-create table public.merchant_application_branches (
+-- Idempotent (deployment fix): safe to rerun on a project where a
+-- previous attempt partially applied.
+create table if not exists public.merchant_application_branches (
   id             uuid primary key default gen_random_uuid(),
   application_id uuid not null references public.merchant_applications(id) on delete cascade,
   name           text not null,
@@ -25,7 +27,7 @@ create table public.merchant_application_branches (
   updated_at     timestamptz not null default now()
 );
 
-create index merchant_application_branches_app_idx
+create index if not exists merchant_application_branches_app_idx
   on public.merchant_application_branches(application_id);
 
 alter table public.merchant_application_branches enable row level security;
@@ -35,6 +37,8 @@ alter table public.merchant_application_branches enable row level security;
 -- rows are written exclusively by the trusted signup path (SECURITY
 -- DEFINER trigger, M2) and admins. A submitted application cannot be
 -- altered by its applicant, matching merchant_applications policies.
+drop policy if exists merchant_application_branches_applicant_select
+  on public.merchant_application_branches;
 create policy merchant_application_branches_applicant_select
   on public.merchant_application_branches
   for select using (
@@ -45,6 +49,8 @@ create policy merchant_application_branches_applicant_select
     )
   );
 
+drop policy if exists merchant_application_branches_admin_all
+  on public.merchant_application_branches;
 create policy merchant_application_branches_admin_all
   on public.merchant_application_branches
   for all using (public.is_admin()) with check (public.is_admin());

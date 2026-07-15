@@ -59,8 +59,20 @@ $$;
 
 -- ---------------------------------------------------------------------
 -- lookup_renter_by_mobile — body unchanged except the added guard.
+--
+-- DEPLOYMENT FIX (42P13): projects where migration 122300's lookup
+-- redefinition never landed still carry the ORIGINAL two-column
+-- signature from 120600 (id, has_nafath). CREATE OR REPLACE cannot
+-- change OUT columns, so the function is dropped first. Dependency
+-- audit: no views, triggers, or SQL functions reference it — the only
+-- callers are PostgREST RPCs by name, which re-resolve after the
+-- recreate in the same transaction. The grant, SECURITY DEFINER, and
+-- search_path are restored below. The three-column shape is the one
+-- the merchant session UI already depends on (has_national_id).
 -- ---------------------------------------------------------------------
-create or replace function public.lookup_renter_by_mobile(p_mobile text)
+drop function if exists public.lookup_renter_by_mobile(text);
+
+create function public.lookup_renter_by_mobile(p_mobile text)
 returns table (
   id               uuid,
   has_nafath       boolean,
@@ -103,6 +115,8 @@ grant execute on function public.lookup_renter_by_mobile(text) to authenticated;
 
 -- ---------------------------------------------------------------------
 -- confirm_renter_presence — body unchanged except the added guard.
+-- Return signature identical in every prior version (120700, 120900),
+-- so CREATE OR REPLACE is safe — no drop needed.
 -- ---------------------------------------------------------------------
 create or replace function public.confirm_renter_presence(
   p_mobile   text,
@@ -171,6 +185,8 @@ grant execute on function public.confirm_renter_presence(text, text) to authenti
 
 -- ---------------------------------------------------------------------
 -- get_renter_eligibility — body unchanged except the added guard.
+-- Return signature identical to its only prior version (121000), so
+-- CREATE OR REPLACE is safe — no drop needed.
 -- ---------------------------------------------------------------------
 create or replace function public.get_renter_eligibility(p_renter_id uuid)
 returns table (
