@@ -1650,6 +1650,10 @@
         "issuedAt": "Issued at",
         "attestedAt": "Attested at",
         "attestedBanner": "This note is digitally binding and ready for enforcement if needed."
+      },
+      "info": {
+        "item": "Rented item",
+        "itemValue": "Original item value"
       }
     },
     "approvals": {
@@ -1781,7 +1785,7 @@
         "invoice": "Original invoice",
         "warn": {
           "title": "Binding action",
-          "hint": "Opening a case will lock the rental and may lead to escalation via the promissory note."
+          "hint": "Opening a case halts the normal return path and hands the contract to the resolution team. Your right is documented in the contract."
         },
         "submit": "Open damage case",
         "confirmSheet": {

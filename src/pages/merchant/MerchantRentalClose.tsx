@@ -228,25 +228,23 @@ export default function MerchantRentalClose() {
     return (
       <>
         <Header title={t('merchant.close.title')} showBack />
-        <Screen padded={false} className="bg-canvas">
-          <div className="px-5 pt-6 pb-10 space-y-5 flex flex-col min-h-full">
-            <div className="relative overflow-hidden rounded-xl3 bg-gradient-to-br from-ink-900 via-ink-800 to-ink-900 text-white p-6 shadow-plush text-center">
-              <div
-                aria-hidden
-                className="pointer-events-none absolute -top-12 start-1/2 -translate-x-1/2 h-48 w-48 rounded-full bg-success-500/25 blur-3xl"
-              />
-              <div className="relative mx-auto h-14 w-14 rounded-2xl bg-success-500/20 ring-1 ring-success-400/30 text-success-200 grid place-items-center">
-                <CheckIcon size={24} />
-              </div>
-              <h1 className="relative mt-5 editorial-title text-[26px] leading-tight text-white">
+        <Screen padded={false} className="bg-beige-100">
+          <div className="px-5 pt-10 pb-10 space-y-5 flex flex-col min-h-full">
+            {/* Design-language success header (matches M07/M11): green
+                halo circle + centered title/subtitle + real reference. */}
+            <div className="flex flex-col items-center text-center">
+              <span className="h-[76px] w-[76px] rounded-full bg-green-700 text-white grid place-items-center ring-[14px] ring-green-50">
+                <CheckIcon size={30} strokeWidth={2.5} />
+              </span>
+              <h1 className="mt-6 text-[21px] font-bold text-navy-700">
                 {t('merchant.close.success.title')}
               </h1>
-              <p className="relative mt-2.5 text-[13px] text-white/65 leading-relaxed max-w-[38ch] mx-auto">
+              <p className="mt-2 text-[13px] text-ink-600 leading-[1.9] max-w-[280px]">
                 {t('merchant.close.success.subtitle')}
               </p>
-              <div className="relative mt-4 inline-flex items-center gap-2 rounded-full bg-white/10 ring-1 ring-white/15 px-3 py-1.5 text-[12px] font-semibold">
-                <BadgeCheckIcon size={14} />
-                <span className="num">{rental.id}</span>
+              <div className="mt-3 inline-flex items-center gap-2 rounded-full bg-white ring-1 ring-beige-200 px-3.5 py-1.5 text-[12px] font-bold text-navy-700">
+                <BadgeCheckIcon size={14} className="text-green-700" />
+                <span className="num" dir="ltr">{rental.contractRef}</span>
               </div>
             </div>
 
@@ -323,35 +321,54 @@ export default function MerchantRentalClose() {
     <>
       <Header
         title={t('merchant.close.title')}
-        subtitle={rental.id}
+        subtitle={rental.contractRef}
         showBack
       />
       <Screen padded={false} className="bg-canvas">
         <div className="px-5 pt-5 pb-10 space-y-5">
           <form className="space-y-4" onSubmit={onSubmit} noValidate>
-            {/* Hero */}
-            <div className="relative overflow-hidden rounded-xl3 bg-gradient-to-br from-ink-900 via-ink-800 to-ink-900 text-white p-6 shadow-plush">
-              <div
-                aria-hidden
-                className="pointer-events-none absolute -top-10 end-[-15%] h-48 w-48 rounded-full bg-success-500/20 blur-3xl"
-              />
-              <div className="relative flex items-start gap-3">
-                <span className="h-11 w-11 shrink-0 rounded-2xl bg-white/10 ring-1 ring-white/15 text-white grid place-items-center">
-                  <PackageIcon size={20} />
-                </span>
-                <div className="min-w-0 flex-1">
-                  <div className="text-[10.5px] text-white/55 uppercase tracking-[0.08em]">
-                    {t('merchant.close.hero.eyebrow')}
-                  </div>
-                  <div className="mt-1.5 editorial-title text-[20px] leading-tight truncate text-white">
-                    {t('merchant.close.hero.title')}
-                  </div>
-                  <p className="mt-2 text-[12.5px] text-white/65 leading-relaxed">
-                    {t('merchant.close.hero.subtitle')}
-                  </p>
+            {/* M14 intent card — what closing does, in the design's
+                white-card language (the dark hero is gone). */}
+            <div className="rounded-[14px] bg-white ring-1 ring-beige-200 px-[18px] py-4 flex items-start gap-3">
+              <span className="h-10 w-10 shrink-0 rounded-xl bg-green-50 text-green-700 grid place-items-center">
+                <PackageIcon size={18} />
+              </span>
+              <div className="min-w-0 flex-1">
+                <div className="text-[13.5px] font-bold text-navy-700">
+                  {t('merchant.close.hero.title')}
                 </div>
+                <p className="mt-1 text-[12.5px] text-ink-500 leading-relaxed">
+                  {t('merchant.close.hero.subtitle')}
+                </p>
               </div>
             </div>
+
+            {/* M14 receipt confirmation — first, per the design. */}
+            <label className="flex items-start gap-3 rounded-[14px] bg-white ring-1 ring-beige-200 px-[18px] py-4 cursor-pointer select-none">
+              <span
+                className={`h-5 w-5 mt-0.5 shrink-0 rounded-md grid place-items-center ring-1 ${
+                  confirm
+                    ? 'bg-navy-700 ring-navy-700 text-white'
+                    : 'bg-white ring-beige-300 text-transparent'
+                }`}
+              >
+                <CheckIcon size={12} />
+              </span>
+              <div className="min-w-0 flex-1">
+                <div className="text-[13px] font-bold text-ink-900">
+                  {t('merchant.close.confirm.title')}
+                </div>
+                <div className="mt-0.5 text-[12px] text-ink-500 leading-relaxed">
+                  {t('merchant.close.confirm.subtitle')}
+                </div>
+              </div>
+              <input
+                type="checkbox"
+                className="sr-only"
+                checked={confirm}
+                onChange={(e) => setConfirm(e.target.checked)}
+              />
+            </label>
 
             {/* Rental summary */}
             <Card padded className="space-y-3">
@@ -437,35 +454,6 @@ export default function MerchantRentalClose() {
                 />
               </FormField>
             </Card>
-
-            {/* Confirmation */}
-            <label
-              className="flex items-start gap-3 rounded-xl2 bg-white hairline p-3.5 cursor-pointer select-none"
-            >
-              <span
-                className={`h-5 w-5 mt-0.5 shrink-0 rounded-md grid place-items-center ring-1 ${
-                  confirm
-                    ? 'bg-ink-900 ring-ink-900 text-white'
-                    : 'bg-white ring-canvas-300 text-transparent'
-                }`}
-              >
-                <CheckIcon size={12} />
-              </span>
-              <div className="min-w-0 flex-1">
-                <div className="text-[13px] font-semibold text-ink-900">
-                  {t('merchant.close.confirm.title')}
-                </div>
-                <div className="mt-0.5 text-[12px] text-ink-500 leading-relaxed">
-                  {t('merchant.close.confirm.subtitle')}
-                </div>
-              </div>
-              <input
-                type="checkbox"
-                className="sr-only"
-                checked={confirm}
-                onChange={(e) => setConfirm(e.target.checked)}
-              />
-            </label>
 
             {/* Alt action info */}
             <div className="rounded-xl2 bg-warn-50 ring-1 ring-warn-500/15 p-3.5 flex items-start gap-3">

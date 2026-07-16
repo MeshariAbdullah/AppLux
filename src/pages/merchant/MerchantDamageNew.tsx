@@ -21,10 +21,7 @@ import {
   DocIcon,
   GavelIcon,
   ImageIcon,
-  InfoIcon,
   PackageIcon,
-  ReceiptIcon,
-  SignatureIcon,
   UsersIcon,
 } from '@/components/icons';
 import { cn } from '@/lib/cn';
@@ -86,10 +83,6 @@ const SEVERITY_STYLE: Record<SeverityOption['tone'], {
     chip: 'bg-danger-50 text-danger-700',
   },
 };
-
-function invoiceRefFromContract(contractRef: string): string {
-  return `INV-${contractRef.replace('CN-', '')}-LATEST`;
-}
 
 // Business rule (see damage/non-return claim policy):
 //   * partial      → 30% of the item's ORIGINAL VALUE (repairable
@@ -411,34 +404,22 @@ export default function MerchantDamageNew() {
     <>
       <Header
         title={t('merchant.damage.new.title')}
-        subtitle={rental.id}
+        subtitle={rental.contractRef}
         showBack
       />
       <Screen padded={false} className="bg-canvas">
         <div className="px-5 pt-5 pb-10 space-y-5">
           <form className="space-y-4" onSubmit={onSubmit} noValidate>
-            {/* Hero */}
-            <div className="relative overflow-hidden rounded-xl3 bg-gradient-to-br from-ink-900 via-ink-800 to-ink-900 text-white p-6 shadow-plush">
-              <div
-                aria-hidden
-                className="pointer-events-none absolute -top-10 end-[-15%] h-48 w-48 rounded-full bg-danger-500/25 blur-3xl"
-              />
-              <div className="relative flex items-start gap-3">
-                <span className="h-11 w-11 shrink-0 rounded-2xl bg-white/10 ring-1 ring-white/15 text-white grid place-items-center">
-                  <AlertIcon size={20} />
-                </span>
-                <div className="min-w-0 flex-1">
-                  <div className="text-[10.5px] text-white/55 uppercase tracking-[0.08em]">
-                    {t('merchant.damage.new.hero.eyebrow')}
-                  </div>
-                  <div className="mt-1.5 editorial-title text-[20px] leading-tight truncate text-white">
-                    {t('merchant.damage.new.hero.title')}
-                  </div>
-                  <p className="mt-2 text-[12.5px] text-white/65 leading-relaxed">
-                    {t('merchant.damage.new.hero.subtitle')}
-                  </p>
-                </div>
+            {/* M15 warning banner — opening a case halts the normal
+                return path; shown FIRST per the design. */}
+            <div className="rounded-xl2 bg-danger-50 ring-1 ring-danger-500/20 px-4 py-3">
+              <div className="text-[12.5px] font-bold text-danger-700 flex items-center gap-1.5">
+                <AlertIcon size={13} />
+                {t('merchant.damage.new.warn.title')}
               </div>
+              <p className="mt-1 text-[12.5px] text-danger-700/90 leading-[1.8]">
+                {t('merchant.damage.new.warn.hint')}
+              </p>
             </div>
 
             {/* Rental summary */}
@@ -731,39 +712,17 @@ export default function MerchantDamageNew() {
                 title={t('merchant.damage.new.linked')}
                 className="mb-0"
               />
+              {/* Note + invoice rows removed: the promissory note is
+                  disabled in the current phase and the old invoice ref
+                  here was SYNTHESIZED (not a real document reference).
+                  Real references only. */}
               <LinkedRow
                 icon={<DocIcon size={16} />}
                 tone="bg-canvas-100 text-ink-700"
                 label={t('merchant.rental.docs.contract')}
                 refValue={rental.contractRef}
               />
-              <CardDivider />
-              <LinkedRow
-                icon={<SignatureIcon size={16} />}
-                tone="bg-gold-50 text-gold-700"
-                label={t('merchant.rental.docs.note')}
-                refValue={rental.noteRef}
-              />
-              <CardDivider />
-              <LinkedRow
-                icon={<ReceiptIcon size={16} />}
-                tone="bg-canvas-100 text-ink-700"
-                label={t('merchant.damage.new.invoice')}
-                refValue={invoiceRefFromContract(rental.contractRef)}
-              />
             </Card>
-
-            <div className="rounded-xl2 bg-danger-50/70 ring-1 ring-danger-500/15 p-3.5 flex items-start gap-3">
-              <span className="h-9 w-9 shrink-0 rounded-xl bg-white text-danger-600 grid place-items-center ring-1 ring-danger-500/20">
-                <InfoIcon size={16} />
-              </span>
-              <div className="min-w-0 flex-1 text-[12px] text-danger-700/90 leading-relaxed">
-                <div className="text-danger-800 font-semibold mb-0.5">
-                  {t('merchant.damage.new.warn.title')}
-                </div>
-                <div>{t('merchant.damage.new.warn.hint')}</div>
-              </div>
-            </div>
 
             {submitError && (
               <div

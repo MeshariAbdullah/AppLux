@@ -5,7 +5,6 @@ import { Button, Card, CardDivider, EmptyState, SectionHeader, StatusChip, type 
 import {
   AlertIcon,
   BadgeCheckIcon,
-  CarIcon,
   CheckIcon,
   ChevronIcon,
   ClockIcon,
@@ -15,7 +14,6 @@ import {
   InfoIcon,
   PackageIcon,
   ReceiptIcon,
-  ShieldIcon,
   SignatureIcon,
   SparkleIcon,
   UsersIcon,
@@ -28,10 +26,6 @@ import { getInitials } from '@/lib/format/initials';
 import { isRentalFinalized } from '@/lib/format/rentalFinalization';
 import { rentalStatusTone as toneForStatus } from '@/lib/format/statusTones';
 import { useI18n, useT } from '@/lib/i18n';
-import {
-  MerchantStatusStrip,
-  type MerchantStatusStep,
-} from '@/components/merchant/MerchantStatusStrip';
 import { useStore } from '@/lib/store';
 import {
   adaptContractToMerchantRental,
@@ -80,22 +74,6 @@ function toneForNafith(state: MerchantNafithState): StatusTone {
   if (state === 'approved') return 'success';
   if (state === 'submitted') return 'gold';
   return 'neutral';
-}
-
-// Map an in-flight rental's operational state to one of the four
-// merchant-facing status steps. Only meaningful pre-activation; the
-// caller already gates this away once the rental is live.
-function deriveMerchantStatusStep(rental: MerchantRental): MerchantStatusStep {
-  if (rental.customerApproved) return 'notify';
-  if (
-    rental.contractState === 'signed' ||
-    rental.noteState === 'signed' ||
-    rental.nafithState === 'submitted' ||
-    rental.nafithState === 'approved'
-  ) {
-    return 'payment-and-signing';
-  }
-  return 'customer-review';
 }
 
 function stageStates(rental: MerchantRental): Record<StageKey, StageState> {
@@ -309,10 +287,16 @@ export default function MerchantRentalDetails() {
   );
   const activityPreview = sortedTimeline.slice(0, 5);
 
+  // Design M13 — position on the approved four-stage journey. A
+  // finalized contract has completed all four stages; an active one is
+  // in stage 3 (بدء الإيجار); anything pre-approval sits in stage 2.
+  const journeyIdx =
+    closureState !== 'active' ? 4 : rental.customerApproved ? 2 : 1;
+
   return (
     <>
       <Header
-        title={rental.id}
+        title={rental.contractRef}
         subtitle={rental.customerName}
         showBack
         trailing={
@@ -325,16 +309,66 @@ export default function MerchantRentalDetails() {
       />
       <Screen padded={false} className="bg-canvas">
         <div className="px-5 pt-5 pb-10 space-y-5">
-          {/* Pre-activation operational status. Hidden once the rental
-              is live — at that point the status chip in the header,
-              the closure banner below, and the activity log already
-              tell the merchant everything they need. */}
-          {!rental.customerApproved && (
-            <MerchantStatusStrip
-              t={t}
-              currentStep={deriveMerchantStatusStep(rental)}
-            />
-          )}
+          {/* M13 journey card — the shared four-stage reference journey
+              rendered as a horizontal stepper. */}
+          <div className="rounded-[14px] bg-white ring-1 ring-beige-200 px-4 py-5">
+            <div className="flex items-start">
+              {(
+                [
+                  'journey.stages.request',
+                  'journey.stages.review',
+                  'journey.stages.started',
+                  'journey.stages.closure',
+                ] as const
+              ).map((key, i) => {
+                const done = i < journeyIdx;
+                const current = i === journeyIdx;
+                return (
+                  <div key={key} className="contents">
+                    {i > 0 && (
+                      <div
+                        aria-hidden
+                        className={cn(
+                          'flex-[0.5] h-[2.5px] mt-3',
+                          i <= journeyIdx - 1
+                            ? 'bg-green-700'
+                            : i === journeyIdx
+                              ? 'bg-gradient-to-l from-green-700 to-navy-100/60 rtl:bg-gradient-to-r'
+                              : 'bg-navy-100/60',
+                        )}
+                      />
+                    )}
+                    <div className="flex-1 flex flex-col items-center gap-1.5 min-w-0">
+                      <span
+                        className={cn(
+                          'h-[26px] w-[26px] rounded-full grid place-items-center text-[11px] font-bold num',
+                          done
+                            ? 'bg-green-700 text-white'
+                            : current
+                              ? 'bg-white border-[3px] border-green-500 text-green-700'
+                              : 'bg-white border-[1.5px] border-navy-200 text-ink-400',
+                        )}
+                      >
+                        {done ? <CheckIcon size={12} strokeWidth={2.5} /> : i + 1}
+                      </span>
+                      <span
+                        className={cn(
+                          'text-[10.5px] text-center leading-snug',
+                          current
+                            ? 'font-bold text-green-700'
+                            : done
+                              ? 'font-semibold text-ink-800'
+                              : 'text-ink-400',
+                        )}
+                      >
+                        {t(key)}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
 
           {/* Outcome banner */}
           {closureState !== 'active' && (
@@ -407,104 +441,57 @@ export default function MerchantRentalDetails() {
             </div>
           )}
 
-          {/* Hero */}
-          <div className="relative overflow-hidden rounded-xl3 bg-gradient-to-br from-ink-900 via-ink-800 to-ink-900 text-white p-6 shadow-plush">
-            <div
-              aria-hidden
-              className="pointer-events-none absolute inset-0 pattern-dots opacity-25"
-            />
-            <div
-              aria-hidden
-              className="pointer-events-none absolute -top-14 end-[-18%] h-52 w-52 rounded-full bg-gold-400/22 blur-[100px]"
-            />
-            <div className="relative flex items-start gap-4">
-              <span className="h-12 w-12 shrink-0 rounded-2xl bg-white/8 ring-1 ring-white/12 text-gold-300 grid place-items-center">
-                <CarIcon size={20} />
-              </span>
-              <div className="min-w-0 flex-1">
-                <div className="text-[10.5px] text-white/55 uppercase tracking-[0.08em]">
-                  {t('merchant.rental.hero.current')}
-                </div>
-                <div className="mt-1.5 editorial-title text-[20px] leading-tight truncate text-white">
-                  {rental.item}
-                </div>
-                <div className="mt-2 flex items-center gap-1.5 text-[12px] text-white/65 truncate">
-                  <UsersIcon size={12} />
-                  <span className="truncate">{rental.customerName}</span>
-                </div>
+          {/* M13 customer card — approved data only (name + mobile
+              were already shown here pre-restyle). */}
+          <div className="rounded-[14px] bg-white ring-1 ring-beige-200 px-[18px] py-4 flex items-center gap-3">
+            <span className="h-11 w-11 shrink-0 rounded-full bg-navy-50 text-navy-700 grid place-items-center text-[15px] font-bold">
+              {rental.customerInitials}
+            </span>
+            <div className="min-w-0 flex-1">
+              <div className="text-[13.5px] font-bold text-ink-900 truncate">
+                {rental.customerName}
+              </div>
+              <div className="mt-0.5 text-[12px] text-ink-500 num truncate" dir="ltr">
+                +966 {rental.customerMobile}
               </div>
             </div>
-            <div className="relative mt-4 grid grid-cols-3 gap-3 text-[11.5px]">
-              <HeroStat
-                label={t('merchant.rentals.rentalFee')}
-                value={formatCurrency(rental.monthlyAmount)}
-              />
-              <HeroStat
-                label={t('merchant.rentals.rentalPeriodLabel')}
-                value={t('merchant.rentals.rentalPeriod', { count: rentalDays })}
-              />
-              <HeroStat
-                label={t('merchant.rentals.returnDate')}
-                value={formatDate(rental.endDate)}
-              />
-            </div>
+            <StatusChip
+              size="sm"
+              tone={rental.customerApproved ? 'success' : 'warn'}
+              dot={false}
+              label={t(
+                rental.customerApproved
+                  ? 'merchant.rental.approval.approved'
+                  : 'merchant.rental.approval.awaiting',
+              )}
+            />
           </div>
 
-          {/* Customer approval */}
-          <Card padded className="space-y-3">
-            <SectionHeader
-              title={t('merchant.rental.approval.title')}
-              className="mb-0"
-              action={
-                <StatusChip
-                  tone={rental.customerApproved ? 'success' : 'warn'}
-                  dot
-                  label={t(
-                    rental.customerApproved
-                      ? 'merchant.rental.approval.approved'
-                      : 'merchant.rental.approval.awaiting',
-                  )}
-                />
-              }
+          {/* M13 rental facts — key/value rows */}
+          <div className="rounded-[14px] bg-white ring-1 ring-beige-200 px-[18px] py-2">
+            <FactRow label={t('merchant.rental.info.item')} value={rental.item} />
+            <FactRow
+              label={t('merchant.rentals.rentalFee')}
+              value={<span className="num font-bold">{formatCurrency(rental.monthlyAmount)}</span>}
             />
-            <div className="flex items-center gap-3">
-              <span
-                className={cn(
-                  'h-10 w-10 shrink-0 rounded-xl grid place-items-center',
-                  rental.customerApproved
-                    ? 'bg-success-50 text-success-600'
-                    : 'bg-warn-50 text-warn-600',
-                )}
-              >
-                {rental.customerApproved ? (
-                  <CheckIcon size={18} />
-                ) : (
-                  <ClockIcon size={18} />
-                )}
-              </span>
-              <div className="min-w-0 flex-1">
-                <div className="text-[13.5px] font-semibold text-ink-900 truncate">
-                  {rental.customerName}
-                </div>
-                <div className="mt-0.5 text-[11.5px] text-ink-400 num truncate">
-                  +966{rental.customerMobile}
-                </div>
-              </div>
-            </div>
-            {rental.customerApproved && stageAt(rental, 'customer-approved') && (
-              <div className="rounded-xl2 bg-success-50/60 ring-1 ring-success-500/15 p-3 text-[12px] text-success-700 flex items-center gap-2">
-                <BadgeCheckIcon size={14} />
-                <span className="truncate">
-                  {t('merchant.rental.approval.approvedOn', {
-                    at: formatDate(stageAt(rental, 'customer-approved')!, {
-                      dateStyle: 'medium',
-                      timeStyle: 'short',
-                    }),
-                  })}
-                </span>
-              </div>
-            )}
-          </Card>
+            <FactRow
+              label={t('merchant.rental.info.itemValue')}
+              value={<span className="num">{formatCurrency(rental.itemValue)}</span>}
+            />
+            <FactRow
+              label={t('merchant.close.fields.start')}
+              value={<span className="num">{formatDate(rental.startDate)}</span>}
+            />
+            <FactRow
+              label={t('merchant.rentals.returnDate')}
+              value={<span className="num">{formatDate(rental.endDate)}</span>}
+            />
+            <FactRow
+              label={t('merchant.rentals.rentalPeriodLabel')}
+              value={t('merchant.rentals.rentalPeriod', { count: rentalDays })}
+              last
+            />
+          </div>
 
           {/* Documents readiness */}
           <Card padded className="space-y-3">
@@ -674,31 +661,32 @@ export default function MerchantRentalDetails() {
                 single access point for opening the contract or note. */}
           </div>
 
-          <div className="rounded-xl2 bg-gold-50 hairline p-3.5 flex items-start gap-3">
-            <span className="h-9 w-9 shrink-0 rounded-xl bg-white text-gold-700 grid place-items-center ring-1 hairline">
-              <ShieldIcon size={18} />
-            </span>
-            <div className="min-w-0 text-[12px] text-brand-800/90 leading-relaxed">
-              <div className="flex items-center gap-1.5 text-brand-900 font-semibold mb-0.5">
-                <InfoIcon size={12} />
-                {t('track.placeholders.nafith')}
-              </div>
-              {t('track.placeholders.nafithDesc')}
-            </div>
-          </div>
         </div>
       </Screen>
     </>
   );
 }
 
-function HeroStat({ label, value }: { label: ReactNode; value: ReactNode }) {
+function FactRow({
+  label,
+  value,
+  last,
+}: {
+  label: ReactNode;
+  value: ReactNode;
+  last?: boolean;
+}) {
   return (
-    <div>
-      <div className="text-white/55 uppercase tracking-wide text-[10.5px]">
-        {label}
-      </div>
-      <div className="mt-0.5 font-semibold text-white num truncate">{value}</div>
+    <div
+      className={cn(
+        'flex items-center justify-between gap-3 py-2.5',
+        !last && 'border-b border-beige-100',
+      )}
+    >
+      <span className="text-[12.5px] text-ink-500 shrink-0">{label}</span>
+      <span className="text-[13px] font-semibold text-ink-900 text-end truncate">
+        {value}
+      </span>
     </div>
   );
 }
