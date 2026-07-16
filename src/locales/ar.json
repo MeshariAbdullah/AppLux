@@ -1236,10 +1236,14 @@
       },
       "handoff": {
         "seal": "تم إصدار حزمة الإيجار",
-        "title": "تم إصدار حزمة الإيجار",
-        "body": "العميل يتابع الخطوات الآن. سيصلك إشعار عند اكتمال الدفع واعتماد نفاذ.",
+        "title": "صدر العرض والعقد",
+        "body": "أرسلنا العرض والعقد للعميل — يبدأ الإيجار فور موافقته.",
         "requestNumberLabel": "رقم الطلب",
-        "doneCta": "العودة إلى العمليات"
+        "doneCta": "العودة للوحة المتجر",
+        "bodyNamed": "أرسلنا العرض لـ {name}. يبدأ الإيجار فور الموافقة على العقد.",
+        "statusChip": "بانتظار مراجعة العميل",
+        "stageLine": "المرحلة {current} من {total} · {stage}",
+        "viewRentals": "متابعة الإيجارات"
       }
     },
     "login": {
@@ -1461,7 +1465,25 @@
       "quickHistory": "السجل",
       "quickHistoryDesc": "العقود المنتهية والمُقفلة",
       "signOut": "تسجيل الخروج",
-      "branchesCount": "{count} فرع"
+      "branchesCount": "{count} فرع",
+      "heading": "لوحة المتجر",
+      "stats": {
+        "active": "إيجارات نشطة",
+        "review": "بانتظار مراجعة العميل",
+        "dueWeek": "إرجاعات هذا الأسبوع",
+        "damage": "حالات تلف مفتوحة"
+      },
+      "issueCta": "إصدار عقد إيجار جديد",
+      "attentionTitle": "يحتاج انتباهك",
+      "attentionEmpty": "لا يوجد ما يحتاج انتباهك حاليًا — كل شيء تحت السيطرة.",
+      "feed": {
+        "sentAt": "أُرسل {date}",
+        "overdueSince": "كان الإرجاع {date}",
+        "dueOn": "الإرجاع {date}",
+        "offerTitle": "عرض إيجار {ref}",
+        "damageTitle": "{count} حالات تلف مفتوحة",
+        "damageChip": "تلف"
+      }
     },
     "status": {
       "title": "حالة الطلب",
@@ -1477,7 +1499,7 @@
       "subtitle": "جميع الإيجارات التي تديرها المنشأة — نشطة، منتهية، ومُقفلة.",
       "searchPlaceholder": "ابحث بالعميل أو رقم العقد",
       "filterAll": "الكل",
-      "filterActive": "نشِط",
+      "filterActive": "نشط",
       "filterDue": "قريب الاستحقاق",
       "filterOverdue": "متأخر",
       "count": "{count} عقداً",
@@ -1491,11 +1513,13 @@
       "rentalPeriodLabel": "فترة التأجير",
       "installments": "{paid} من {total} أقساط",
       "status": {
-        "active": "نشِط",
+        "active": "نشط",
         "due-soon": "قريب الاستحقاق",
         "overdue": "متأخر",
         "returned": "مُرجَع"
-      }
+      },
+      "filterReview": "مراجعة العميل",
+      "reviewStart": "يبدأ {date}"
     },
     "rental": {
       "title": "متابعة التأجير",

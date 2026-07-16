@@ -1,19 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { Header, Screen } from '@/components/layout';
+import { Screen } from '@/components/layout';
 import { MerchantTabBar } from '@/components/merchant/MerchantTabBar';
-import {
-  Card,
-  EmptyState,
-  PageSkeleton,
-  SectionHeader,
-  StatusChip,
-} from '@/components/ui';
-import {
-  CarIcon,
-  ChevronIcon,
-  InfoIcon,
-} from '@/components/icons';
+import { EmptyState, Input, PageSkeleton, StatusChip } from '@/components/ui';
+import { InfoIcon, SearchIcon } from '@/components/icons';
 import { CACHE_TTL, cacheKeys } from '@/lib/cache/keys';
 import { useCachedQuery } from '@/lib/cache/useCachedQuery';
 import { getInitials } from '@/lib/format/initials';
@@ -25,26 +15,50 @@ import {
   fetchMyMerchant,
   fetchProfilesByIds,
   listMerchantContracts,
+  listMerchantInvoices,
   useSupabaseAuth,
+  type RentalInvoiceRow,
 } from '@/lib/supabase';
 import type { MerchantRental } from '@/lib/data';
 import { cn } from '@/lib/cn';
 
-type Filter = 'all' | 'active' | 'due-soon' | 'overdue';
+// =====================================================================
+// Merchant rentals — design M12.
+// =====================================================================
+// Approved primary filters: الكل / مراجعة العميل / نشط / متأخر, each
+// with a live count chip from the loaded dataset. "مراجعة العميل" rows
+// are the ISSUED invoices (offers awaiting the customer) — the same
+// cached read the dashboard uses (merchant:{uid}:invoices:issued), so
+// no new query semantics. قريب الاستحقاق stays a CARD-level chip under
+// the نشط filter, per the approved vocabulary. Search filters the
+// loaded rows client-side by customer or reference.
+// =====================================================================
+
+type Filter = 'all' | 'review' | 'active' | 'overdue';
 
 const FILTERS: { key: Filter; labelKey: string }[] = [
   { key: 'all', labelKey: 'merchant.rentals.filterAll' },
+  { key: 'review', labelKey: 'merchant.rentals.filterReview' },
   { key: 'active', labelKey: 'merchant.rentals.filterActive' },
-  { key: 'due-soon', labelKey: 'merchant.rentals.filterDue' },
   { key: 'overdue', labelKey: 'merchant.rentals.filterOverdue' },
 ];
 
+/** Awaiting-customer-review row (issued invoice / demo approval). */
+type ReviewEntry = {
+  id: string;
+  ref: string;
+  customerName: string;
+  amount: number;
+  startsAt: string | null;
+};
+
 export default function MerchantRentals() {
   const t = useT();
-  const { dir } = useI18n();
-  const { merchantRentals: demoRentals } = useStore();
+  const { formatCurrency, formatDate } = useI18n();
+  const { merchantRentals: demoRentals, merchantApprovals } = useStore();
   const { configured, session } = useSupabaseAuth();
   const [liveRentals, setLiveRentals] = useState<MerchantRental[] | null>(null);
+  const [liveReviewRows, setLiveReviewRows] = useState<ReviewEntry[] | null>(null);
   const [liveLoading, setLiveLoading] = useState<boolean>(
     () => configured && Boolean(session?.user?.id),
   );
@@ -53,12 +67,12 @@ export default function MerchantRentals() {
   const [filter, setFilter] = useState<Filter>(
     FILTERS.some((f) => f.key === initialFilter) ? initialFilter : 'all',
   );
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [query, setQuery] = useState('');
 
   // Phase 3B: merchant identity comes from the shared memory cache
   // (same key as MerchantHome / the rental-session wizard), so landing
-  // here from the dashboard no longer re-resolves it. The rentals list
-  // itself stays UNCACHED until Phase 4A wires mutation invalidation —
-  // caching it now would show stale rows after close/damage actions.
+  // here from the dashboard no longer re-resolves it.
   const userId = session?.user?.id ?? null;
   const { data: myMerchantData, error: merchantError } = useCachedQuery(
     configured && userId ? cacheKeys.myMerchant(userId) : null,
@@ -83,9 +97,21 @@ export default function MerchantRentals() {
   );
   const contractRows = contractsError ? [] : contractRowsData;
 
+  // M12: issued invoices ("مراجعة العميل" rows) — SAME cache key, TTL
+  // and invalidation the dashboard already uses for this list.
+  const { data: invoiceRowsData, error: invoicesError } = useCachedQuery(
+    configured && userId && myMerchant
+      ? cacheKeys.merchantInvoices(userId, 'issued')
+      : null,
+    () => listMerchantInvoices(myMerchant!.id, { status: 'issued' }),
+    { ttlMs: CACHE_TTL.merchantLists, refetchOnFocus: true },
+  );
+  const invoiceRows = invoicesError ? [] : invoiceRowsData;
+
   useEffect(() => {
     if (!configured || !userId) {
       setLiveRentals(null);
+      setLiveReviewRows(null);
       setLiveLoading(false);
       return;
     }
@@ -95,20 +121,27 @@ export default function MerchantRentals() {
     }
     if (!myMerchant) {
       setLiveRentals([]);
+      setLiveReviewRows([]);
       setLiveLoading(false);
       return;
     }
-    if (contractRows === undefined) {
-      setLiveLoading(true); // contracts list still resolving
+    if (contractRows === undefined || invoiceRows === undefined) {
+      setLiveLoading(true); // lists still resolving
       return;
     }
     setLiveLoading(true);
     let cancelled = false;
     (async () => {
       if (cancelled) return;
-      const profileMap = await fetchProfilesByIds(
-        contractRows.map((c) => c.customer_user_id),
-      ).catch(() => new Map<string, never>());
+      // One batch: contract customers + invoice customers (the page
+      // already made this live profile read for contracts).
+      const customerIds = [
+        ...contractRows.map((c) => c.customer_user_id),
+        ...invoiceRows.map((i: RentalInvoiceRow) => i.customer_user_id),
+      ];
+      const profileMap = await fetchProfilesByIds(customerIds).catch(
+        () => new Map<string, never>(),
+      );
       if (cancelled) return;
       setLiveRentals(
         contractRows.map((r) => {
@@ -125,19 +158,73 @@ export default function MerchantRentals() {
           });
         }),
       );
+      setLiveReviewRows(
+        invoiceRows.map((i: RentalInvoiceRow) => ({
+          id: i.id,
+          ref: i.invoice_number,
+          customerName: profileMap.get(i.customer_user_id)?.full_name ?? '—',
+          amount: Number(i.total_amount),
+          startsAt: i.starts_at ?? null,
+        })),
+      );
       if (!cancelled) setLiveLoading(false);
     })();
     return () => {
       cancelled = true;
     };
-  }, [configured, userId, myMerchant, contractRows]);
+  }, [configured, userId, myMerchant, contractRows, invoiceRows]);
 
   const merchantRentals = liveRentals ?? demoRentals;
+  const reviewRows: ReviewEntry[] = configured
+    ? liveReviewRows ?? []
+    : merchantApprovals.map((a) => ({
+        id: a.id,
+        ref: a.id,
+        customerName: a.customerName,
+        amount: a.amount,
+        startsAt: null,
+      }));
 
-  const filtered = useMemo(() => {
-    if (filter === 'all') return merchantRentals;
-    return merchantRentals.filter((r) => r.status === filter);
-  }, [filter, merchantRentals]);
+  // ---- counts from the loaded dataset ----
+  const counts: Record<Filter, number> = useMemo(() => {
+    const overdue = merchantRentals.filter((r) => r.status === 'overdue').length;
+    const active = merchantRentals.filter(
+      (r) => r.status === 'active' || r.status === 'due-soon',
+    ).length;
+    return {
+      all: merchantRentals.length + reviewRows.length,
+      review: reviewRows.length,
+      active,
+      overdue,
+    };
+  }, [merchantRentals, reviewRows]);
+
+  const q = query.trim().toLowerCase();
+  const matches = (...fields: string[]) =>
+    !q || fields.some((f) => f.toLowerCase().includes(q));
+
+  const filteredRentals = useMemo(() => {
+    const base =
+      filter === 'all'
+        ? merchantRentals
+        : filter === 'active'
+          ? merchantRentals.filter(
+              (r) => r.status === 'active' || r.status === 'due-soon',
+            )
+          : filter === 'overdue'
+            ? merchantRentals.filter((r) => r.status === 'overdue')
+            : [];
+    return base.filter((r) => matches(r.customerName, r.id, r.item));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filter, merchantRentals, q]);
+
+  const filteredReviews = useMemo(() => {
+    const base = filter === 'all' || filter === 'review' ? reviewRows : [];
+    return base.filter((r) => matches(r.customerName, r.ref));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filter, reviewRows, q]);
+
+  const totalShown = filteredRentals.length + filteredReviews.length;
 
   const onFilter = (next: Filter) => {
     setFilter(next);
@@ -150,25 +237,54 @@ export default function MerchantRentals() {
   if (configured && liveLoading) {
     return (
       <>
-        <Header title={t('merchant.rentals.title')} showBack />
-        <Screen padded={false} className="bg-canvas">
-          <div className="px-5 pt-4 pb-24">
+        <Screen padded={false} className="bg-beige-100">
+          <div className="px-5 pt-[calc(env(safe-area-inset-top)+22px)] pb-24">
             <PageSkeleton rows={4} />
           </div>
         </Screen>
+        <MerchantTabBar />
       </>
     );
   }
 
   return (
     <>
-      <Header
-        title={t('merchant.rentals.title')}
-        subtitle={t('merchant.rentals.count', { count: filtered.length })}
-        showBack
-      />
-      <Screen padded={false} className="bg-canvas">
-        <div className="px-5 pt-4 pb-24 space-y-4">
+      <Screen padded={false} className="bg-beige-100">
+        <div className="px-5 pt-[calc(env(safe-area-inset-top)+22px)] pb-24 space-y-3">
+          {/* ====== M12 masthead: title + search toggle ====== */}
+          <div className="flex items-center gap-2.5">
+            <h1 className="flex-1 text-[19px] font-bold text-navy-700">
+              {t('merchant.rentals.title')}
+            </h1>
+            <button
+              type="button"
+              onClick={() => {
+                setSearchOpen((s) => !s);
+                if (searchOpen) setQuery('');
+              }}
+              aria-label={t('merchant.rentals.searchPlaceholder')}
+              aria-pressed={searchOpen}
+              className={cn(
+                'h-10 w-10 grid place-items-center rounded-xl bg-white text-navy-700 transition-colors',
+                searchOpen
+                  ? 'ring-[1.5px] ring-green-500'
+                  : 'ring-[1.5px] ring-beige-300 hover:ring-navy-200',
+              )}
+            >
+              <SearchIcon size={15} />
+            </button>
+          </div>
+
+          {searchOpen && (
+            <Input
+              autoFocus
+              placeholder={t('merchant.rentals.searchPlaceholder')}
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+            />
+          )}
+
+          {/* ====== Filter chips with live counts ====== */}
           <div
             className="flex gap-2 overflow-x-auto scrollbar-none -mx-1 px-1"
             role="tablist"
@@ -179,32 +295,38 @@ export default function MerchantRentals() {
                 <button
                   key={f.key}
                   type="button"
+                  role="tab"
+                  aria-selected={active}
                   onClick={() => onFilter(f.key)}
                   className={cn(
-                    'h-8 px-3 rounded-full text-[12.5px] font-semibold whitespace-nowrap transition-colors ring-1 ring-inset',
+                    'h-9 px-4 rounded-full text-[12.5px] font-semibold whitespace-nowrap transition-colors',
                     active
-                      ? 'bg-ink-900 text-white ring-ink-900'
-                      : 'bg-white text-ink-600 hairline',
+                      ? 'bg-navy-700 text-white'
+                      : 'bg-white text-ink-700 ring-1 ring-beige-200',
                   )}
                 >
-                  {t(f.labelKey)}
+                  {t(f.labelKey)}{' '}
+                  <span dir="ltr" className="num">
+                    {counts[f.key]}
+                  </span>
                 </button>
               );
             })}
           </div>
 
-          <SectionHeader title={t('merchant.rentals.subtitle')} />
-
-          {filtered.length === 0 ? (
+          {totalShown === 0 ? (
             <EmptyState
               icon={<InfoIcon size={22} />}
               title={t('merchant.rentals.empty')}
               description={t('merchant.rentals.emptyHint')}
             />
           ) : (
-            <div className="space-y-2.5">
-              {filtered.map((r) => (
-                <RentalCard key={r.id} rental={r} dir={dir} />
+            <div className="space-y-3">
+              {filteredReviews.map((r) => (
+                <ReviewCard key={r.id} entry={r} formatCurrency={formatCurrency} formatDate={formatDate} />
+              ))}
+              {filteredRentals.map((r) => (
+                <RentalCard key={r.id} rental={r} />
               ))}
             </div>
           )}
@@ -215,6 +337,51 @@ export default function MerchantRentals() {
   );
 }
 
+// ---------------------------------------------------------------------
+// Cards
+// ---------------------------------------------------------------------
+
+/** Issued offer awaiting the customer — taps through to the approvals
+ *  queue (there is no contract yet to open). */
+function ReviewCard({
+  entry,
+  formatCurrency,
+  formatDate,
+}: {
+  entry: ReviewEntry;
+  formatCurrency: (n: number) => string;
+  formatDate: (d: string) => string;
+}) {
+  const t = useT();
+  return (
+    <Link to="/merchant/approvals" className="block">
+      <div className="rounded-[14px] bg-white ring-1 ring-beige-200 px-[18px] py-4 space-y-2 transition-transform active:scale-[0.995]">
+        <div className="flex items-center justify-between gap-3">
+          <span className="text-[14px] font-bold text-ink-900 truncate">
+            {entry.customerName}
+          </span>
+          <StatusChip
+            size="sm"
+            tone="warn"
+            dot={false}
+            label={t('merchant.rentals.filterReview')}
+          />
+        </div>
+        <div className="text-[12.5px] text-ink-500 truncate">
+          <span dir="ltr" className="num">{entry.ref}</span>
+          {' · '}
+          <span className="num">{formatCurrency(entry.amount)}</span>
+          {entry.startsAt && (
+            <>
+              {' · '}
+              {t('merchant.rentals.reviewStart', { date: formatDate(entry.startsAt) })}
+            </>
+          )}
+        </div>
+      </div>
+    </Link>
+  );
+}
 
 function rentalPeriodDays(start: string, end: string): number {
   const s = new Date(start).getTime();
@@ -223,65 +390,45 @@ function rentalPeriodDays(start: string, end: string): number {
   return Math.max(1, Math.round((e - s) / (1000 * 60 * 60 * 24)));
 }
 
-function RentalCard({ rental, dir }: { rental: MerchantRental; dir: 'rtl' | 'ltr' }) {
+function RentalCard({ rental }: { rental: MerchantRental }) {
   const t = useT();
   const { formatCurrency, formatDate } = useI18n();
   const tone = toneForStatus(rental.status);
   const days = rentalPeriodDays(rental.startDate, rental.endDate);
+  const returned = rental.status === 'returned';
   return (
     <Link to={`/merchant/rentals/${rental.id}`} className="block">
-    <Card padded interactive className="space-y-3">
-      <div className="flex items-center gap-3">
-        <span className="h-10 w-10 shrink-0 rounded-xl bg-canvas-100 text-ink-700 grid place-items-center">
-          <CarIcon size={18} />
-        </span>
-        <div className="flex-1 min-w-0">
-          <div className="text-[13.5px] font-semibold text-ink-900 truncate">
+      <div
+        className={cn(
+          'rounded-[14px] bg-white ring-1 ring-beige-200 px-[18px] py-4 space-y-2 transition-transform active:scale-[0.995]',
+          returned && 'opacity-85',
+        )}
+      >
+        <div className="flex items-center justify-between gap-3">
+          <span className="text-[14px] font-bold text-ink-900 truncate">
             {rental.customerName}
-          </div>
-          <div className="mt-0.5 text-[12px] text-ink-400 truncate">
-            {rental.item}
-          </div>
+          </span>
+          {/* قريب الاستحقاق renders here as a card-level chip — it is
+              deliberately NOT a primary filter (approved vocabulary). */}
+          <StatusChip
+            size="sm"
+            tone={tone}
+            dot={false}
+            label={t(`merchant.rentals.status.${rental.status}`)}
+          />
         </div>
-        <StatusChip
-          size="sm"
-          tone={tone}
-          dot
-          label={t(`merchant.rentals.status.${rental.status}`)}
-        />
-      </div>
-
-      <div className="grid grid-cols-3 gap-2 text-[11.5px]">
-        <div>
-          <div className="text-ink-400 uppercase tracking-wide text-[10.5px]">
-            {t('merchant.rentals.rentalFee')}
-          </div>
-          <div className="mt-0.5 font-semibold text-ink-900 num">
-            {formatCurrency(rental.monthlyAmount)}
-          </div>
-        </div>
-        <div>
-          <div className="text-ink-400 uppercase tracking-wide text-[10.5px]">
-            {t('merchant.rentals.returnDate')}
-          </div>
-          <div className="mt-0.5 font-semibold text-ink-900 num">
-            {formatDate(rental.endDate)}
-          </div>
-        </div>
-        <div className="text-end">
-          <div className="text-ink-400 uppercase tracking-wide text-[10.5px]">
-            {rental.id}
-          </div>
-          <div className="mt-0.5 text-[11.5px] text-ink-500">
-            {t('merchant.rentals.rentalPeriod', { count: days })}
-          </div>
+        <div className="text-[12.5px] text-ink-500 truncate">
+          <span dir="ltr" className="num">{rental.contractRef}</span>
+          {' · '}
+          <span className="num">{formatCurrency(rental.monthlyAmount)}</span>
+          {' · '}
+          {rental.status === 'overdue'
+            ? t('merchant.home.feed.overdueSince', { date: formatDate(rental.endDate) })
+            : t('merchant.home.feed.dueOn', { date: formatDate(rental.endDate) })}
+          {' · '}
+          {t('merchant.rentals.rentalPeriod', { count: days })}
         </div>
       </div>
-
-      <div className="flex items-center justify-end text-[11.5px] text-ink-400">
-        <ChevronIcon size={14} className={cn(dir === 'rtl' ? 'rotate-180' : '')} />
-      </div>
-    </Card>
     </Link>
   );
 }

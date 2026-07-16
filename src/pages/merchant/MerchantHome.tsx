@@ -1,31 +1,20 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Header, Screen } from '@/components/layout';
-import {
-  Button,
-  Card,
-  PageSkeleton,
-  SectionHeader,
-} from '@/components/ui';
+import { Screen } from '@/components/layout';
+import { Header } from '@/components/layout';
+import { PageSkeleton, StatusChip, type StatusTone } from '@/components/ui';
 import { LangToggle } from '@/components/auth/LangToggle';
 import { MerchantTabBar } from '@/components/merchant/MerchantTabBar';
 import {
-  AlertIcon,
-  ChevronIcon,
-  ClockIcon,
+  BadgeCheckIcon,
   GavelIcon,
   HistoryIcon,
-  PackageIcon,
-  ReceiptIcon,
-  SparkleIcon,
+  PlusIcon,
 } from '@/components/icons';
 import { getInitials } from '@/lib/format/initials';
 import { logEvent } from '@/lib/observability/log';
-import { releaseInfo } from '@/lib/releaseInfo';
-import { useTapReveal } from '@/lib/useTapReveal';
 import { useI18n, useT } from '@/lib/i18n';
 import { useStore } from '@/lib/store';
-import { cn } from '@/lib/cn';
 import type { MerchantRental } from '@/lib/data';
 import {
   adaptContractToMerchantRental,
@@ -38,6 +27,7 @@ import {
 } from '@/lib/supabase';
 import { CACHE_TTL, cacheKeys } from '@/lib/cache/keys';
 import { useCachedQuery } from '@/lib/cache/useCachedQuery';
+import { resolveMerchantName } from '@/lib/merchantName';
 import { withTimeout } from '@/lib/withTimeout';
 
 // Per-query timeouts so a single slow Supabase round-trip can't park
@@ -46,40 +36,37 @@ const MERCHANT_IDENTITY_TIMEOUT_MS = 8_000;
 const MERCHANT_DATA_TIMEOUT_MS = 12_000;
 
 // =====================================================================
-// Merchant dashboard — action hub layout.
+// Merchant dashboard — design M09.
 // =====================================================================
-// Three sections, in priority order:
-//   1. Action Required (conditional)  — overdue / pending / damage
-//   2. Quick Actions   (always shown) — start session, contracts, …
-//   3. Overview        (always shown) — three compact stat tiles
+// Compact in-body masthead (store name over "لوحة المتجر" + verified
+// chip), a 2×2 stat-tile grid, the primary green issue CTA, and the
+// "يحتاج انتباهك" feed. Sign-out + release line/diagnostics moved to
+// MerchantProfile (M16) in design D1 — the dashboard no longer
+// duplicates them.
 //
-// What this layout deliberately does NOT show:
-//   * a big dark "operations" hero with a revenue figure
-//   * a 4-tile 2×2 summary block that duplicates the quick actions
-//   * a "Recent activity" feed (the merchant has a full /merchant/rentals
-//     list one tap away)
-//   * an "Issue rental invoice" quick action (redundant with the
-//     "Start rental session" flow, which is the same operation)
-//
-// All state-driven items move into Action Required when they need
-// attention. Navigation lives in Quick Actions. At-a-glance counts
-// live in Overview.
+// Stat derivations (all from the queries this page already ran):
+//   * active rentals    — adapted contracts with status ≠ returned
+//                         (same definition the old overview tile used)
+//   * awaiting review   — issued invoices count (demo: approvals queue)
+//   * returns this week — non-returned contracts with end_date within
+//                         the next 7 days (client-side date math only)
+//   * open damage cases — demo damage store entries not settled (live
+//                         damage lists load on /merchant/damages; the
+//                         dashboard never fetched them and still
+//                         doesn't — no new queries in a design phase)
 // =====================================================================
 
 export default function MerchantHome() {
   const t = useT();
-  const { dir } = useI18n();
+  const { locale, formatDate } = useI18n();
   const navigate = useNavigate();
   const {
     merchant,
-    signOutMerchant,
     merchantRentals: demoRentals,
     merchantApprovals,
     merchantDamages,
   } = useStore();
   const supabaseAuth = useSupabaseAuth();
-  // Phase 6C hidden diagnostics gesture — seven taps on the version line.
-  const tapVersion = useTapReveal(() => navigate('/diagnostics'));
 
   // ---------- Data fetching (two stages) ----------
   // Stage 1 (Phase 3B): own merchant identity reads through the memory
@@ -151,6 +138,7 @@ export default function MerchantHome() {
     }
   }, [contractsError, invoicesError]);
   const contractRows = contractsError ? [] : contractRowsData;
+  const issuedInvoices = invoicesError ? [] : issuedInvoicesData;
   const livePendingInvoices = invoicesError
     ? 0
     : (issuedInvoicesData?.length ?? null);
@@ -216,7 +204,7 @@ export default function MerchantHome() {
     }
   }, [supabaseAuth.configured, merchant, navigate]);
 
-  // ---------- Derived counts ----------
+  // ---------- Derived counts (see header comment for definitions) ----------
   const overdueCount = useMemo(
     () => merchantRentals.filter((r) => r.status === 'overdue').length,
     [merchantRentals],
@@ -230,6 +218,121 @@ export default function MerchantHome() {
     () => merchantDamages.filter((d) => d.status !== 'settled').length,
     [merchantDamages],
   );
+  // Returns due within the next 7 days (still out, end date upcoming).
+  const dueWeekCount = useMemo(() => {
+    const now = Date.now();
+    const week = now + 7 * 86_400_000;
+    return merchantRentals.filter((r) => {
+      if (r.status === 'returned') return false;
+      const end = new Date(r.endDate).getTime();
+      return !Number.isNaN(end) && end >= now && end <= week;
+    }).length;
+  }, [merchantRentals]);
+
+  // ---------- Attention feed ----------
+  // Only legitimate, already-loaded actionable states: overdue rentals,
+  // issued offers awaiting the customer, upcoming returns, and (demo)
+  // open damage cases. Capped at five rows — the full lists are one tap
+  // away on their own screens.
+  type FeedItem = {
+    key: string;
+    title: string;
+    chipLabel: string;
+    chipTone: StatusTone;
+    meta: ReactNode;
+    to: string;
+  };
+  const feed = useMemo<FeedItem[]>(() => {
+    const items: FeedItem[] = [];
+    for (const r of merchantRentals.filter((x) => x.status === 'overdue')) {
+      items.push({
+        key: `overdue-${r.id}`,
+        title: r.customerName,
+        chipLabel: t('merchant.rentals.status.overdue'),
+        chipTone: 'danger',
+        meta: (
+          <>
+            {t('merchant.home.feed.overdueSince', { date: formatDate(r.endDate) })}
+            {' · '}
+            <span dir="ltr" className="num">{r.contractRef}</span>
+          </>
+        ),
+        to: `/merchant/rentals/${r.id}`,
+      });
+    }
+    if (supabaseAuth.configured) {
+      for (const inv of issuedInvoices ?? []) {
+        items.push({
+          key: `inv-${inv.id}`,
+          title: t('merchant.home.feed.offerTitle', { ref: inv.invoice_number }),
+          chipLabel: t('journey.stages.review'),
+          chipTone: 'warn',
+          meta: (
+            <>
+              {t('merchant.home.feed.sentAt', {
+                date: formatDate(inv.issued_at ?? inv.created_at),
+              })}
+              {' · '}
+              <span dir="ltr" className="num">{inv.invoice_number}</span>
+            </>
+          ),
+          to: '/merchant/approvals',
+        });
+      }
+    } else {
+      for (const a of merchantApprovals) {
+        items.push({
+          key: `appr-${a.id}`,
+          title: `${a.item} — ${a.customerName}`,
+          chipLabel: t('journey.stages.review'),
+          chipTone: 'warn',
+          meta: (
+            <>
+              {t('merchant.home.feed.sentAt', { date: formatDate(a.submittedAt) })}
+              {' · '}
+              <span dir="ltr" className="num">{a.id}</span>
+            </>
+          ),
+          to: '/merchant/approvals',
+        });
+      }
+    }
+    for (const r of merchantRentals.filter((x) => x.status === 'due-soon')) {
+      items.push({
+        key: `due-${r.id}`,
+        title: r.customerName,
+        chipLabel: t('merchant.rentals.status.due-soon'),
+        chipTone: 'success',
+        meta: (
+          <>
+            {t('merchant.home.feed.dueOn', { date: formatDate(r.endDate) })}
+            {' · '}
+            <span dir="ltr" className="num">{r.contractRef}</span>
+          </>
+        ),
+        to: `/merchant/rentals/${r.id}`,
+      });
+    }
+    if (openDamageCount > 0) {
+      items.push({
+        key: 'damages',
+        title: t('merchant.home.feed.damageTitle', { count: openDamageCount }),
+        chipLabel: t('merchant.home.feed.damageChip'),
+        chipTone: 'danger',
+        meta: t('merchant.home.damageAlertHint'),
+        to: '/merchant/damages',
+      });
+    }
+    return items.slice(0, 5);
+  }, [
+    merchantRentals,
+    issuedInvoices,
+    merchantApprovals,
+    openDamageCount,
+    supabaseAuth.configured,
+    t,
+    formatDate,
+  ]);
 
   // ---------- Pre-render gate (demo only) ----------
   if (!supabaseAuth.configured && !merchant) return null;
@@ -241,212 +344,109 @@ export default function MerchantHome() {
   if (supabaseAuth.configured && (merchantLoading || dataLoading)) {
     return (
       <>
-        <Header title={t('merchant.home.title')} />
-        <Screen className="bg-canvas">
+        <Header title={t('merchant.home.heading')} />
+        <Screen className="bg-beige-100">
           <PageSkeleton rows={4} />
         </Screen>
+        <MerchantTabBar />
       </>
     );
   }
 
   const companyName = supabaseAuth.configured
-    ? liveMerchant?.company_name ?? (merchantLoading ? '…' : t('merchant.home.unknownMerchant'))
+    ? liveMerchant
+      ? resolveMerchantName(liveMerchant, locale, t('merchant.home.unknownMerchant'))
+      : t('merchant.home.unknownMerchant')
     : merchant?.companyName ?? '';
-
-  // ---------- Quick actions ----------
-  // Four entries only. Pending approvals deliberately omitted — it's a
-  // state-driven item that lives in Action Required when count > 0.
-  const quickActions: QuickAction[] = [
-    {
-      title: t('merchant.home.startSession'),
-      desc: t('merchant.home.startSessionDesc'),
-      icon: <SparkleIcon size={18} />,
-      to: '/merchant/session/new',
-      featured: true,
-    },
-    {
-      title: t('merchant.home.quickRentals'),
-      desc: t('merchant.home.quickRentalsDesc'),
-      icon: <PackageIcon size={18} />,
-      to: '/merchant/rentals',
-    },
-    {
-      title: t('merchant.home.quickDamages'),
-      desc: t('merchant.home.quickDamagesDesc'),
-      icon: <GavelIcon size={18} />,
-      to: '/merchant/damages',
-    },
-    {
-      title: t('merchant.home.quickHistory'),
-      desc: t('merchant.home.quickHistoryDesc'),
-      icon: <HistoryIcon size={18} />,
-      to: '/merchant/history',
-    },
-  ];
-
-  const hasActionRequired =
-    overdueCount > 0 || pendingCount > 0 || openDamageCount > 0;
+  const verified = supabaseAuth.configured ? Boolean(liveMerchant?.verified) : true;
 
   return (
     <>
-      <Header
-        title={t('merchant.home.title')}
-        trailing={<LangToggle tone="dark" />}
-      />
-      <Screen padded={false} className="bg-canvas">
-        <div className="px-5 pt-5 pb-24 space-y-5">
-          {/* ====== GREETING (compact, replaces big hero) ====== */}
-          <GreetingStrip
-            greeting={t('merchant.home.welcome', { name: companyName })}
-            subtitle={t('merchant.home.subtitle')}
-          />
+      <Screen padded={false} className="bg-beige-100">
+        <div className="px-5 pt-[calc(env(safe-area-inset-top)+22px)] pb-24 space-y-3">
+          {/* ====== M09 masthead ====== */}
+          <div className="flex items-center gap-2.5">
+            <div className="flex-1 min-w-0">
+              <div className="text-[13px] text-ink-500 truncate">{companyName}</div>
+              <h1 className="text-[19px] font-bold text-navy-700 leading-tight">
+                {t('merchant.home.heading')}
+              </h1>
+            </div>
+            <LangToggle compact />
+            {verified && (
+              <span className="inline-flex items-center gap-1 rounded-full bg-green-50 text-green-700 px-3 py-1.5 text-[11px] font-bold shrink-0">
+                <BadgeCheckIcon size={11} />
+                {t('merchant.profile.verified')}
+              </span>
+            )}
+          </div>
 
-          {/* ====== ACTION REQUIRED (conditional) ====== */}
-          {hasActionRequired && (
-            <section>
-              <SectionHeader title={t('merchant.home.alertsTitle')} />
-              <div className="space-y-2.5">
-                {pendingCount > 0 && (
-                  <AlertRow
-                    tone="warn"
-                    icon={<ReceiptIcon size={16} />}
-                    title={t('merchant.home.approvalsAlert', { count: pendingCount })}
-                    hint={t('merchant.home.approvalsAlertHint')}
-                    to="/merchant/approvals"
-                    cta={t('merchant.home.viewAlert')}
-                    dir={dir}
-                  />
-                )}
-                {overdueCount > 0 && (
-                  <AlertRow
-                    tone="danger"
-                    icon={<ClockIcon size={16} />}
-                    title={t('merchant.home.overdueAlert', { count: overdueCount })}
-                    hint={t('merchant.home.overdueAlertHint')}
-                    to="/merchant/rentals?filter=overdue"
-                    cta={t('merchant.home.viewAlert')}
-                    dir={dir}
-                  />
-                )}
-                {openDamageCount > 0 && (
-                  <AlertRow
-                    tone="warn"
-                    icon={<AlertIcon size={16} />}
-                    title={t('merchant.home.damageAlert', { count: openDamageCount })}
-                    hint={t('merchant.home.damageAlertHint')}
-                    to="/merchant/damages"
-                    cta={t('merchant.home.viewAlert')}
-                    dir={dir}
-                  />
-                )}
-              </div>
-            </section>
+          {/* ====== Stat tiles (2×2) ====== */}
+          <div className="grid grid-cols-2 gap-2.5 pt-1">
+            <StatTile value={activeCount} label={t('merchant.home.stats.active')} />
+            <StatTile
+              value={pendingCount}
+              label={t('merchant.home.stats.review')}
+              valueClass="text-warn-600"
+            />
+            <StatTile value={dueWeekCount} label={t('merchant.home.stats.dueWeek')} />
+            <StatTile
+              value={openDamageCount}
+              label={t('merchant.home.stats.damage')}
+              valueClass="text-danger-600"
+            />
+          </div>
+
+          {/* ====== Primary issue CTA ====== */}
+          <Link
+            to="/merchant/session/new"
+            className="flex items-center justify-center gap-2 h-13 w-full rounded-xl2 bg-green-500 text-white font-bold text-[14.5px] shadow-soft hover:bg-green-600 active:bg-green-600 transition-[background-color,transform] duration-200 ease-plush active:scale-[0.985] select-none"
+          >
+            <PlusIcon size={15} strokeWidth={2.5} />
+            {t('merchant.home.issueCta')}
+          </Link>
+
+          {/* ====== Attention feed ====== */}
+          <div className="text-[14px] font-bold text-navy-700 pt-1.5">
+            {t('merchant.home.attentionTitle')}
+          </div>
+          {feed.length === 0 ? (
+            <div className="rounded-[14px] bg-white ring-1 ring-beige-200 px-[18px] py-4 text-[12.5px] text-ink-500 leading-relaxed">
+              {t('merchant.home.attentionEmpty')}
+            </div>
+          ) : (
+            feed.map((item) => (
+              <Link key={item.key} to={item.to} className="block">
+                <div className="rounded-[14px] bg-white ring-1 ring-beige-200 px-[18px] py-[15px] space-y-2 transition-transform active:scale-[0.995]">
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="text-[13.5px] font-bold text-ink-900 truncate">
+                      {item.title}
+                    </span>
+                    <StatusChip size="sm" tone={item.chipTone} dot={false} label={item.chipLabel} />
+                  </div>
+                  <div className="text-[12px] text-ink-500 truncate">{item.meta}</div>
+                </div>
+              </Link>
+            ))
           )}
 
-          {/* ====== QUICK ACTIONS ====== */}
-          <section>
-            <SectionHeader title={t('merchant.home.quickActionsTitle')} />
-            <div className="space-y-2.5">
-              {quickActions.map((a) => (
-                <Link key={a.to} to={a.to} className="block">
-                  <Card
-                    padded
-                    interactive
-                    className={cn(
-                      'flex items-center gap-3',
-                      a.featured &&
-                        'bg-gradient-to-br from-lavender-300 via-lavender-400 to-lavender-500 ring-0 shadow-plush',
-                    )}
-                  >
-                    <span
-                      className={cn(
-                        'h-10 w-10 shrink-0 rounded-xl grid place-items-center ring-1 ring-inset',
-                        a.featured
-                          ? 'bg-white/15 text-white ring-white/20'
-                          : 'bg-canvas-100 text-ink-700 hairline',
-                      )}
-                    >
-                      {a.icon}
-                    </span>
-                    <div className="flex-1 min-w-0">
-                      <div
-                        className={cn(
-                          'text-[13.5px] font-semibold truncate',
-                          a.featured ? 'text-white' : 'text-ink-900',
-                        )}
-                      >
-                        {a.title}
-                      </div>
-                      <div
-                        className={cn(
-                          'mt-0.5 text-[12px] leading-relaxed truncate',
-                          a.featured ? 'text-white/75' : 'text-ink-400',
-                        )}
-                      >
-                        {a.desc}
-                      </div>
-                    </div>
-                    <ChevronIcon
-                      size={16}
-                      className={cn(
-                        'shrink-0',
-                        a.featured ? 'text-white/75' : 'text-ink-300',
-                        dir === 'rtl' ? 'rotate-180' : '',
-                      )}
-                    />
-                  </Card>
-                </Link>
-              ))}
-            </div>
-          </section>
-
-          {/* ====== OVERVIEW (three compact tiles) ====== */}
-          <section>
-            <SectionHeader title={t('merchant.home.summaryTitle')} />
-            <div className="grid grid-cols-3 gap-2.5">
-              <OverviewTile
-                label={t('merchant.home.summaryActive')}
-                value={activeCount}
-              />
-              <OverviewTile
-                label={t('merchant.home.summaryPending')}
-                value={pendingCount}
-              />
-              <OverviewTile
-                label={t('merchant.home.summaryDamages')}
-                value={openDamageCount}
-              />
-            </div>
-          </section>
-
-          {/* ====== SIGN OUT ====== */}
-          <div className="pt-2">
-            <Button
-              variant="secondary"
-              block
-              onClick={async () => {
-                if (supabaseAuth.configured) {
-                  try {
-                    await supabaseAuth.signOut();
-                  } catch (err) {
-                    logEvent('rpc_failure', 'warn', { op: 'merchant_sign_out' }, err);
-                  }
-                }
-                signOutMerchant();
-                navigate('/merchant/welcome', { replace: true });
-              }}
+          {/* ====== Secondary destinations (kept reachable: the design
+                     nav has no damages/history tab) ====== */}
+          <div className="grid grid-cols-2 gap-2.5 pt-1">
+            <Link
+              to="/merchant/damages"
+              className="flex items-center justify-center gap-2 h-11 rounded-xl2 bg-white ring-1 ring-beige-200 text-[12.5px] font-bold text-navy-700 hover:bg-beige-50 transition-colors"
             >
-              {t('merchant.home.signOut')}
-            </Button>
-            {/* Phase 6C: merchant version row — seven taps open the
-                hidden /diagnostics page. Reads as a plain build line. */}
-            <button
-              type="button"
-              onClick={tapVersion}
-              className="mt-3 w-full text-center text-[11px] text-ink-400 num cursor-default select-none"
+              <GavelIcon size={14} />
+              {t('merchant.home.quickDamages')}
+            </Link>
+            <Link
+              to="/merchant/history"
+              className="flex items-center justify-center gap-2 h-11 rounded-xl2 bg-white ring-1 ring-beige-200 text-[12.5px] font-bold text-navy-700 hover:bg-beige-50 transition-colors"
             >
-              {t('profile.version')} {releaseInfo.version}
-            </button>
+              <HistoryIcon size={14} />
+              {t('merchant.home.quickHistory')}
+            </Link>
           </div>
         </div>
       </Screen>
@@ -459,97 +459,24 @@ export default function MerchantHome() {
 // Pieces
 // =====================================================================
 
-function GreetingStrip({
-  greeting,
-  subtitle,
-}: {
-  greeting: string;
-  subtitle: string;
-}) {
-  return (
-    <div className="rounded-xl3 bg-white hairline shadow-soft px-5 py-4">
-      <div className="flex items-center gap-3">
-        <span className="h-1.5 w-6 rounded-full bg-lavender-400 shrink-0" aria-hidden />
-        <h1 className="editorial-title text-[20px] text-ink-900 leading-tight truncate">
-          {greeting}
-        </h1>
-      </div>
-      <p className="mt-2 text-[12.5px] text-ink-500 leading-relaxed ps-9">
-        {subtitle}
-      </p>
-    </div>
-  );
-}
-
-type QuickAction = {
-  title: string;
-  desc: string;
-  icon: ReactNode;
-  to: string;
-  featured?: boolean;
-};
-
-type AlertRowProps = {
-  tone: 'danger' | 'warn';
-  icon: ReactNode;
-  title: ReactNode;
-  hint: ReactNode;
-  cta: ReactNode;
-  to: string;
-  dir: 'rtl' | 'ltr';
-};
-
-function AlertRow({ tone, icon, title, hint, cta, to, dir }: AlertRowProps) {
-  const skin =
-    tone === 'danger'
-      ? 'bg-danger-50 ring-danger-500/25 text-danger-700'
-      : 'bg-warn-50 ring-warn-500/25 text-warn-700';
-  const iconSkin =
-    tone === 'danger' ? 'bg-danger-500/10 text-danger-600' : 'bg-warn-500/10 text-warn-600';
-  return (
-    <Link to={to} className="block">
-      <div
-        className={cn(
-          'rounded-xl2 ring-1 ring-inset px-3.5 py-3 flex items-center gap-3 transition-transform active:scale-[0.995]',
-          skin,
-        )}
-      >
-        <span
-          className={cn(
-            'h-9 w-9 shrink-0 rounded-xl grid place-items-center',
-            iconSkin,
-          )}
-        >
-          {icon}
-        </span>
-        <div className="min-w-0 flex-1">
-          <div className="text-[13px] font-semibold truncate">{title}</div>
-          <div className="mt-0.5 text-[11.5px] opacity-80 truncate">{hint}</div>
-        </div>
-        <div className="flex items-center gap-1 shrink-0 text-[12px] font-semibold">
-          {cta}
-          <ChevronIcon size={14} className={cn(dir === 'rtl' ? 'rotate-180' : '')} />
-        </div>
-      </div>
-    </Link>
-  );
-}
-
-function OverviewTile({
-  label,
+function StatTile({
   value,
+  label,
+  valueClass,
 }: {
-  label: ReactNode;
   value: number;
+  label: ReactNode;
+  valueClass?: string;
 }) {
   return (
-    <div className="rounded-xl2 bg-white hairline px-3 py-3 shadow-soft">
-      <div className="text-[10.5px] font-semibold uppercase tracking-[0.08em] text-ink-400 truncate">
-        {label}
-      </div>
-      <div className="mt-1.5 text-[22px] font-bold text-ink-900 num leading-none">
+    <div className="rounded-[14px] bg-white ring-1 ring-beige-200 px-4 py-[15px]">
+      <div
+        className={`text-[24px] font-bold leading-none num ${valueClass ?? 'text-navy-700'}`}
+        dir="ltr"
+      >
         {value}
       </div>
+      <div className="mt-1.5 text-[12px] text-ink-500 leading-snug">{label}</div>
     </div>
   );
 }

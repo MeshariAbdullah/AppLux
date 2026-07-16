@@ -38,7 +38,6 @@ import {
   maskMobile,
   type MobileIssue,
 } from '@/lib/mobile';
-import { MerchantStatusStrip } from '@/components/merchant/MerchantStatusStrip';
 import { CACHE_TTL, cacheKeys } from '@/lib/cache/keys';
 import { cacheInvalidatePrefix } from '@/lib/cache/memoryCache';
 import { useCachedQuery } from '@/lib/cache/useCachedQuery';
@@ -852,7 +851,7 @@ export default function MerchantRentalSession() {
 
           {session.step === 'start' && <StartCard t={t} onBegin={handleStart} />}
 
-          {session.step !== 'start' && (
+          {session.step !== 'start' && session.step !== 'issued' && (
             <VerifyCard
               t={t}
               dir={dir}
@@ -912,8 +911,7 @@ export default function MerchantRentalSession() {
 
           {(session.step === 'operation' ||
             session.step === 'eligibility' ||
-            session.step === 'contract' ||
-            session.step === 'issued') && (
+            session.step === 'contract') && (
             <OperationCard
               t={t}
               operation={session.operation}
@@ -927,8 +925,7 @@ export default function MerchantRentalSession() {
               active={session.step === 'operation'}
               locked={
                 session.step === 'eligibility' ||
-                session.step === 'contract' ||
-                session.step === 'issued'
+                session.step === 'contract'
               }
               loading={session.eligibility.loading}
               error={session.eligibility.error}
@@ -937,8 +934,7 @@ export default function MerchantRentalSession() {
           )}
 
           {(session.step === 'eligibility' ||
-            session.step === 'contract' ||
-            session.step === 'issued') && (
+            session.step === 'contract') && (
             <EligibilityCard
               t={t}
               verdict={verdict}
@@ -949,14 +945,14 @@ export default function MerchantRentalSession() {
               issueError={null}
               issueDisabled={false}
               active={session.step === 'eligibility'}
-              locked={session.step === 'contract' || session.step === 'issued'}
+              locked={session.step === 'contract'}
               onIssue={() => setStep('contract')}
               onReduce={() => setStep('operation')}
               onCancel={() => navigate('/merchant/home')}
             />
           )}
 
-          {(session.step === 'contract' || session.step === 'issued') && (
+          {session.step === 'contract' && (
             <ContractCard
               t={t}
               dir={dir}
@@ -966,8 +962,8 @@ export default function MerchantRentalSession() {
               rentalAmount={rentalAmount}
               originalItemValue={originalItemValue}
               formatCurrency={formatCurrency}
-              active={session.step === 'contract'}
-              locked={session.step === 'issued'}
+              active
+              locked={false}
               issuing={session.issue.submitting}
               issueError={session.issue.error}
               issueDisabled={supabaseAuth.configured && !merchantId}
@@ -2156,6 +2152,7 @@ function PreviewTile({
 function HandoffCard({
   t,
   invoice,
+  renter,
   navigate,
 }: {
   t: (k: string, v?: Record<string, string | number>) => string;
@@ -2164,45 +2161,93 @@ function HandoffCard({
   renter: ProfileRow | null;
   navigate: (path: string) => void;
 }) {
+  // Design M11 — centered success layout. Real invoice reference only;
+  // the approved four-stage journey with stage 2 (مراجعة العميل)
+  // current. No payment / note / Nafath mentions.
+  const STAGE_KEYS = [
+    'journey.stages.request',
+    'journey.stages.review',
+    'journey.stages.started',
+    'journey.stages.closure',
+  ];
+  const CURRENT = 1; // stage 2 of 4 — customer review
   return (
-    <>
-      <section className="rounded-xl3 bg-white hairline shadow-soft p-6 animate-reveal-up">
-        <div className="inline-flex items-center gap-1.5 rounded-full bg-white ring-1 ring-lavender-200 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-lavender-700 animate-stamp-in">
-          <BadgeCheckIcon size={11} />
-          {t('merchant.session.handoff.seal')}
-        </div>
-        <h3 className="mt-4 editorial-title text-[20px] text-ink-900 leading-tight">
-          {t('merchant.session.handoff.title')}
-        </h3>
-        <p className="mt-2 text-[13px] text-ink-500 leading-relaxed">
-          {t('merchant.session.handoff.body')}
-        </p>
+    <div className="flex flex-col items-center pt-6 animate-reveal-up">
+      <span className="h-[84px] w-[84px] rounded-full bg-green-700 text-white grid place-items-center ring-[14px] ring-green-50">
+        <CheckIcon size={34} strokeWidth={2.5} />
+      </span>
+      <h3 className="mt-6 text-[21px] font-bold text-navy-700 text-center">
+        {t('merchant.session.handoff.title')}
+      </h3>
+      <p className="mt-2 text-[13.5px] text-ink-600 text-center leading-[1.9] max-w-[280px]">
+        {renter?.full_name
+          ? t('merchant.session.handoff.bodyNamed', { name: renter.full_name })
+          : t('merchant.session.handoff.body')}
+      </p>
 
-        {/* Request number — the single identifier the merchant needs. */}
-        <div className="mt-5 rounded-xl2 bg-canvas-100 ring-1 ring-canvas-200 px-4 py-3">
-          <div className="text-[10.5px] font-semibold uppercase tracking-[0.12em] text-ink-500">
-            {t('merchant.session.handoff.requestNumberLabel')}
+      {/* Reference card: request number + review chip + stage dots */}
+      <div className="mt-5 w-full rounded-[14px] bg-white ring-1 ring-beige-200 p-[18px]">
+        <div className="flex items-center justify-between gap-3">
+          <div className="min-w-0">
+            <div className="text-[11.5px] text-ink-500">
+              {t('merchant.session.handoff.requestNumberLabel')}
+            </div>
+            <div className="mt-0.5 text-[14px] font-bold num truncate" dir="ltr">
+              {invoice.invoice_number}
+            </div>
           </div>
-          <div className="mt-1 font-semibold text-[15px] text-ink-900 num">
-            {invoice.invoice_number}
-          </div>
+          <span className="shrink-0 rounded-full bg-warn-50 text-warn-600 px-3 py-1.5 text-[11.5px] font-bold">
+            {t('merchant.session.handoff.statusChip')}
+          </span>
         </div>
-      </section>
-
-      {/* 4-step merchant-facing operational status — no customer journey
-          narration, no platform internals. */}
-      <MerchantStatusStrip t={t} currentStep="customer-review" />
-
-      <div className="text-center pt-2">
-        <button
-          type="button"
-          onClick={() => navigate('/merchant/home')}
-          className="text-[12.5px] text-ink-500 hover:text-ink-700 underline underline-offset-4 decoration-canvas-300 hover:decoration-ink-500"
-        >
-          {t('merchant.session.handoff.doneCta')}
-        </button>
+        <div className="mt-4 flex items-center" aria-hidden>
+          {STAGE_KEYS.map((_, i) => (
+            <span key={i} className="contents">
+              <span
+                className={cn(
+                  'shrink-0 rounded-full',
+                  i < CURRENT
+                    ? 'h-3 w-3 bg-green-700'
+                    : i === CURRENT
+                      ? 'h-4 w-4 bg-white border-[3px] border-green-500'
+                      : 'h-3 w-3 bg-navy-100/60',
+                )}
+              />
+              {i < STAGE_KEYS.length - 1 && (
+                <span
+                  className={cn(
+                    'flex-1 h-[2.5px]',
+                    i < CURRENT ? 'bg-green-700' : 'bg-navy-100/60',
+                  )}
+                />
+              )}
+            </span>
+          ))}
+        </div>
+        <div className="mt-2 text-[11.5px] font-semibold text-green-700">
+          {t('merchant.session.handoff.stageLine', {
+            current: CURRENT + 1,
+            total: STAGE_KEYS.length,
+            stage: t(STAGE_KEYS[CURRENT]),
+          })}
+        </div>
       </div>
-    </>
+
+      <button
+        type="button"
+        onClick={() => navigate('/merchant/rentals?filter=review')}
+        className="mt-[18px] w-full h-13 rounded-xl2 bg-navy-700 text-white font-bold text-[14.5px] hover:bg-navy-800 transition-colors"
+      >
+        {t('merchant.session.handoff.viewRentals')}
+      </button>
+      <button
+        type="button"
+        onClick={() => navigate('/merchant/home')}
+        className="mt-4 text-[13.5px] font-bold text-green-700 hover:text-green-800"
+      >
+        {t('merchant.session.handoff.doneCta')}
+      </button>
+    </div>
   );
 }
 

@@ -1236,10 +1236,14 @@
       },
       "handoff": {
         "seal": "Rental package issued",
-        "title": "Rental package issued",
-        "body": "The renter is continuing the next steps. You'll be notified when payment and Nafath approval are complete.",
+        "title": "Offer and contract issued",
+        "body": "We sent the offer and contract to the customer — the rental starts once they approve.",
         "requestNumberLabel": "Request number",
-        "doneCta": "Return to operations"
+        "doneCta": "Back to the dashboard",
+        "bodyNamed": "We sent the offer to {name}. The rental starts once the contract is approved.",
+        "statusChip": "Awaiting customer review",
+        "stageLine": "Stage {current} of {total} · {stage}",
+        "viewRentals": "View rentals"
       }
     },
     "login": {
@@ -1461,7 +1465,25 @@
       "quickHistory": "History",
       "quickHistoryDesc": "Closed and ended contracts",
       "signOut": "Sign out",
-      "branchesCount": "{count} branches"
+      "branchesCount": "{count} branches",
+      "heading": "Store dashboard",
+      "stats": {
+        "active": "Active rentals",
+        "review": "Awaiting customer review",
+        "dueWeek": "Returns this week",
+        "damage": "Open damage cases"
+      },
+      "issueCta": "Issue a new rental contract",
+      "attentionTitle": "Needs your attention",
+      "attentionEmpty": "Nothing needs your attention right now — everything is on track.",
+      "feed": {
+        "sentAt": "Sent {date}",
+        "overdueSince": "Return was due {date}",
+        "dueOn": "Return on {date}",
+        "offerTitle": "Rental offer {ref}",
+        "damageTitle": "{count} open damage cases",
+        "damageChip": "Damage"
+      }
     },
     "status": {
       "title": "Request status",
@@ -1495,7 +1517,9 @@
         "due-soon": "Due soon",
         "overdue": "Overdue",
         "returned": "Returned"
-      }
+      },
+      "filterReview": "Customer review",
+      "reviewStart": "Starts {date}"
     },
     "rental": {
       "title": "Rental tracking",
