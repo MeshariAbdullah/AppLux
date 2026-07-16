@@ -3,10 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { Header, Screen } from '@/components/layout';
 import {
   Button,
-  Card,
   CardDivider,
   PageSkeleton,
-  SectionHeader,
   StatusChip,
   type StatusTone,
 } from '@/components/ui';
@@ -34,19 +32,20 @@ type StateVisual = {
   badgeKey: string;
   titleKey: string;
   subtitleKey: string;
-  haloClass: string;
-  iconBox: string;
+  circle: string;
   icon: typeof ClockIcon;
 };
 
+// Design M07 — each state gets a tinted status circle over the beige
+// canvas: amber clock (pending), green badge (approved), red alert
+// (rejected).
 const STATE_VISUALS: Record<MerchantStatus, StateVisual> = {
   pending: {
     badgeTone: 'warn',
     badgeKey: 'merchant.pending.states.pending.badge',
     titleKey: 'merchant.pending.states.pending.title',
     subtitleKey: 'merchant.pending.states.pending.subtitle',
-    haloClass: 'bg-warn-500/25',
-    iconBox: 'bg-warn-500/20 ring-warn-400/30 text-warn-200',
+    circle: 'bg-warn-50 text-warn-600',
     icon: ClockIcon,
   },
   approved: {
@@ -54,8 +53,7 @@ const STATE_VISUALS: Record<MerchantStatus, StateVisual> = {
     badgeKey: 'merchant.pending.states.approved.badge',
     titleKey: 'merchant.pending.states.approved.title',
     subtitleKey: 'merchant.pending.states.approved.subtitle',
-    haloClass: 'bg-success-500/25',
-    iconBox: 'bg-success-500/20 ring-success-400/30 text-success-200',
+    circle: 'bg-green-50 text-green-700',
     icon: BadgeCheckIcon,
   },
   rejected: {
@@ -63,8 +61,7 @@ const STATE_VISUALS: Record<MerchantStatus, StateVisual> = {
     badgeKey: 'merchant.pending.states.rejected.badge',
     titleKey: 'merchant.pending.states.rejected.title',
     subtitleKey: 'merchant.pending.states.rejected.subtitle',
-    haloClass: 'bg-danger-500/25',
-    iconBox: 'bg-danger-500/20 ring-danger-400/30 text-danger-200',
+    circle: 'bg-danger-50 text-danger-600',
     icon: AlertIcon,
   },
 };
@@ -258,7 +255,7 @@ export default function MerchantPending() {
     return (
       <>
         <Header title={t('merchant.pending.headers.pending')} />
-        <Screen padded={false} className="bg-canvas">
+        <Screen padded={false} className="bg-beige-100">
           <div className="px-5 pt-5 pb-10">
             <PageSkeleton rows={4} />
           </div>
@@ -276,169 +273,156 @@ export default function MerchantPending() {
   return (
     <>
       <Header title={t(`merchant.pending.headers.${effectiveStatus}`)} />
-      <Screen padded={false} className="bg-canvas">
-        <div className="px-5 pt-5 pb-10 space-y-5">
-          {/* Hero */}
-          <div className="relative overflow-hidden rounded-xl3 bg-gradient-to-br from-ink-900 via-ink-800 to-ink-900 text-white p-6 shadow-plush">
-            <div
-              aria-hidden
-              className="pointer-events-none absolute inset-0 pattern-dots opacity-25"
-            />
-            <div
-              aria-hidden
-              className={`pointer-events-none absolute -top-10 end-[-15%] h-48 w-48 rounded-full ${visual.haloClass} blur-3xl`}
-            />
-            <div className="relative flex items-start justify-between gap-3">
-              <div className="min-w-0 flex-1">
-                <span className="inline-flex items-center gap-1.5 rounded-full bg-white/10 ring-1 ring-white/15 px-2.5 py-1 text-[11.5px] font-semibold">
-                  <HeroIcon size={13} />
-                  {t(visual.badgeKey)}
-                </span>
-                <h1 className="mt-4 editorial-title text-[26px] leading-tight text-white">
-                  {t(visual.titleKey)}
-                </h1>
-                <p className="mt-2.5 text-[13px] text-white/65 leading-relaxed max-w-[36ch]">
-                  {t(visual.subtitleKey)}
-                </p>
-              </div>
-              <span
-                className={`h-12 w-12 shrink-0 rounded-2xl ring-1 grid place-items-center ${visual.iconBox}`}
-              >
-                <HeroIcon size={22} />
-              </span>
-            </div>
+      <Screen padded={false} className="bg-beige-100">
+        <div className="px-5 pt-8 pb-10 flex flex-col items-center">
+          {/* M07 — centered status circle + title + subtitle */}
+          <span
+            className={`h-[76px] w-[76px] rounded-full grid place-items-center ${visual.circle}`}
+          >
+            <HeroIcon size={30} strokeWidth={1.8} />
+          </span>
+          <h1 className="mt-5 text-[20px] font-bold text-navy-700 text-center leading-snug">
+            {t(visual.titleKey)}
+          </h1>
+          <p className="mt-2 text-[13px] text-ink-600 text-center leading-[1.9] max-w-[280px]">
+            {t(visual.subtitleKey)}
+          </p>
 
-            <div className="relative mt-5 grid grid-cols-2 gap-3 text-[12px]">
-              <div>
-                <div className="text-white/55 uppercase tracking-wide text-[11px]">
+          {/* Request-id card — reference + status chip, then the
+              state-appropriate timestamp */}
+          <div className="mt-5 w-full rounded-xl2 bg-white ring-1 ring-beige-200 px-4 py-4 space-y-3">
+            <div className="flex items-center justify-between gap-3">
+              <div className="min-w-0">
+                <div className="text-[11.5px] text-ink-500">
                   {t('merchant.pending.requestId')}
                 </div>
-                <div className="mt-0.5 font-semibold num truncate">{view.refId}</div>
-              </div>
-              <div>
-                <div className="text-white/55 uppercase tracking-wide text-[11px]">
-                  {t(`merchant.pending.timestampLabel.${effectiveStatus}`)}
-                </div>
-                <div className="mt-0.5 font-semibold num">
-                  {formatDate(decisionAt ?? view.submittedAt)}
+                <div className="mt-0.5 text-[14px] font-bold num truncate" dir="ltr">
+                  {view.refId}
                 </div>
               </div>
+              <StatusChip
+                size="sm"
+                tone={visual.badgeTone}
+                dot
+                label={t(visual.badgeKey)}
+              />
+            </div>
+            <CardDivider />
+            <div className="flex items-center justify-between gap-3 text-[12px]">
+              <span className="text-ink-500">
+                {t(`merchant.pending.timestampLabel.${effectiveStatus}`)}
+              </span>
+              <span className="font-semibold text-ink-900 num">
+                {formatDate(decisionAt ?? view.submittedAt)}
+              </span>
             </div>
           </div>
 
-          {effectiveStatus === 'rejected' && (
-            <section>
-              <SectionHeader title={t('merchant.pending.rejection.title')} />
-              <Card padded className="space-y-2">
-                <div className="flex items-start gap-3">
-                  <span className="h-9 w-9 shrink-0 rounded-xl bg-danger-50 text-danger-600 grid place-items-center ring-1 ring-danger-100">
-                    <AlertIcon size={16} />
-                  </span>
-                  <p className="text-[13px] text-ink-800 leading-relaxed">
-                    {rejectionReason ||
-                      t('merchant.pending.rejection.fallback')}
-                  </p>
-                </div>
-                <div className="text-[11.5px] text-ink-400 num pt-1">
-                  {t('merchant.pending.rejection.decidedAt', {
-                    date: formatDate(decisionAt ?? view.submittedAt),
-                  })}
-                </div>
-              </Card>
-            </section>
+          {/* Rejection banner — demo decisions carry a reason; live
+              rejections deliberately do NOT expose admin decision_notes
+              (the neutral copy above already covers them). */}
+          {effectiveStatus === 'rejected' && rejectionReason && (
+            <div className="mt-3 w-full rounded-xl2 bg-danger-50 ring-1 ring-danger-500/20 px-4 py-3.5">
+              <div className="text-[12.5px] font-bold text-danger-700">
+                {t('merchant.pending.rejection.title')}
+              </div>
+              <p className="mt-1 text-[12.5px] text-danger-700 leading-[1.8]">
+                {rejectionReason}
+              </p>
+              <div className="mt-1.5 text-[11.5px] text-danger-600/80 num">
+                {t('merchant.pending.rejection.decidedAt', {
+                  date: formatDate(decisionAt ?? view.submittedAt),
+                })}
+              </div>
+            </div>
           )}
 
           {effectiveStatus === 'pending' && (
-            <section>
-              <SectionHeader title={t('merchant.pending.whatNextTitle')} />
-              <Card padded>
-                <ul className="space-y-3">
-                  <NextStep
-                    icon={<ShieldIcon size={14} />}
-                    label={t('merchant.pending.whatNext1')}
-                  />
-                  <NextStep
-                    icon={<WalletIcon size={14} />}
-                    label={t('merchant.pending.whatNext2')}
-                  />
-                  <NextStep
-                    icon={<BadgeCheckIcon size={14} />}
-                    label={t('merchant.pending.whatNext3')}
-                  />
-                </ul>
-              </Card>
-            </section>
+            <div className="mt-3 w-full rounded-xl2 bg-white ring-1 ring-beige-200 p-4">
+              <div className="text-[12.5px] font-bold text-navy-700 mb-3">
+                {t('merchant.pending.whatNextTitle')}
+              </div>
+              <ul className="space-y-3">
+                <NextStep
+                  icon={<ShieldIcon size={14} />}
+                  label={t('merchant.pending.whatNext1')}
+                />
+                <NextStep
+                  icon={<WalletIcon size={14} />}
+                  label={t('merchant.pending.whatNext2')}
+                />
+                <NextStep
+                  icon={<BadgeCheckIcon size={14} />}
+                  label={t('merchant.pending.whatNext3')}
+                />
+              </ul>
+            </div>
           )}
 
-          <section>
-            <SectionHeader title={t('merchant.pending.summaryTitle')} />
-            <Card padded className="space-y-3">
-              <div className="flex items-start gap-3">
-                <span className="h-10 w-10 rounded-xl bg-canvas-100 text-ink-700 grid place-items-center shrink-0">
-                  <BuildingIcon size={18} />
-                </span>
-                <div className="min-w-0 flex-1">
-                  <div className="text-[13.5px] font-semibold text-ink-900 truncate">
-                    {view.companyName}
-                  </div>
-                  <div className="mt-0.5 text-[12px] text-ink-400 num truncate">
-                    CR {view.commercialReg}
-                  </div>
+          {/* Application summary */}
+          <div className="mt-3 w-full rounded-xl2 bg-white ring-1 ring-beige-200 p-4 space-y-3">
+            <div className="text-[12.5px] font-bold text-navy-700">
+              {t('merchant.pending.summaryTitle')}
+            </div>
+            <div className="flex items-start gap-3">
+              <span className="h-10 w-10 rounded-xl bg-navy-50 text-navy-700 grid place-items-center shrink-0">
+                <BuildingIcon size={18} />
+              </span>
+              <div className="min-w-0 flex-1">
+                <div className="text-[13.5px] font-semibold text-ink-900 truncate">
+                  {view.companyName}
                 </div>
-                <StatusChip
-                  size="sm"
-                  tone={visual.badgeTone}
-                  dot
-                  label={t(visual.badgeKey)}
-                />
+                <div className="mt-0.5 text-[12px] text-ink-400 num truncate">
+                  CR {view.commercialReg}
+                </div>
               </div>
-              <CardDivider />
-              <Field
-                label={t('merchant.register.authorizedName')}
-                value={view.authorizedName}
-              />
-              {view.iban && (
-                <>
-                  <CardDivider />
-                  <Field
-                    label={t('merchant.register.iban')}
-                    value={<span className="num">{view.iban}</span>}
-                  />
-                </>
-              )}
-              {view.contactEmail && (
-                <>
-                  <CardDivider />
-                  <Field
-                    label={t('merchant.register.contactEmail')}
-                    value={view.contactEmail}
-                  />
-                </>
-              )}
-              {view.contactPhone && (
-                <>
-                  <CardDivider />
-                  <Field
-                    label={t('merchant.register.contactPhone')}
-                    value={<span className="num">+966 {view.contactPhone}</span>}
-                  />
-                </>
-              )}
-              {view.branchesCount > 0 && (
-                <>
-                  <CardDivider />
-                  <Field
-                    label={t('merchant.register.steps.branches')}
-                    value={t('merchant.home.branchesCount', {
-                      count: view.branchesCount,
-                    })}
-                  />
-                </>
-              )}
-            </Card>
-          </section>
+            </div>
+            <CardDivider />
+            <Field
+              label={t('merchant.register.authorizedName')}
+              value={view.authorizedName}
+            />
+            {view.iban && (
+              <>
+                <CardDivider />
+                <Field
+                  label={t('merchant.register.iban')}
+                  value={<span className="num">{view.iban}</span>}
+                />
+              </>
+            )}
+            {view.contactEmail && (
+              <>
+                <CardDivider />
+                <Field
+                  label={t('merchant.register.contactEmail')}
+                  value={view.contactEmail}
+                />
+              </>
+            )}
+            {view.contactPhone && (
+              <>
+                <CardDivider />
+                <Field
+                  label={t('merchant.register.contactPhone')}
+                  value={<span className="num">+966 {view.contactPhone}</span>}
+                />
+              </>
+            )}
+            {view.branchesCount > 0 && (
+              <>
+                <CardDivider />
+                <Field
+                  label={t('merchant.register.steps.branches')}
+                  value={t('merchant.home.branchesCount', {
+                    count: view.branchesCount,
+                  })}
+                />
+              </>
+            )}
+          </div>
 
-          <div className="space-y-2.5">
+          <div className="mt-5 w-full space-y-2.5">
             {/* Live mode: manual status refresh (also fired on focus).
                 Re-reads the application AND the profile role, so an
                 admin approval moves the user forward without a
@@ -569,7 +553,7 @@ function NextStep({
 }) {
   return (
     <li className="flex items-start gap-3">
-      <span className="h-8 w-8 shrink-0 rounded-xl bg-canvas-100 text-ink-700 grid place-items-center ring-1 hairline">
+      <span className="h-8 w-8 shrink-0 rounded-xl bg-green-50 text-green-700 grid place-items-center">
         {icon}
       </span>
       <span className="text-[13px] text-ink-700 leading-relaxed">{label}</span>

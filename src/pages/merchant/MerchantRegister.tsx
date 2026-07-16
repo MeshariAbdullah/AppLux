@@ -19,7 +19,13 @@ import {
   useSupabaseAuth,
 } from '@/lib/supabase';
 import { cn } from '@/lib/cn';
-import { ArrowIcon, BuildingIcon, CheckIcon, PlusIcon } from '@/components/icons';
+import {
+  ArrowIcon,
+  BuildingIcon,
+  CheckIcon,
+  MapPinIcon,
+  PlusIcon,
+} from '@/components/icons';
 
 // =====================================================================
 // Merchant registration — SEPARATE ACCOUNT from the start (merchant
@@ -401,42 +407,43 @@ export default function MerchantRegister() {
 
   return (
     <>
-      <Header
-        title={t('merchant.register.title')}
-        subtitle={t('merchant.register.step', { current: step + 1, total: STEPS.length })}
-        showBack={step === 0}
-        leading={
-          step > 0 ? (
-            <button
-              type="button"
-              onClick={goBack}
-              className="h-9 w-9 grid place-items-center rounded-full bg-canvas-100 text-ink-700 hover:bg-canvas-200"
-              aria-label={t('common.back')}
-            >
-              <ArrowIcon size={18} className={cn(dir === 'rtl' ? '' : 'rotate-180')} />
-            </button>
-          ) : undefined
-        }
-      />
-
-      <div className="px-4 pt-3">
-        <div className="flex gap-1.5">
+      {/* M02–M06 header: back square, title, LTR step counter, then the
+          five-segment progress bar (done = deep green, current = vibrant
+          green, upcoming = neutral). */}
+      <div className="bg-beige-100 px-5 pt-[calc(env(safe-area-inset-top)+16px)]">
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={goBack}
+            className="h-9 w-9 grid place-items-center rounded-[10px] bg-white text-navy-700 shadow-soft"
+            aria-label={t('common.back')}
+          >
+            <ArrowIcon size={16} className={cn(dir === 'rtl' ? '' : 'rotate-180')} />
+          </button>
+          <h1 className="flex-1 text-[16px] font-bold text-navy-700">
+            {t('merchant.register.title')}
+          </h1>
+          <span className="text-[12px] text-ink-500 num" dir="ltr">
+            {step + 1} / {STEPS.length}
+          </span>
+        </div>
+        <div className="mt-3.5 flex gap-1.5" aria-hidden>
           {STEPS.map((_, i) => (
             <span
               key={i}
               className={cn(
                 'h-1 flex-1 rounded-full transition-colors',
-                i <= step ? 'bg-ink-900' : 'bg-ink-100',
+                i < step ? 'bg-green-700' : i === step ? 'bg-green-500' : 'bg-navy-100/60',
               )}
             />
           ))}
         </div>
       </div>
 
-      <Screen>
+      <Screen className="bg-beige-100">
         <div>
-          <h1 className="text-[20px] font-bold text-ink-900">{t(current.titleKey)}</h1>
-          <p className="mt-1.5 text-[13px] text-ink-500 leading-relaxed">{t(current.subKey)}</p>
+          <h1 className="text-[18px] font-bold text-navy-700">{t(current.titleKey)}</h1>
+          <p className="mt-1 text-[12.5px] text-ink-500 leading-relaxed">{t(current.subKey)}</p>
         </div>
 
         <form
@@ -506,22 +513,63 @@ export default function MerchantRegister() {
                   className="num"
                 />
               </FormField>
-              <FormField label={t('merchant.register.category')} required error={errors.category}>
-                <Select
-                  value={values.category}
-                  onChange={onField('category')}
-                  invalid={Boolean(errors.category)}
+              {/* M03 category chips — 2-column grid with letter avatars.
+                  Same required validation; the selection is an active
+                  choice, never a default. */}
+              <div className="space-y-2">
+                <div className="text-[13px] font-semibold text-ink-800">
+                  {t('merchant.register.category')}
+                </div>
+                <div
+                  className="grid grid-cols-2 gap-2.5"
+                  role="radiogroup"
+                  aria-label={t('merchant.register.category')}
                 >
-                  <option value="" disabled>
-                    {t('merchant.register.categoryPh')}
-                  </option>
-                  {CATEGORY_KEYS.map((c) => (
-                    <option key={c} value={c}>
-                      {t(`merchant.register.categories.${c}`)}
-                    </option>
-                  ))}
-                </Select>
-              </FormField>
+                  {CATEGORY_KEYS.map((c) => {
+                    const label = t(`merchant.register.categories.${c}`);
+                    const selected = values.category === c;
+                    return (
+                      <button
+                        key={c}
+                        type="button"
+                        role="radio"
+                        aria-checked={selected}
+                        onClick={() => {
+                          setValues((v) => ({ ...v, category: c }));
+                          if (errors.category)
+                            setErrors((p) => ({ ...p, category: undefined }));
+                        }}
+                        className={cn(
+                          'flex flex-col items-center gap-2 rounded-[14px] px-3.5 py-4 transition-colors',
+                          selected
+                            ? 'bg-green-50 ring-[1.5px] ring-green-500'
+                            : 'bg-white ring-1 ring-beige-300 hover:ring-navy-200',
+                        )}
+                      >
+                        <span
+                          className={cn(
+                            'h-10 w-10 rounded-full grid place-items-center text-[15px] font-bold',
+                            selected ? 'bg-white text-green-700' : 'bg-beige-100 text-navy-700',
+                          )}
+                        >
+                          {label.charAt(0)}
+                        </span>
+                        <span
+                          className={cn(
+                            'text-[13px]',
+                            selected ? 'font-bold text-green-700' : 'font-semibold text-ink-800',
+                          )}
+                        >
+                          {label}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+                {errors.category && (
+                  <div className="text-[12px] text-danger-600">{errors.category}</div>
+                )}
+              </div>
             </>
           )}
 
@@ -581,10 +629,16 @@ export default function MerchantRegister() {
                 {values.branches.map((b, idx) => {
                   const be: BranchErrors = errors.branches?.[b.key] ?? {};
                   return (
-                    <Card key={b.key} padded className="space-y-3">
-                      <div className="flex items-center justify-between gap-2">
-                        <div className="text-[13.5px] font-semibold text-ink-900">
-                          {t('merchant.register.branchTitle', { index: idx + 1 })}
+                    <Card key={b.key} padded className="space-y-3 rounded-[14px]">
+                      {/* M05 branch-card header: green location badge +
+                          branch label + red remove action. */}
+                      <div className="flex items-center gap-3">
+                        <span className="h-9 w-9 shrink-0 rounded-[10px] bg-green-50 text-green-700 grid place-items-center">
+                          <MapPinIcon size={15} />
+                        </span>
+                        <div className="flex-1 text-[13.5px] font-bold text-navy-700 truncate">
+                          {b.name.trim() ||
+                            t('merchant.register.branchTitle', { index: idx + 1 })}
                         </div>
                         {values.branches.length > 1 && (
                           <button
@@ -595,7 +649,7 @@ export default function MerchantRegister() {
                                 branches: v.branches.filter((x) => x.key !== b.key),
                               }))
                             }
-                            className="text-[12px] font-medium text-danger-600 hover:underline"
+                            className="text-[12.5px] font-bold text-danger-600 hover:underline"
                           >
                             {t('merchant.register.removeBranch')}
                           </button>
@@ -651,15 +705,19 @@ export default function MerchantRegister() {
                   );
                 })}
               </div>
-              <Button
+              {/* M05 add action — green-tint pill on a dashed frame. */}
+              <button
                 type="button"
-                variant="secondary"
-                block
-                leading={<PlusIcon size={16} />}
                 onClick={() => setValues((v) => ({ ...v, branches: [...v.branches, newBranch()] }))}
+                className={cn(
+                  'flex w-full items-center justify-center gap-1.5 h-12 rounded-xl2',
+                  'bg-green-50 text-green-700 font-bold text-[13.5px]',
+                  'border-[1.5px] border-dashed border-green-200 hover:bg-green-100 transition-colors',
+                )}
               >
+                <PlusIcon size={15} />
                 {t('merchant.register.addBranch')}
-              </Button>
+              </button>
             </>
           )}
 
@@ -747,16 +805,31 @@ export default function MerchantRegister() {
             </div>
           )}
 
-          <div className="pt-2 space-y-2">
-            <Button type="submit" size="lg" block loading={submitting}>
-              {step === STEPS.length - 1
-                ? t('merchant.register.submit')
-                : t('common.continue')}
-            </Button>
+          {/* M02–M06 footer: السابق (outlined, 1fr) + التالي — {next
+              step} / إرسال الطلب (navy, 2fr). Safe-area padded; the
+              wizard never shows the tab bar so nothing can overlap. */}
+          <div className="pt-2 pb-[env(safe-area-inset-bottom)]">
+            <div className="flex gap-2.5">
+              <button
+                type="button"
+                onClick={goBack}
+                className={cn(
+                  'flex-1 h-13 rounded-xl2 bg-white text-navy-700 font-bold text-[14px]',
+                  'ring-[1.5px] ring-inset ring-beige-300 hover:bg-beige-50 transition-colors',
+                )}
+              >
+                {t('merchant.register.prev')}
+              </button>
+              <Button type="submit" size="lg" loading={submitting} className="flex-[2]">
+                {step === STEPS.length - 1
+                  ? t('merchant.register.submit')
+                  : t(`merchant.register.next.${step}`)}
+              </Button>
+            </div>
             {step === 0 && (
-              <div className="text-center text-[13px] text-ink-500">
+              <div className="pt-3 text-center text-[13px] text-ink-500">
                 {t('auth.haveAccount')}{' '}
-                <Link to="/merchant/login" className="text-gold-700 font-semibold">
+                <Link to="/merchant/login" className="font-bold text-navy-700 hover:text-green-700">
                   {t('merchant.entry.login')}
                 </Link>
               </div>

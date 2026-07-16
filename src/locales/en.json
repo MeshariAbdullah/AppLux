@@ -1272,32 +1272,32 @@
       "apply": "Apply to join"
     },
     "register": {
-      "title": "Merchant registration",
+      "title": "Merchant application",
       "intro": "Tell us about your business so we can start reviewing your application.",
       "step": "Step {current} of {total}",
       "steps": {
-        "company": "Company details",
-        "companySub": "Core information about your company and commercial registration.",
-        "authorized": "Authorized signatory",
-        "authorizedSub": "Details of the person authorized to approve contracts.",
+        "company": "Business information",
+        "companySub": "Your store name, commercial registration and category.",
+        "authorized": "Authorized representative",
+        "authorizedSub": "The person authorized to manage the account and sign.",
         "banking": "Banking details",
         "bankingSub": "Approved IBAN for receiving collections.",
         "contact": "Contact details",
         "contactSub": "Used by our approvals team to coordinate with you.",
-        "branches": "Branches",
-        "branchesSub": "Add branches that will serve customers via Lend.",
-        "credentials": "Sign-in details",
-        "credentialsSub": "The email and password you will use for the merchant dashboard.",
-        "review": "Review & submit",
-        "reviewSub": "Review everything before creating the account and submitting."
+        "branches": "Store branches",
+        "branchesSub": "Add at least one branch.",
+        "credentials": "Create the business account",
+        "credentialsSub": "The sign-in details you will use to manage your store.",
+        "review": "Review your application",
+        "reviewSub": "Check the details before submitting."
       },
-      "companyName": "Company name",
-      "companyNamePh": "Trade name as registered",
+      "companyName": "Store / business name",
+      "companyNamePh": "e.g. Durrat Al-Anaqa",
       "commercialReg": "Commercial registration number",
       "commercialRegPh": "10 digits",
-      "authorizedName": "Authorized person name",
+      "authorizedName": "Representative's full name",
       "authorizedNamePh": "As shown on National ID",
-      "authorizedId": "Authorized person ID",
+      "authorizedId": "Representative's National ID",
       "authorizedIdPh": "10 digits",
       "iban": "IBAN",
       "ibanPh": "SA + 22 digits",
@@ -1320,7 +1320,7 @@
       "removeBranch": "Remove branch",
       "noBranches": "No branches added yet",
       "noBranchesHint": "Add at least one branch to speed up approval.",
-      "submit": "Submit for approval",
+      "submit": "Submit application",
       "errors": {
         "required": "This field is required",
         "commercialReg": "Commercial registration must be 10 digits",
@@ -1337,7 +1337,7 @@
       "emailPh": "you@company.com",
       "password": "Password",
       "confirmPassword": "Confirm password",
-      "category": "Business category",
+      "category": "Store category",
       "categoryPh": "Choose the primary category",
       "categories": {
         "dress": "Dresses & fashion",
@@ -1371,7 +1371,15 @@
         "title": "You are signed in with another account",
         "body": "Creating a new merchant account requires signing out of the current account first.",
         "cta": "Sign out and continue"
-      }
+      },
+      "prev": "Back",
+      "next": {
+        "0": "Next — business information",
+        "1": "Next — representative",
+        "2": "Next — branches",
+        "3": "Next — review"
+      },
+      "addBranchTitle": "New branch"
     },
     "pending": {
       "title": "Application under review",
@@ -1387,18 +1395,18 @@
       "states": {
         "pending": {
           "badge": "Under review",
-          "title": "Application under review",
-          "subtitle": "We received your request. The Lend team will review it and get back to you within 1-3 business days."
+          "title": "Your application is under review",
+          "subtitle": "We usually review business details within one to three working days. We will email you as soon as a decision is made."
         },
         "approved": {
           "badge": "Approved",
-          "title": "Your business is approved",
-          "subtitle": "You can now issue rental contracts and promissory notes for customers."
+          "title": "Approved — welcome to Lend",
+          "subtitle": "Sign in and start issuing your contracts."
         },
         "rejected": {
           "badge": "Rejected",
-          "title": "We couldn't approve this application",
-          "subtitle": "Review the reason below, then update your details and resubmit."
+          "title": "We are sorry — application rejected",
+          "subtitle": "Your application was not approved at this time. Review your information or contact support for more details."
         }
       },
       "timestampLabel": {
@@ -1408,7 +1416,7 @@
       },
       "rejection": {
         "title": "Reason for rejection",
-        "fallback": "The application did not meet the current partner approval criteria.",
+        "fallback": "Your application was not approved at this time. Review your information or contact support for more details.",
         "decidedAt": "Decision issued on {date}",
         "demoReason": "We couldn't verify the IBAN — please update the details and resubmit."
       },
