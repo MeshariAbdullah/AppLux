@@ -1,16 +1,14 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Header, Screen } from '@/components/layout';
-import { Button, Card, FormField, Input } from '@/components/ui';
+import { Button, FormField, Input } from '@/components/ui';
 import {
-  BadgeCheckIcon,
-  BuildingIcon,
   EyeIcon,
   EyeOffIcon,
   InfoIcon,
   LockIcon,
-  ShieldIcon,
 } from '@/components/icons';
+import { LendLogo } from '@/components/brand/Logo';
 import { translateAuthError } from '@/lib/errors';
 import { logEvent } from '@/lib/observability/log';
 import { useT } from '@/lib/i18n';
@@ -181,35 +179,17 @@ export default function MerchantLogin() {
   return (
     <>
       <Header title={t('merchant.login.title')} showBack />
-      <Screen padded={false} className="bg-canvas">
+      <Screen padded={false} className="bg-beige-100">
         <div className="px-5 pt-5 pb-10 space-y-5">
-          {/* Hero */}
-          <div className="relative overflow-hidden rounded-xl3 bg-gradient-to-br from-ink-900 via-ink-800 to-ink-900 text-white p-6 shadow-plush">
-            <div
-              aria-hidden
-              className="pointer-events-none absolute inset-0 pattern-dots opacity-25"
-            />
-            <div
-              aria-hidden
-              className="pointer-events-none absolute -top-12 end-[-15%] h-48 w-48 rounded-full bg-gold-400/22 blur-3xl"
-            />
-            <div className="relative flex items-start gap-3">
-              <span className="h-11 w-11 shrink-0 rounded-2xl bg-white/10 ring-1 ring-white/15 grid place-items-center">
-                <BuildingIcon size={20} />
-              </span>
-              <div className="min-w-0 flex-1">
-                <span className="inline-flex items-center gap-1.5 rounded-full bg-white/10 ring-1 ring-white/15 px-2 py-0.5 text-[11px] font-semibold">
-                  <BadgeCheckIcon size={12} />
-                  {t('merchant.login.trust')}
-                </span>
-                <h1 className="mt-2 text-[20px] font-bold leading-tight">
-                  {t('merchant.login.title')}
-                </h1>
-                <p className="mt-1.5 text-[12.5px] text-white/70 leading-relaxed">
-                  {t('merchant.login.subtitle')}
-                </p>
-              </div>
-            </div>
+          {/* M08 masthead — centered mark, portal title, account-type chip */}
+          <div className="flex flex-col items-center gap-3 pt-6">
+            <LendLogo variant="mark" theme="light" size={52} />
+            <h1 className="text-[22px] font-bold text-navy-700 leading-tight">
+              {t('merchant.login.portal')}
+            </h1>
+            <span className="rounded-full bg-navy-50 text-navy-700 px-3.5 py-1.5 text-[11.5px] font-bold">
+              {t('merchant.login.badge')}
+            </span>
           </div>
 
           {/* Demo hint — DEMO MODE ONLY. Production merchants must
@@ -300,14 +280,19 @@ export default function MerchantLogin() {
             )}
 
             {wrongAccountType && (
-              <div className="rounded-xl2 bg-warn-50 ring-1 ring-warn-500/25 px-3.5 py-2.5 text-[12.5px] text-warn-800 leading-relaxed">
-                {t('merchant.login.errors.customerAccountOnMerchantLogin')}{' '}
-                <Link
-                  to="/auth/login"
-                  className="font-semibold text-lavender-700 underline underline-offset-4"
-                >
-                  {t('merchant.login.goToCustomerLogin')}
-                </Link>
+              <div className="rounded-xl2 bg-navy-50 ring-1 ring-navy-200 px-4 py-3 flex items-start gap-2.5 text-[12.5px] text-ink-800 leading-relaxed">
+                <span className="h-5 w-5 shrink-0 rounded-full bg-navy-700 text-white grid place-items-center text-[12px] font-bold num">
+                  i
+                </span>
+                <span>
+                  {t('merchant.login.errors.customerAccountOnMerchantLogin')}{' '}
+                  <Link
+                    to="/auth/login"
+                    className="font-bold text-navy-700 underline underline-offset-4"
+                  >
+                    {t('merchant.login.goToCustomerLogin')}
+                  </Link>
+                </span>
               </div>
             )}
 
@@ -317,18 +302,6 @@ export default function MerchantLogin() {
                 : t('merchant.login.submit')}
             </Button>
 
-            <Card padded className="flex items-start gap-3 bg-white">
-              <span className="h-9 w-9 shrink-0 rounded-xl bg-success-50 text-success-600 grid place-items-center ring-1 ring-success-500/15">
-                <ShieldIcon size={16} />
-              </span>
-              <div className="min-w-0 text-[12px] text-ink-600 leading-relaxed">
-                <div className="text-ink-900 font-semibold mb-0.5 text-[12.5px]">
-                  {t('merchant.login.security.title')}
-                </div>
-                <div>{t('merchant.login.security.hint')}</div>
-              </div>
-            </Card>
-
             <p className="text-center text-[11px] text-ink-400 leading-relaxed inline-flex items-center gap-1 justify-center w-full">
               <LockIcon size={11} />
               {t('auth.entry.encrypted')}
@@ -336,8 +309,8 @@ export default function MerchantLogin() {
 
             <div className="text-center text-[13px] text-ink-500">
               {t('merchant.login.noAccount')}{' '}
-              <Link to="/merchant/register" className="text-gold-700 font-semibold">
-                {t('merchant.login.register')}
+              <Link to="/merchant/register" className="font-bold text-navy-700 hover:text-green-700">
+                {t('merchant.login.apply')}
               </Link>
             </div>
           </form>

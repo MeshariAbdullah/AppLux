@@ -1087,13 +1087,17 @@
     "entry": {
       "eyebrow": "Lend for merchants",
       "title": "Grow your business with digital rental",
-      "subtitle": "Join as a verified merchant and issue rental contracts and digital promissory notes with ease.",
-      "feature1": "Instantly attested digital contracts",
-      "feature2": "Automated electronic collections",
-      "feature3": "Unified dashboard for all your branches",
-      "register": "Apply as a merchant",
-      "login": "Merchant sign in",
-      "switchToUser": "Not a merchant? Sign up as a customer"
+      "subtitle": "Join as a verified merchant and close digital rental contracts with your customers — no paper, no hassle.",
+      "feature1": "A documented contract for every rental",
+      "feature2": "Track returns and damage cases",
+      "feature3": "Manage your branches in one place",
+      "register": "Apply to join",
+      "login": "Merchant sign-in",
+      "switchToUser": "Not a merchant? Sign up as a customer",
+      "titleA": "Rent out from your store,",
+      "titleB": "smart and documented.",
+      "switchPrefix": "Customer?",
+      "switchLink": "Back to the customer portal"
     },
     "switchToMerchant": "Are you a merchant?",
     "openMerchantPortal": "Merchant portal",
@@ -1245,7 +1249,7 @@
       "emailPh": "name@company.com",
       "password": "Password",
       "submit": "Sign in",
-      "noAccount": "Haven't registered yet?",
+      "noAccount": "Don't have a merchant account?",
       "register": "Create merchant account",
       "trust": "Business portal",
       "demoTitle": "Demo mode",
@@ -1262,7 +1266,10 @@
         "passwordShort": "Password is too short (use at least 4 characters).",
         "customerAccountOnMerchantLogin": "This is a customer account. Use the customer sign-in page."
       },
-      "goToCustomerLogin": "Go to customer sign-in"
+      "goToCustomerLogin": "Go to customer sign-in",
+      "portal": "Merchant portal",
+      "badge": "Merchant account",
+      "apply": "Apply to join"
     },
     "register": {
       "title": "Merchant registration",
@@ -1941,6 +1948,23 @@
       "viewApprovals": "View approvals",
       "backToHome": "Back to dashboard",
       "previewTitle": "Invoice preview"
+    },
+    "tabs": {
+      "home": "Home",
+      "rentals": "Rentals",
+      "issue": "Issue",
+      "account": "Account"
+    },
+    "profile": {
+      "title": "Account",
+      "verified": "Verified",
+      "activity": "Category",
+      "branches": "Branches",
+      "accountStatus": "Account status",
+      "activeVerified": "Active & verified",
+      "inactive": "Inactive",
+      "representative": "Authorized representative",
+      "support": "Contact support"
     }
   },
   "admin": {

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { Header, Screen } from '@/components/layout';
+import { MerchantTabBar } from '@/components/merchant/MerchantTabBar';
 import {
   Card,
   EmptyState,
@@ -151,7 +152,7 @@ export default function MerchantRentals() {
       <>
         <Header title={t('merchant.rentals.title')} showBack />
         <Screen padded={false} className="bg-canvas">
-          <div className="px-5 pt-4 pb-10">
+          <div className="px-5 pt-4 pb-24">
             <PageSkeleton rows={4} />
           </div>
         </Screen>
@@ -167,7 +168,7 @@ export default function MerchantRentals() {
         showBack
       />
       <Screen padded={false} className="bg-canvas">
-        <div className="px-5 pt-4 pb-10 space-y-4">
+        <div className="px-5 pt-4 pb-24 space-y-4">
           <div
             className="flex gap-2 overflow-x-auto scrollbar-none -mx-1 px-1"
             role="tablist"
@@ -209,6 +210,7 @@ export default function MerchantRentals() {
           )}
         </div>
       </Screen>
+      <MerchantTabBar />
     </>
   );
 }

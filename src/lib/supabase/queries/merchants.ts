@@ -73,6 +73,21 @@ export async function fetchMerchant(id: string): Promise<MerchantRow | null> {
  * Fetch the merchant record owned by the current authenticated user.
  * Used by the merchant operational screens to discover their merchant id.
  */
+// Design D1: the merchant profile page shows the branch count. RLS
+// merchant_branches_owner_all scopes the read to the caller's own
+// merchant; admins pass via their policy.
+export async function listMerchantBranches(
+  merchantId: string,
+): Promise<Array<{ id: string; name: unknown; city: string }>> {
+  const sb = requireSupabase();
+  const { data, error } = await sb
+    .from('merchant_branches')
+    .select('id, name, city')
+    .eq('merchant_id', merchantId);
+  if (error) throw error;
+  return (data ?? []) as Array<{ id: string; name: unknown; city: string }>;
+}
+
 export async function fetchMyMerchant(
   userId: string,
 ): Promise<MerchantRow | null> {

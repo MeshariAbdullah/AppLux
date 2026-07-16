@@ -95,6 +95,7 @@ export {
   fetchMerchant,
   fetchMerchantsByIds,
   fetchMyMerchant,
+  listMerchantBranches,
 } from './queries/merchants';
 export type { ListMerchantsFilter } from './queries/merchants';
 export {

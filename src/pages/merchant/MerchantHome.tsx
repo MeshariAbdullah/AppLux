@@ -8,6 +8,7 @@ import {
   SectionHeader,
 } from '@/components/ui';
 import { LangToggle } from '@/components/auth/LangToggle';
+import { MerchantTabBar } from '@/components/merchant/MerchantTabBar';
 import {
   AlertIcon,
   ChevronIcon,
@@ -293,7 +294,7 @@ export default function MerchantHome() {
         trailing={<LangToggle tone="dark" />}
       />
       <Screen padded={false} className="bg-canvas">
-        <div className="px-5 pt-5 pb-10 space-y-5">
+        <div className="px-5 pt-5 pb-24 space-y-5">
           {/* ====== GREETING (compact, replaces big hero) ====== */}
           <GreetingStrip
             greeting={t('merchant.home.welcome', { name: companyName })}
@@ -449,6 +450,7 @@ export default function MerchantHome() {
           </div>
         </div>
       </Screen>
+      <MerchantTabBar />
     </>
   );
 }

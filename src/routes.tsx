@@ -65,6 +65,7 @@ const MerchantDamages = lazyWithReload(() => import('@/pages/merchant/MerchantDa
 const MerchantDamageNew = lazyWithReload(() => import('@/pages/merchant/MerchantDamageNew'));
 const MerchantDamageDetails = lazyWithReload(() => import('@/pages/merchant/MerchantDamageDetails'));
 const MerchantHistoryPage = lazyWithReload(() => import('@/pages/merchant/MerchantHistoryPage'));
+const MerchantProfile = lazyWithReload(() => import('@/pages/merchant/MerchantProfile'));
 const MerchantInvoiceNew = lazyWithReload(() => import('@/pages/merchant/MerchantInvoiceNew'));
 const MerchantRentalSession = lazyWithReload(() => import('@/pages/merchant/MerchantRentalSession'));
 
@@ -336,6 +337,16 @@ export function AppRoutes() {
           element={
             <RequireRole role="merchant" fallback="/merchant/welcome">
               <MerchantHistoryPage />
+            </RequireRole>
+          }
+        />
+        {/* Design D1 — "حسابي" tab: store profile, business info,
+            support, sign-out, release line + diagnostics gesture. */}
+        <Route
+          path="/merchant/profile"
+          element={
+            <RequireRole role="merchant" fallback="/merchant/welcome">
+              <MerchantProfile />
             </RequireRole>
           }
         />
