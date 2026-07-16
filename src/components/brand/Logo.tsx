@@ -91,6 +91,9 @@ function Mark({
   className?: string;
 } & Omit<SVGProps<SVGSVGElement>, 'width' | 'height'>) {
   const green = theme === 'mono' ? LEND_NAVY : LEND_GREEN;
+  // On dark navy surfaces the navy arc + dot flip to white (design M01)
+  // — mirrors the wordmark's dark-theme behavior; green is unchanged.
+  const navy = theme === 'dark' ? '#FFFFFF' : LEND_NAVY;
   return (
     <svg
       viewBox="0 0 40 40"
@@ -103,7 +106,7 @@ function Mark({
       {/* Top navy arc — semi-circle from left (180°) to right (0°) via top */}
       <path
         d="M 5 20 A 15 15 0 0 1 35 20"
-        stroke={LEND_NAVY}
+        stroke={navy}
         strokeWidth={4}
         strokeLinecap="round"
       />
@@ -115,7 +118,7 @@ function Mark({
         strokeLinecap="round"
       />
       {/* Central Navy dot — the certifying platform */}
-      <circle cx={20} cy={20} r={3} fill={LEND_NAVY} />
+      <circle cx={20} cy={20} r={3} fill={navy} />
     </svg>
   );
 }

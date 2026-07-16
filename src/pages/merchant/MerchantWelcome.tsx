@@ -35,13 +35,18 @@ export default function MerchantWelcome() {
 
   return (
     <div className="relative flex flex-col min-h-full bg-navy-700 text-white">
-      <div className="relative flex items-center justify-between px-5 pt-[calc(env(safe-area-inset-top)+18px)]">
-        <LendLogo variant="mark" theme="dark" size={40} />
-        <LangToggle tone="light" />
+      {/* Language control floats over the hero with minimal weight —
+          the M01 composition has no top bar, so nothing else takes
+          vertical space above the centered content. */}
+      <div className="absolute z-10 top-[calc(env(safe-area-inset-top)+14px)] end-5">
+        <LangToggle tone="light" compact />
       </div>
 
-      {/* Hero */}
-      <div className="relative flex-1 flex flex-col justify-center gap-4 px-7 pt-10 pb-6">
+      {/* Hero — M01: logo + eyebrow + headline + subtitle + bullets as
+          ONE vertically-centered block (uniform 18px rhythm), filling
+          the navy area above the sheet. */}
+      <div className="relative flex-1 flex flex-col justify-center gap-[18px] px-7 pt-[calc(env(safe-area-inset-top)+24px)] pb-6">
+        <LendLogo variant="mark" theme="dark" size={56} />
         {/* Latin eyebrow — bidi renders it LTR inline while alignment
             follows the RTL container (starts at the right edge). */}
         <div className="text-[11px] font-bold tracking-[0.25em] text-green-200 num">
@@ -52,10 +57,10 @@ export default function MerchantWelcome() {
           <br />
           <span className="text-green-500">{t('merchant.entry.titleB')}</span>
         </h1>
-        <p className="text-[13.5px] leading-[1.9] text-white/70 max-w-[30ch]">
+        <p className="text-[13.5px] leading-[1.9] text-white/70 max-w-[280px]">
           {t('merchant.entry.subtitle')}
         </p>
-        <ul className="mt-2 space-y-2.5">
+        <ul className="space-y-2.5">
           {features.map((label, i) => (
             <li key={i} className="flex items-center gap-2.5 text-[13px]">
               <span className="h-5 w-5 shrink-0 rounded-full bg-green-500/25 grid place-items-center text-green-500">
@@ -67,8 +72,9 @@ export default function MerchantWelcome() {
         </ul>
       </div>
 
-      {/* Action sheet */}
-      <div className="relative bg-beige-100 text-navy-700 rounded-t-3xl px-5 pt-6 pb-[calc(env(safe-area-inset-bottom)+24px)] space-y-3">
+      {/* Action sheet — M01: 24px top radius, 24/20/28 padding, 12px
+          row gap; sits flush at the bottom of the viewport. */}
+      <div className="relative bg-beige-100 text-navy-700 rounded-t-3xl px-5 pt-6 pb-[calc(env(safe-area-inset-bottom)+28px)] space-y-3">
         <Link
           to="/merchant/register"
           className={cn(
