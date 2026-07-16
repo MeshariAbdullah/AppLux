@@ -836,16 +836,16 @@ export default function MerchantRentalSession() {
             type="button"
             onClick={handleBack}
             aria-label={t('merchant.session.back')}
-            className="h-10 w-10 grid place-items-center rounded-full bg-white text-ink-800 hairline hover:bg-canvas-100 transition-[background-color,transform] duration-200 ease-plush active:scale-95"
+            className="h-9 w-9 grid place-items-center rounded-[10px] bg-white text-navy-700 shadow-soft transition-transform active:scale-95"
           >
             <ArrowIcon
-              size={18}
+              size={16}
               className={cn(dir === 'rtl' ? '' : 'rotate-180')}
             />
           </button>
         }
       />
-      <Screen padded={false} className="bg-canvas">
+      <Screen padded={false} className="bg-beige-100">
         <div className="px-5 pt-5 pb-10 space-y-5">
           <SessionEyebrow stepIndex={stepIndex} t={t} />
 
@@ -1005,16 +1005,34 @@ function SessionEyebrow({
       : stepIndex === STEPS.indexOf('issued')
         ? numberedTotal
         : Math.max(stepIndex, 0) + 1;
+  // M10 progress language — matches the M02 wizard: eyebrow + LTR
+  // counter over a segmented bar (done = deep green, current = vibrant
+  // green). The step count is the REAL count; the flow is deliberately
+  // never presented as shorter than it is.
   return (
-    <div className="flex items-baseline justify-between gap-3 px-1">
-      <div className="text-[10.5px] font-semibold uppercase tracking-[0.14em] text-lavender-700">
-        {t('merchant.session.eyebrow')}
+    <div className="px-1">
+      <div className="flex items-baseline justify-between gap-3">
+        <div className="text-[10.5px] font-semibold uppercase tracking-[0.14em] text-green-700">
+          {t('merchant.session.eyebrow')}
+        </div>
+        <div className="text-[11.5px] text-ink-500 num" dir="ltr">
+          {currentNumber} / {numberedTotal}
+        </div>
       </div>
-      <div className="text-[11px] text-ink-400 num">
-        {t('merchant.session.stepCounter', {
-          current: currentNumber,
-          total: numberedTotal,
-        })}
+      <div className="mt-2.5 flex gap-1.5" aria-hidden>
+        {Array.from({ length: numberedTotal }, (_, i) => (
+          <span
+            key={i}
+            className={cn(
+              'h-1 flex-1 rounded-full transition-colors',
+              i < currentNumber - 1
+                ? 'bg-green-700'
+                : i === currentNumber - 1
+                  ? 'bg-green-500'
+                  : 'bg-navy-100/60',
+            )}
+          />
+        ))}
       </div>
     </div>
   );
@@ -1038,20 +1056,20 @@ function StepShell({
   return (
     <section
       className={cn(
-        'rounded-xl3 bg-white hairline p-5 shadow-soft transition-opacity',
+        'rounded-[14px] bg-white ring-1 ring-beige-200 p-5 transition-opacity',
         locked && 'opacity-70',
-        active && 'ring-1 ring-lavender-300/70',
+        active && 'ring-[1.5px] ring-green-500',
       )}
     >
       <div className="flex items-start gap-3.5">
         <span
           className={cn(
-            'relative h-9 w-9 shrink-0 rounded-full grid place-items-center text-[12.5px] font-semibold num',
+            'relative h-9 w-9 shrink-0 rounded-full grid place-items-center text-[12.5px] font-bold num',
             locked
-              ? 'bg-lavender-400 text-white'
+              ? 'bg-green-700 text-white'
               : active
-                ? 'bg-white ring-2 ring-lavender-400 text-lavender-700 shadow-[0_0_0_4px_rgba(164,141,218,0.18)]'
-                : 'bg-canvas-100 text-ink-500 ring-1 ring-canvas-200',
+                ? 'bg-white border-[3px] border-green-500 text-green-700'
+                : 'bg-beige-100 text-ink-500 ring-1 ring-beige-200',
           )}
           aria-hidden
         >
@@ -1083,33 +1101,27 @@ function StartCard({
   t: (k: string) => string;
   onBegin: () => void;
 }) {
+  // Design language: solid deep-navy card with the vibrant-green CTA
+  // (no gradients — 2026 brand rules).
   return (
-    <section className="rounded-xl3 bg-gradient-to-br from-lavender-300 via-lavender-400 to-lavender-500 text-white p-6 shadow-plush overflow-hidden relative">
-      <span
-        aria-hidden
-        className="pointer-events-none absolute -top-12 end-[-12%] h-44 w-44 rounded-full bg-white/15 blur-3xl"
-      />
-      <div className="relative">
-        <span className="inline-flex items-center gap-1.5 rounded-full bg-white/15 ring-1 ring-white/25 px-2.5 py-1 text-[10.5px] font-semibold uppercase tracking-[0.14em]">
-          <SparkleIcon size={11} />
-          {t('merchant.session.start.eyebrow')}
-        </span>
-        <h2 className="mt-4 editorial-title text-[22px] leading-tight">
-          {t('merchant.session.start.title')}
-        </h2>
-        <p className="mt-2.5 text-[13px] text-white/80 leading-relaxed max-w-[36ch]">
-          {t('merchant.session.start.body')}
-        </p>
-        <Button
-          variant="secondary"
-          size="lg"
-          block
-          className="mt-5 bg-white text-lavender-700 hover:bg-white/95"
-          onClick={onBegin}
-        >
-          {t('merchant.session.start.cta')}
-        </Button>
-      </div>
+    <section className="rounded-xl3 bg-navy-700 text-white p-6 shadow-plush">
+      <span className="inline-flex items-center gap-1.5 rounded-full bg-white/10 ring-1 ring-white/20 px-2.5 py-1 text-[10.5px] font-semibold uppercase tracking-[0.14em] text-green-200">
+        <SparkleIcon size={11} />
+        {t('merchant.session.start.eyebrow')}
+      </span>
+      <h2 className="mt-4 text-[22px] font-bold leading-snug">
+        {t('merchant.session.start.title')}
+      </h2>
+      <p className="mt-2.5 text-[13px] text-white/70 leading-[1.9] max-w-[36ch]">
+        {t('merchant.session.start.body')}
+      </p>
+      <button
+        type="button"
+        onClick={onBegin}
+        className="mt-5 flex items-center justify-center h-13 w-full rounded-xl2 bg-green-500 text-white font-bold text-[15px] hover:bg-green-600 active:bg-green-600 transition-[background-color,transform] duration-200 ease-plush active:scale-[0.985] select-none"
+      >
+        {t('merchant.session.start.cta')}
+      </button>
     </section>
   );
 }
