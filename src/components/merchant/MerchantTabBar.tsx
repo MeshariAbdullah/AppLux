@@ -30,47 +30,32 @@ export function MerchantTabBar() {
     { to: '/merchant/profile', label: t('merchant.tabs.account'), icon: UserIcon },
   ];
 
+  // Design M09/M12/M16 bottom nav: WHITE bar, flat icons, active tab =
+  // deep-green icon + bold green label (no filled circle, no underline).
   return (
     <nav
-      className="sticky bottom-0 z-30 bg-beige-100/95 backdrop-blur-md pb-[env(safe-area-inset-bottom)] border-t border-beige-300/70"
+      className="sticky bottom-0 z-30 bg-white/95 backdrop-blur-md pb-[env(safe-area-inset-bottom)] border-t border-beige-200"
       aria-label="merchant"
     >
-      <ul className="grid grid-cols-4 px-2 pt-2 pb-1">
+      <ul className="grid grid-cols-4 px-2 pt-2.5 pb-3">
         {tabs.map((tab) => (
           <li key={tab.to}>
             <NavLink
               to={tab.to}
               className={({ isActive }) =>
                 cn(
-                  'group flex flex-col items-center justify-center gap-1.5 py-1.5',
-                  'text-[10.5px] font-medium tracking-tight transition-colors',
-                  isActive ? 'text-navy-700' : 'text-ink-400',
+                  'group flex flex-col items-center justify-center gap-1 py-0.5',
+                  'text-[11px] tracking-tight transition-colors',
+                  isActive
+                    ? 'text-green-700 font-bold'
+                    : 'text-ink-400 font-medium hover:text-navy-700',
                 )
               }
             >
-              {({ isActive }) => (
-                <>
-                  <span
-                    className={cn(
-                      'h-9 w-9 grid place-items-center rounded-full relative',
-                      'transition-[background-color,color,transform] duration-200 ease-plush',
-                      isActive
-                        ? 'bg-navy-700 text-white scale-100 shadow-soft'
-                        : 'bg-transparent text-ink-400 scale-95 group-hover:text-navy-700',
-                    )}
-                  >
-                    <tab.icon size={19} />
-                  </span>
-                  <span className="leading-none">{tab.label}</span>
-                  <span
-                    aria-hidden
-                    className={cn(
-                      'h-[3px] w-5 rounded-full transition-colors duration-200',
-                      isActive ? 'bg-green-500' : 'bg-transparent',
-                    )}
-                  />
-                </>
-              )}
+              <span className="grid place-items-center h-6 transition-colors duration-200 ease-plush">
+                <tab.icon size={20} />
+              </span>
+              <span className="leading-none">{tab.label}</span>
             </NavLink>
           </li>
         ))}

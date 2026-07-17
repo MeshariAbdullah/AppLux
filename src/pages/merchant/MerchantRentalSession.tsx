@@ -829,6 +829,7 @@ export default function MerchantRentalSession() {
 
   return (
     <>
+      {session.step !== 'issued' && (
       <Header
         title={t('merchant.session.title')}
         leading={
@@ -845,9 +846,16 @@ export default function MerchantRentalSession() {
           </button>
         }
       />
+      )}
       <Screen padded={false} className="bg-beige-100">
-        <div className="px-5 pt-5 pb-10 space-y-5">
-          <SessionEyebrow stepIndex={stepIndex} t={t} />
+        <div
+          className={
+            session.step === 'issued'
+              ? 'px-6 pt-[calc(env(safe-area-inset-top)+16px)] pb-10 flex flex-col justify-center min-h-full'
+              : 'px-5 pt-5 pb-10 space-y-5'
+          }
+        >
+          {session.step !== 'issued' && <SessionEyebrow stepIndex={stepIndex} t={t} />}
 
           {session.step === 'start' && <StartCard t={t} onBegin={handleStart} />}
 

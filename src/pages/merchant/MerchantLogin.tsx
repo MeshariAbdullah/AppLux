@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Header, Screen } from '@/components/layout';
+import { Screen } from '@/components/layout';
 import { Button, FormField, Input } from '@/components/ui';
 import {
+  ArrowIcon,
   EyeIcon,
   EyeOffIcon,
   InfoIcon,
@@ -178,9 +179,18 @@ export default function MerchantLogin() {
 
   return (
     <>
-      <Header title={t('merchant.login.title')} showBack />
       <Screen padded={false} className="bg-beige-100">
-        <div className="px-5 pt-5 pb-10 space-y-5">
+        {/* M08 has no header bar — a floating back square keeps the
+            navigation affordance (Capacitor has no browser chrome). */}
+        <button
+          type="button"
+          onClick={() => navigate(-1)}
+          aria-label={t('common.back')}
+          className="absolute z-10 top-[calc(env(safe-area-inset-top)+14px)] start-5 h-9 w-9 grid place-items-center rounded-[10px] bg-white text-navy-700 shadow-soft"
+        >
+          <ArrowIcon size={16} className="rtl:rotate-0 ltr:rotate-180" />
+        </button>
+        <div className="px-5 pt-[calc(env(safe-area-inset-top)+14px)] pb-10 space-y-5">
           {/* M08 masthead — centered mark, portal title, account-type chip */}
           <div className="flex flex-col items-center gap-3 pt-6">
             <LendLogo variant="mark" theme="light" size={52} />
@@ -296,7 +306,13 @@ export default function MerchantLogin() {
               </div>
             )}
 
-            <Button type="submit" size="lg" block loading={submitting}>
+            <Button
+              type="submit"
+              size="lg"
+              block
+              loading={submitting}
+              className="!bg-navy-700 hover:!bg-navy-800 active:!bg-navy-800"
+            >
               {submitting
                 ? t('auth.login.submitting')
                 : t('merchant.login.submit')}

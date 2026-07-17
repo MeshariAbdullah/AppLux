@@ -487,12 +487,13 @@ export default function MerchantDamageNew() {
                           {t(`merchant.damage.new.severity.desc.${o.key}`)}
                         </div>
                       </div>
+                      {/* Design M15: red radio for the selected case type. */}
                       <span
                         className={cn(
-                          'h-5 w-5 mt-0.5 rounded-full ring-1 grid place-items-center shrink-0',
+                          'h-5 w-5 mt-0.5 rounded-full grid place-items-center shrink-0',
                           active
-                            ? 'bg-ink-900 text-white ring-ink-900'
-                            : 'bg-white hairline',
+                            ? 'bg-danger-600 ring-1 ring-danger-600'
+                            : 'bg-white ring-1 hairline',
                         )}
                       >
                         {active && (
@@ -739,6 +740,7 @@ export default function MerchantDamageNew() {
               block
               disabled={!canSubmit || submitting}
               leading={<AlertIcon size={16} />}
+              className="!bg-danger-600 hover:!bg-danger-700 active:!bg-danger-700 disabled:!bg-danger-600/50"
             >
               {t('merchant.damage.new.submit')}
             </Button>

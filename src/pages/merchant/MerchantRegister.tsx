@@ -1,4 +1,4 @@
-import { useMemo, useState, type ChangeEvent, type ReactNode } from 'react';
+import { useMemo, useState, type ChangeEvent } from 'react';
 import { Link, Navigate, useNavigate } from 'react-router-dom';
 import { Header, Screen } from '@/components/layout';
 import {
@@ -440,20 +440,22 @@ export default function MerchantRegister() {
         </div>
       </div>
 
-      <Screen className="bg-beige-100">
-        <div>
-          <h1 className="text-[18px] font-bold text-navy-700">{t(current.titleKey)}</h1>
-          <p className="mt-1 text-[12.5px] text-ink-500 leading-relaxed">{t(current.subKey)}</p>
-        </div>
+      <Screen padded={false} className="bg-beige-100">
+        <div className="px-5 pt-5 pb-6 flex flex-col min-h-full">
+          <div>
+            <h1 className="text-[18px] font-bold text-navy-700">{t(current.titleKey)}</h1>
+            <p className="mt-1 text-[12.5px] text-ink-500 leading-relaxed">{t(current.subKey)}</p>
+          </div>
 
-        <form
-          className="space-y-4"
-          onSubmit={(e) => {
-            e.preventDefault();
-            void goNext();
-          }}
-          noValidate
-        >
+          <form
+            className="mt-5 flex-1 flex flex-col"
+            onSubmit={(e) => {
+              e.preventDefault();
+              void goNext();
+            }}
+            noValidate
+          >
+            <div className="space-y-4">
           {step === 0 && (
             <>
               <FormField label={t('merchant.register.email')} required error={errors.email}>
@@ -723,18 +725,16 @@ export default function MerchantRegister() {
 
           {step === 4 && (
             <div className="space-y-3">
-              <ReviewCard title={t('merchant.register.review.account')}>
+              {/* M06 — ONE compact card of label/value rows so the whole
+                  review + consent + footer fit a phone screen. */}
+              <div className="rounded-[14px] bg-white ring-1 ring-beige-200 px-[18px] py-1.5">
                 <ReviewRow label={t('merchant.register.email')} value={values.email} ltr />
-              </ReviewCard>
-              <ReviewCard title={t('merchant.register.review.business')}>
                 <ReviewRow label={t('merchant.register.companyName')} value={values.companyName} />
                 <ReviewRow label={t('merchant.register.commercialReg')} value={values.commercialReg} ltr />
                 <ReviewRow
                   label={t('merchant.register.review.categoryLabel')}
                   value={values.category ? t(`merchant.register.categories.${values.category}`) : '—'}
                 />
-              </ReviewCard>
-              <ReviewCard title={t('merchant.register.review.representative')}>
                 <ReviewRow label={t('merchant.register.authorizedName')} value={values.authorizedName} />
                 {/* Masked on review — the full id travels only inside the
                     signup payload. */}
@@ -744,21 +744,15 @@ export default function MerchantRegister() {
                   ltr
                 />
                 <ReviewRow label={t('merchant.register.contactPhone')} value={`+966 ${values.contactMobile}`} ltr />
-                <ReviewRow
-                  label={t('merchant.register.contactEmail')}
-                  value={values.contactEmail.trim() || values.email}
-                  ltr
-                />
-              </ReviewCard>
-              <ReviewCard title={t('merchant.register.review.branches')}>
                 {values.branches.map((b, i) => (
                   <ReviewRow
                     key={b.key}
                     label={t('merchant.register.branchTitle', { index: i + 1 })}
-                    value={`${b.name} · ${t(`register.cities.${b.city}`)} — ${b.address}`}
+                    value={`${b.name} — ${t(`register.cities.${b.city}`)}`}
+                    last={i === values.branches.length - 1}
                   />
                 ))}
-              </ReviewCard>
+              </div>
 
               {CONSENT_ENABLED && (
                 <label className="flex items-start gap-3 rounded-xl2 bg-white hairline p-3.5 cursor-pointer">
@@ -799,69 +793,88 @@ export default function MerchantRegister() {
             </div>
           )}
 
-          {errors.form && (
-            <div className="rounded-xl2 bg-danger-50 ring-1 ring-danger-500/25 px-3.5 py-2.5 text-[12.5px] text-danger-700 leading-relaxed">
-              {errors.form}
-            </div>
-          )}
-
-          {/* M02–M06 footer: السابق (outlined, 1fr) + التالي — {next
-              step} / إرسال الطلب (navy, 2fr). Safe-area padded; the
-              wizard never shows the tab bar so nothing can overlap. */}
-          <div className="pt-2 pb-[env(safe-area-inset-bottom)]">
-            <div className="flex gap-2.5">
-              <button
-                type="button"
-                onClick={goBack}
-                className={cn(
-                  'flex-1 h-13 rounded-xl2 bg-white text-navy-700 font-bold text-[14px]',
-                  'ring-[1.5px] ring-inset ring-beige-300 hover:bg-beige-50 transition-colors',
-                )}
-              >
-                {t('merchant.register.prev')}
-              </button>
-              <Button type="submit" size="lg" loading={submitting} className="flex-[2]">
-                {step === STEPS.length - 1
-                  ? t('merchant.register.submit')
-                  : t(`merchant.register.next.${step}`)}
-              </Button>
-            </div>
-            {step === 0 && (
-              <div className="pt-3 text-center text-[13px] text-ink-500">
-                {t('auth.haveAccount')}{' '}
-                <Link to="/merchant/login" className="font-bold text-navy-700 hover:text-green-700">
-                  {t('merchant.entry.login')}
-                </Link>
+            {errors.form && (
+              <div className="rounded-xl2 bg-danger-50 ring-1 ring-danger-500/25 px-3.5 py-2.5 text-[12.5px] text-danger-700 leading-relaxed">
+                {errors.form}
               </div>
             )}
-          </div>
-        </form>
+            </div>
+
+            {/* M02–M06 footer, pinned to the screen bottom: step 1 has a
+                single full-width NAVY CTA (the header back square covers
+                "previous"); steps 2–5 pair the navy CTA with the
+                outlined السابق. The wizard never shows the tab bar so
+                nothing can overlap. */}
+            <div className="mt-auto pt-6 pb-[env(safe-area-inset-bottom)]">
+              <div className="flex gap-2.5">
+                <Button
+                  type="submit"
+                  size="lg"
+                  loading={submitting}
+                  className={cn(
+                    '!bg-navy-700 hover:!bg-navy-800 active:!bg-navy-800',
+                    step === 0 ? 'flex-1' : 'flex-[2]',
+                  )}
+                >
+                  {step === STEPS.length - 1
+                    ? t('merchant.register.submit')
+                    : t(`merchant.register.next.${step}`)}
+                </Button>
+                {step > 0 && (
+                  <button
+                    type="button"
+                    onClick={goBack}
+                    className={cn(
+                      'flex-1 h-13 rounded-xl2 bg-white text-navy-700 font-bold text-[14px]',
+                      'ring-[1.5px] ring-inset ring-beige-300 hover:bg-beige-50 transition-colors',
+                    )}
+                  >
+                    {t('merchant.register.prev')}
+                  </button>
+                )}
+              </div>
+              {step === 0 && (
+                <div className="pt-3 text-center text-[13px] text-ink-500">
+                  {t('auth.haveAccount')}{' '}
+                  <Link to="/merchant/login" className="font-bold text-navy-700 hover:text-green-700">
+                    {t('merchant.entry.login')}
+                  </Link>
+                </div>
+              )}
+            </div>
+          </form>
+        </div>
       </Screen>
     </>
   );
 }
 
-function ReviewCard({ title, children }: { title: string; children: ReactNode }) {
+/** M06 compact row — muted label at the start, bold value at the end. */
+function ReviewRow({
+  label,
+  value,
+  ltr,
+  last,
+}: {
+  label: string;
+  value: string;
+  ltr?: boolean;
+  last?: boolean;
+}) {
   return (
-    <Card padded={false} className="overflow-hidden">
-      <div className="px-4 pt-3 pb-1.5 text-[10.5px] font-semibold uppercase tracking-[0.12em] text-ink-400">
-        {title}
-      </div>
-      <div className="px-4 pb-3 space-y-2">{children}</div>
-    </Card>
-  );
-}
-
-function ReviewRow({ label, value, ltr }: { label: string; value: string; ltr?: boolean }) {
-  return (
-    <div>
-      <div className="text-[11px] text-ink-400">{label}</div>
-      <div
-        className="text-[13px] font-semibold text-ink-900 break-words"
+    <div
+      className={cn(
+        'flex items-center justify-between gap-4 py-2.5',
+        !last && 'border-b border-beige-100',
+      )}
+    >
+      <span className="text-[12.5px] text-ink-500 shrink-0">{label}</span>
+      <span
+        className="text-[13px] font-bold text-ink-900 text-end truncate"
         dir={ltr ? 'ltr' : undefined}
       >
         {value || '—'}
-      </div>
+      </span>
     </div>
   );
 }

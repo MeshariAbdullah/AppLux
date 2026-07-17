@@ -390,19 +390,21 @@ export default function MerchantRentalClose() {
                   </div>
                 </div>
               </div>
-              <div className="grid grid-cols-3 gap-2 text-[11.5px]">
-                <MiniStat
+              {/* Design M14: full-width label/value rows (the old 3-col
+                  tiles clipped Hijri dates). */}
+              <div>
+                <SummaryRow
                   label={t('merchant.close.fields.start')}
-                  value={formatDate(rental.startDate)}
+                  value={<span className="num">{formatDate(rental.startDate)}</span>}
                 />
-                <MiniStat
+                <SummaryRow
                   label={t('merchant.close.fields.end')}
-                  value={formatDate(rental.endDate)}
+                  value={<span className="num">{formatDate(rental.endDate)}</span>}
                 />
-                <MiniStat
+                <SummaryRow
                   label={t('merchant.close.fields.rentalFee')}
-                  value={formatCurrency(rental.monthlyAmount)}
-                  numeric
+                  value={<span className="num font-bold">{formatCurrency(rental.monthlyAmount)}</span>}
+                  last
                 />
               </div>
             </Card>
@@ -498,6 +500,7 @@ export default function MerchantRentalClose() {
               loading={busy}
               disabled={!confirm}
               leading={<CheckIcon size={16} />}
+              className="!bg-navy-700 hover:!bg-navy-800 active:!bg-navy-800 disabled:!bg-navy-700/50"
             >
               {t('merchant.close.submit')}
             </Button>
@@ -523,27 +526,23 @@ export default function MerchantRentalClose() {
   );
 }
 
-function MiniStat({
+function SummaryRow({
   label,
   value,
-  numeric,
+  last,
 }: {
   label: React.ReactNode;
   value: React.ReactNode;
-  numeric?: boolean;
+  last?: boolean;
 }) {
   return (
-    <div className="rounded-xl bg-canvas-100 p-2.5">
-      <div className="text-[10.5px] uppercase tracking-wide text-ink-400">
-        {label}
-      </div>
-      <div
-        className={`mt-0.5 text-[12.5px] font-semibold text-ink-900 truncate ${
-          numeric ? 'num' : ''
-        }`}
-      >
-        {value}
-      </div>
+    <div
+      className={`flex items-center justify-between gap-3 py-2.5 ${
+        last ? '' : 'border-b border-beige-100'
+      }`}
+    >
+      <span className="text-[12.5px] text-ink-500 shrink-0">{label}</span>
+      <span className="text-[13px] font-semibold text-ink-900 text-end">{value}</span>
     </div>
   );
 }

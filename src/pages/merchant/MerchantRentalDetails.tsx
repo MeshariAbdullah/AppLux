@@ -607,24 +607,25 @@ export default function MerchantRentalDetails() {
           <div className="space-y-2.5 pt-1">
             {closureState === 'active' && (
               <>
-                <Button
-                  size="lg"
-                  block
-                  leading={<CheckIcon size={16} />}
+                {/* Design M13: solid NAVY close + red-outlined damage. */}
+                <button
+                  type="button"
                   onClick={() => navigate(`/merchant/rentals/${rental.id}/close`)}
+                  className="flex items-center justify-center gap-2 h-13 w-full rounded-xl2 bg-navy-700 text-white font-bold text-[14.5px] hover:bg-navy-800 transition-colors"
                 >
+                  <CheckIcon size={16} />
                   {t('merchant.rental.actions.close')}
-                </Button>
-                <Button
-                  variant="secondary"
-                  block
-                  leading={<AlertIcon size={16} />}
+                </button>
+                <button
+                  type="button"
                   onClick={() =>
                     navigate(`/merchant/rentals/${rental.id}/damage/new`)
                   }
+                  className="flex items-center justify-center gap-2 h-12 w-full rounded-xl2 bg-white text-danger-600 font-bold text-[13.5px] ring-[1.5px] ring-inset ring-danger-500/40 hover:bg-danger-50 transition-colors"
                 >
+                  <AlertIcon size={15} />
                   {t('merchant.rental.actions.reportDamage')}
-                </Button>
+                </button>
               </>
             )}
             {closureState === 'closed' && (

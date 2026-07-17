@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Header, Screen } from '@/components/layout';
+import { Screen } from '@/components/layout';
 import {
   Button,
   CardDivider,
@@ -253,14 +253,11 @@ export default function MerchantPending() {
   // Live loading (first fetch in flight).
   if (configured && liveApp === undefined) {
     return (
-      <>
-        <Header title={t('merchant.pending.headers.pending')} />
-        <Screen padded={false} className="bg-beige-100">
-          <div className="px-5 pt-5 pb-10">
-            <PageSkeleton rows={4} />
-          </div>
-        </Screen>
-      </>
+      <Screen padded={false} className="bg-beige-100">
+        <div className="px-5 pt-[calc(env(safe-area-inset-top)+24px)] pb-10">
+          <PageSkeleton rows={4} />
+        </div>
+      </Screen>
     );
   }
 
@@ -272,9 +269,8 @@ export default function MerchantPending() {
 
   return (
     <>
-      <Header title={t(`merchant.pending.headers.${effectiveStatus}`)} />
       <Screen padded={false} className="bg-beige-100">
-        <div className="px-5 pt-8 pb-10 flex flex-col items-center">
+        <div className="px-5 pt-[calc(env(safe-area-inset-top)+40px)] pb-10 flex flex-col items-center">
           {/* M07 — centered status circle + title + subtitle */}
           <span
             className={`h-[76px] w-[76px] rounded-full grid place-items-center ${visual.circle}`}
@@ -468,15 +464,15 @@ export default function MerchantPending() {
                     </Button>
                   </>
                 )}
-                <Button
-                  variant="ghost"
-                  block
+                <button
+                  type="button"
                   onClick={() => {
                     void handleSignOut();
                   }}
+                  className="flex items-center justify-center h-13 w-full rounded-xl2 bg-white text-navy-700 font-bold text-[14px] ring-[1.5px] ring-inset ring-navy-700 hover:bg-navy-50 transition-colors"
                 >
                   {t('merchant.pending.signOut')}
-                </Button>
+                </button>
               </>
             )}
 
@@ -499,15 +495,15 @@ export default function MerchantPending() {
                 >
                   {t('merchant.pending.continueToDashboard')}
                 </Button>
-                <Button
-                  variant="ghost"
-                  block
+                <button
+                  type="button"
                   onClick={() => {
                     void handleSignOut();
                   }}
+                  className="flex items-center justify-center h-13 w-full rounded-xl2 bg-white text-navy-700 font-bold text-[14px] ring-[1.5px] ring-inset ring-navy-700 hover:bg-navy-50 transition-colors"
                 >
                   {t('merchant.pending.signOut')}
-                </Button>
+                </button>
               </>
             )}
 
@@ -526,15 +522,15 @@ export default function MerchantPending() {
                     {t('merchant.pending.resubmit')}
                   </Button>
                 )}
-                <Button
-                  variant="ghost"
-                  block
+                <button
+                  type="button"
                   onClick={() => {
                     void handleSignOut();
                   }}
+                  className="flex items-center justify-center h-13 w-full rounded-xl2 bg-white text-navy-700 font-bold text-[14px] ring-[1.5px] ring-inset ring-navy-700 hover:bg-navy-50 transition-colors"
                 >
                   {t('merchant.pending.signOut')}
-                </Button>
+                </button>
               </>
             )}
           </div>

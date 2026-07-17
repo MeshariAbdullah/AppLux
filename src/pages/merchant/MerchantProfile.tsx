@@ -203,9 +203,6 @@ export default function MerchantProfile() {
                   }}
                   className="flex w-full items-center gap-3 px-4 py-3.5 text-start hover:bg-beige-50 transition-colors"
                 >
-                  <span className="h-9 w-9 rounded-xl bg-navy-50 text-navy-700 grid place-items-center shrink-0">
-                    <SupportIcon size={16} />
-                  </span>
                   <span className="flex-1 text-[13.5px] font-semibold text-ink-800">
                     {t('merchant.profile.support')}
                   </span>
@@ -236,24 +233,21 @@ export default function MerchantProfile() {
   );
 }
 
+// Design M16 rows: no leading icon boxes — label (start) + value (end).
 function Row({
-  icon,
   label,
   value,
   valueClassName,
 }: {
-  icon: ReactNode;
+  icon?: ReactNode;
   label: string;
   value: string;
   valueClassName?: string;
 }) {
   return (
-    <div className="flex items-center gap-3 px-4 py-3.5">
-      <span className="h-9 w-9 rounded-xl bg-beige-200/60 text-navy-700 grid place-items-center shrink-0">
-        {icon}
-      </span>
+    <div className="flex items-center gap-3 px-[18px] py-3.5">
       <span className="flex-1 text-[13.5px] font-semibold text-ink-800">{label}</span>
-      <span className={cn('text-[12.5px] text-ink-500', valueClassName)}>{value}</span>
+      <span className={cn('text-[12.5px] text-ink-500 text-end', valueClassName)}>{value}</span>
     </div>
   );
 }

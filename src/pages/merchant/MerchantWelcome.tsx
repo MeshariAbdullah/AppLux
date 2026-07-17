@@ -47,10 +47,11 @@ export default function MerchantWelcome() {
           the navy area above the sheet. */}
       <div className="relative flex-1 flex flex-col justify-center gap-[18px] px-7 pt-[calc(env(safe-area-inset-top)+24px)] pb-6">
         <LendLogo variant="mark" theme="dark" size={56} />
-        {/* Latin eyebrow — bidi renders it LTR inline while alignment
-            follows the RTL container (starts at the right edge). */}
-        <div className="text-[11px] font-bold tracking-[0.25em] text-green-200 num">
-          FOR MERCHANTS
+        {/* Latin eyebrow — the block stays start-aligned (right in RTL,
+            matching M01); only the inline span runs LTR for the Latin
+            glyph order. */}
+        <div className="text-[11px] font-bold tracking-[0.25em] text-green-200">
+          <span className="num" dir="ltr">FOR MERCHANTS</span>
         </div>
         <h1 className="text-[27px] font-bold leading-[1.55]">
           {t('merchant.entry.titleA')}
