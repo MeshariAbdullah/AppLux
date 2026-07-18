@@ -197,8 +197,8 @@
       "pill": "Demo"
     },
     "entrySubtitle": "Smart, documented rentals — a digital contract protects your right at every step.",
-    "roleCustomer": "I'm a customer — I want to rent",
-    "roleMerchant": "I'm a merchant — I rent out",
+    "createCustomerAccount": "Create customer account",
+    "merchantPrefix": "Are you a merchant?",
     "haveAccountPrefix": "Have an account?",
     "signInLink": "Sign in"
   },
@@ -584,7 +584,7 @@
     "note": "Rental eligibility is determined based on your profile and platform history.",
     "inactiveTitle": "Eligibility is not active yet",
     "tiers": {
-      "standard": "Standard",
+      "standard": "Active",
       "premium": "Premium",
       "elite": "Elite"
     }
@@ -758,8 +758,7 @@
     },
     "nav": {
       "next": "Continue",
-      "back": "Back",
-      "accept": "Agree & continue"
+      "back": "Back"
     },
     "invoice": {
       "title": "Rental invoice",

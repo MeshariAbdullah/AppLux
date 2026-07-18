@@ -10,16 +10,16 @@ import { cn } from '@/lib/cn';
 // =====================================================================
 // Public entry — customer design C01 (approved Conflict-1 decision).
 // A deep-navy splash gate: brand mark + wordmark, the locked slogan,
-// one short subtitle, then a beige action sheet with the two-role
-// picker (customer solid navy / merchant outlined) and the sign-in
-// link. The previous marketing surfaces (audience toggle, workflow
-// preview, trust strip, partner strip + discovery sheet and its
-// public listMerchants fetch) are removed per the approved decision;
-// store discovery lives at /stores.
+// one short subtitle, then a beige action sheet. Test-fix Bug 3
+// (approved): the sheet is customer-first — create customer account
+// (solid navy) + customer sign-in link; the merchant portal is a
+// SMALL secondary text link, not an equal primary button; the
+// terms/privacy line is removed from this screen (MerchantWelcome
+// keeps its own).
 //
 // Preserved: every destination (/auth/register, /auth/login,
-// /merchant/welcome, demo-only /admin/home), the compact language
-// toggle, and the terms line.
+// /merchant/welcome, demo-only /admin/home) and the compact language
+// toggle. No auth behavior changes.
 // =====================================================================
 
 export default function Welcome() {
@@ -62,20 +62,7 @@ export default function Welcome() {
             'focus:outline-none',
           )}
         >
-          {t('welcome.roleCustomer')}
-        </Link>
-        <Link
-          to="/merchant/welcome"
-          className={cn(
-            'flex items-center justify-center h-13 w-full rounded-xl2 px-5',
-            'bg-white text-navy-700 font-bold text-[15px] tracking-tight select-none',
-            'ring-[1.5px] ring-inset ring-navy-700',
-            'hover:bg-navy-50 active:bg-navy-50',
-            'transition-[background-color,transform] duration-200 ease-plush active:scale-[0.985]',
-            'focus:outline-none',
-          )}
-        >
-          {t('welcome.roleMerchant')}
+          {t('welcome.createCustomerAccount')}
         </Link>
 
         <div className="text-center text-[13px] text-ink-500 pt-0.5">
@@ -85,6 +72,18 @@ export default function Welcome() {
             className="font-bold text-green-700 hover:text-green-800"
           >
             {t('welcome.signInLink')}
+          </Link>
+        </div>
+
+        {/* Bug 3: merchant entry demoted to a small secondary text
+            link — same /merchant/welcome destination, no button. */}
+        <div className="text-center text-[12px] text-ink-400 pt-0.5">
+          {t('welcome.merchantPrefix')}{' '}
+          <Link
+            to="/merchant/welcome"
+            className="font-bold text-navy-700 hover:text-navy-800"
+          >
+            {t('welcome.merchantCtaShort')}
           </Link>
         </div>
 
@@ -103,10 +102,6 @@ export default function Welcome() {
             </span>
           </Link>
         )}
-
-        <p className="text-center text-[11px] text-ink-400 leading-relaxed px-6">
-          {t('welcome.terms')}
-        </p>
       </div>
     </div>
   );

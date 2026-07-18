@@ -13,6 +13,7 @@ import {
 } from '@/components/ui';
 import {
   AlertIcon,
+  ArrowIcon,
   BadgeCheckIcon,
   CheckIcon,
   ClockIcon,
@@ -1003,6 +1004,15 @@ function Field({ label, value }: { label: ReactNode; value: ReactNode }) {
 
 /* --------- Footer --------- */
 
+// Test-fix Bug 12 — explicit previous/next step navigation:
+//   * Previous renders ONLY when a previous step exists (hidden on the
+//     first step; the header back remains the way to leave the flow).
+//   * Next renders ONLY when a following step exists — the confirm
+//     step has NO next arrow; the approval button inside the step is
+//     the final action and stays the only primary.
+//   * Arrows navigate between existing steps one at a time and never
+//     submit or mutate anything.
+//   * Arrow glyphs flip with the reading direction (AR RTL / EN LTR).
 function StepFooter({
   step,
   onBack,
@@ -1013,11 +1023,26 @@ function StepFooter({
   onNext: () => void;
 }) {
   const t = useT();
+  const { dir } = useI18n();
+  const prevButton = (
+    <button
+      type="button"
+      onClick={onBack}
+      className="flex-1 h-11 rounded-xl2 bg-white text-navy-700 font-bold text-[13.5px] ring-[1.5px] ring-inset ring-beige-300 hover:bg-beige-50 transition-colors inline-flex items-center justify-center gap-1.5"
+    >
+      <ArrowIcon
+        size={13}
+        className={cn('shrink-0', dir === 'ltr' && 'rotate-180')}
+      />
+      {t('review.nav.back')}
+    </button>
+  );
   if (step === 'confirm') {
     return (
-      <div className="sticky bottom-0 z-20 border-t border-ink-100 bg-white/95 backdrop-blur px-4 py-3 pb-[calc(env(safe-area-inset-bottom)+12px)]">
-        <div className="flex items-center gap-2 text-[11.5px] text-ink-400">
-          <ClockIcon size={14} />
+      <div className="sticky bottom-0 z-20 border-t border-beige-200 bg-white/95 backdrop-blur px-4 py-3 pb-[calc(env(safe-area-inset-bottom)+12px)] flex items-center gap-3">
+        {prevButton}
+        <div className="flex-[2] flex items-center gap-2 text-[11.5px] text-ink-400 min-w-0">
+          <ClockIcon size={14} className="shrink-0" />
           <span>{t(ENABLE_PAYMENTS_AND_NOTES ? 'review.confirm.nafithNote' : 'review.confirm.footerSimple')}</span>
         </div>
       </div>
@@ -1030,16 +1055,16 @@ function StepFooter({
         variant="primary"
         className="flex-[2] !bg-navy-700 hover:!bg-navy-800 active:!bg-navy-800"
         onClick={onNext}
+        trailing={
+          <ArrowIcon
+            size={14}
+            className={cn('shrink-0', dir === 'rtl' && 'rotate-180')}
+          />
+        }
       >
-        {step === 'contract' ? t('review.nav.accept') : t('review.nav.next')}
+        {t('review.nav.next')}
       </Button>
-      <button
-        type="button"
-        onClick={onBack}
-        className="flex-1 h-11 rounded-xl2 bg-white text-navy-700 font-bold text-[13.5px] ring-[1.5px] ring-inset ring-beige-300 hover:bg-beige-50 transition-colors"
-      >
-        {t('review.nav.back')}
-      </button>
+      {step !== 'invoice' && prevButton}
     </div>
   );
 }
