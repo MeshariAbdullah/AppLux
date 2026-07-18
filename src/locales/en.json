@@ -69,6 +69,10 @@
     "conflict": "This action was already completed or is no longer available. Refresh to see the latest state.",
     "validation": "Some of the submitted details are invalid. Review them and try again.",
     "timeout": "The request took too long. Please try again.",
+    "receiptPhotosLocked": "The receipt photos were already confirmed — they can no longer be changed.",
+    "receiptPhotosMax": "A maximum of four photos per contract.",
+    "receiptPhotosMin": "Add at least one photo before confirming.",
+    "receiptPhotosConfirmRequired": "The rental cannot activate until the receipt photos are uploaded and confirmed.",
     "approvedButProvisioningFailed": "The application was approved, but merchant provisioning failed. Approve again to retry — provisioning is safe to re-run.",
     "boundary": {
       "title": "Something went wrong",
@@ -621,15 +625,9 @@
       "subtitle": "Once a partner issues you an invoice and you sign, every rental is documented in this section.",
       "cta": "Explore partner boutiques"
     },
-    "handover": {
-      "title": "Required: photo of the product",
-      "hint": "Before you receive the item from the merchant, capture a photo. This documents the item's condition at handover for both sides.",
-      "capture": "Take handover photo",
-      "retake": "Retake photo",
-      "done": "Handover photo captured",
-      "captureFor": "Capture handover photo for {ref}",
-      "uploading": "Uploading…",
-      "uploadFailed": "Upload failed — the photo was saved locally. Try again when you have a connection."
+    "receipt": {
+      "documented": "Item receipt documented with photos",
+      "photoAlt": "Receipt photo {n}"
     }
   },
   "notifications": {
@@ -754,7 +752,25 @@
     "steps": {
       "invoice": "Offer",
       "contract": "Contract",
-      "confirm": "Confirm"
+      "confirm": "Confirm",
+      "photos": "Receipt"
+    },
+    "photos": {
+      "title": "Item receipt photos",
+      "subtitle": "Take 1 to 4 clear photos of the item at receipt. They document the item's condition and protect your rights.",
+      "lockedSubtitle": "The receipt photos are confirmed and saved on the contract record. Finish activation to start the rental.",
+      "addFirst": "Add the receipt photo",
+      "addMore": "Add photo",
+      "uploading": "Uploading photo…",
+      "remove": "Remove photo {n}",
+      "photoAlt": "Receipt photo {n}",
+      "countLine": "{count} of {max} photos",
+      "lockHint": "Once confirmed, the photos are locked permanently — they cannot be deleted, replaced, or retaken.",
+      "confirmCta": "Confirm photos & activate rental",
+      "confirming": "Confirming photos and activating…",
+      "retryActivate": "Continue rental activation",
+      "minHint": "At least one photo is required to activate the rental.",
+      "afterHint": "After confirmation the rental activates immediately and the merchant is notified."
     },
     "nav": {
       "next": "Continue",
@@ -825,12 +841,12 @@
       "afterHint": "After approval you continue to payment, then we hand you off to Nafath to sign the promissory note.",
       "processing": "Recording your approval…",
       "recording": "Confirming approval & continuing to payment",
-      "commitmentBodySimple": "Once you confirm, the rental activates immediately and the merchant is notified.",
+      "commitmentBodySimple": "Once you confirm, you move straight to documenting the item receipt with photos; the rental then activates and the merchant is notified.",
       "consent3Simple": "I agree to activate the rental and start its period per the contract above",
-      "commitActionSimple": "I agree — activate the rental",
-      "recordingSimple": "Confirming approval and activating the rental",
-      "afterHintSimple": "After approving, the rental starts immediately and its details appear on the tracking page.",
-      "footerSimple": "Approving activates the rental immediately."
+      "commitActionSimple": "I agree — continue to receipt photos",
+      "recordingSimple": "Confirming approval and moving to receipt photos",
+      "afterHintSimple": "After approving you move to the receipt-photos step — the rental activates only after you confirm them.",
+      "footerSimple": "After approval: document the receipt with photos, then the rental activates."
     },
     "framing": {
       "eyebrow": "Entering a rental",
@@ -1074,6 +1090,11 @@
         "nafithAttested": "Attested via Nafith",
         "active": "Contract active",
         "ended": "Contract ended"
+      },
+      "receiptPending": {
+        "title": "Receipt documentation incomplete",
+        "body": "The rental cannot start until the item receipt photos are uploaded and confirmed inside the acceptance flow.",
+        "cta": "Complete receipt documentation"
       }
     },
     "note": {

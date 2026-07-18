@@ -52,7 +52,17 @@ const RPC_UNAUTHORIZED_CODES = new Set([
   'P0081', // merchant_set_customer_national_id — not authorised
   'P0085', // merchant_set_customer_national_id — target not customer
   'P0100', // profiles guard — role/account_status self-change blocked
+  'P0112', // receipt photos — not the contract customer
 ]);
+
+/** Receipt-photo flow (Bugs 17/19) — codes with dedicated copy so the
+ *  customer knows exactly which product rule stopped the action. */
+const RECEIPT_PHOTO_CODES: Record<string, string> = {
+  P0113: 'errors.receiptPhotosLocked', // confirmed → immutable
+  P0115: 'errors.receiptPhotosMax', // 4-photo cap reached
+  P0116: 'errors.receiptPhotosMin', // confirm needs ≥1 photo
+  P0117: 'errors.receiptPhotosConfirmRequired', // activation gate
+};
 
 /** RPC guard codes that mean "the submitted details are invalid". */
 const RPC_VALIDATION_CODES = new Set([
@@ -76,6 +86,9 @@ export function translateError(
   if (code) {
     if (RPC_UNAUTHORIZED_CODES.has(code)) return t('errors.unauthorized');
     if (RPC_VALIDATION_CODES.has(code)) return t('errors.validation');
+    if (RECEIPT_PHOTO_CODES[code]) return t(RECEIPT_PHOTO_CODES[code]);
+    if (code === 'P0110') return t('errors.validation'); // empty path guard
+    if (code === 'P0114') return t('errors.conflict'); // wrong contract state
     // P0001 = default RAISE — all current uses are state guards
     // ("already accepted", "not in a signable state").
     if (code === 'P0001') return t('errors.conflict');

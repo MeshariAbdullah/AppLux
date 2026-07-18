@@ -19,6 +19,7 @@ export type {
   AppRole,
   ContractStatusDB,
   DamageCaseInsert,
+  ContractReceiptPhotoRow,
   DamageCaseRow,
   DamageEvidenceInsert,
   DamageEvidenceRow,
@@ -133,6 +134,7 @@ export type { CreateInvoiceInput, CreatedInvoice } from './queries/invoices';
 export {
   closeRentalContract,
   fetchContractById,
+  fetchContractByInvoiceId,
   getHandoverPhotoUrl,
   HANDOVER_BUCKET,
   HANDOVER_PREFIX,
@@ -140,6 +142,16 @@ export {
   listMerchantContracts,
   uploadAndRecordHandover,
 } from './queries/contracts';
+
+export {
+  confirmContractReceiptPhotos,
+  getReceiptPhotoUrl,
+  listContractReceiptPhotos,
+  RECEIPT_MAX_PHOTOS,
+  RECEIPT_MIN_PHOTOS,
+  removeContractReceiptPhoto,
+  uploadContractReceiptPhoto,
+} from './queries/receipts';
 
 export {
   fetchNoteById,

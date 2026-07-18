@@ -225,8 +225,23 @@ export type RentalContractRow = {
    *  in the Contracts tab. NULL until handover happens. */
   handover_photo_path: string | null;
   handover_at: string | null;
+  /** When the customer confirmed the receipt photos captured inside
+   *  the guided acceptance flow (Bugs 17/19). NULL = photos editable
+   *  and activation blocked; NOT NULL = photos locked. */
+  receipt_photos_confirmed_at: string | null;
   created_at: string;
   updated_at: string;
+};
+
+/** One customer-captured receipt photo (1–4 per contract) — see
+ *  20260502122900_contract_receipt_photos.sql. Rows become immutable
+ *  once the contract's receipt_photos_confirmed_at is set. */
+export type ContractReceiptPhotoRow = {
+  id: string;
+  contract_id: string;
+  uploaded_by: string;
+  storage_path: string;
+  created_at: string;
 };
 export type RentalContractInsert = Partial<RentalContractRow> & {
   contract_number: string;
@@ -413,6 +428,16 @@ export type Database = {
         Update: Partial<DamageEvidenceRow>;
         Relationships: [];
       };
+      contract_receipt_photos: {
+        Row: ContractReceiptPhotoRow;
+        Insert: Partial<ContractReceiptPhotoRow> & {
+          contract_id: string;
+          uploaded_by: string;
+          storage_path: string;
+        };
+        Update: Partial<ContractReceiptPhotoRow>;
+        Relationships: [];
+      };
     };
     Views: Record<string, never>;
     Functions: {
@@ -477,6 +502,20 @@ export type Database = {
       record_contract_handover: {
         Args: { p_contract_id: string; p_photo_path: string };
         Returns: void;
+      };
+      /** Receipt-photo flow (Bugs 17/19) — see
+       *  20260502122900_contract_receipt_photos.sql. */
+      add_contract_receipt_photo: {
+        Args: { p_contract_id: string; p_storage_path: string };
+        Returns: string;
+      };
+      remove_contract_receipt_photo: {
+        Args: { p_photo_id: string };
+        Returns: void;
+      };
+      confirm_contract_receipt_photos: {
+        Args: { p_contract_id: string };
+        Returns: string;
       };
       record_rental_payment: {
         Args: { p_invoice_id: string };

@@ -37,6 +37,8 @@ import { resolveMerchantName } from '@/lib/merchantName';
 import {
   acceptRentalInvoice,
   activateRentalWithoutPaymentAndNote,
+  confirmContractReceiptPhotos,
+  fetchContractByInvoiceId,
   fetchInvoiceByToken,
   fetchMerchant,
   synthesizePackageFromInvoice,
@@ -45,6 +47,7 @@ import {
 } from '@/lib/supabase';
 import type { ScannedPackage } from '@/lib/data';
 import { ReviewStepper, type ReviewStepKey } from '@/components/review/ReviewStepper';
+import { ReceiptPhotosStep } from '@/components/review/ReceiptPhotosStep';
 import { StoreLogo } from '@/components/stores/StoreLogo';
 import { cn } from '@/lib/cn';
 
@@ -103,6 +106,25 @@ export default function Review() {
         setLiveMerchantRow(merchant);
         setLivePkg(synthesizePackageFromInvoice(res.invoice, res.items, merchant));
         setLiveInvoiceId(res.invoice.id);
+        // Bugs 17/19 resume path: the invoice was already accepted on a
+        // previous visit. Its contract exists — if it's still pending,
+        // re-enter the guided flow directly at the receipt-photos step
+        // (acceptance must never re-run); if it's already active or
+        // closed, this wizard has nothing left to do — hand off to the
+        // read-only tracking page.
+        if (res.invoice.status === 'accepted') {
+          const contract = await fetchContractByInvoiceId(res.invoice.id).catch(
+            () => null,
+          );
+          if (cancelled || !contract) return;
+          if (contract.status === 'pending') {
+            setLiveContractId(contract.id);
+            setReceiptConfirmed(Boolean(contract.receipt_photos_confirmed_at));
+            setStep('photos');
+          } else {
+            navigate(`/track/contract/${contract.id}`, { replace: true });
+          }
+        }
       })
       .catch((err) => {
         logEvent('rpc_failure', 'warn', { op: 'fetch_invoice_by_token' }, err);
@@ -131,6 +153,13 @@ export default function Review() {
 
   const [step, setStep] = useState<ReviewStepKey>('invoice');
   const [acceptError, setAcceptError] = useState<string | null>(null);
+  // Bugs 17/19 — receipt-photo step state. The contract id exists the
+  // moment acceptance succeeds; photos are uploaded against it, and
+  // activation only runs after confirm_contract_receipt_photos.
+  const [liveContractId, setLiveContractId] = useState<string | null>(null);
+  const [receiptConfirmed, setReceiptConfirmed] = useState(false);
+  const [receiptError, setReceiptError] = useState<string | null>(null);
+  const [finalizing, setFinalizing] = useState(false);
   // Current-phase activation recovery: when acceptance SUCCEEDED but
   // the follow-up activation RPC failed, the contract id is parked here
   // and the customer gets an explicit "retry activation" action. Retry
@@ -222,24 +251,30 @@ export default function Review() {
   const handleApproved = async () => {
     setAcceptError(null);
     if (configured && liveInvoiceId) {
-      // Acceptance already succeeded on a previous attempt — never
-      // re-accept; only retry the idempotent activation.
-      if (pendingActivationId) {
-        await activateContract(pendingActivationId);
+      // Acceptance already succeeded (resume / earlier attempt) — never
+      // re-accept. The guided flow continues at the photos step; the
+      // photo-confirm CTA drives the (idempotent) activation from there.
+      if (liveContractId || pendingActivationId) {
+        setStep('photos');
         return;
       }
       try {
         const contractId = await acceptRentalInvoice(liveInvoiceId);
         // Phase 4B: acceptance flipped the invoice status and created
         // the contract — drop the cached customer lists NOW, so even
-        // if the follow-up activation fails the lists never serve the
+        // if the follow-up steps fail the lists never serve the
         // stale pre-acceptance rows within their TTL.
         if (supabaseUserId) {
           cacheInvalidate(cacheKeys.customerInvoices(supabaseUserId));
           cacheInvalidate(cacheKeys.customerContracts(supabaseUserId));
         }
         if (!ENABLE_PAYMENTS_AND_NOTES) {
-          await activateContract(contractId);
+          // Bugs 17/19: the guided flow moves IMMEDIATELY to the item
+          // receipt-photography step. Activation is deferred until the
+          // photos are uploaded (≥1) and confirmed — enforced again
+          // server-side by the P0117 gate in the activation RPC.
+          setLiveContractId(contractId);
+          setStep('photos');
           return;
         }
         navigate(`/approval/${pkg.token}`, { replace: true });
@@ -254,8 +289,46 @@ export default function Review() {
       }
       return;
     }
-    approvePackage(pkg.token);
-    navigate(`/approval/${pkg.token}`, { replace: true });
+    // Demo mode: same guided-flow shape — the receipt-photos step comes
+    // before the demo approval is recorded.
+    setStep('photos');
+  };
+
+  // Photos-step final action: confirm the photos (locks them), then
+  // activate. Debounced here; the confirm RPC is idempotent and the
+  // activation RPC row-locks, so a double submission can never confirm
+  // or activate twice.
+  const handleFinalizePhotos = async () => {
+    if (finalizing) return;
+    setReceiptError(null);
+    setFinalizing(true);
+    try {
+      if (configured && liveContractId) {
+        if (!receiptConfirmed) {
+          await confirmContractReceiptPhotos(liveContractId);
+          setReceiptConfirmed(true);
+          // The contract row changed (receipt_photos_confirmed_at) —
+          // drop the cached entity so revisits within the TTL see it.
+          cacheInvalidate(cacheKeys.contract(liveContractId));
+        }
+        await activateContract(liveContractId);
+      } else {
+        // Demo mode: record the demo approval and hand off, exactly
+        // where the demo flow used to do it.
+        approvePackage(pkg.token);
+        navigate(`/approval/${pkg.token}`, { replace: true });
+      }
+    } catch (err) {
+      const eventId = logEvent(
+        'rpc_failure',
+        'error',
+        { op: 'confirm_receipt_photos' },
+        err,
+      );
+      setReceiptError(withSupportId(translateError(err, t), eventId));
+    } finally {
+      setFinalizing(false);
+    }
   };
 
   return (
@@ -266,20 +339,23 @@ export default function Review() {
         <div className="px-4 pt-4 pb-28 space-y-4">
           {/* Framing band — names what the customer is about to do.
               Calm, single sentence, no CTA. Sets the room before the
-              decision. */}
-          <section className="rounded-[14px] bg-white ring-1 ring-beige-200 p-5 animate-reveal-up">
-            <div className="text-[10.5px] font-bold text-green-700 uppercase tracking-[0.14em]">
-              {t('review.framing.eyebrow')}
-            </div>
-            <p className="mt-2 editorial-title text-[17px] text-ink-900 leading-snug">
-              {t('review.framing.title', {
-                boutique: lessorName ?? t('review.framing.boutiqueFallback'),
-              })}
-            </p>
-            <p className="mt-2 text-[12.5px] text-ink-500 leading-relaxed">
-              {t(ENABLE_PAYMENTS_AND_NOTES ? 'review.framing.body' : 'review.framing.bodySimple')}
-            </p>
-          </section>
+              decision. Hidden on the photos step — the offer/contract
+              framing is already behind the customer there. */}
+          {step !== 'photos' && (
+            <section className="rounded-[14px] bg-white ring-1 ring-beige-200 p-5 animate-reveal-up">
+              <div className="text-[10.5px] font-bold text-green-700 uppercase tracking-[0.14em]">
+                {t('review.framing.eyebrow')}
+              </div>
+              <p className="mt-2 editorial-title text-[17px] text-ink-900 leading-snug">
+                {t('review.framing.title', {
+                  boutique: lessorName ?? t('review.framing.boutiqueFallback'),
+                })}
+              </p>
+              <p className="mt-2 text-[12.5px] text-ink-500 leading-relaxed">
+                {t(ENABLE_PAYMENTS_AND_NOTES ? 'review.framing.body' : 'review.framing.bodySimple')}
+              </p>
+            </section>
+          )}
 
           {/* The embedded rental-journey timeline was removed here —
               the ReviewStepper above is the ONLY step indicator on the
@@ -299,6 +375,23 @@ export default function Review() {
               onApproved={handleApproved}
             />
           )}
+          {step === 'photos' && (
+            <ReceiptPhotosStep
+              live={configured && Boolean(liveContractId)}
+              contractId={liveContractId}
+              locked={receiptConfirmed}
+              finalizing={finalizing || activating}
+              onFinalize={handleFinalizePhotos}
+            />
+          )}
+          {receiptError && (
+            <div
+              role="alert"
+              className="rounded-xl2 bg-danger-50 ring-1 ring-danger-500/25 px-3.5 py-2.5 text-[12.5px] text-danger-700 leading-relaxed"
+            >
+              {receiptError}
+            </div>
+          )}
           {acceptError && (
             <div className="rounded-xl2 bg-danger-50 ring-1 ring-danger-500/25 px-3.5 py-2.5 text-[12.5px] text-danger-700 leading-relaxed">
               {acceptError}
@@ -306,7 +399,9 @@ export default function Review() {
           )}
           {/* Explicit activation recovery: acceptance succeeded but
               activation failed — the customer retries the idempotent
-              activation only, never the whole review flow. */}
+              activation only, never the whole review flow. On the
+              photos step the step's own locked CTA is the retry
+              control, so only the error text renders there. */}
           {pendingActivationId && activationError && (
             <div className="rounded-xl2 bg-warn-50 ring-1 ring-warn-500/25 p-4 space-y-3">
               <div className="text-[13px] font-semibold text-warn-700 leading-tight">
@@ -315,16 +410,18 @@ export default function Review() {
               <p className="text-[12px] text-ink-600 leading-relaxed">
                 {activationError}
               </p>
-              <Button
-                variant="primary"
-                size="md"
-                block
-                loading={activating}
-                disabled={activating}
-                onClick={() => void activateContract(pendingActivationId)}
-              >
-                {t('review.activation.retryCta')}
-              </Button>
+              {step !== 'photos' && (
+                <Button
+                  variant="primary"
+                  size="md"
+                  block
+                  loading={activating}
+                  disabled={activating}
+                  onClick={() => void activateContract(pendingActivationId)}
+                >
+                  {t('review.activation.retryCta')}
+                </Button>
+              )}
             </div>
           )}
         </div>
@@ -337,6 +434,9 @@ export default function Review() {
             invoice: null,
             contract: 'invoice',
             confirm: 'contract',
+            // Point of no return: acceptance already ran — the wizard
+            // never navigates back out of the photos step.
+            photos: null,
           };
           const prev = back[step];
           if (prev) setStep(prev);
@@ -347,6 +447,7 @@ export default function Review() {
             invoice: 'contract',
             contract: 'confirm',
             confirm: null,
+            photos: null,
           };
           const nxt = next[step];
           if (nxt) setStep(nxt);
@@ -1024,6 +1125,11 @@ function StepFooter({
 }) {
   const t = useT();
   const { dir } = useI18n();
+  // Photos step (Bugs 17/19): no wizard navigation at all — acceptance
+  // already ran (going back would be misleading) and the step's own
+  // confirm button is the final action. Bug 12's "no next on the final
+  // action step" rule applies here exactly as on confirm.
+  if (step === 'photos') return null;
   const prevButton = (
     <button
       type="button"

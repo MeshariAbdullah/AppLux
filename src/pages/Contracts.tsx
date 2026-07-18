@@ -1,18 +1,14 @@
-import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { Header, Screen } from '@/components/layout';
 import { Card, PageSkeleton, SectionHeader } from '@/components/ui';
 import {
   ArrowIcon,
   BadgeCheckIcon,
-  CameraIcon,
   CheckIcon,
   DocIcon,
   ReceiptIcon,
 } from '@/components/icons';
-import { cacheKeys } from '@/lib/cache/keys';
-import { cacheInvalidate } from '@/lib/cache/memoryCache';
-import { logEvent } from '@/lib/observability/log';
 import { ENABLE_PAYMENTS_AND_NOTES } from '@/lib/featureFlags';
 import { useI18n, useT } from '@/lib/i18n';
 import { useStore } from '@/lib/store';
@@ -26,7 +22,8 @@ import {
   adaptInvoice,
   adaptNote,
   getHandoverPhotoUrl,
-  uploadAndRecordHandover,
+  getReceiptPhotoUrl,
+  listContractReceiptPhotos,
   useSupabaseAuth,
 } from '@/lib/supabase';
 import type {
@@ -331,9 +328,10 @@ function RentalBundleCard({
         />
       </div>
 
-      {/* Handover photo banner — moved INSIDE the bundle so the
-          required customer action sits with the rental it belongs to. */}
-      <HandoverPhotoBanner contract={contract} />
+      {/* Receipt documentation — READ-ONLY (Bugs 17/19). Photography
+          now happens inside the guided acceptance flow before
+          activation; this block only shows the documented result. */}
+      <ReceiptDocumentedBlock contract={contract} />
 
       <Link
         to={`/track/contract/${contract.id}`}
@@ -484,186 +482,76 @@ function EmptyRentals() {
 }
 
 // =====================================================================
-// Handover photo banner — unchanged behavior, now sits inside the
-// rental bundle card so the required action is contextual.
-// (Lifted as-is from the previous Contracts screen.)
+// Receipt documentation — READ-ONLY result of the guided-flow
+// photography step (Bugs 17/19). The customer captures and confirms
+// the photos INSIDE the acceptance flow before activation; nothing is
+// captured, replaced, or deleted from here anymore. Contracts that
+// predate the flow fall back to the legacy single handover photo when
+// one exists; otherwise the block renders nothing.
+// Previews use short-lived signed URLs — storage paths never render.
 // =====================================================================
 
-function HandoverPhotoBanner({ contract }: { contract: Contract }) {
+function ReceiptDocumentedBlock({ contract }: { contract: Contract }) {
   const t = useT();
-  const { configured, session } = useSupabaseAuth();
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const { configured } = useSupabaseAuth();
+  const [urls, setUrls] = useState<string[]>([]);
 
-  const previewCacheKey = `lend.handover.${contract.id}.dataUrl`;
-
-  const [optimisticPreview, setOptimisticPreview] = useState<string | null>(
-    () => {
-      if (typeof window === 'undefined') return null;
-      return window.localStorage.getItem(previewCacheKey);
-    },
-  );
-  const [signedPreview, setSignedPreview] = useState<string | null>(null);
-  const [uploading, setUploading] = useState(false);
-  const [uploadError, setUploadError] = useState<string | null>(null);
-  const [optimisticallyCaptured, setOptimisticallyCaptured] =
-    useState<boolean>(false);
-  const captured =
-    Boolean(contract.handoverPhotoPath) || optimisticallyCaptured;
+  const confirmed = Boolean(contract.receiptPhotosConfirmedAt);
+  const legacyPath = contract.handoverPhotoPath ?? null;
 
   useEffect(() => {
-    let cancelled = false;
-    if (!configured || !contract.handoverPhotoPath) {
-      setSignedPreview(null);
+    if (!configured) {
+      setUrls([]);
       return;
     }
-    getHandoverPhotoUrl(contract.handoverPhotoPath)
-      .then((url) => {
-        if (!cancelled) setSignedPreview(url);
-      })
-      .catch(() => {
-        if (!cancelled) setSignedPreview(null);
-      });
+    let cancelled = false;
+    const load = async () => {
+      if (confirmed) {
+        const rows = await listContractReceiptPhotos(contract.id).catch(() => []);
+        const signed = await Promise.all(
+          rows.map((r) => getReceiptPhotoUrl(r.storage_path)),
+        );
+        if (!cancelled) setUrls(signed.filter((u): u is string => Boolean(u)));
+        return;
+      }
+      if (legacyPath) {
+        const url = await getHandoverPhotoUrl(legacyPath).catch(() => null);
+        if (!cancelled) setUrls(url ? [url] : []);
+      }
+    };
+    void load();
     return () => {
       cancelled = true;
     };
-  }, [configured, contract.handoverPhotoPath]);
+  }, [configured, confirmed, legacyPath, contract.id]);
 
-  const preview = signedPreview ?? optimisticPreview;
-
-  const onFileSelected = async (file: File) => {
-    setUploadError(null);
-    setUploading(true);
-    try {
-      const dataUrl = await readAsDataUrl(file);
-      window.localStorage.setItem(previewCacheKey, dataUrl);
-      setOptimisticPreview(dataUrl);
-
-      if (configured) {
-        await uploadAndRecordHandover({
-          contractId: contract.id,
-          file,
-        });
-        // Phase 4B: the contract row changed (handover photo path) —
-        // drop the cached list + entity so revisits within the TTL
-        // don't render the stale pre-handover row.
-        cacheInvalidate(cacheKeys.contract(contract.id));
-        const uid = session?.user?.id;
-        if (uid) cacheInvalidate(cacheKeys.customerContracts(uid));
-        setOptimisticallyCaptured(true);
-      } else {
-        setOptimisticallyCaptured(true);
-      }
-    } catch (err) {
-      logEvent('rpc_failure', 'warn', { op: 'handover_photo_persist' }, err);
-      setUploadError(t('contracts.handover.uploadFailed'));
-    } finally {
-      setUploading(false);
-    }
-  };
+  if (!confirmed && !legacyPath) return null;
 
   return (
-    <div
-      className={cn(
-        'mt-4 rounded-xl2 p-3.5 ring-1',
-        captured
-          ? 'bg-success-50 ring-success-500/20'
-          : 'bg-warn-50 ring-warn-500/25',
-      )}
-    >
-      <div className="flex items-start gap-3">
-        <span
-          className={cn(
-            'h-9 w-9 shrink-0 rounded-xl grid place-items-center ring-1',
-            captured
-              ? 'bg-white text-success-600 ring-success-500/20'
-              : 'bg-white text-warn-600 ring-warn-500/25',
-          )}
-        >
-          {captured ? <CheckIcon size={16} /> : <CameraIcon size={16} />}
+    <div className="mt-4 rounded-xl2 p-3.5 ring-1 bg-success-50 ring-success-500/20">
+      <div className="flex items-center gap-3">
+        <span className="h-9 w-9 shrink-0 rounded-xl grid place-items-center ring-1 bg-white text-success-600 ring-success-500/20">
+          <CheckIcon size={16} />
         </span>
-        <div className="min-w-0 flex-1">
-          <div
-            className={cn(
-              'text-[12.5px] font-semibold',
-              captured ? 'text-success-700' : 'text-warn-800',
-            )}
-          >
-            {captured
-              ? t('contracts.handover.done')
-              : t('contracts.handover.title')}
-          </div>
-          {!captured && (
-            <div className="mt-0.5 text-[11.5px] text-warn-700/85 leading-relaxed">
-              {t('contracts.handover.hint')}
-            </div>
-          )}
+        <div className="text-[12.5px] font-semibold text-success-700">
+          {t('contracts.receipt.documented')}
         </div>
       </div>
 
-      {captured && preview && (
-        <div className="mt-3">
-          <img
-            src={preview}
-            alt={t('contracts.handover.done')}
-            className="rounded-xl2 ring-1 ring-canvas-200 max-h-44 object-cover w-full"
-          />
-        </div>
-      )}
-
-      <div className="mt-2.5 flex items-center gap-2">
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept="image/*"
-          capture="environment"
-          className="hidden"
-          aria-label={t('contracts.handover.captureFor', { ref: contract.id })}
-          onChange={(e) => {
-            const f = e.target.files?.[0];
-            if (f) void onFileSelected(f);
-            e.target.value = '';
-          }}
-        />
-        <button
-          type="button"
-          onClick={() => fileInputRef.current?.click()}
-          disabled={uploading}
-          className={cn(
-            'inline-flex items-center gap-1.5 text-[12px] font-semibold rounded-full px-3 py-1.5 transition-colors',
-            captured
-              ? 'bg-white text-success-700 ring-1 ring-success-500/20 hover:bg-success-50/70'
-              : 'bg-warn-600 text-white hover:bg-warn-700',
-            uploading && 'opacity-60 cursor-not-allowed',
-          )}
-        >
-          <CameraIcon size={14} />
-          {uploading
-            ? t('contracts.handover.uploading')
-            : captured
-              ? t('contracts.handover.retake')
-              : t('contracts.handover.capture')}
-        </button>
-      </div>
-
-      {uploadError && (
-        <div
-          role="alert"
-          className="mt-2 text-[11.5px] text-danger-700 leading-relaxed"
-        >
-          {uploadError}
+      {urls.length > 0 && (
+        <div className={cn('mt-3 grid gap-2', urls.length > 1 ? 'grid-cols-2' : 'grid-cols-1')}>
+          {urls.map((url, i) => (
+            <img
+              key={i}
+              src={url}
+              alt={t('contracts.receipt.photoAlt', { n: i + 1 })}
+              className="rounded-xl2 ring-1 ring-canvas-200 max-h-44 object-cover w-full"
+            />
+          ))}
         </div>
       )}
     </div>
   );
-}
-
-function readAsDataUrl(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(String(reader.result ?? ''));
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
 }
 
 function daysUntil(dateIso: string): number {

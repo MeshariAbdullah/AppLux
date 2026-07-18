@@ -41,6 +41,10 @@ export type Contract = {
    *  shape; live mode always populates from rental_contracts. */
   handoverPhotoPath?: string | null;
   handoverAt?: string | null;
+  /** When the customer confirmed the mandatory receipt photos taken
+   *  inside the guided acceptance flow (Bugs 17/19). Optional for the
+   *  demo store shape; live mode populates from rental_contracts. */
+  receiptPhotosConfirmedAt?: string | null;
 };
 
 export type NoteStatus = 'signed' | 'pending' | 'defaulted';

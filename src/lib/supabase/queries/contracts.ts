@@ -14,6 +14,23 @@ export async function fetchContractById(
   return data;
 }
 
+/** Resume support for the guided acceptance flow (Bugs 17/19): an
+ *  accepted invoice's contract, so a reopened /review/:token can jump
+ *  straight to the receipt-photos step. RLS scopes this to the
+ *  customer's own contracts. */
+export async function fetchContractByInvoiceId(
+  invoiceId: string,
+): Promise<RentalContractRow | null> {
+  const sb = requireSupabase();
+  const { data, error } = await sb
+    .from('rental_contracts')
+    .select('*')
+    .eq('invoice_id', invoiceId)
+    .maybeSingle();
+  if (error) throw error;
+  return data;
+}
+
 export async function listCustomerContracts(
   customerUserId: string,
   filter?: { status?: ContractStatusDB; limit?: number },

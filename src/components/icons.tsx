@@ -59,6 +59,12 @@ export const PlusIcon = (p: IconProps) => (
   </svg>
 );
 
+export const XIcon = (p: IconProps) => (
+  <svg {...base(p)}>
+    <path d="m6 6 12 12M18 6 6 18" />
+  </svg>
+);
+
 export const ChevronIcon = (p: IconProps) => (
   <svg {...base(p)}>
     <path d="m9 6 6 6-6 6" />

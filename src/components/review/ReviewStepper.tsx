@@ -2,14 +2,20 @@ import { cn } from '@/lib/cn';
 import { CheckIcon } from '@/components/icons';
 import { useT } from '@/lib/i18n';
 
-// The customer-side review wizard intentionally has THREE steps —
-// offer → contract → confirm. There is no "note" step here:
-// the promissory note doesn't exist yet at this stage. The note
-// is issued by the platform AFTER payment and is approved by the
-// customer in Nafath, outside the platform.
-export type ReviewStepKey = 'invoice' | 'contract' | 'confirm';
+// The customer-side review wizard has FOUR steps — offer → contract →
+// confirm → receipt photos (Bugs 17/19: photography moved INSIDE the
+// guided acceptance flow; the rental cannot activate until the photos
+// are uploaded and confirmed). There is still no "note" step here:
+// the promissory note doesn't exist yet at this stage — it is issued
+// by the platform AFTER payment and approved in Nafath, outside the
+// platform.
+//
+// The photos step is post-commitment: it only becomes reachable after
+// the acceptance RPC succeeds, and the wizard never navigates back
+// out of it (the contract already exists).
+export type ReviewStepKey = 'invoice' | 'contract' | 'confirm' | 'photos';
 
-const ORDER: ReviewStepKey[] = ['invoice', 'contract', 'confirm'];
+const ORDER: ReviewStepKey[] = ['invoice', 'contract', 'confirm', 'photos'];
 
 type Props = {
   active: ReviewStepKey;

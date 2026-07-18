@@ -87,6 +87,9 @@ export default function ContractTracking() {
   const [contractTemplate, setContractTemplate] =
     useState<ContractTemplateOutput | null>(null);
   const [showFullContract, setShowFullContract] = useState(false);
+  // Bugs 17/19 resume: a pending contract whose receipt photos are not
+  // confirmed can re-enter the guided flow via the invoice scan token.
+  const [resumeToken, setResumeToken] = useState<string | null>(null);
 
   useEffect(() => {
     if (!configured || !id) {
@@ -103,6 +106,7 @@ export default function ContractTracking() {
     setLiveInvoices(null);
     setLiveNote(null);
     setContractTemplate(null);
+    setResumeToken(null);
     setResolving(true);
     let cancelled = false;
     (async () => {
@@ -129,6 +133,15 @@ export default function ContractTracking() {
         items = await listInvoiceItems(fetchedInvoice.id).catch(() => []);
         if (cancelled) return;
         setLiveInvoices([adaptInvoice(fetchedInvoice, items, merchantName)]);
+        // Bugs 17/19: unfinished receipt documentation — surface the
+        // way back into the guided flow's photos step.
+        if (
+          row.status === 'pending' &&
+          !row.receipt_photos_confirmed_at &&
+          fetchedInvoice.scan_token
+        ) {
+          setResumeToken(fetchedInvoice.scan_token);
+        }
       }
 
       // Build the generated contract content from the same template
@@ -255,6 +268,28 @@ export default function ContractTracking() {
               </div>
             </div>
           </div>
+
+          {/* Bugs 17/19: the rental cannot start until the receipt
+              photos are uploaded + confirmed — this is the resume path
+              back into the guided flow's photos step. */}
+          {resumeToken && contract.status === 'pending' && (
+            <div className="rounded-xl2 bg-warn-50 ring-1 ring-warn-500/25 p-4 space-y-3">
+              <div className="text-[13px] font-semibold text-warn-700 leading-tight">
+                {t('track.contract.receiptPending.title')}
+              </div>
+              <p className="text-[12px] text-ink-600 leading-relaxed">
+                {t('track.contract.receiptPending.body')}
+              </p>
+              <Button
+                variant="primary"
+                size="md"
+                block
+                onClick={() => navigate(`/review/${resumeToken}`)}
+              >
+                {t('track.contract.receiptPending.cta')}
+              </Button>
+            </div>
+          )}
 
           {/* Journey is the primary structural element — leads the page.
               Current phase: the approved 4-stage reference journey. */}
