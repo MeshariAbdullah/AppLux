@@ -22,7 +22,7 @@ import {
 } from '@/lib/supabase';
 import { RentalJourneyTimeline } from '@/components/rental/RentalJourneyTimeline';
 import { ENABLE_PAYMENTS_AND_NOTES } from '@/lib/featureFlags';
-import { deriveJourneyOnApproval, deriveSimpleJourney } from '@/lib/rentalJourney';
+import { deriveJourneyOnApproval } from '@/lib/rentalJourney';
 import type { ScannedPackage } from '@/lib/data';
 import { PaymentSimulationSheet } from '@/components/payment/PaymentSimulationSheet';
 
@@ -37,7 +37,7 @@ export default function Approval() {
     () => scans.find((s) => s.token === token),
     [scans, token],
   );
-  const { formatCurrency, formatDate, formatNumber } = useI18n();
+  const { formatCurrency, formatDate } = useI18n();
 
   const [livePkg, setLivePkg] = useState<ScannedPackage | null>(null);
   // Bug 14: capture the live invoice id so the "Continue contract"
@@ -158,65 +158,52 @@ export default function Approval() {
 
   return (
     <>
-      <Header title={t('approval.title')} />
-      <Screen padded={false} className="bg-canvas">
-        {/* Celebration hero */}
-        <div className="relative px-6 pt-12 pb-10 text-center bg-gradient-to-b from-gold-50 to-canvas-50">
-          <div
-            aria-hidden
-            className="pointer-events-none absolute inset-x-0 top-0 h-40 bg-gradient-to-b from-white/60 to-transparent"
-          />
-          <div className="relative mx-auto h-24 w-24">
-            {/* One-shot halo sweep — the system has just recorded something.
-                After it completes the ring settles to a calm steady state
-                so the moment doesn't keep agitating. */}
-            <span
-              aria-hidden
-              className="absolute inset-0 rounded-full bg-lavender-300/30 animate-halo-sweep"
-            />
-            <span
-              aria-hidden
-              className="absolute inset-2 rounded-full bg-lavender-200/60"
-            />
-            <span className="absolute inset-4 rounded-full bg-lavender-400 grid place-items-center text-white shadow-plush animate-stamp-in">
-              <CheckIcon size={36} strokeWidth={3} />
-            </span>
-          </div>
-          <h1 className="mt-7 editorial-title text-[26px] text-ink-900 leading-tight animate-reveal-up">
+      <Screen padded={false} className="bg-beige-100">
+        {/* C10 — centered green success. */}
+        <div className="px-6 pt-[calc(env(safe-area-inset-top)+72px)] pb-6 text-center flex flex-col items-center">
+          <span className="h-[84px] w-[84px] rounded-full bg-green-700 text-white grid place-items-center ring-[14px] ring-green-50 animate-stamp-in">
+            <CheckIcon size={34} strokeWidth={2.5} />
+          </span>
+          <h1 className="mt-7 text-[24px] font-bold text-navy-700 leading-tight animate-reveal-up">
             {t('approval.documentedHeadline')}
           </h1>
-          <p className="mt-2.5 text-[13.5px] text-ink-500 leading-relaxed max-w-xs mx-auto animate-reveal-up">
+          <p className="mt-2.5 text-[13.5px] text-ink-600 leading-[1.9] max-w-[300px] animate-reveal-up">
             {t(ENABLE_PAYMENTS_AND_NOTES ? 'approval.documentedSubtitle' : 'approval.documentedSubtitleSimple')}
           </p>
-          <div className="mt-5 inline-flex items-center gap-2 rounded-full bg-white ring-1 ring-lavender-200 px-3 py-1.5 text-[10.5px] font-semibold uppercase tracking-[0.14em] text-lavender-700 animate-stamp-in">
-            <BadgeCheckIcon size={11} />
-            <span>{t('approval.officialSeal')}</span>
-            <span className="text-ink-400 num">
-              #{formatNumber(Date.parse(approvedAt) % 1_000_000)}
-            </span>
-          </div>
         </div>
 
-        <div className="px-5 pt-2 pb-10 space-y-5">
-          {/* Journey is the primary structural element of this screen.
-              Current phase: the approved 4-stage journey with the
-              rental already started (activation happened during the
-              review flow, no payment/note steps). */}
-          <RentalJourneyTimeline
-            variant="lead"
-            steps={
-              ENABLE_PAYMENTS_AND_NOTES
-                ? deriveJourneyOnApproval({ issuedAt: pkg.issuedAt }, approvedAt)
-                : deriveSimpleJourney({
-                    current: 'started',
-                    requestAt: pkg.issuedAt,
-                    startedAt: approvedAt,
-                  })
-            }
-          />
+        <div className="px-5 pb-10 space-y-4">
+          {/* C10 reference card — real contract reference + the current
+              journey stage chip (stage 3 · بدء الإيجار in the
+              no-payment path). */}
+          <div className="rounded-[14px] bg-white ring-1 ring-beige-200 p-[18px]">
+            <div className="flex items-center justify-between gap-3">
+              <div className="min-w-0">
+                <div className="text-[11.5px] text-ink-500">
+                  {t('approval.contractSigned')}
+                </div>
+                <div className="mt-0.5 text-[14px] font-bold num truncate" dir="ltr">
+                  {pkg.contract.reference}
+                </div>
+              </div>
+              <span className="shrink-0 rounded-full bg-green-50 text-green-700 px-3 py-1.5 text-[11.5px] font-bold">
+                {t('journey.stages.started')}
+              </span>
+            </div>
+            <div className="mt-3 text-[11px] text-ink-400 num">
+              {t('approval.documentedRecordTime', { time: approvedTime })}
+            </div>
+          </div>
 
-          {/* Documented record — the contract + note are now part of the
-              rental's official record. Quiet, lavender, no actions. */}
+          {/* Legacy flag-ON structure preserved below (journey lead +
+              note rows render only when payments/notes return). */}
+          {ENABLE_PAYMENTS_AND_NOTES && (
+            <RentalJourneyTimeline
+              variant="lead"
+              steps={deriveJourneyOnApproval({ issuedAt: pkg.issuedAt }, approvedAt)}
+            />
+          )}
+          {ENABLE_PAYMENTS_AND_NOTES && (
           <section className="rounded-xl3 bg-lavender-50/60 ring-1 ring-lavender-200/60 p-5">
             <div className="text-[10.5px] font-semibold text-lavender-700 uppercase tracking-[0.14em]">
               {t('approval.documentedRecordTitle')}
@@ -264,6 +251,7 @@ export default function Approval() {
               {t('approval.documentedRecordTime', { time: approvedTime })}
             </div>
           </section>
+          )}
 
           {/* Nafith disclaimer band — current phase: no note exists,
               so no disclaimer (ENABLE_PAYMENTS_AND_NOTES). */}
@@ -297,7 +285,7 @@ export default function Approval() {
                 variant="primary"
                 size="lg"
                 block
-                leading={<BadgeCheckIcon size={18} />}
+                className="!bg-navy-700 hover:!bg-navy-800 active:!bg-navy-800"
                 onClick={() => {
                   if (configured && liveContractId) {
                     navigate(`/track/contract/${liveContractId}`, { replace: true });
@@ -336,7 +324,7 @@ export default function Approval() {
               <button
                 type="button"
                 onClick={() => navigate('/home', { replace: true })}
-                className="text-ink-700 hover:text-ink-900 underline underline-offset-4 decoration-canvas-300 hover:decoration-ink-700"
+                className="font-bold text-green-700 hover:text-green-800"
               >
                 {t('approval.goHome')}
               </button>

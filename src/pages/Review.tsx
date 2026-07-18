@@ -266,8 +266,8 @@ export default function Review() {
           {/* Framing band — names what the customer is about to do.
               Calm, single sentence, no CTA. Sets the room before the
               decision. */}
-          <section className="rounded-xl3 bg-lavender-50/60 ring-1 ring-lavender-200/60 p-5 animate-reveal-up">
-            <div className="text-[10.5px] font-semibold text-lavender-700 uppercase tracking-[0.14em]">
+          <section className="rounded-[14px] bg-white ring-1 ring-beige-200 p-5 animate-reveal-up">
+            <div className="text-[10.5px] font-bold text-green-700 uppercase tracking-[0.14em]">
               {t('review.framing.eyebrow')}
             </div>
             <p className="mt-2 editorial-title text-[17px] text-ink-900 leading-snug">
@@ -1023,14 +1023,23 @@ function StepFooter({
       </div>
     );
   }
+  // C09 footer — navy primary on the start side, outlined السابق.
   return (
-    <div className="sticky bottom-0 z-20 border-t border-ink-100 bg-white/95 backdrop-blur px-4 py-3 pb-[calc(env(safe-area-inset-bottom)+12px)] flex items-center gap-2">
-      <Button variant="secondary" className="flex-1" onClick={onBack}>
-        {t('review.nav.back')}
-      </Button>
-      <Button variant="primary" className="flex-1" onClick={onNext}>
+    <div className="sticky bottom-0 z-20 border-t border-beige-200 bg-white/95 backdrop-blur px-4 py-3 pb-[calc(env(safe-area-inset-bottom)+12px)] flex items-center gap-2.5">
+      <Button
+        variant="primary"
+        className="flex-[2] !bg-navy-700 hover:!bg-navy-800 active:!bg-navy-800"
+        onClick={onNext}
+      >
         {step === 'contract' ? t('review.nav.accept') : t('review.nav.next')}
       </Button>
+      <button
+        type="button"
+        onClick={onBack}
+        className="flex-1 h-11 rounded-xl2 bg-white text-navy-700 font-bold text-[13.5px] ring-[1.5px] ring-inset ring-beige-300 hover:bg-beige-50 transition-colors"
+      >
+        {t('review.nav.back')}
+      </button>
     </div>
   );
 }

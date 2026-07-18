@@ -1,37 +1,53 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Header, Screen } from '@/components/layout';
-import { EmptyState, Skeleton } from '@/components/ui';
-import { BadgeCheckIcon, BuildingIcon } from '@/components/icons';
+import { useSearchParams } from 'react-router-dom';
+import { Screen } from '@/components/layout';
+import { EmptyState, Input, Skeleton } from '@/components/ui';
+import { InfoIcon, SearchIcon } from '@/components/icons';
 import { CACHE_TTL, cacheKeys } from '@/lib/cache/keys';
 import { useCachedQuery } from '@/lib/cache/useCachedQuery';
 import { logEvent } from '@/lib/observability/log';
-import { useT } from '@/lib/i18n';
+import { useI18n, useT } from '@/lib/i18n';
 import { useStore } from '@/lib/store';
-import type { PartnerStore } from '@/lib/data';
+import type { PartnerStore, StoreCategory } from '@/lib/data';
 import {
   adaptMerchantToStore,
   listMerchants,
   useSupabaseAuth,
 } from '@/lib/supabase';
-import { SECTORS } from '@/lib/sectors';
+import { StoreCard } from '@/components/stores/StoreCard';
+import { cn } from '@/lib/cn';
 
 // =====================================================================
-// Sectors-only view (SCRUM-41 Bug 5 → follow-up #1).
+// Stores — customer design C06 (approved Conflict-2 decision).
+// The browsable store LIST: title, search, the approved category chips
+// (الكل / فساتين / حقائب / ساعات / بشوت) and real partner cards that
+// open the existing /stores/:id details route.
 //
-// Customers see the top-level sectors with their sub-categories and a
-// real partner count. Sectors with no onboarded merchants (jewellery,
-// vehicles, events today) show "Partners coming soon" — the page
-// itself doesn't need to know which sectors are populated, that's
-// derived from listMerchants() against each sector's storeCategories.
-//
-// Taxonomy is centralised in src/lib/sectors.ts — used by both this
-// page and the Welcome landing.
+// Data is UNCHANGED from the sectors era: the same single cached
+// listMerchants() read (publicMerchants key, 15-min TTL, no focus
+// refetch). Search + category filtering are client-side over the
+// already-loaded rows. src/lib/sectors.ts stays untouched for other
+// consumers.
 // =====================================================================
+
+type Filter = 'all' | StoreCategory;
+
+const FILTERS: Filter[] = ['all', 'dresses', 'bags', 'watches', 'bishts'];
 
 export default function Stores() {
   const t = useT();
+  const { locale } = useI18n();
   const { stores: demoStores } = useStore();
   const { configured } = useSupabaseAuth();
+  // Home's category grid deep-links /stores?filter=<category>; the
+  // param seeds the client-side chip state only (no data change).
+  const [searchParams] = useSearchParams();
+  const initialFilter = (searchParams.get('filter') as Filter | null) ?? 'all';
+  const [filter, setFilter] = useState<Filter>(
+    FILTERS.includes(initialFilter) ? initialFilter : 'all',
+  );
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [query, setQuery] = useState('');
 
   // Phase 3B: the partner list reads through the memory cache — 15-min
   // TTL, no focus refetch (public display data). Revisiting the page
@@ -65,118 +81,125 @@ export default function Stores() {
     if (!configured) return demoStores;
     // Phase 9 rule preserved: never fall back to demo seeds in live
     // mode. Error or pre-load renders as an empty list behind the
-    // skeleton — the per-sector "Partners coming soon" copy already
-    // reads correctly when sectorCounts is all zeros.
+    // skeleton.
     return (liveRows ?? []).map(adaptMerchantToStore);
   }, [configured, demoStores, liveRows]);
 
   const loading = configured ? liveLoading : !demoSettled;
 
-  const sectorCounts = useMemo(() => {
-    const counts: Record<string, number> = {};
-    for (const sector of SECTORS) {
-      counts[sector.key] = stores.filter((s) =>
-        sector.storeCategories.includes(s.category),
-      ).length;
+  // Client-side filtering over the loaded rows only.
+  const q = query.trim().toLowerCase();
+  const filtered = useMemo(() => {
+    let rows = stores;
+    if (filter !== 'all') rows = rows.filter((s) => s.category === filter);
+    if (q) {
+      rows = rows.filter((s) => {
+        const name = (s.name[locale] || s.name.ar || '').toLowerCase();
+        const city = t(`register.cities.${s.city}`).toLowerCase();
+        return name.includes(q) || city.includes(q);
+      });
     }
-    return counts;
-  }, [stores]);
+    return rows;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [stores, filter, q, locale]);
 
   return (
-    <>
-      <Header title={t('stores.title')} subtitle={t('stores.subtitle')} />
-      <Screen className="bg-canvas">
+    <Screen padded={false} className="bg-beige-100">
+      <div className="px-5 pt-[calc(env(safe-area-inset-top)+22px)] pb-24 space-y-3">
+        {/* ====== C06 masthead: title + search toggle ====== */}
+        <div className="flex items-center gap-2.5">
+          <h1 className="flex-1 text-[19px] font-bold text-navy-700">
+            {t('stores.title')}
+          </h1>
+          <button
+            type="button"
+            onClick={() => {
+              setSearchOpen((s) => !s);
+              if (searchOpen) setQuery('');
+            }}
+            aria-label={t('stores.searchPlaceholder')}
+            aria-pressed={searchOpen}
+            className={cn(
+              'h-10 w-10 grid place-items-center rounded-xl bg-white text-navy-700 transition-colors',
+              searchOpen
+                ? 'ring-[1.5px] ring-green-500'
+                : 'ring-[1.5px] ring-beige-300 hover:ring-navy-200',
+            )}
+          >
+            <SearchIcon size={15} />
+          </button>
+        </div>
+
+        {searchOpen && (
+          <Input
+            autoFocus
+            placeholder={t('stores.searchPlaceholder')}
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+          />
+        )}
+
+        {/* ====== Approved category chips ====== */}
+        <div
+          className="flex gap-2 overflow-x-auto scrollbar-none -mx-1 px-1"
+          role="tablist"
+        >
+          {FILTERS.map((f) => {
+            const active = f === filter;
+            return (
+              <button
+                key={f}
+                type="button"
+                role="tab"
+                aria-selected={active}
+                onClick={() => setFilter(f)}
+                className={cn(
+                  'h-9 px-4 rounded-full text-[12.5px] font-semibold whitespace-nowrap transition-colors',
+                  active
+                    ? 'bg-navy-700 text-white'
+                    : 'bg-white text-ink-700 ring-1 ring-beige-200',
+                )}
+              >
+                {t(`stores.filters.${f}`)}
+              </button>
+            );
+          })}
+        </div>
+
         {loading ? (
-          <div className="space-y-2.5">
-            {Array.from({ length: 2 }).map((_, i) => (
-              <SectorSkeleton key={i} />
+          <div className="space-y-3">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <StoreSkeleton key={i} />
             ))}
           </div>
+        ) : filtered.length === 0 ? (
+          <EmptyState
+            icon={<InfoIcon size={22} />}
+            title={t('stores.emptySearch')}
+            description={t('stores.emptyHint')}
+          />
         ) : (
-          <div className="space-y-2.5">
-            {SECTORS.map((sector, i) => (
-              <SectorCard
-                key={sector.key}
-                index={i + 1}
-                name={t(sector.i18nName)}
-                sub={t(sector.i18nSub)}
-                partnerCount={sectorCounts[sector.key] ?? 0}
-                t={t}
-              />
+          <div className="space-y-3">
+            {filtered.map((s) => (
+              <StoreCard key={s.id} store={s} />
             ))}
-            {/* Reassurance line — sets the expectation that stores
-                listed elsewhere in the app are partners, not random
-                third parties. Stays on the page even when the sector
-                count is zero. */}
-            <div className="rounded-xl2 bg-canvas-100/60 ring-1 ring-canvas-200 px-4 py-3 text-center text-[11.5px] text-ink-500 leading-relaxed">
-              {t('stores.sectorPartnerNote')}
-            </div>
-            {SECTORS.length === 0 && (
-              <EmptyState
-                icon={<BuildingIcon size={22} />}
-                title={t('stores.sectorNoPartners')}
-                description={t('stores.subtitle')}
-              />
-            )}
           </div>
         )}
-      </Screen>
-    </>
-  );
-}
-
-function SectorCard({
-  index,
-  name,
-  sub,
-  partnerCount,
-  t,
-}: {
-  index: number;
-  name: string;
-  sub: string;
-  partnerCount: number;
-  t: (k: string, vars?: Record<string, string | number>) => string;
-}) {
-  const partnerLabel =
-    partnerCount === 0
-      ? t('stores.sectorNoPartners')
-      : partnerCount === 1
-        ? t('stores.sectorPartner')
-        : t('stores.sectorPartners', { count: partnerCount });
-  return (
-    <div className="rounded-xl3 bg-white ring-1 ring-canvas-200 shadow-soft p-4">
-      <div className="flex items-center gap-3">
-        <span className="h-9 w-9 rounded-xl bg-lavender-50 text-lavender-700 grid place-items-center text-[13px] font-bold">
-          {index}
-        </span>
-        <div className="min-w-0 flex-1">
-          <div className="text-[14px] font-semibold text-ink-900 truncate">
-            {name}
-          </div>
-          <div className="mt-0.5 text-[11.5px] text-ink-500 truncate">
-            {sub}
-          </div>
-        </div>
-        <span className="inline-flex items-center gap-1 text-[10.5px] font-semibold uppercase tracking-[0.08em] text-lavender-700 bg-lavender-50 rounded-full px-2 py-0.5 shrink-0">
-          <BadgeCheckIcon size={10} />
-          {partnerLabel}
-        </span>
       </div>
-    </div>
+    </Screen>
   );
 }
 
-function SectorSkeleton() {
+function StoreSkeleton() {
   return (
-    <div className="rounded-xl3 bg-white ring-1 ring-canvas-200 p-4">
+    <div className="rounded-[14px] bg-white ring-1 ring-beige-200 px-[18px] py-4">
       <div className="flex items-center gap-3">
-        <Skeleton className="h-9 w-9 rounded-xl" />
+        <Skeleton className="h-11 w-11 rounded-full" />
         <div className="flex-1 space-y-2">
           <Skeleton className="h-3.5 w-2/3" />
           <Skeleton className="h-3 w-1/2" />
         </div>
-        <Skeleton className="h-5 w-20 rounded-full" />
+        <Skeleton className="h-5 w-14 rounded-full" />
       </div>
     </div>
   );

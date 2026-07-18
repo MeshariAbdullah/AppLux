@@ -19,51 +19,28 @@ export function ReviewStepper({ active }: Props) {
   const t = useT();
   const activeIdx = ORDER.indexOf(active);
 
+  // Customer design C09 — three segmented pills: done = white pill with
+  // a green check, active = navy pill, upcoming = quiet text.
   return (
-    <div className="px-5 pt-3 pb-4 bg-canvas-50/85 backdrop-blur-md">
-      <ol className="flex items-center gap-1.5">
+    <div className="px-5 pt-3 pb-3 bg-beige-100/90 backdrop-blur-md">
+      <ol className="flex items-center gap-2">
         {ORDER.map((s, i) => {
           const done = i < activeIdx;
           const isActive = i === activeIdx;
           return (
-            <li key={s} className="flex items-center gap-1.5 flex-1 min-w-0">
-              <div className="flex items-center gap-2 min-w-0">
-                <span
-                  className={cn(
-                    'h-7 w-7 rounded-full grid place-items-center text-[11px] font-semibold shrink-0',
-                    'transition-[background-color,color,box-shadow] duration-200 ease-plush',
-                    done && 'bg-gold-400 text-ink-950',
-                    isActive && 'bg-ink-900 text-white shadow-soft',
-                    !done && !isActive && 'bg-canvas-200 text-ink-400',
-                  )}
-                >
-                  {done ? (
-                    <CheckIcon size={13} strokeWidth={2.5} />
-                  ) : (
-                    <span className="num">{i + 1}</span>
-                  )}
-                </span>
-                <span
-                  className={cn(
-                    'text-[11.5px] font-medium truncate tracking-tight',
-                    isActive
-                      ? 'text-ink-900'
-                      : done
-                        ? 'text-gold-700'
-                        : 'text-ink-400',
-                  )}
-                >
-                  {t(`review.steps.${s}`)}
-                </span>
-              </div>
-              {i < ORDER.length - 1 && (
-                <div
-                  className={cn(
-                    'flex-1 h-px rounded-full',
-                    done ? 'bg-gold-300' : 'bg-canvas-300',
-                  )}
-                />
-              )}
+            <li key={s} className="flex-1 min-w-0">
+              <span
+                className={cn(
+                  'flex items-center justify-center gap-1.5 h-9 rounded-full text-[12.5px] font-bold truncate px-2',
+                  'transition-colors duration-200 ease-plush',
+                  isActive && 'bg-navy-700 text-white',
+                  done && 'bg-white ring-1 ring-beige-200 text-green-700',
+                  !done && !isActive && 'text-ink-400',
+                )}
+              >
+                {done && <CheckIcon size={12} strokeWidth={2.5} />}
+                {t(`review.steps.${s}`)}
+              </span>
             </li>
           );
         })}

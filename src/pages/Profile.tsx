@@ -1,25 +1,8 @@
 import { useState, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Header, Screen } from '@/components/layout';
-import {
-  Avatar,
-  Button,
-  Card,
-  ConfirmSheet,
-  SectionHeader,
-  StatusChip,
-} from '@/components/ui';
-import {
-  AlertIcon,
-  ChevronIcon,
-  GlobeIcon,
-  HistoryIcon,
-  InfoIcon,
-  PhoneIcon,
-  ShieldIcon,
-  SupportIcon,
-  UserIcon,
-} from '@/components/icons';
+import { Screen } from '@/components/layout';
+import { Button, ConfirmSheet, StatusChip } from '@/components/ui';
+import { AlertIcon, ChevronIcon } from '@/components/icons';
 import { translateAuthError } from '@/lib/errors';
 import { logEvent } from '@/lib/observability/log';
 import { releaseInfo } from '@/lib/releaseInfo';
@@ -122,255 +105,172 @@ export default function Profile() {
     window.open(url, '_blank', 'noopener,noreferrer');
   };
 
+  const languageValue = locale === 'ar' ? t('profile.arabic') : t('profile.english');
+
   return (
     <>
-      <Header title={t('profile.title')} />
-      <Screen className="bg-canvas">
-        {/* Identity card */}
-        <Card padded>
-          <div className="flex items-center gap-4">
-            <Avatar name={fullName !== '—' ? fullName : 'A'} size="lg" tone="gold" />
-            <div className="min-w-0">
-              <div className="editorial-title text-[17px] text-ink-900 truncate">
+      <Screen padded={false} className="bg-beige-100">
+        <div className="px-5 pt-[calc(env(safe-area-inset-top)+22px)] pb-24 space-y-4">
+          {/* ====== C13 masthead ====== */}
+          <div className="flex items-center gap-3.5">
+            <span className="h-14 w-14 shrink-0 rounded-full bg-navy-700 text-white grid place-items-center text-[19px] font-bold">
+              {(fullName !== '—' ? fullName : 'A').trim().charAt(0)}
+            </span>
+            <div className="min-w-0 flex-1">
+              <div className="text-[17px] font-bold text-navy-700 truncate">
                 {fullName}
               </div>
-              <div className="text-[12.5px] text-ink-400 truncate mt-0.5">{email}</div>
-              <div className="mt-2 flex items-center gap-1.5">
-                <StatusChip tone="gold" label={t('app.name')} />
-                {nafathVerified && (
-                  <StatusChip tone="gold" label={t('nafath.verified')} />
-                )}
+              <div className="mt-0.5 text-[12.5px] text-ink-500 truncate" dir="ltr">
+                {email}
               </div>
             </div>
+            {nafathVerified && (
+              <StatusChip
+                size="sm"
+                tone="success"
+                dot={false}
+                label={t('nafath.verified')}
+              />
+            )}
           </div>
-        </Card>
 
-        {/* Pending deletion banner — only when a request is on file */}
-        {deletionRequestedAt && (
-          <Card padded className="bg-warn-50 ring-1 ring-warn-500/30">
-            <div className="flex items-start gap-3">
-              <span className="h-10 w-10 shrink-0 rounded-2xl bg-white text-warn-700 grid place-items-center ring-1 ring-warn-500/30">
-                <AlertIcon size={18} />
-              </span>
-              <div className="min-w-0 flex-1">
-                <div className="text-[13.5px] font-semibold text-warn-700 tracking-tight">
-                  {t('profile.deleteAccount.pendingTitle')}
-                </div>
-                <p className="mt-1 text-[12.5px] text-ink-700 leading-relaxed">
-                  {t('profile.deleteAccount.pendingBody', {
-                    date: formatDate(deletionRequestedAt),
-                  })}
-                </p>
-                <Button
-                  size="sm"
-                  variant="secondary"
-                  className="mt-3"
-                  onClick={onCancelDeletion}
-                  loading={cancelSubmitting}
-                >
-                  {cancelSubmitting
-                    ? t('profile.deleteAccount.cancelling')
-                    : t('profile.deleteAccount.cancelRequest')}
-                </Button>
+          {/* Pending deletion banner — only when a request is on file */}
+          {deletionRequestedAt && (
+            <div className="rounded-[14px] bg-warn-50 ring-1 ring-warn-500/25 px-[18px] py-4">
+              <div className="text-[13px] font-bold text-warn-700">
+                {t('profile.deleteAccount.pendingTitle')}
               </div>
+              <p className="mt-1 text-[12.5px] text-ink-700 leading-relaxed">
+                {t('profile.deleteAccount.pendingBody', {
+                  date: formatDate(deletionRequestedAt),
+                })}
+              </p>
+              <Button
+                size="sm"
+                variant="secondary"
+                className="mt-3"
+                onClick={onCancelDeletion}
+                loading={cancelSubmitting}
+              >
+                {cancelSubmitting
+                  ? t('profile.deleteAccount.cancelling')
+                  : t('profile.deleteAccount.cancelRequest')}
+              </Button>
             </div>
-          </Card>
-        )}
+          )}
 
-        {/* Account list — kept for parity with the previous layout. */}
-        <div>
-          <SectionHeader title={t('profile.accountSection')} />
-          <Card padded={false} className="overflow-hidden">
-            <Row
-              icon={<UserIcon size={18} />}
-              tone="lavender"
-              label={t('profile.accountEntry')}
-              dir={dir}
-            />
+          {/* ====== Card A — account rows (C13 icon-less rows) ====== */}
+          <div className="rounded-[14px] bg-white ring-1 ring-beige-200 px-[18px]">
+            <Row label={t('profile.accountEntry')} dir={dir} />
             <Divider />
             <Row
-              icon={<HistoryIcon size={18} />}
-              tone="canvas"
               label={t('profile.historyEntry')}
               dir={dir}
               onClick={() => navigate('/contracts')}
             />
-          </Card>
-        </div>
-
-        {/* Language toggle */}
-        <div>
-          <SectionHeader title={t('profile.language')} />
-          <Card padded={false} className="overflow-hidden">
-            <div className="grid grid-cols-2">
-              <button
-                type="button"
-                onClick={() => setLocale('ar')}
-                className={cn(
-                  'py-4 text-[13.5px] font-medium transition-colors tracking-tight',
-                  locale === 'ar'
-                    ? 'bg-lavender-400 text-white'
-                    : 'text-ink-700 hover:bg-lavender-50',
-                )}
-              >
-                {t('profile.arabic')}
-              </button>
-              <button
-                type="button"
-                onClick={() => setLocale('en')}
-                className={cn(
-                  'py-4 text-[13.5px] font-medium transition-colors tracking-tight',
-                  locale === 'en'
-                    ? 'bg-lavender-400 text-white'
-                    : 'text-ink-700 hover:bg-lavender-50',
-                )}
-              >
-                {t('profile.english')}
-              </button>
-            </div>
-          </Card>
-        </div>
-
-        {/* Support & legal — App Store readiness. Rows are only
-            rendered when their corresponding env var is set, so dev
-            builds aren't littered with dead links. */}
-        {(SUPPORT_EMAIL || SUPPORT_URL || PRIVACY_URL) && (
-          <div>
-            <SectionHeader title={t('profile.support')} />
-            <Card padded={false} className="overflow-hidden">
-              {SUPPORT_EMAIL && (
-                <>
-                  <Row
-                    icon={<SupportIcon size={18} />}
-                    tone="lavender"
-                    label={t('profile.supportEmailLabel')}
-                    dir={dir}
-                    trailing={
-                      <span className="text-[11.5px] text-ink-400 truncate max-w-[140px]">
-                        {SUPPORT_EMAIL}
-                      </span>
-                    }
-                    onClick={() => {
-                      window.location.href = `mailto:${SUPPORT_EMAIL}`;
-                    }}
-                  />
-                  {(SUPPORT_URL || PRIVACY_URL) && <Divider />}
-                </>
-              )}
-              {SUPPORT_URL && (
-                <>
-                  <Row
-                    icon={<PhoneIcon size={18} />}
-                    tone="canvas"
-                    label={t('profile.supportPageLabel')}
-                    dir={dir}
-                    onClick={() => openExternal(SUPPORT_URL)}
-                  />
-                  {PRIVACY_URL && <Divider />}
-                </>
-              )}
-              {PRIVACY_URL && (
-                <Row
-                  icon={<ShieldIcon size={18} />}
-                  tone="lavender"
-                  label={t('profile.privacyPolicy')}
-                  dir={dir}
-                  onClick={() => openExternal(PRIVACY_URL)}
-                />
-              )}
-            </Card>
-          </div>
-        )}
-
-        {/* About — single read-only row showing the build version. */}
-        <div>
-          <SectionHeader title={t('profile.appearance')} />
-          <Card padded={false} className="overflow-hidden">
+            <Divider />
             <Row
-              icon={<GlobeIcon size={18} />}
-              tone="canvas"
-              label={t('profile.language')}
+              label={t('profile.accountStatusLabel')}
               dir={dir}
               trailing={
-                <span className="text-[12px] text-ink-400">
-                  {locale === 'ar' ? t('profile.arabic') : t('profile.english')}
+                <span className="text-[12.5px] font-bold text-green-700">
+                  {t('profile.accountStatusActive')}
                 </span>
               }
             />
             <Divider />
-            {/* Phase 6C: seven taps within the rolling window open the
-                hidden /diagnostics page. No chevron — the row must not
-                advertise itself as tappable. */}
+            {/* Language — C13 row form; tapping toggles AR ↔ EN (same
+                capability as the previous segmented control). */}
             <Row
-              icon={<InfoIcon size={18} />}
-              tone="canvas"
-              label={t('profile.about')}
+              label={t('profile.language')}
               dir={dir}
-              onClick={tapVersion}
-              chevron={false}
               trailing={
-                <span className="text-[12px] text-ink-400 num">
-                  {t('profile.version')} {releaseInfo.version}
-                </span>
+                <span className="text-[12.5px] text-ink-500">{languageValue}</span>
               }
+              onClick={() => setLocale(locale === 'ar' ? 'en' : 'ar')}
             />
-          </Card>
-        </div>
+            {PRIVACY_URL && (
+              <>
+                <Divider />
+                <Row
+                  label={t('profile.privacyPolicy')}
+                  dir={dir}
+                  onClick={() => openExternal(PRIVACY_URL)}
+                />
+              </>
+            )}
+          </div>
 
-        {/* Account control — App Store guideline 5.1.1(v) requires
-            an in-app account deletion entry point. Suppressed when
-            a deletion request is already on file (the banner above
-            handles that state). */}
-        {!deletionRequestedAt && (
-          <div>
-            <SectionHeader title={t('profile.dangerSection')} />
-            <Card padded={false} className="overflow-hidden">
-              <button
-                type="button"
+          {/* ====== Card B — support + account control ====== */}
+          <div className="rounded-[14px] bg-white ring-1 ring-beige-200 px-[18px]">
+            {SUPPORT_EMAIL && (
+              <>
+                <Row
+                  label={t('profile.supportEmailLabel')}
+                  dir={dir}
+                  trailing={
+                    <span className="text-[11.5px] text-ink-400 truncate max-w-[150px]" dir="ltr">
+                      {SUPPORT_EMAIL}
+                    </span>
+                  }
+                  onClick={() => {
+                    window.location.href = `mailto:${SUPPORT_EMAIL}`;
+                  }}
+                />
+                {(SUPPORT_URL || !deletionRequestedAt) && <Divider />}
+              </>
+            )}
+            {SUPPORT_URL && (
+              <>
+                <Row
+                  label={t('profile.supportPageLabel')}
+                  dir={dir}
+                  onClick={() => openExternal(SUPPORT_URL)}
+                />
+                {!deletionRequestedAt && <Divider />}
+              </>
+            )}
+            {/* Account deletion — App Store guideline 5.1.1(v) entry
+                point; suppressed while a request is pending. */}
+            {!deletionRequestedAt && (
+              <Row
+                label={t('profile.deleteAccount.row')}
+                dir={dir}
+                danger
                 onClick={() => {
                   setDeletionError(null);
                   setConfirmOpen(true);
                 }}
-                className="flex w-full items-start gap-3.5 px-5 py-4 text-start hover:bg-danger-50/50 transition-colors"
-              >
-                <span className="h-10 w-10 rounded-2xl bg-danger-50 text-danger-600 grid place-items-center shrink-0">
-                  <AlertIcon size={18} />
-                </span>
-                <div className="flex-1 min-w-0">
-                  <div className="text-[14px] font-semibold text-danger-700 tracking-tight">
-                    {t('profile.deleteAccount.row')}
-                  </div>
-                  <div className="mt-0.5 text-[11.5px] text-ink-500 leading-relaxed">
-                    {t('profile.deleteAccount.rowHint')}
-                  </div>
-                </div>
-                <ChevronIcon
-                  size={16}
-                  className={cn('text-danger-300 mt-2', dir === 'rtl' && 'rotate-180')}
-                />
-              </button>
-            </Card>
+              />
+            )}
           </div>
-        )}
 
-        {deletionError && (
-          <div className="rounded-xl2 bg-danger-50 ring-1 ring-danger-500/25 px-3.5 py-2.5 text-[12.5px] text-danger-700 leading-relaxed">
-            {deletionError}
-          </div>
-        )}
+          {deletionError && (
+            <div className="rounded-xl2 bg-danger-50 ring-1 ring-danger-500/25 px-3.5 py-2.5 text-[12.5px] text-danger-700 leading-relaxed">
+              {deletionError}
+            </div>
+          )}
 
-        {/* Sign out — soft lavender outline */}
-        <button
-          type="button"
-          onClick={onSignOut}
-          className="w-full inline-flex items-center justify-center gap-2 h-12 rounded-xl2 bg-lavender-50 text-lavender-700 font-semibold ring-1 ring-inset ring-lavender-200 hover:bg-lavender-100 transition-colors"
-        >
-          {t('profile.signOut')}
-        </button>
+          {/* Sign out — outlined navy (M16-family pattern) */}
+          <button
+            type="button"
+            onClick={onSignOut}
+            className="flex items-center justify-center h-13 w-full rounded-xl2 bg-white text-navy-700 font-bold text-[14px] ring-[1.5px] ring-inset ring-navy-700 hover:bg-navy-50 transition-colors"
+          >
+            {t('profile.signOut')}
+          </button>
 
-        <p className="text-center text-[11px] text-ink-400 num">
-          Lend v0.1.0
-        </p>
+          {/* Release line — seven taps open /diagnostics (6C gesture,
+              moved here from the old About row). Real release data. */}
+          <button
+            type="button"
+            onClick={tapVersion}
+            className="w-full text-center text-[11px] text-ink-400 num cursor-default select-none"
+            dir="ltr"
+          >
+            Lend · {releaseInfo.version} · {releaseInfo.commit} · {releaseInfo.env}
+          </button>
+        </div>
       </Screen>
 
       <ConfirmSheet
@@ -394,27 +294,22 @@ export default function Profile() {
 }
 
 function Divider() {
-  return <div className="mx-5 h-px bg-canvas-200/80" />;
+  return <div className="h-px bg-beige-100" />;
 }
 
+// C13 rows — no leading icon boxes: label (start) + value + chevron.
 function Row({
-  icon,
   label,
   trailing,
   dir,
-  tone = 'canvas',
   onClick,
-  chevron = true,
+  danger = false,
 }: {
-  icon: ReactNode;
   label: ReactNode;
   trailing?: ReactNode;
   dir: 'rtl' | 'ltr';
-  tone?: 'lavender' | 'canvas';
   onClick?: () => void;
-  /** Hide the affordance for rows whose tap action is intentionally
-   *  undiscoverable (the 6C seven-tap version row). */
-  chevron?: boolean;
+  danger?: boolean;
 }) {
   return (
     <button
@@ -422,24 +317,27 @@ function Row({
       onClick={onClick}
       disabled={!onClick}
       className={cn(
-        'flex w-full items-center gap-3.5 px-5 py-4 text-start transition-colors',
-        onClick && chevron ? 'hover:bg-lavender-50' : 'cursor-default',
+        'flex w-full items-center gap-3 py-3.5 text-start transition-colors',
+        onClick ? 'hover:bg-beige-50' : 'cursor-default',
       )}
     >
       <span
         className={cn(
-          'h-10 w-10 rounded-2xl grid place-items-center',
-          tone === 'lavender'
-            ? 'bg-lavender-50 text-lavender-600'
-            : 'bg-canvas-100 text-ink-700',
+          'flex-1 text-[13.5px] font-semibold tracking-tight',
+          danger ? 'text-danger-600' : 'text-ink-800',
         )}
       >
-        {icon}
+        {label}
       </span>
-      <span className="flex-1 text-[14px] font-medium text-ink-800 tracking-tight">{label}</span>
       {trailing}
-      {onClick && chevron && (
-        <ChevronIcon size={16} className={cn('text-ink-300', dir === 'rtl' && 'rotate-180')} />
+      {onClick && (
+        <ChevronIcon
+          size={14}
+          className={cn(
+            danger ? 'text-danger-400' : 'text-ink-300',
+            dir === 'rtl' && 'rotate-180',
+          )}
+        />
       )}
     </button>
   );

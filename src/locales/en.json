@@ -195,7 +195,12 @@
     "adminDemo": {
       "label": "Open operations console",
       "pill": "Demo"
-    }
+    },
+    "entrySubtitle": "Smart, documented rentals — a digital contract protects your right at every step.",
+    "roleCustomer": "I'm a customer — I want to rent",
+    "roleMerchant": "I'm a merchant — I rent out",
+    "haveAccountPrefix": "Have an account?",
+    "signInLink": "Sign in"
   },
   "auth": {
     "loginTitle": "Welcome back",
@@ -309,7 +314,8 @@
       "emailNotConfirmed": "Your email is not confirmed yet. Open the confirmation email we sent you, then sign in again.",
       "merchantAccountOnCustomerLogin": "This is a merchant account. Use the merchant sign-in page."
     },
-    "goToMerchantLogin": "Go to merchant sign-in"
+    "goToMerchantLogin": "Go to merchant sign-in",
+    "welcomeBack": "Welcome back"
   },
   "register": {
     "title": "Create account",
@@ -376,7 +382,8 @@
       "mobile": "Must start with 5 and be 9 digits",
       "email": "Invalid email address",
       "income": "Must be a number greater than zero"
-    }
+    },
+    "customerTitle": "Create a customer account"
   },
   "nafath": {
     "title": "Verify with Nafath",
@@ -418,7 +425,8 @@
       "expiresInArabic": "Expires in {days} days",
       "fromMerchant": "From {merchant}",
       "morePending": "+{count} more invoice(s) waiting · View all",
-      "cta": "Review & accept"
+      "cta": "Review the offer and contract",
+      "offerTitle": "An offer awaits your review"
     },
     "current": {
       "title": "Live rental",
@@ -431,7 +439,8 @@
       "notePill": "Note (Nafath)",
       "stateSigned": "Signed",
       "statePending": "Pending",
-      "cta": "View contract details"
+      "cta": "View contract details",
+      "endsOnShort": "Return {date}"
     },
     "starter": {
       "eyebrow": "Get started",
@@ -453,7 +462,11 @@
     "historyStrip": {
       "title": "Recent rentals",
       "viewAll": "View all rentals"
-    }
+    },
+    "verifiedBanner": "Your account is verified and ready to rent.",
+    "browseStores": "Browse stores",
+    "browseAll": "All",
+    "stageLine": "Stage {current} of {total} · {stage}"
   },
   "sections": {
     "activeInvoices": "Active invoices",
@@ -496,7 +509,7 @@
     }
   },
   "stores": {
-    "title": "Sectors",
+    "title": "Stores",
     "subtitle": "Each sector groups partner businesses by what they rent.",
     "sectorPartners": "{count} partner businesses",
     "sectorPartner": "1 partner business",
@@ -520,7 +533,7 @@
     "branchesCount": "{count} branches",
     "emptySearch": "No matching stores",
     "emptyHint": "Try a different keyword or filter.",
-    "notice": "Informational only — contracts are not created from this page.",
+    "notice": "Rentals start at the store: the merchant issues your offer and contract, and you review and approve them in the app.",
     "callBranch": "Call branch",
     "openMap": "Open in maps",
     "notFound": "Store not found",
@@ -550,6 +563,14 @@
     "actions": {
       "viewBoutique": "View boutique",
       "branchesAndLocation": "Branches & location"
+    },
+    "verifiedShort": "Verified",
+    "detailsTitle": "Store details",
+    "howTo": {
+      "title": "How do you rent from {name}?",
+      "step1": "Visit a branch and pick the item",
+      "step2": "Give the merchant your Lend-registered mobile number",
+      "step3": "Review the offer and contract, then approve in the app"
     }
   },
   "eligibility": {
@@ -646,7 +667,9 @@
       "pendingBody": "We received your deletion request on {date}. Your account will be fully removed within 30 days. You can still cancel below if you change your mind.",
       "cancelRequest": "Cancel deletion request",
       "cancelling": "Cancelling…"
-    }
+    },
+    "accountStatusLabel": "Account status",
+    "accountStatusActive": "Active & verified"
   },
   "diagnostics": {
     "title": "Diagnostics",

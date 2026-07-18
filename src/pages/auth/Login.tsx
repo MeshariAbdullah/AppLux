@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Header, Screen } from '@/components/layout';
-import { Button, Card, FormField, Input } from '@/components/ui';
+import { Screen } from '@/components/layout';
+import { Button, FormField, Input } from '@/components/ui';
 import {
-  BadgeCheckIcon,
+  ArrowIcon,
   EyeIcon,
   EyeOffIcon,
   InfoIcon,
@@ -17,6 +17,7 @@ import { cn } from '@/lib/cn';
 import { useStore } from '@/lib/store';
 import { emptyRegistration } from '@/lib/store';
 import { useSupabaseAuth } from '@/lib/supabase';
+import { LendLogo } from '@/components/brand/Logo';
 import {
   isMisconfiguredProduction,
   ProductionConfigError,
@@ -197,32 +198,39 @@ export default function Login() {
 
   return (
     <>
-      <Header title={t('auth.loginTitle')} showBack />
-      <Screen className="bg-canvas">
-        <div className="space-y-6">
-          {/* Hero */}
-          <div className="relative overflow-hidden rounded-xl3 bg-gradient-to-br from-ink-900 via-ink-800 to-ink-900 text-white p-6 shadow-plush">
-            <div
-              aria-hidden
-              className="pointer-events-none absolute inset-0 pattern-dots opacity-25"
-            />
-            <div
-              aria-hidden
-              className="pointer-events-none absolute -top-14 end-[-18%] h-52 w-52 rounded-full bg-gold-400/22 blur-[80px]"
-            />
-            <div className="relative">
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-white/10 ring-1 ring-white/15 px-2.5 py-1 text-[11px] font-semibold">
-                <BadgeCheckIcon size={12} />
-                {t('auth.login.trust')}
-              </span>
-              <h1 className="mt-4 editorial-title text-[24px] leading-tight text-white">
-                {t('auth.loginTitle')}
-              </h1>
-              <p className="mt-2 text-[13px] text-white/65 leading-relaxed max-w-[34ch]">
-                {t('auth.loginSubtitle')}
-              </p>
-            </div>
+      <Screen padded={false} className="bg-beige-100">
+        {/* C03 has no header bar — a floating back square keeps the
+            navigation affordance (Capacitor has no browser chrome). */}
+        <button
+          type="button"
+          onClick={() => navigate(-1)}
+          aria-label={t('common.back')}
+          className="absolute z-10 top-[calc(env(safe-area-inset-top)+14px)] start-5 h-9 w-9 grid place-items-center rounded-[10px] bg-white text-navy-700 shadow-soft"
+        >
+          <ArrowIcon size={16} className="rtl:rotate-0 ltr:rotate-180" />
+        </button>
+        <div className="px-5 pt-[calc(env(safe-area-inset-top)+14px)] pb-10 space-y-5">
+          {/* C03 masthead — centered mark + welcome-back title */}
+          <div className="flex flex-col items-center gap-3 pt-8">
+            <LendLogo variant="mark" theme="light" size={52} />
+            <h1 className="text-[22px] font-bold text-navy-700 leading-tight">
+              {t('auth.welcomeBack')}
+            </h1>
           </div>
+
+          {/* Merchant-credentials notice — C03 places it right under
+              the masthead. Same behavior as before. */}
+          {wrongAccountType && (
+            <div className="rounded-xl2 bg-navy-50 ring-1 ring-navy-200 px-4 py-3 text-[12.5px] text-ink-800 leading-relaxed">
+              {t('auth.errors.merchantAccountOnCustomerLogin')}{' '}
+              <Link
+                to="/merchant/login"
+                className="font-bold text-navy-700 underline underline-offset-4"
+              >
+                {t('auth.goToMerchantLogin')}
+              </Link>
+            </div>
+          )}
 
           {/* Demo hint — DEMO MODE ONLY. Production users must never
               see demo credentials or a demo-fill affordance. */}
@@ -315,7 +323,7 @@ export default function Login() {
               />
             </FormField>
 
-            <div className="flex justify-end">
+            <div className="flex justify-start">
               <Link
                 to="/auth/forgot-password"
                 className="text-[12.5px] font-semibold text-lavender-700 hover:text-lavender-800"
@@ -330,19 +338,13 @@ export default function Login() {
               </div>
             )}
 
-            {wrongAccountType && (
-              <div className="rounded-xl2 bg-warn-50 ring-1 ring-warn-500/25 px-3.5 py-2.5 text-[12.5px] text-warn-800 leading-relaxed">
-                {t('auth.errors.merchantAccountOnCustomerLogin')}{' '}
-                <Link
-                  to="/merchant/login"
-                  className="font-semibold text-lavender-700 underline underline-offset-4"
-                >
-                  {t('auth.goToMerchantLogin')}
-                </Link>
-              </div>
-            )}
-
-            <Button type="submit" size="lg" block loading={submitting}>
+            <Button
+              type="submit"
+              size="lg"
+              block
+              loading={submitting}
+              className="!bg-navy-700 hover:!bg-navy-800 active:!bg-navy-800"
+            >
               {submitting ? t('auth.login.submitting') : t('auth.signIn')}
             </Button>
 
@@ -374,21 +376,14 @@ export default function Login() {
               </>
             )}
 
-            <Card padded className="flex items-start gap-3.5">
-              <span className="h-10 w-10 shrink-0 rounded-2xl bg-gold-50 text-gold-700 grid place-items-center">
-                <LockIcon size={16} />
-              </span>
-              <div className="min-w-0 text-[12.5px] text-ink-500 leading-relaxed">
-                <div className="text-ink-900 font-semibold mb-0.5 text-[13px] tracking-tight">
-                  {t('auth.login.security.title')}
-                </div>
-                <div>{t('auth.login.security.hint')}</div>
-              </div>
-            </Card>
+            <p className="text-center text-[11px] text-ink-400 leading-relaxed inline-flex items-center gap-1 justify-center w-full">
+              <LockIcon size={11} />
+              {t('auth.login.security.hint')}
+            </p>
 
             <div className="text-center text-[13px] text-ink-500 pt-1">
               {t('auth.noAccount')}{' '}
-              <Link to="/auth/register" className="text-gold-700 font-semibold hover:text-gold-600">
+              <Link to="/auth/register" className="font-bold text-green-700 hover:text-green-800">
                 {t('auth.register')}
               </Link>
             </div>

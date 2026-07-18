@@ -308,6 +308,13 @@ export const LockIcon = (p: IconProps) => (
   </svg>
 );
 
+export const MailIcon = (p: IconProps) => (
+  <svg {...base(p)}>
+    <rect x="3" y="5" width="18" height="14" rx="2" />
+    <path d="m3 7 9 6 9-6" />
+  </svg>
+);
+
 export const DressIcon = (p: IconProps) => (
   <svg {...base(p)}>
     <path d="M10 3h4l-.5 3 4 5-1 3H7.5l-1-3 4-5L10 3Z" />

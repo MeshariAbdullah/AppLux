@@ -1,27 +1,17 @@
-import { useMemo, type ReactNode } from 'react';
+import { useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Header, Screen } from '@/components/layout';
-import {
-  Avatar,
-  Card,
-  CardSkeleton,
-  IconButton,
-  PageSkeleton,
-  SectionHeader,
-} from '@/components/ui';
+import { Screen } from '@/components/layout';
+import { Avatar, CardSkeleton, PageSkeleton, StatusChip } from '@/components/ui';
 import {
   ArrowIcon,
   BadgeCheckIcon,
   BellIcon,
+  BuildingIcon,
   CheckIcon,
   ChevronIcon,
   DocIcon,
   ReceiptIcon,
-  SparkleIcon,
-  BuildingIcon,
-  WalletIcon,
 } from '@/components/icons';
-import { ENABLE_PAYMENTS_AND_NOTES } from '@/lib/featureFlags';
 import { useI18n, useT } from '@/lib/i18n';
 import { useStore } from '@/lib/store';
 import {
@@ -40,12 +30,21 @@ import type { Contract, HistoryItem, Invoice, PromissoryNote } from '@/lib/data'
 import { cn } from '@/lib/cn';
 
 // =====================================================================
-// Customer home — mode-driven layout
+// Customer home — design C05 (approved Conflict-3 HYBRID).
 // =====================================================================
-// The dashboard derives ONE `mode` from the loaded data and composes
-// itself from a small set of mode-aware blocks. The same screen renders
-// very differently for the four customer states (new / attention /
-// active / idle) without stacking parallel empty-state cards.
+// Composition per the imported design: light greeting row (avatar +
+// quiet notification bell), the green "verified & ready" banner, then
+// the mode-driven hero (pending-offer card / active-rental card with
+// the four-stage journey dots / starter / idle), the store-category
+// grid, and the recent-rentals strip as the activity block.
+//
+// PRESERVED per the approved hybrid decision:
+//   * the compact eligibility card (live values; taps to /eligibility)
+//     — restyled into the design card language, placed right after the
+//     verified banner
+//   * the notification bell (only route to /notifications)
+// Data, caching (4B keys/TTLs/invalidation), the mode precedence and
+// every destination are unchanged.
 //
 // Mode precedence (highest first):
 //   attention — any invoice waiting on the customer to accept
@@ -63,6 +62,8 @@ type ActiveRental = {
   note?: PromissoryNote;
   merchantName: string;
 };
+
+const CATEGORY_KEYS = ['dresses', 'bags', 'watches', 'bishts'] as const;
 
 export default function Home() {
   const t = useT();
@@ -163,16 +164,10 @@ export default function Home() {
 
   // Index invoices/notes by id so the rental bundle card can fuse them.
   const invoicesByContractRef = useMemo(() => {
-    // We don't have invoice → contract id on the UI Invoice type, but
-    // `contract.title` already encodes the contract number. Match on
-    // amount + index as a fallback isn't reliable; instead we surface
-    // the most recent accepted invoice per merchant. Good enough for
-    // the active-rental case and unaffected if there's only one rental.
     const map = new Map<string, Invoice>();
     invoices.forEach((inv) => {
       if (inv.status === 'paid') {
-        const key = inv.id;
-        map.set(key, inv);
+        map.set(inv.id, inv);
       }
     });
     return map;
@@ -194,8 +189,6 @@ export default function Home() {
     return contracts
       .filter((c) => c.status === 'active' || c.status === 'pending')
       .map<ActiveRental>((contract) => {
-        // Pair this contract with its note (matched by counterparty
-        // since the UI types don't carry contract_id on the note).
         const note = notes.find((n) => n.counterparty === contract.counterparty);
         const invoice = Array.from(invoicesByContractRef.values()).find(
           (inv) => inv.amount === contract.monthlyAmount,
@@ -221,70 +214,62 @@ export default function Home() {
   // Render
   // ---------------------------------------------------------------------
 
+  const greetingRow = (
+    <div className="flex items-center gap-2.5">
+      <div className="flex-1 min-w-0">
+        <div className="text-[13px] text-ink-500">{t('home.greeting')}</div>
+        <h1 className="text-[19px] font-bold text-navy-700 leading-tight truncate">
+          {firstName || fullName || '—'}
+        </h1>
+      </div>
+      {/* Quiet notification bell — preserved per the approved hybrid:
+          this is the app's only route to /notifications. */}
+      <button
+        type="button"
+        aria-label={t('nav.notifications')}
+        onClick={() => navigate('/notifications')}
+        className="h-10 w-10 grid place-items-center rounded-xl bg-white ring-[1.5px] ring-beige-300 text-navy-700 hover:ring-navy-200 transition-colors"
+      >
+        <BellIcon size={16} />
+      </button>
+      <Avatar name={fullName || 'A'} tone="ink" />
+    </div>
+  );
+
   // Loading first — in live mode we MUST NOT render mode-based content
   // until invoices/contracts/notes have been fetched, otherwise the
   // dashboard briefly shows the "new customer" mode before the real
-  // data arrives. The hero stays so the user sees the page chrome.
+  // data arrives.
   if (configured && liveLoading) {
     return (
-      <>
-        <Header
-          variant="hero"
-          leading={<Avatar name={session?.fullName ?? profile?.full_name ?? 'A'} tone="gold" />}
-          title={
-            <span className="text-white">
-              {t('home.greeting')}
-              {firstName && `، ${firstName}`}
-            </span>
-          }
-          subtitle={t('home.subtitle')}
-          trailing={
-            <IconButton
-              variant="glass"
-              label={t('nav.notifications')}
-              onClick={() => navigate('/notifications')}
-            >
-              <BellIcon size={18} />
-            </IconButton>
-          }
-        />
-        <Screen className="bg-canvas">
+      <Screen padded={false} className="bg-beige-100">
+        <div className="px-5 pt-[calc(env(safe-area-inset-top)+22px)] pb-24 space-y-4">
+          {greetingRow}
           <CardSkeleton />
-          <div className="mt-4">
-            <PageSkeleton rows={3} />
-          </div>
-        </Screen>
-      </>
+          <PageSkeleton rows={3} />
+        </div>
+      </Screen>
     );
   }
 
   return (
-    <>
-      <Header
-        variant="hero"
-        leading={<Avatar name={session?.fullName ?? 'A'} tone="gold" />}
-        title={
-          <span className="text-white">
-            {t('home.greeting')}
-            {firstName && `، ${firstName}`}
+    <Screen padded={false} className="bg-beige-100">
+      <div className="px-5 pt-[calc(env(safe-area-inset-top)+22px)] pb-24 space-y-3">
+        {/* ====== C05 greeting ====== */}
+        {greetingRow}
+
+        {/* ====== Verified & ready banner ====== */}
+        <div className="rounded-xl2 bg-green-50 ring-1 ring-green-200 px-4 py-3 flex items-center gap-2.5">
+          <span className="h-5 w-5 shrink-0 rounded-full bg-green-700 text-white grid place-items-center">
+            <CheckIcon size={11} strokeWidth={2.5} />
           </span>
-        }
-        subtitle={t('home.subtitle')}
-        trailing={
-          <IconButton
-            variant="glass"
-            label={t('nav.notifications')}
-            onClick={() => navigate('/notifications')}
-          >
-            <BellIcon size={18} />
-          </IconButton>
-        }
-      />
-      <Screen className="bg-canvas">
-        {/* Compact eligibility — always shown, never dominates.
-            Restored after 417c0ec removed it unintentionally; the
-            /eligibility DETAIL page stays "coming soon", so tapping
-            the card lands on that friendly placeholder. */}
+          <span className="text-[12.5px] font-semibold text-green-700">
+            {t('home.verifiedBanner')}
+          </span>
+        </div>
+
+        {/* ====== Compact eligibility (preserved; design card chrome).
+              Live values + the only path to /eligibility. ====== */}
         <EligibilityCompact
           eligibility={eligibility}
           tierLabel={t(`eligibility.tiers.${eligibility.tier}`)}
@@ -294,12 +279,11 @@ export default function Home() {
           dir={dir}
         />
 
-        {/* Mode-driven hero block. */}
+        {/* ====== Mode-driven hero block ====== */}
         {mode === 'attention' && (
           <AttentionStack
             invoices={attentionInvoices}
             t={t}
-            dir={dir}
             formatCurrency={formatCurrency}
             formatDate={formatDate}
             onReview={(invoice) => {
@@ -321,7 +305,6 @@ export default function Home() {
           <ActiveStack
             rentals={activeRentals}
             t={t}
-            dir={dir}
             formatCurrency={formatCurrency}
             formatDate={formatDate}
             onOpenContract={(id) => navigate(`/track/contract/${id}`)}
@@ -332,9 +315,39 @@ export default function Home() {
 
         {mode === 'idle' && <IdleAcknowledgment t={t} dir={dir} />}
 
-        {/* History strip — appears whenever there's anything to show,
-            independent of mode. Only the new customer has zero history
-            and zero usage, so this block is naturally suppressed for them. */}
+        {/* ====== C05 store-category grid → /stores ====== */}
+        <div className="flex items-center justify-between pt-1.5">
+          <div className="text-[14px] font-bold text-navy-700">
+            {t('home.browseStores')}
+          </div>
+          <Link
+            to="/stores"
+            className="text-[12.5px] font-bold text-green-700 hover:text-green-800"
+          >
+            {t('home.browseAll')}
+          </Link>
+        </div>
+        <div className="grid grid-cols-4 gap-2.5">
+          {CATEGORY_KEYS.map((c) => {
+            const label = t(`stores.filters.${c}`);
+            return (
+              <Link
+                key={c}
+                to={`/stores?filter=${c}`}
+                className="flex flex-col items-center gap-1.5 rounded-[14px] bg-white ring-1 ring-beige-200 px-2 py-3.5 transition-transform active:scale-[0.97]"
+              >
+                <span className="h-9 w-9 rounded-full bg-beige-100 text-navy-700 grid place-items-center text-[14px] font-bold">
+                  {label.charAt(0)}
+                </span>
+                <span className="text-[11.5px] font-semibold text-ink-800 truncate max-w-full">
+                  {label}
+                </span>
+              </Link>
+            );
+          })}
+        </div>
+
+        {/* ====== Activity — recent completed rentals (real data) ====== */}
         {history.length > 0 && (
           <HistoryStrip
             items={history.slice(0, 2)}
@@ -344,12 +357,8 @@ export default function Home() {
             formatDate={formatDate}
           />
         )}
-
-        {/* The middle quick-link cards (Partners / Eligibility /
-            Account) are removed — every destination is one tap away
-            in the bottom navigation, which is unchanged. */}
-      </Screen>
-    </>
+      </div>
+    </Screen>
   );
 }
 
@@ -357,18 +366,9 @@ export default function Home() {
 // Blocks
 // =====================================================================
 
-// Eligibility summary strip — restrained, premium, calm.
-//
-// Design intent: this is a smart summary, not a hero. It sits in the
-// normal page flow below the header, on white, with hairline borders
-// and small typography. The only colored accent is the tier pill and
-// a barely-visible usage hairline at the bottom edge — both there so
-// active customers still get usage information at a glance.
-//
-// Anything that previously made it dominate the top — lavender
-// gradient fill, white-on-color type, the -mt-12 pull-up into the
-// header, the editorial 28px number, the 6px progress bar, the
-// decorative blur dots — is gone.
+// Compact eligibility — preserved element, restyled into the C05 card
+// language (white 14px-radius card, green accents). Live values; taps
+// through to /eligibility.
 function EligibilityCompact({
   eligibility,
   tierLabel,
@@ -398,19 +398,15 @@ function EligibilityCompact({
     <button
       type="button"
       onClick={onOpen}
-      className={cn(
-        'relative w-full text-start rounded-2xl bg-white hairline overflow-hidden',
-        'px-4 py-3 shadow-soft transition-colors',
-        'hover:bg-canvas-100/40 active:bg-canvas-100/70',
-      )}
+      className="relative w-full text-start rounded-[14px] bg-white ring-1 ring-beige-200 overflow-hidden px-[18px] py-3.5 transition-colors hover:bg-beige-50 active:bg-beige-50"
     >
       <div className="flex items-center justify-between gap-3">
         <div className="min-w-0 flex-1">
-          <div className="text-[10px] font-semibold text-ink-400 uppercase tracking-[0.08em]">
+          <div className="text-[11.5px] text-ink-500">
             {t('home.eligibilityCompact.available')}
           </div>
           <div className="mt-0.5 flex items-baseline gap-1.5">
-            <span className="num text-[17px] font-semibold text-ink-900 tracking-tight">
+            <span className="num text-[17px] font-bold text-navy-700 tracking-tight">
               {formatCurrency(eligibility.remaining)}
             </span>
             {eligibility.limit > 0 && (
@@ -421,7 +417,7 @@ function EligibilityCompact({
           </div>
         </div>
         <div className="flex items-center gap-2 shrink-0">
-          <span className="inline-flex items-center text-[10px] font-semibold text-lavender-700 bg-lavender-50 ring-1 ring-lavender-200 rounded-full px-2 py-0.5">
+          <span className="inline-flex items-center text-[10.5px] font-bold text-green-700 bg-green-50 rounded-full px-2.5 py-1">
             {tierLabel}
           </span>
           <ChevronIcon
@@ -433,10 +429,10 @@ function EligibilityCompact({
       {hasUsage && (
         <span
           aria-hidden
-          className="pointer-events-none absolute inset-x-0 bottom-0 h-[2px] bg-canvas-200"
+          className="pointer-events-none absolute inset-x-0 bottom-0 h-[2.5px] bg-navy-100/60"
         >
           <span
-            className="block h-full bg-lavender-400"
+            className="block h-full bg-green-500"
             style={{ width: `${usagePct}%` }}
           />
         </span>
@@ -447,17 +443,17 @@ function EligibilityCompact({
 
 // ---------------------------------------------------------------------
 
+// Pending-offer card — C05: bold title + review chip, meta line with
+// the item / amount / date, then the navy full-width review CTA.
 function AttentionStack({
   invoices,
   t,
-  dir,
   formatCurrency,
   formatDate,
   onReview,
 }: {
   invoices: AttentionInvoice[];
   t: (k: string, p?: Record<string, string | number>) => string;
-  dir: 'rtl' | 'ltr';
   formatCurrency: (n: number) => string;
   formatDate: (iso: string) => string;
   onReview: (invoice: AttentionInvoice) => void;
@@ -472,62 +468,44 @@ function AttentionStack({
     <div className="space-y-2">
       <div
         key={top.id}
-        className={cn(
-          'relative rounded-xl3 bg-gradient-to-br from-warn-50 to-white',
-          'ring-1 ring-warn-500/25 p-5 shadow-soft animate-fade-in',
-        )}
+        className="rounded-[14px] bg-white ring-1 ring-beige-200 px-[18px] py-4 space-y-3 animate-fade-in"
       >
-        <div className="flex items-start gap-3">
-          <span className="h-10 w-10 rounded-2xl bg-warn-600 text-white grid place-items-center shrink-0 shadow-soft">
-            <ReceiptIcon size={18} />
+        <div className="flex items-center justify-between gap-3">
+          <span className="text-[14px] font-bold text-ink-900 truncate">
+            {t('home.attention.offerTitle')}
           </span>
-          <div className="min-w-0 flex-1">
-            <div className="text-[11px] font-semibold text-warn-700 uppercase tracking-[0.08em]">
-              {daysLeft > 0
-                ? t('home.attention.expiresIn', { days: daysLeft })
-                : t('common.overdue')}
-            </div>
-            {top.merchantName && (
-              <div className="mt-0.5 text-[11.5px] text-ink-500 truncate">
-                {t('home.attention.fromMerchant', { merchant: top.merchantName })}
-              </div>
-            )}
-            <div className="mt-1 text-[16px] font-semibold text-ink-900 tracking-tight truncate">
-              {top.title}
-            </div>
-            <div className="mt-2 flex items-center gap-3 text-[12px] text-ink-500">
-              <span className="num font-semibold text-ink-900">
-                {formatCurrency(top.amount)}
-              </span>
-              <span className="text-ink-300">·</span>
-              <span className="num">{formatDate(top.dueDate)}</span>
-            </div>
-          </div>
+          <StatusChip
+            size="sm"
+            tone="warn"
+            dot={false}
+            label={t('journey.stages.review')}
+          />
+        </div>
+        <div className="text-[12.5px] text-ink-500 truncate">
+          {top.title}
+          {top.merchantName ? ` — ${top.merchantName}` : ''}
+          {' · '}
+          <span className="num">{formatCurrency(top.amount)}</span>
+          {' · '}
+          <span className="num">
+            {daysLeft > 0
+              ? t('home.attention.expiresIn', { days: daysLeft })
+              : formatDate(top.dueDate)}
+          </span>
         </div>
         <button
           type="button"
           onClick={() => onReview(top)}
-          className={cn(
-            'mt-4 inline-flex items-center justify-center gap-1.5 h-11 w-full rounded-xl2',
-            'bg-ink-900 text-white font-semibold text-[14px] tracking-tight',
-            'shadow-plush hover:bg-ink-800 active:bg-ink-800 transition-colors',
-          )}
+          className="flex items-center justify-center h-12 w-full rounded-xl2 bg-navy-700 text-white font-bold text-[14px] tracking-tight hover:bg-navy-800 active:bg-navy-800 transition-colors"
         >
           {t('home.attention.cta')}
-          <ArrowIcon
-            size={14}
-            className={cn(dir === 'rtl' ? 'rotate-180' : '')}
-          />
         </button>
       </div>
 
       {extra > 0 && (
         <Link
           to="/contracts"
-          className={cn(
-            'block text-center text-[12px] font-semibold text-lavender-700',
-            'hover:text-lavender-800',
-          )}
+          className="block text-center text-[12px] font-bold text-green-700 hover:text-green-800"
         >
           {t('home.attention.morePending', { count: extra })}
         </Link>
@@ -538,168 +516,104 @@ function AttentionStack({
 
 // ---------------------------------------------------------------------
 
+// Active-rental card — C05: bold title + started chip, meta line, the
+// four-stage journey dots with the stage line, then the details CTA.
 function ActiveStack({
   rentals,
   t,
-  dir,
   formatCurrency,
   formatDate,
   onOpenContract,
 }: {
   rentals: ActiveRental[];
   t: (k: string, p?: Record<string, string | number>) => string;
-  dir: 'rtl' | 'ltr';
   formatCurrency: (n: number) => string;
   formatDate: (iso: string) => string;
   onOpenContract: (id: string) => void;
 }) {
+  const STAGE_KEYS = [
+    'journey.stages.request',
+    'journey.stages.review',
+    'journey.stages.started',
+    'journey.stages.closure',
+  ];
   return (
     <div className="space-y-3">
-      {rentals.map(({ contract, invoice, note, merchantName }) => {
-        const daysLeft = daysUntil(contract.endDate);
-        const daysLabel =
-          daysLeft > 0
-            ? t('home.current.daysLeft', { days: daysLeft })
-            : daysLeft === 0
-              ? t('home.current.endsToday')
-              : t('home.current.endedHint');
+      {rentals.map(({ contract, merchantName }) => {
+        // Approved four-stage mapping: an ACTIVE contract is in stage 3
+        // (بدء الإيجار); a pending one is still in customer review.
+        const currentIdx = contract.status === 'active' ? 2 : 1;
         return (
           <div
             key={contract.id}
-            className="rounded-xl3 bg-white hairline p-5 shadow-soft animate-fade-in"
+            className="rounded-[14px] bg-white ring-1 ring-beige-200 px-[18px] py-4 space-y-3 animate-fade-in"
           >
-            <div className="flex items-start gap-3">
-              <span className="h-11 w-11 rounded-2xl bg-lavender-50 text-lavender-700 ring-1 ring-lavender-200 grid place-items-center shrink-0">
-                <SparkleIcon size={18} />
+            <div className="flex items-center justify-between gap-3">
+              <span className="text-[14px] font-bold text-ink-900 truncate">
+                {t('home.current.title')}
               </span>
-              <div className="min-w-0 flex-1">
-                <div className="text-[10.5px] font-semibold text-lavender-700 uppercase tracking-[0.08em]">
-                  {t('home.current.title')}
-                </div>
-                <div className="mt-0.5 text-[15px] font-semibold text-ink-900 tracking-tight truncate">
-                  {contract.title}
-                </div>
-                {merchantName && merchantName !== '—' && (
-                  <div className="mt-0.5 text-[12.5px] text-ink-500 truncate">
-                    {merchantName}
-                  </div>
-                )}
-              </div>
-              <div className="text-end shrink-0 num">
-                <div className="editorial-title text-[26px] text-ink-900 leading-none">
-                  {daysLeft > 0 ? daysLeft : daysLeft === 0 ? '0' : '—'}
-                </div>
-                <div className="mt-1 text-[10.5px] font-semibold text-ink-400 uppercase tracking-[0.08em]">
-                  {daysLabel}
-                </div>
-              </div>
+              <StatusChip
+                size="sm"
+                tone={contract.status === 'active' ? 'success' : 'warn'}
+                dot={false}
+                label={t(STAGE_KEYS[currentIdx])}
+              />
+            </div>
+            <div className="text-[12.5px] text-ink-500 truncate">
+              {contract.title}
+              {merchantName && merchantName !== '—' ? ` — ${merchantName}` : ''}
+              {' · '}
+              <span className="num">{formatCurrency(contract.monthlyAmount)}</span>
+              {' · '}
+              {t('home.current.endsOnShort', {
+                date: formatDate(contract.endDate),
+              })}
             </div>
 
-            {/* Three-stamp row — one rental, three artifacts, one card. */}
-            <div className="mt-4 grid grid-cols-3 gap-2">
-              <ArtifactPill
-                icon={<ReceiptIcon size={13} />}
-                label={t('home.current.invoicePill')}
-                state={invoice ? 'signed' : 'pending'}
-                t={t}
-              />
-              <ArtifactPill
-                icon={<DocIcon size={13} />}
-                label={t('home.current.contractPill')}
-                state={contract.status === 'active' ? 'signed' : 'pending'}
-                t={t}
-              />
-              {/* Promissory-note pill — hidden in the current phase
-                  (ENABLE_PAYMENTS_AND_NOTES). */}
-              {ENABLE_PAYMENTS_AND_NOTES && (
-                <ArtifactPill
-                  icon={<WalletIcon size={13} />}
-                  label={t('home.current.notePill')}
-                  state={note?.status === 'signed' ? 'signed' : 'pending'}
-                  t={t}
-                />
-              )}
+            {/* Four-stage journey dots (same visual language as the
+                approved M11/M13 strips). */}
+            <div className="flex items-center pt-0.5" aria-hidden>
+              {STAGE_KEYS.map((k, i) => (
+                <span key={k} className="contents">
+                  <span
+                    className={cn(
+                      'shrink-0 rounded-full',
+                      i < currentIdx
+                        ? 'h-3 w-3 bg-green-700'
+                        : i === currentIdx
+                          ? 'h-4 w-4 bg-white border-[3px] border-green-500'
+                          : 'h-3 w-3 bg-navy-100/60',
+                    )}
+                  />
+                  {i < STAGE_KEYS.length - 1 && (
+                    <span
+                      className={cn(
+                        'flex-1 h-[2.5px]',
+                        i < currentIdx ? 'bg-green-700' : 'bg-navy-100/60',
+                      )}
+                    />
+                  )}
+                </span>
+              ))}
             </div>
-
-            <div className="mt-4 flex items-end justify-between gap-3">
-              <div>
-                <div className="text-[10.5px] font-semibold text-ink-400 uppercase tracking-[0.08em]">
-                  {t('contracts.bundle.amountLabel')}
-                </div>
-                <div className="mt-0.5 text-[15px] font-semibold text-ink-900 num">
-                  {formatCurrency(contract.monthlyAmount)}
-                </div>
-              </div>
-              <div className="text-end">
-                <div className="text-[10.5px] font-semibold text-ink-400 uppercase tracking-[0.08em]">
-                  {t('contracts.bundle.endsOn')}
-                </div>
-                <div className="mt-0.5 text-[13px] text-ink-700 num">
-                  {formatDate(contract.endDate)}
-                </div>
-              </div>
+            <div className="text-[11.5px] font-semibold text-green-700">
+              {t('home.stageLine', {
+                current: currentIdx + 1,
+                total: STAGE_KEYS.length,
+                stage: t(STAGE_KEYS[currentIdx]),
+              })}
             </div>
 
             <button
               type="button"
               onClick={() => onOpenContract(contract.id)}
-              className={cn(
-                'mt-4 inline-flex items-center justify-center gap-1.5 h-11 w-full rounded-xl2',
-                'bg-lavender-400 text-white font-semibold text-[14px] tracking-tight',
-                'shadow-soft hover:bg-lavender-500 active:bg-lavender-500 transition-colors',
-              )}
+              className="flex items-center justify-center h-12 w-full rounded-xl2 bg-navy-700 text-white font-bold text-[14px] tracking-tight hover:bg-navy-800 active:bg-navy-800 transition-colors"
             >
               {t('home.current.cta')}
-              <ArrowIcon
-                size={14}
-                className={cn(dir === 'rtl' ? 'rotate-180' : '')}
-              />
             </button>
           </div>
         );
       })}
-    </div>
-  );
-}
-
-function ArtifactPill({
-  icon,
-  label,
-  state,
-  t,
-}: {
-  icon: ReactNode;
-  label: string;
-  state: 'signed' | 'pending';
-  t: (k: string) => string;
-}) {
-  const signed = state === 'signed';
-  return (
-    <div
-      className={cn(
-        'rounded-xl px-2.5 py-2 flex items-center gap-2 ring-1',
-        signed
-          ? 'bg-success-50 ring-success-500/20 text-success-700'
-          : 'bg-canvas-100 ring-canvas-200 text-ink-500',
-      )}
-    >
-      <span className="grid place-items-center shrink-0">{icon}</span>
-      <div className="min-w-0">
-        <div className="text-[10.5px] font-semibold text-ink-700 truncate">
-          {label}
-        </div>
-        <div
-          className={cn(
-            'text-[10px] font-semibold mt-0.5',
-            signed ? 'text-success-600' : 'text-ink-400',
-          )}
-        >
-          {signed
-            ? t('home.current.stateSigned')
-            : t('home.current.statePending')}
-        </div>
-      </div>
-      {signed && <CheckIcon size={11} className="ms-auto shrink-0" />}
     </div>
   );
 }
@@ -715,46 +629,38 @@ function JourneyStarter({
 }) {
   const steps = [
     {
-      icon: <BuildingIcon size={16} />,
+      icon: <BuildingIcon size={15} />,
       title: t('home.starter.step1Title'),
       hint: t('home.starter.step1Hint'),
     },
     {
-      icon: <ReceiptIcon size={16} />,
+      icon: <ReceiptIcon size={15} />,
       title: t('home.starter.step2Title'),
       hint: t('home.starter.step2Hint'),
     },
     {
-      icon: <DocIcon size={16} />,
+      icon: <DocIcon size={15} />,
       title: t('home.starter.step3Title'),
       hint: t('home.starter.step3Hint'),
     },
   ];
   return (
-    <Card className="animate-fade-in">
-      <div className="text-[10.5px] font-semibold text-lavender-700 uppercase tracking-[0.08em]">
-        {t('home.starter.eyebrow')}
-      </div>
-      <div className="mt-1 editorial-title text-[22px] text-ink-900 leading-snug tracking-tight">
+    <div className="rounded-[14px] bg-white ring-1 ring-beige-200 px-[18px] py-4 animate-fade-in">
+      <div className="text-[14px] font-bold text-navy-700">
         {t('home.starter.title')}
       </div>
 
-      <ol className="mt-4 space-y-3.5">
+      <ol className="mt-3 space-y-3">
         {steps.map((s, i) => (
           <li key={i} className="flex items-start gap-3">
-            <span className="h-9 w-9 shrink-0 rounded-2xl bg-lavender-50 text-lavender-700 ring-1 ring-lavender-200 grid place-items-center">
+            <span className="h-8 w-8 shrink-0 rounded-xl bg-green-50 text-green-700 grid place-items-center">
               {s.icon}
             </span>
             <div className="min-w-0 flex-1 pt-0.5">
-              <div className="flex items-center gap-2">
-                <span className="text-[10px] font-bold text-ink-400 num">
-                  0{i + 1}
-                </span>
-                <span className="text-[14px] font-semibold text-ink-900 tracking-tight">
-                  {s.title}
-                </span>
+              <div className="text-[13px] font-bold text-ink-900 tracking-tight">
+                {s.title}
               </div>
-              <div className="mt-0.5 text-[12.5px] text-ink-500 leading-relaxed">
+              <div className="mt-0.5 text-[12px] text-ink-500 leading-relaxed">
                 {s.hint}
               </div>
             </div>
@@ -764,19 +670,12 @@ function JourneyStarter({
 
       <Link
         to="/stores"
-        className={cn(
-          'mt-5 inline-flex items-center justify-center gap-1.5 h-11 w-full rounded-xl2',
-          'bg-ink-900 text-white font-semibold text-[14px] tracking-tight',
-          'shadow-plush hover:bg-ink-800 active:bg-ink-800 transition-colors',
-        )}
+        className="mt-4 flex items-center justify-center gap-1.5 h-12 w-full rounded-xl2 bg-navy-700 text-white font-bold text-[14px] tracking-tight hover:bg-navy-800 active:bg-navy-800 transition-colors"
       >
         {t('home.starter.ctaPrimary')}
-        <ArrowIcon
-          size={14}
-          className={cn(dir === 'rtl' ? 'rotate-180' : '')}
-        />
+        <ArrowIcon size={14} className={cn(dir === 'rtl' ? 'rotate-180' : '')} />
       </Link>
-    </Card>
+    </div>
   );
 }
 
@@ -790,13 +689,13 @@ function IdleAcknowledgment({
   dir: 'rtl' | 'ltr';
 }) {
   return (
-    <Card className="animate-fade-in">
+    <div className="rounded-[14px] bg-white ring-1 ring-beige-200 px-[18px] py-4 animate-fade-in">
       <div className="flex items-start gap-3">
-        <span className="h-10 w-10 shrink-0 rounded-2xl bg-success-50 text-success-700 ring-1 ring-success-500/20 grid place-items-center">
+        <span className="h-10 w-10 shrink-0 rounded-xl bg-green-50 text-green-700 grid place-items-center">
           <BadgeCheckIcon size={18} />
         </span>
         <div className="min-w-0 flex-1">
-          <div className="text-[15px] font-semibold text-ink-900 tracking-tight">
+          <div className="text-[14px] font-bold text-ink-900 tracking-tight">
             {t('home.idle.title')}
           </div>
           <div className="mt-1 text-[12.5px] text-ink-500 leading-relaxed">
@@ -806,19 +705,12 @@ function IdleAcknowledgment({
       </div>
       <Link
         to="/stores"
-        className={cn(
-          'mt-4 inline-flex items-center justify-center gap-1.5 h-11 w-full rounded-xl2',
-          'bg-white text-ink-900 ring-1 ring-canvas-200 font-semibold text-[13.5px] tracking-tight',
-          'hover:bg-canvas-100/60 active:bg-canvas-100 transition-colors',
-        )}
+        className="mt-3.5 flex items-center justify-center gap-1.5 h-11 w-full rounded-xl2 bg-white text-navy-700 ring-[1.5px] ring-inset ring-beige-300 font-bold text-[13.5px] tracking-tight hover:bg-beige-50 transition-colors"
       >
         {t('home.idle.cta')}
-        <ArrowIcon
-          size={14}
-          className={cn(dir === 'rtl' ? 'rotate-180' : '')}
-        />
+        <ArrowIcon size={14} className={cn(dir === 'rtl' ? 'rotate-180' : '')} />
       </Link>
-    </Card>
+    </div>
   );
 }
 
@@ -838,45 +730,45 @@ function HistoryStrip({
   formatDate: (iso: string) => string;
 }) {
   return (
-    <section>
-      <SectionHeader
-        title={t('home.historyStrip.title')}
-        action={
-          <Link to="/contracts" className="inline-flex items-center gap-1">
-            {t('home.historyStrip.viewAll')}
-            <ArrowIcon
-              size={12}
-              className={cn(dir === 'rtl' ? 'rotate-180' : '')}
-            />
-          </Link>
-        }
-      />
-      <Card padded={false} className="px-5">
+    <section className="pt-1.5">
+      <div className="flex items-center justify-between mb-2">
+        <div className="text-[14px] font-bold text-navy-700">
+          {t('home.historyStrip.title')}
+        </div>
+        <Link
+          to="/contracts"
+          className="inline-flex items-center gap-1 text-[12.5px] font-bold text-green-700 hover:text-green-800"
+        >
+          {t('home.historyStrip.viewAll')}
+          <ArrowIcon size={12} className={cn(dir === 'rtl' ? 'rotate-180' : '')} />
+        </Link>
+      </div>
+      <div className="rounded-[14px] bg-white ring-1 ring-beige-200 px-[18px]">
         {items.map((h, i) => (
           <div key={h.id}>
             <div className="flex items-center justify-between gap-3 py-3.5">
               <div className="min-w-0">
-                <div className="text-[13.5px] font-semibold text-ink-900 truncate tracking-tight">
+                <div className="text-[13px] font-bold text-ink-900 truncate tracking-tight">
                   {h.title}
                 </div>
-                <div className="mt-0.5 text-[11.5px] text-ink-400 truncate">
+                <div className="mt-0.5 text-[11.5px] text-ink-500 truncate">
                   {h.counterparty !== '—' ? h.counterparty + ' · ' : ''}
-                  {formatDate(h.closedAt)}
+                  <span className="num">{formatDate(h.closedAt)}</span>
                 </div>
               </div>
               <div className="text-end shrink-0">
-                <div className="text-[13px] font-semibold text-ink-900 num">
+                <div className="text-[13px] font-bold text-ink-900 num">
                   {formatCurrency(h.amount)}
                 </div>
-                <div className="text-[10.5px] text-success-600 font-semibold mt-0.5">
+                <div className="text-[10.5px] text-green-700 font-bold mt-0.5">
                   {t('status.history.completed')}
                 </div>
               </div>
             </div>
-            {i < items.length - 1 && <div className="h-px bg-canvas-200/80" />}
+            {i < items.length - 1 && <div className="h-px bg-beige-100" />}
           </div>
         ))}
-      </Card>
+      </div>
     </section>
   );
 }
@@ -892,4 +784,3 @@ function daysUntil(dateIso: string): number {
   target.setHours(0, 0, 0, 0);
   return Math.round((target.getTime() - today.getTime()) / 86_400_000);
 }
-

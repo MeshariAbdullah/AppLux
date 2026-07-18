@@ -4,6 +4,7 @@ import { Header, Screen } from '@/components/layout';
 import { Button, Card, EmptyState, SectionHeader, Skeleton, StatusChip } from '@/components/ui';
 import {
   BadgeCheckIcon,
+  ChevronIcon,
   ClockIcon,
   InfoIcon,
   MapPinIcon,
@@ -109,91 +110,50 @@ export default function StoreDetails() {
 
   return (
     <>
-      <Header title={t('stores.title')} showBack />
-      <Screen className="bg-canvas">
-        <div className="space-y-6">
-          {/* Hero card */}
-          <div className="relative overflow-hidden rounded-xl3 bg-gradient-to-br from-ink-900 via-ink-800 to-ink-900 text-white p-7 shadow-plush">
-            <div aria-hidden className="pointer-events-none absolute inset-0 pattern-dots opacity-25" />
-            <div
-              aria-hidden
-              className="pointer-events-none absolute -top-14 end-[-18%] h-56 w-56 rounded-full bg-gold-400/22 blur-[100px]"
-            />
-            <div
-              aria-hidden
-              className="pointer-events-none absolute -bottom-16 start-[-15%] h-48 w-48 rounded-full bg-gold-500/12 blur-[100px]"
-            />
-            <div className="relative flex items-start gap-5">
-              <StoreLogo store={store} size="lg" />
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-1.5 mb-2">
-                  <span className="inline-flex items-center gap-1.5 rounded-full bg-white/10 ring-1 ring-white/15 px-2.5 py-1 text-[11px] font-semibold">
-                    {categoryIcon(store.category, 12)}
-                    {t(`stores.filters.${store.category}`)}
-                  </span>
-                  {store.verified && (
-                    <StatusChip
-                      tone="gold"
-                      dot={false}
-                      label={t('stores.verified')}
-                    />
-                  )}
-                </div>
-                <h1 className="editorial-title text-[24px] leading-tight text-white">{name}</h1>
-                <div className="mt-2.5 flex items-center gap-3 text-[12.5px] text-white/75">
-                  <span className="inline-flex items-center gap-1">
-                    <StarIcon size={12} className="text-gold-300" />
-                    <span className="num font-semibold">{store.rating.toFixed(1)}</span>
-                  </span>
-                  <span className="h-1 w-1 rounded-full bg-white/30" />
-                  <span>{t('stores.branchesCount', { count: store.branches.length })}</span>
-                </div>
+      <Screen padded={false} className="bg-beige-100">
+        {/* C07 — navy header band: back square + title row, then the
+            store identity (avatar, name, category, real-data chips). */}
+        <div className="bg-navy-700 text-white px-5 pt-[calc(env(safe-area-inset-top)+16px)] pb-6">
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => navigate(-1)}
+              aria-label={t('stores.goBack')}
+              className="h-9 w-9 grid place-items-center rounded-[10px] bg-white text-navy-700 shadow-soft"
+            >
+              <ChevronIcon size={15} className="rtl:rotate-180" />
+            </button>
+            <h1 className="flex-1 text-[16px] font-bold">{t('stores.detailsTitle')}</h1>
+          </div>
+          <div className="mt-5 flex items-center gap-4">
+            <span className="h-16 w-16 shrink-0 rounded-full bg-green-50 text-green-700 grid place-items-center text-[22px] font-bold">
+              {name.trim().charAt(0)}
+            </span>
+            <div className="min-w-0 flex-1">
+              <div className="text-[19px] font-bold leading-tight truncate">{name}</div>
+              <div className="mt-0.5 text-[12.5px] text-white/60 truncate">
+                {t(`stores.filters.${store.category}`)} · {cityLabel}
               </div>
             </div>
           </div>
-
-          {/* At-a-glance stats */}
-          <div className="grid grid-cols-3 gap-2.5">
-            <StatTile
-              icon={<StarIcon size={14} className="text-gold-400" />}
-              label={t('stores.stats.rating')}
-              value={
-                <span className="num">{store.rating.toFixed(1)}</span>
-              }
-              hint={t('stores.stats.ratingHint')}
-            />
-            <StatTile
-              icon={<PackageIcon size={14} className="text-ink-700" />}
-              label={t('stores.stats.branches')}
-              value={
-                <span className="num">{store.branches.length}</span>
-              }
-              hint={t('stores.stats.branchesHint')}
-            />
-            <StatTile
-              icon={
-                <BadgeCheckIcon
-                  size={14}
-                  className={
-                    store.verified ? 'text-gold-700' : 'text-ink-400'
-                  }
-                />
-              }
-              label={t('stores.stats.status')}
-              value={
-                <span
-                  className={
-                    store.verified ? 'text-gold-700' : 'text-ink-500'
-                  }
-                >
-                  {store.verified
-                    ? t('stores.verified')
-                    : t('stores.stats.notVerified')}
-                </span>
-              }
-              hint={t('stores.stats.statusHint')}
-            />
+          <div className="mt-4 flex items-center gap-2 flex-wrap">
+            {store.verified && (
+              <span className="inline-flex items-center gap-1 rounded-full bg-green-500/20 text-green-200 px-3 py-1.5 text-[11px] font-bold">
+                <BadgeCheckIcon size={11} />
+                {t('stores.verified')}
+              </span>
+            )}
+            <span className="inline-flex items-center gap-1 rounded-full bg-white/10 px-3 py-1.5 text-[11px] font-bold">
+              <StarIcon size={11} className="text-green-200" />
+              <span className="num">{store.rating.toFixed(1)}</span>
+            </span>
+            <span className="inline-flex items-center rounded-full bg-white/10 px-3 py-1.5 text-[11px] font-bold">
+              {t('stores.branchesCount', { count: store.branches.length })}
+            </span>
           </div>
+        </div>
+
+        <div className="px-5 pt-4 pb-10 space-y-4">
 
           {/* Quick contact (first branch) */}
           {store.branches[0] && (
@@ -220,11 +180,36 @@ export default function StoreDetails() {
             </a>
           )}
 
-          {/* Informational notice */}
-          <div className="rounded-xl2 bg-gold-50 px-4 py-3 flex items-start gap-2.5 text-[12.5px] text-gold-700">
-            <InfoIcon size={16} className="mt-0.5 shrink-0" />
-            <span className="leading-relaxed">{t('stores.notice')}</span>
+          {/* C07 informational note — the rental starts at the store. */}
+          <div className="rounded-xl2 bg-navy-50 ring-1 ring-navy-100 px-4 py-3 text-[12.5px] text-navy-700 leading-[1.8]">
+            {t('stores.notice')}
           </div>
+
+          {/* C07 — "how do I rent from this store?" numbered steps. */}
+          <section className="rounded-[14px] bg-white ring-1 ring-beige-200 px-[18px] py-4">
+            <div className="text-[13.5px] font-bold text-navy-700">
+              {t('stores.howTo.title', { name })}
+            </div>
+            <ol className="mt-3">
+              {[1, 2, 3].map((n) => (
+                <li
+                  key={n}
+                  className={
+                    n < 3
+                      ? 'flex items-center gap-3 py-2.5 border-b border-beige-100'
+                      : 'flex items-center gap-3 py-2.5'
+                  }
+                >
+                  <span className="h-6 w-6 shrink-0 rounded-full bg-green-50 text-green-700 grid place-items-center text-[11.5px] font-bold num">
+                    {n}
+                  </span>
+                  <span className="text-[13px] text-ink-800">
+                    {t(`stores.howTo.step${n}`)}
+                  </span>
+                </li>
+              ))}
+            </ol>
+          </section>
 
           {/* About */}
           <section>
@@ -284,6 +269,7 @@ export default function StoreDetails() {
   );
 }
 
+// (unused since the C07 band; kept out — see git history)
 function StatTile({
   icon,
   label,

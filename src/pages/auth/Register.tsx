@@ -9,7 +9,7 @@ import { useStore, emptyRegistration, type RegistrationDraft } from '@/lib/store
 import { useSupabaseAuth, updateProfile } from '@/lib/supabase';
 import { classifyMobile, type MobileIssue } from '@/lib/mobile';
 import { cn } from '@/lib/cn';
-import { ArrowIcon, BadgeCheckIcon } from '@/components/icons';
+import { ArrowIcon, BadgeCheckIcon, MailIcon } from '@/components/icons';
 import {
   isMisconfiguredProduction,
   ProductionConfigError,
@@ -513,45 +513,48 @@ function SupabaseRegister() {
     // email-confirmation enabled. Render a clear "check your email"
     // state instead of bouncing through RootRedirect / /welcome.
     return (
-      <>
-        <Header title={t('register.title')} showBack />
-        <Screen className="bg-canvas">
-          <div className="rounded-xl3 bg-white ring-1 ring-canvas-200 p-5 shadow-soft space-y-3">
-            <div className="h-11 w-11 rounded-2xl bg-gold-50 text-gold-700 grid place-items-center">
-              <BadgeCheckIcon size={20} />
-            </div>
-            <h1 className="editorial-title text-[20px] text-ink-900 leading-tight">
-              {t('register.emailConfirm.title')}
-            </h1>
-            <p className="text-[13px] text-ink-500 leading-relaxed">
-              {t('register.emailConfirm.body', { email: email.trim() })}
-            </p>
-          </div>
+      <Screen padded={false} className="bg-beige-100">
+        {/* C04 — centered check-your-email state. */}
+        <div className="px-6 pt-[calc(env(safe-area-inset-top)+96px)] pb-10 flex flex-col items-center text-center">
+          <span className="h-[76px] w-[76px] rounded-full bg-green-50 text-green-700 grid place-items-center">
+            <MailIcon size={28} />
+          </span>
+          <h1 className="mt-6 text-[21px] font-bold text-navy-700">
+            {t('register.emailConfirm.title')}
+          </h1>
+          <p className="mt-2 text-[13px] text-ink-600 leading-[1.9] max-w-[300px]">
+            {t('register.emailConfirm.body', { email: email.trim() })}
+          </p>
           <Link
             to="/auth/login"
-            className="block text-center text-[13px] text-lavender-700 font-semibold pt-2"
+            className="mt-6 text-[13.5px] font-bold text-green-700 hover:text-green-800"
           >
             {t('register.emailConfirm.goToLogin')}
           </Link>
-        </Screen>
-      </>
+        </div>
+      </Screen>
     );
   }
 
   return (
-    <>
-      <Header title={t('register.title')} showBack />
-      <Screen className="bg-canvas">
-        <div>
-          <h1 className="editorial-title text-[24px] text-ink-900 leading-tight">
-            {t('register.title')}
+    <Screen padded={false} className="bg-beige-100">
+      <div className="px-5 pt-[calc(env(safe-area-inset-top)+16px)] pb-10">
+        {/* C02 header row — back square + title (M02 pattern). */}
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={() => navigate(-1)}
+            aria-label={t('common.back')}
+            className="h-9 w-9 grid place-items-center rounded-[10px] bg-white text-navy-700 shadow-soft"
+          >
+            <ArrowIcon size={16} className="rtl:rotate-0 ltr:rotate-180" />
+          </button>
+          <h1 className="flex-1 text-[16px] font-bold text-navy-700">
+            {t('register.customerTitle')}
           </h1>
-          <p className="mt-2 text-[13.5px] text-ink-500 leading-relaxed">
-            {t('register.step1Sub')}
-          </p>
         </div>
 
-        <form className="space-y-4" onSubmit={onSubmit} noValidate>
+        <form className="mt-5 space-y-4" onSubmit={onSubmit} noValidate>
           <FormField label={t('register.fullName')} required error={errors.fullName}>
             <Input
               placeholder={t('register.fullNamePh')}
@@ -609,7 +612,7 @@ function SupabaseRegister() {
               className="-mt-2 rounded-xl2 bg-canvas-100/70 ring-1 ring-canvas-200 px-3.5 py-2 text-[11.5px] text-ink-500 flex items-center gap-2"
               aria-live="polite"
             >
-              <BadgeCheckIcon size={12} className="text-lavender-600 shrink-0" />
+              <BadgeCheckIcon size={12} className="text-green-700 shrink-0" />
               <span className="num">
                 {t('auth.mobileAccepted', { e164: normalizedMobile.e164 })}
               </span>
@@ -659,22 +662,28 @@ function SupabaseRegister() {
             </div>
           )}
 
-          <div className="pt-2 space-y-2">
-            <Button type="submit" size="lg" block loading={submitting}>
+          <div className="pt-2 space-y-3">
+            <Button
+              type="submit"
+              size="lg"
+              block
+              loading={submitting}
+              className="!bg-navy-700 hover:!bg-navy-800 active:!bg-navy-800"
+            >
               {t('register.submit')}
             </Button>
             <div className="text-center text-[13px] text-ink-500">
               {t('auth.haveAccount')}{' '}
               <Link
                 to="/auth/login"
-                className="text-lavender-600 font-semibold hover:text-lavender-700"
+                className="font-bold text-green-700 hover:text-green-800"
               >
                 {t('auth.signIn')}
               </Link>
             </div>
           </div>
         </form>
-      </Screen>
-    </>
+      </div>
+    </Screen>
   );
 }

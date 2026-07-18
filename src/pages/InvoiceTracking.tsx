@@ -240,7 +240,7 @@ export default function InvoiceTracking() {
                 variant="primary"
                 size="lg"
                 block
-                className="mt-5"
+                className="mt-5 !bg-navy-700 hover:!bg-navy-800 active:!bg-navy-800"
                 leading={<SparkleIcon size={18} />}
                 onClick={() => navigate(`/review/${invoice.scanToken}`)}
               >

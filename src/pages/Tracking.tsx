@@ -84,8 +84,7 @@ export default function Tracking() {
       <Screen padded={false} className="bg-canvas">
         <div className="px-5 pt-5 pb-10 space-y-5">
           {/* Hero status card */}
-          <div className="relative overflow-hidden rounded-xl3 bg-gradient-to-br from-ink-900 via-ink-800 to-ink-900 text-white p-6 shadow-plush">
-            <div aria-hidden className="pointer-events-none absolute inset-0 pattern-dots opacity-25" />
+          <div className="relative overflow-hidden rounded-[14px] bg-navy-700 text-white p-6">
             <div className="relative flex items-start gap-3">
               <StoreLogo store={store} size="md" />
               <div className="min-w-0 flex-1">
