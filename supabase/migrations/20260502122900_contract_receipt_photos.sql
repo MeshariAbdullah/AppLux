@@ -46,6 +46,15 @@
 -- record_contract_handover RPC remain untouched (existing data keeps
 -- rendering). New rentals use this flow instead.
 --
+-- RERUN SAFETY: the first production attempt of this file failed on
+-- the CREATE TABLE (42703 — profiles(user_id) does not exist), so
+-- under transactional execution nothing was applied. Every statement
+-- here is idempotent (IF NOT EXISTS / DROP POLICY IF EXISTS / CREATE
+-- OR REPLACE), so this file also converges a NON-transactional
+-- partial application (e.g. column/functions/storage policies created
+-- while the table is missing) to the correct final state. Never run
+-- the superseded 122300 file or other historical migrations again.
+--
 -- ROLLBACK (reverse order):
 --   create or replace function public.activate_rental_without_payment_and_note
 --     … re-apply the 20260502122400 body (drops the P0117 gate);
@@ -64,10 +73,18 @@
 -- 1. Table + confirmation column
 -- ---------------------------------------------------------------------
 
+-- FIX (first production run failed with 42703): profiles has NO
+-- user_id column — its PK is `id` (→ auth.users(id)), and every
+-- ownership FK in this schema references profiles(id)
+-- (rental_contracts.customer_user_id, damage_evidence.uploaded_by_user_id).
+-- The uploader FK now follows the same model. `on delete restrict`
+-- matches rental_contracts.customer_user_id — it adds no new deletion
+-- blocking because the uploader is always the contract's customer,
+-- whose profile is already restricted by the contract row itself.
 create table if not exists public.contract_receipt_photos (
   id           uuid primary key default gen_random_uuid(),
   contract_id  uuid not null references public.rental_contracts(id) on delete cascade,
-  uploaded_by  uuid not null references public.profiles(user_id),
+  uploaded_by  uuid not null references public.profiles(id) on delete restrict,
   storage_path text not null,
   created_at   timestamptz not null default now(),
   unique (contract_id, storage_path)
