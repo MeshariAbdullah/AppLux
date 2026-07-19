@@ -448,20 +448,17 @@
     },
     "starter": {
       "eyebrow": "Get started",
-      "title": "Begin your first rental in three steps",
-      "step1Title": "Choose a partner boutique",
-      "step1Hint": "Browse verified partners in your sector.",
-      "step2Title": "Receive a digital invoice",
-      "step2Hint": "The merchant issues an invoice for your review.",
-      "step3Title": "Pay & sign in Nafath",
-      "step3Hint": "After approving the offer + contract you pay, then sign the note in Nafath outside the app — only then is the rental activated.",
-      "ctaPrimary": "Explore partner boutiques",
-      "ctaSecondary": "How Lend works"
+      "title": "Rental steps",
+      "step1Title": "The merchant issues the offer and contract",
+      "step2Title": "Review and approve",
+      "step3Title": "Document the item receipt with photos",
+      "step4Title": "The rental starts after confirmation",
+      "ctaPrimary": "Browse stores"
     },
     "idle": {
       "title": "You're all caught up",
       "subtitle": "No active rentals. Your eligibility is ready when you are.",
-      "cta": "Explore partner boutiques"
+      "cta": "Browse stores"
     },
     "historyStrip": {
       "title": "Recent rentals",
@@ -621,9 +618,8 @@
       "review": "Review"
     },
     "empty": {
-      "title": "Your rentals will appear here",
-      "subtitle": "Once a partner issues you an invoice and you sign, every rental is documented in this section.",
-      "cta": "Explore partner boutiques"
+      "title": "No rentals yet",
+      "cta": "Browse stores"
     },
     "receipt": {
       "documented": "Item receipt documented with photos",

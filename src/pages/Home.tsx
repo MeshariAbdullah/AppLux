@@ -5,12 +5,16 @@ import { Avatar, CardSkeleton, PageSkeleton, StatusChip } from '@/components/ui'
 import {
   ArrowIcon,
   BadgeCheckIcon,
+  BagIcon,
   BellIcon,
-  BuildingIcon,
+  BishtIcon,
+  CameraIcon,
   CheckIcon,
   ChevronIcon,
-  DocIcon,
+  DressIcon,
   ReceiptIcon,
+  SparkleIcon,
+  WatchIcon,
 } from '@/components/icons';
 import { useI18n, useT } from '@/lib/i18n';
 import { useStore } from '@/lib/store';
@@ -64,6 +68,17 @@ type ActiveRental = {
 };
 
 const CATEGORY_KEYS = ['dresses', 'bags', 'watches', 'bishts'] as const;
+
+// Bug 4: proper category glyphs for the store grid (no letter avatars).
+const CATEGORY_ICONS: Record<
+  (typeof CATEGORY_KEYS)[number],
+  (p: { size?: number; className?: string }) => JSX.Element
+> = {
+  dresses: DressIcon,
+  bags: BagIcon,
+  watches: WatchIcon,
+  bishts: BishtIcon,
+};
 
 export default function Home() {
   const t = useT();
@@ -330,14 +345,17 @@ export default function Home() {
         <div className="grid grid-cols-4 gap-2.5">
           {CATEGORY_KEYS.map((c) => {
             const label = t(`stores.filters.${c}`);
+            // Test-fix Bug 4: real category icons instead of decorative
+            // first letters. Filtering/navigation unchanged.
+            const Icon = CATEGORY_ICONS[c];
             return (
               <Link
                 key={c}
                 to={`/stores?filter=${c}`}
                 className="flex flex-col items-center gap-1.5 rounded-[14px] bg-white ring-1 ring-beige-200 px-2 py-3.5 transition-transform active:scale-[0.97]"
               >
-                <span className="h-9 w-9 rounded-full bg-beige-100 text-navy-700 grid place-items-center text-[14px] font-bold">
-                  {label.charAt(0)}
+                <span className="h-9 w-9 rounded-full bg-beige-100 text-navy-700 grid place-items-center">
+                  <Icon size={17} />
                 </span>
                 <span className="text-[11.5px] font-semibold text-ink-800 truncate max-w-full">
                   {label}
@@ -620,6 +638,11 @@ function ActiveStack({
 
 // ---------------------------------------------------------------------
 
+// Test-fix Bug 4: the guidance block is a concise scan-friendly list —
+// title-only steps (no explanatory paragraphs) describing the CURRENT
+// approved flow: offer/contract issued → review & approve → receipt
+// photos → rental starts. No payment / promissory note / Nafath /
+// Nafith wording.
 function JourneyStarter({
   t,
   dir,
@@ -628,21 +651,10 @@ function JourneyStarter({
   dir: 'rtl' | 'ltr';
 }) {
   const steps = [
-    {
-      icon: <BuildingIcon size={15} />,
-      title: t('home.starter.step1Title'),
-      hint: t('home.starter.step1Hint'),
-    },
-    {
-      icon: <ReceiptIcon size={15} />,
-      title: t('home.starter.step2Title'),
-      hint: t('home.starter.step2Hint'),
-    },
-    {
-      icon: <DocIcon size={15} />,
-      title: t('home.starter.step3Title'),
-      hint: t('home.starter.step3Hint'),
-    },
+    { icon: <ReceiptIcon size={15} />, title: t('home.starter.step1Title') },
+    { icon: <CheckIcon size={15} />, title: t('home.starter.step2Title') },
+    { icon: <CameraIcon size={15} />, title: t('home.starter.step3Title') },
+    { icon: <SparkleIcon size={15} />, title: t('home.starter.step4Title') },
   ];
   return (
     <div className="rounded-[14px] bg-white ring-1 ring-beige-200 px-[18px] py-4 animate-fade-in">
@@ -650,19 +662,14 @@ function JourneyStarter({
         {t('home.starter.title')}
       </div>
 
-      <ol className="mt-3 space-y-3">
+      <ol className="mt-3 space-y-2.5">
         {steps.map((s, i) => (
-          <li key={i} className="flex items-start gap-3">
+          <li key={i} className="flex items-center gap-3">
             <span className="h-8 w-8 shrink-0 rounded-xl bg-green-50 text-green-700 grid place-items-center">
               {s.icon}
             </span>
-            <div className="min-w-0 flex-1 pt-0.5">
-              <div className="text-[13px] font-bold text-ink-900 tracking-tight">
-                {s.title}
-              </div>
-              <div className="mt-0.5 text-[12px] text-ink-500 leading-relaxed">
-                {s.hint}
-              </div>
+            <div className="min-w-0 flex-1 text-[13px] font-bold text-ink-900 tracking-tight">
+              {s.title}
             </div>
           </li>
         ))}

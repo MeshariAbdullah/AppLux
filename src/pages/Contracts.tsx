@@ -456,11 +456,10 @@ function EmptyRentals() {
         <span className="h-12 w-12 rounded-2xl bg-lavender-50 text-lavender-700 ring-1 ring-lavender-200 grid place-items-center">
           <DocIcon size={20} />
         </span>
+        {/* Test-fix Bug 6: icon + short title + button only — the
+            descriptive paragraph was removed. */}
         <div className="mt-3 editorial-title text-[20px] text-ink-900 leading-snug tracking-tight">
           {t('contracts.empty.title')}
-        </div>
-        <div className="mt-1.5 text-[12.5px] text-ink-500 leading-relaxed max-w-sm">
-          {t('contracts.empty.subtitle')}
         </div>
         <Link
           to="/stores"
