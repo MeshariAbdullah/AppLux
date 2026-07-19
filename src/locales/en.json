@@ -202,9 +202,7 @@
     },
     "entrySubtitle": "Smart, documented rentals — a digital contract protects your right at every step.",
     "createCustomerAccount": "Create customer account",
-    "merchantPrefix": "Are you a merchant?",
-    "haveAccountPrefix": "Have an account?",
-    "signInLink": "Sign in"
+    "merchantPrefix": "Are you a merchant?"
   },
   "auth": {
     "loginTitle": "Welcome back",

@@ -10,11 +10,11 @@ import { cn } from '@/lib/cn';
 // =====================================================================
 // Public entry — customer design C01 (approved Conflict-1 decision).
 // A deep-navy splash gate: brand mark + wordmark, the locked slogan,
-// one short subtitle, then a beige action sheet. Test-fix Bug 3
-// (approved): the sheet is customer-first — create customer account
-// (solid navy) + customer sign-in link; the merchant portal is a
-// SMALL secondary text link, not an equal primary button; the
-// terms/privacy line is removed from this screen (MerchantWelcome
+// one short subtitle, then a beige action sheet. Approved CTA area:
+// TWO large stacked customer buttons — create customer account (solid
+// navy) and sign in (outlined navy, same large shape) — with the
+// merchant portal kept as a SMALL secondary text link below; the
+// terms/privacy line stays removed from this screen (MerchantWelcome
 // keeps its own).
 //
 // Preserved: every destination (/auth/register, /auth/login,
@@ -64,19 +64,22 @@ export default function Welcome() {
         >
           {t('welcome.createCustomerAccount')}
         </Link>
+        <Link
+          to="/auth/login"
+          className={cn(
+            'flex items-center justify-center h-13 w-full rounded-xl2 px-5',
+            'bg-white text-navy-700 font-bold text-[15px] tracking-tight select-none',
+            'ring-[1.5px] ring-inset ring-navy-700',
+            'hover:bg-navy-50 active:bg-navy-50',
+            'transition-[background-color,transform] duration-200 ease-plush active:scale-[0.985]',
+            'focus:outline-none',
+          )}
+        >
+          {t('welcome.signIn')}
+        </Link>
 
-        <div className="text-center text-[13px] text-ink-500 pt-0.5">
-          {t('welcome.haveAccountPrefix')}{' '}
-          <Link
-            to="/auth/login"
-            className="font-bold text-green-700 hover:text-green-800"
-          >
-            {t('welcome.signInLink')}
-          </Link>
-        </div>
-
-        {/* Bug 3: merchant entry demoted to a small secondary text
-            link — same /merchant/welcome destination, no button. */}
+        {/* Merchant entry stays a small secondary text link — same
+            /merchant/welcome destination, no button. */}
         <div className="text-center text-[12px] text-ink-400 pt-0.5">
           {t('welcome.merchantPrefix')}{' '}
           <Link

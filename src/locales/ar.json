@@ -202,9 +202,7 @@
     },
     "entrySubtitle": "إيجارات ذكية وموثّقة — عقد رقمي يحفظ حقك في كل خطوة.",
     "createCustomerAccount": "إنشاء حساب عميل",
-    "merchantPrefix": "هل أنت تاجر؟",
-    "haveAccountPrefix": "عندك حساب؟",
-    "signInLink": "سجّل الدخول"
+    "merchantPrefix": "هل أنت تاجر؟"
   },
   "auth": {
     "loginTitle": "تسجيل الدخول",
