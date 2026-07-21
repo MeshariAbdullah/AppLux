@@ -44,6 +44,7 @@ export function RequireRole({
   const {
     configured,
     status,
+    session,
     role: actualRole,
     profile,
     profileLoading,
@@ -86,6 +87,21 @@ export function RequireRole({
     if (!allowed) {
       return <Navigate to={fallback} replace />;
     }
+  }
+  // Bug 2 access guard: a CUSTOMER session whose email is not verified
+  // may not enter operational routes — only the verification screen
+  // (public route), resend/change-email, and sign-out. Merchants and
+  // admins are exempt by design, and every account created while
+  // auto-confirm was on carries email_confirmed_at/confirmed_at, so
+  // existing verified customers are unaffected (compatibility rule:
+  // block ONLY when BOTH confirmation timestamps are absent).
+  if (
+    actualRole === 'customer' &&
+    session?.user &&
+    !session.user.email_confirmed_at &&
+    !session.user.confirmed_at
+  ) {
+    return <Navigate to="/auth/verify-email" replace />;
   }
   // Merchant separation M2: merchant accounts exist BEFORE approval
   // (role='merchant', account_status='pending'). Operational merchant

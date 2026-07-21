@@ -47,6 +47,7 @@ const Diagnostics = lazyWithReload(() => import('@/pages/Diagnostics'));
 const Nafath = lazyWithReload(() => import('@/pages/auth/Nafath'));
 const RegisterSuccess = lazyWithReload(() => import('@/pages/auth/RegisterSuccess'));
 const ForgotPassword = lazyWithReload(() => import('@/pages/auth/ForgotPassword'));
+const VerifyEmail = lazyWithReload(() => import('@/pages/auth/VerifyEmail'));
 const ResetPassword = lazyWithReload(() => import('@/pages/auth/ResetPassword'));
 
 // ---- Lazy: merchant area ----
@@ -233,6 +234,10 @@ export function AppRoutes() {
         <Route path="/auth/nafath" element={<Nafath />} />
         <Route path="/auth/success" element={<RegisterSuccess />} />
         <Route path="/auth/forgot-password" element={<ForgotPassword />} />
+        {/* Bug 2: email-OTP verification. Public — reachable both with
+            no session (straight after signup) and with an unverified
+            session (guard redirect). */}
+        <Route path="/auth/verify-email" element={<VerifyEmail />} />
         <Route path="/auth/reset-password" element={<ResetPassword />} />
         <Route path="/merchant/welcome" element={<MerchantWelcome />} />
         <Route path="/merchant/login" element={<MerchantLogin />} />

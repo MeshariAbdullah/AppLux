@@ -16,7 +16,7 @@ import {
   type FullNameIssue,
 } from '@/lib/validation/customer';
 import { cn } from '@/lib/cn';
-import { ArrowIcon, BadgeCheckIcon, MailIcon } from '@/components/icons';
+import { ArrowIcon, BadgeCheckIcon } from '@/components/icons';
 import {
   isMisconfiguredProduction,
   ProductionConfigError,
@@ -406,15 +406,6 @@ function SupabaseRegister() {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [submitting, setSubmitting] = useState(false);
-  /**
-   * When Supabase has email-confirmation enabled, signUp resolves with
-   * { user, session: null } — the new user is registered but NOT logged
-   * in. We must NOT navigate to '/' in that case (RootRedirect would
-   * see status='anonymous' and bounce to /welcome, looking like signup
-   * failed). Instead we render a "check your email" panel until the
-   * user clicks the confirmation link and signs in manually.
-   */
-  const [pendingEmailConfirmation, setPendingEmailConfirmation] = useState(false);
   const [errors, setErrors] = useState<{
     fullName?: string;
     nationalId?: string;
@@ -531,8 +522,13 @@ function SupabaseRegister() {
           logEvent('rpc_failure', 'warn', { op: 'post_signup_mobile_persist' }, err);
         }
       } else {
-        setPendingEmailConfirmation(true);
-        setSubmitting(false);
+        // Bug 2: email confirmation is pending — the account exists in
+        // an unverified state and Supabase has emailed the 6-digit
+        // code. Continue the guided flow on the dedicated OTP screen.
+        navigate('/auth/verify-email', {
+          replace: true,
+          state: { email: emailCheck.kind === 'valid' ? emailCheck.canonical : email.trim() },
+        });
       }
     } catch (err) {
       // The handle_new_auth_user trigger writes profiles.mobile AND
@@ -552,34 +548,6 @@ function SupabaseRegister() {
       setSubmitting(false);
     }
   };
-
-  if (pendingEmailConfirmation) {
-    // signUp succeeded but session is null → Supabase project has
-    // email-confirmation enabled. Render a clear "check your email"
-    // state instead of bouncing through RootRedirect / /welcome.
-    return (
-      <Screen padded={false} className="bg-beige-100">
-        {/* C04 — centered check-your-email state. */}
-        <div className="px-6 pt-[calc(env(safe-area-inset-top)+96px)] pb-10 flex flex-col items-center text-center">
-          <span className="h-[76px] w-[76px] rounded-full bg-green-50 text-green-700 grid place-items-center">
-            <MailIcon size={28} />
-          </span>
-          <h1 className="mt-6 text-[21px] font-bold text-navy-700">
-            {t('register.emailConfirm.title')}
-          </h1>
-          <p className="mt-2 text-[13px] text-ink-600 leading-[1.9] max-w-[300px]">
-            {t('register.emailConfirm.body', { email: email.trim() })}
-          </p>
-          <Link
-            to="/auth/login"
-            className="mt-6 text-[13.5px] font-bold text-green-700 hover:text-green-800"
-          >
-            {t('register.emailConfirm.goToLogin')}
-          </Link>
-        </div>
-      </Screen>
-    );
-  }
 
   return (
     <Screen padded={false} className="bg-beige-100">

@@ -178,9 +178,19 @@ export function translateAuthError(err: unknown, t: TranslateFn): string {
   ) {
     return t('auth.errors.tooManyAttempts');
   }
+  // Email-OTP verification (Bug 2): expired / wrong codes get their
+  // own actionable copy — GoTrue reports both as the same condition,
+  // and we deliberately don't distinguish them (no oracle for guessing).
+  if (
+    code === 'otp_expired' ||
+    code === 'otp_disabled' ||
+    (message.includes('token') && (message.includes('expired') || message.includes('invalid')))
+  ) {
+    return t('auth.errors.otpInvalid');
+  }
   if (
     (message.includes('expired') || message.includes('invalid')) &&
-    (message.includes('token') || message.includes('link') || code === 'otp_expired')
+    message.includes('link')
   ) {
     return t('auth.errors.linkExpired');
   }

@@ -107,6 +107,33 @@ export async function resendSignupConfirmation(email: string): Promise<void> {
   if (error) throw error;
 }
 
+/**
+ * Bug 2 — verify the numeric email OTP that Supabase Auth sends for
+ * signup confirmation (the project's confirmation email template must
+ * render `{{ .Token }}`). Uses the officially supported
+ * `auth.verifyOtp` email flow — nothing is faked or stored app-side;
+ * on success GoTrue marks the email confirmed and returns a session,
+ * which flows through onAuthStateChange like any other sign-in.
+ * The email/OTP values are never logged (observability logs op names
+ * only).
+ */
+export async function verifyEmailOtp({
+  email,
+  token,
+}: {
+  email: string;
+  token: string;
+}): Promise<{ user: User | null; session: Session | null }> {
+  const sb = requireSupabase();
+  const { data, error } = await sb.auth.verifyOtp({
+    email,
+    token,
+    type: 'email',
+  });
+  if (error) throw error;
+  return { user: data.user, session: data.session };
+}
+
 export async function signUpWithPassword({
   email,
   password,

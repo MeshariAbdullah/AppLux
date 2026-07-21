@@ -60,6 +60,7 @@ export {
   signUpWithPassword,
   signUpMerchant,
   resendSignupConfirmation,
+  verifyEmailOtp,
   signInWithPassword,
   signOut,
   getCurrentSession,

@@ -152,6 +152,17 @@ export default function Login() {
         // Navigating synchronously would race against `setStatus('authenticated')`
         // and bounce the user to /welcome (see RootRedirect in routes.tsx).
       } catch (err) {
+        // Bug 2: an unconfirmed email cannot sign in — hand the
+        // customer straight to the OTP verification screen instead of
+        // dead-ending on an error message.
+        const e = err as { code?: string; message?: string };
+        if (
+          e?.code === 'email_not_confirmed' ||
+          (e?.message ?? '').toLowerCase().includes('email not confirmed')
+        ) {
+          navigate('/auth/verify-email', { state: { email: email.trim().toLowerCase() } });
+          return;
+        }
         logEvent('auth_failure', 'warn', { op: 'sign_in' }, err);
         setErrors({ form: translateAuthError(err, t) });
         setSubmitting(false);
