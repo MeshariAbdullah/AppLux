@@ -585,12 +585,12 @@
   "eligibility": {
     "title": "Rental eligibility",
     "backHome": "Back to home",
-    "subtitle": "Your approved financial ceiling for rental contracts.",
+    "subtitle": "Your approved financial limit from Lend",
     "limit": "Total limit",
     "used": "Used",
     "remaining": "Remaining",
     "usageOfLimit": "Used of total",
-    "note": "Rental eligibility is determined based on your profile and platform history.",
+    "note": "Rental eligibility is determined by your profile and record within Lend.",
     "inactiveTitle": "Eligibility is not active yet",
     "tiers": {
       "standard": "Active",
