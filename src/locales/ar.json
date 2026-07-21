@@ -671,7 +671,8 @@
       "cancelling": "جارٍ الإلغاء…"
     },
     "accountStatusLabel": "حالة الحساب",
-    "accountStatusActive": "نشط وموثّق"
+    "accountStatusActive": "نشط وموثّق",
+    "versionLine": "الإصدار {version}"
   },
   "diagnostics": {
     "title": "التشخيص",

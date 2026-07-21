@@ -260,15 +260,16 @@ export default function Profile() {
             {t('profile.signOut')}
           </button>
 
-          {/* Release line — seven taps open /diagnostics (6C gesture,
-              moved here from the old About row). Real release data. */}
+          {/* Version line — seven taps still open /diagnostics (6C
+              gesture; the full release metadata — commit + environment
+              — now lives ONLY on the diagnostics page, never in the
+              visible UI). */}
           <button
             type="button"
             onClick={tapVersion}
-            className="w-full text-center text-[11px] text-ink-400 num cursor-default select-none"
-            dir="ltr"
+            className="w-full text-center text-[11px] text-ink-400 cursor-default select-none"
           >
-            Lend · {releaseInfo.version} · {releaseInfo.commit} · {releaseInfo.env}
+            {t('profile.versionLine', { version: releaseInfo.version })}
           </button>
         </div>
       </Screen>

@@ -671,7 +671,8 @@
       "cancelling": "Cancelling…"
     },
     "accountStatusLabel": "Account status",
-    "accountStatusActive": "Active & verified"
+    "accountStatusActive": "Active & verified",
+    "versionLine": "Version {version}"
   },
   "diagnostics": {
     "title": "Diagnostics",
