@@ -156,6 +156,23 @@ export async function listInvoiceItems(
   return data ?? [];
 }
 
+/** One batched read for the item rows of many invoices — powers the
+ *  REAL item names/values on the customer Home and rentals list
+ *  (data-consistency audit) without N+1 requests. */
+export async function listInvoiceItemsByInvoiceIds(
+  invoiceIds: string[],
+): Promise<RentalInvoiceItemRow[]> {
+  if (invoiceIds.length === 0) return [];
+  const sb = requireSupabase();
+  const { data, error } = await sb
+    .from('rental_invoice_items')
+    .select('*')
+    .in('invoice_id', invoiceIds)
+    .order('position', { ascending: true });
+  if (error) throw error;
+  return data ?? [];
+}
+
 export async function listCustomerInvoices(
   customerUserId: string,
   filter?: { status?: InvoiceStatus; limit?: number },

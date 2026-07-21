@@ -22,6 +22,7 @@ import {
   WalletIcon,
 } from '@/components/icons';
 import { useI18n, useT } from '@/lib/i18n';
+import { resolveMerchantName } from '@/lib/merchantName';
 import { useStore } from '@/lib/store';
 import {
   adaptContract,
@@ -118,8 +119,10 @@ export default function ContractTracking() {
       }
       const merchant = await fetchMerchant(row.merchant_id).catch(() => null);
       if (cancelled) return;
-      const merchantName =
-        merchant?.display_name?.en ?? merchant?.company_name ?? '—';
+      // Data-consistency fix: locale-aware resolution (same helper as
+      // every other surface) — the Arabic UI previously showed the
+      // ENGLISH display name here while Home showed the Arabic one.
+      const merchantName = resolveMerchantName(merchant, locale, '—');
       setLiveContract(adaptContract(row, merchantName));
 
       let invoiceRow: RentalInvoiceRow | null = null;
@@ -133,6 +136,12 @@ export default function ContractTracking() {
         items = await listInvoiceItems(fetchedInvoice.id).catch(() => []);
         if (cancelled) return;
         setLiveInvoices([adaptInvoice(fetchedInvoice, items, merchantName)]);
+        // Data-consistency fix: re-adapt the contract with the REAL
+        // item name now that the invoice items are loaded (the early
+        // set above painted with the reference fallback).
+        if (items[0]?.item_name) {
+          setLiveContract(adaptContract(row, merchantName, items[0].item_name));
+        }
         // Bugs 17/19: unfinished receipt documentation — surface the
         // way back into the guided flow's photos step.
         if (
@@ -149,7 +158,10 @@ export default function ContractTracking() {
       // light_damage_fraction + late_return_multiplier so the panel
       // here matches what was approved.
       if (invoiceRow) {
-        const durationDays = items[0]?.rental_days ?? 30;
+        // Mirror accept_rental_invoice: duration = max(rental_days).
+        const durationDays = items.length
+          ? Math.max(...items.map((it) => it.rental_days || 0)) || 30
+          : 30;
         setContractTemplate(
           buildContractFromTemplate({
             invoice: invoiceRow,
@@ -173,7 +185,8 @@ export default function ContractTracking() {
     return () => {
       cancelled = true;
     };
-  }, [configured, id]);
+    // locale: the merchant display name is locale-resolved inside.
+  }, [configured, id, locale]);
 
   const contract = liveContract ?? demoContract;
   const linkedInvoices =

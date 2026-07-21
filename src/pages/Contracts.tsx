@@ -70,6 +70,7 @@ export default function Contracts() {
     contractRows,
     noteRows,
     merchants,
+    invoiceItemsByInvoiceId,
     loading: liveLoading,
   } = useCustomerRentalData(configured, session?.user?.id);
 
@@ -83,18 +84,18 @@ export default function Contracts() {
       invoiceRows
         ? invoiceRows
             .filter((r) => r.status === 'issued' || r.status === 'viewed')
-            .map((r) => adaptInvoice(r, [], nameMap[r.merchant_id]))
+            .map((r) => adaptInvoice(r, invoiceItemsByInvoiceId?.[r.id] ?? [], nameMap[r.merchant_id]))
         : null,
-    [invoiceRows, nameMap],
+    [invoiceRows, nameMap, invoiceItemsByInvoiceId],
   );
   const liveContracts = useMemo<Contract[] | null>(
     () =>
       contractRows
         ? contractRows
             .filter((c) => c.status !== 'ended' && c.status !== 'cancelled')
-            .map((r) => adaptContract(r, nameMap[r.merchant_id]))
+            .map((r) => adaptContract(r, nameMap[r.merchant_id], invoiceItemsByInvoiceId?.[r.invoice_id]?.[0]?.item_name))
         : null,
-    [contractRows, nameMap],
+    [contractRows, nameMap, invoiceItemsByInvoiceId],
   );
   const liveNotes = useMemo<PromissoryNote[] | null>(
     () =>
@@ -106,9 +107,9 @@ export default function Contracts() {
       contractRows
         ? contractRows
             .filter((c) => c.status === 'ended' || c.status === 'cancelled')
-            .map((r) => adaptContractToHistory(r, nameMap[r.merchant_id]))
+            .map((r) => adaptContractToHistory(r, nameMap[r.merchant_id], invoiceItemsByInvoiceId?.[r.invoice_id]?.[0]?.item_name))
         : null,
-    [contractRows, nameMap],
+    [contractRows, nameMap, invoiceItemsByInvoiceId],
   );
 
   // Demo fallback: the demo store keeps invoices with the UI 'due'

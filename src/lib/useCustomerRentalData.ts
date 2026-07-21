@@ -6,11 +6,13 @@ import {
   listCustomerContracts,
   listCustomerInvoices,
   listCustomerNotes,
+  listInvoiceItemsByInvoiceIds,
 } from '@/lib/supabase';
 import type {
   MerchantRow,
   PromissoryNoteRow,
   RentalContractRow,
+  RentalInvoiceItemRow,
   RentalInvoiceRow,
 } from '@/lib/supabase';
 
@@ -44,6 +46,13 @@ export type CustomerRentalData = {
   contractRows: RentalContractRow[] | null;
   noteRows: PromissoryNoteRow[] | null;
   merchants: MerchantRow[] | null;
+  /** Invoice-item rows grouped by invoice_id — the REAL item names /
+   *  line values behind every invoice and contract in the lists
+   *  (data-consistency audit: Home and the rentals list previously
+   *  had no item data, so titles degraded to fabricated labels).
+   *  Missing entry = items still loading or unavailable; consumers
+   *  fall back to the real reference number, never an invented name. */
+  invoiceItemsByInvoiceId: Record<string, RentalInvoiceItemRow[]> | null;
   /** True until all three lists AND the merchant batch have settled. */
   loading: boolean;
 };
@@ -101,6 +110,38 @@ export function useCustomerRentalData(
     { ttlMs: CACHE_TTL.merchantEntity },
   );
 
+  // Batched invoice-item rows for every invoice referenced by the
+  // lists (the invoices themselves + the contracts' source invoices).
+  // One IN() query, cached with the same lifecycle as the lists and
+  // invalidated at the same mutation sites (accept / activation).
+  const invoiceIds = useMemo(() => {
+    if (!invoiceRows || !contractRows) return null;
+    return Array.from(
+      new Set([
+        ...invoiceRows.map((r) => r.id),
+        ...contractRows.map((r) => r.invoice_id),
+      ]),
+    ).sort();
+  }, [invoiceRows, contractRows]);
+
+  const itemsQ = useCachedQuery(
+    uid && invoiceIds && invoiceIds.length > 0
+      ? cacheKeys.customerInvoiceItems(uid)
+      : null,
+    () => listInvoiceItemsByInvoiceIds(invoiceIds!),
+    { ttlMs: CACHE_TTL.customerLists, refetchOnFocus: true },
+  );
+  const invoiceItemsByInvoiceId = useMemo(() => {
+    if (!uid || invoiceIds === null) return null;
+    if (invoiceIds.length === 0) return {};
+    if (itemsQ.data === undefined) return itemsQ.loading ? null : {};
+    const map: Record<string, RentalInvoiceItemRow[]> = {};
+    for (const row of itemsQ.data) {
+      (map[row.invoice_id] ??= []).push(row);
+    }
+    return map;
+  }, [uid, invoiceIds, itemsQ.data, itemsQ.loading]);
+
   const merchants: MerchantRow[] | null = !uid
     ? null
     : merchantIds === null
@@ -118,9 +159,17 @@ export function useCustomerRentalData(
     (invoiceRows === null ||
       contractRows === null ||
       noteRows === null ||
-      merchants === null);
+      merchants === null ||
+      invoiceItemsByInvoiceId === null);
 
-  return { invoiceRows, contractRows, noteRows, merchants, loading };
+  return {
+    invoiceRows,
+    contractRows,
+    noteRows,
+    merchants,
+    invoiceItemsByInvoiceId,
+    loading,
+  };
 }
 
 /** Same display-name resolution the pages used inline. */

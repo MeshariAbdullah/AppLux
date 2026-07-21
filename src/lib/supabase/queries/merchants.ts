@@ -76,6 +76,27 @@ export async function fetchMerchant(id: string): Promise<MerchantRow | null> {
 // Design D1: the merchant profile page shows the branch count. RLS
 // merchant_branches_owner_all scopes the read to the caller's own
 // merchant; admins pass via their policy.
+/** Pickup-branch info for customer-facing rental surfaces. Readable
+ *  by anyone for ACTIVE merchants via merchant_branches_public_select
+ *  (20260502120200) — no RLS change involved. */
+export type BranchInfo = {
+  id: string;
+  name: { ar?: string; en?: string } | null;
+  city: string;
+  address: { ar?: string; en?: string } | null;
+};
+
+export async function fetchBranchById(id: string): Promise<BranchInfo | null> {
+  const sb = requireSupabase();
+  const { data, error } = await sb
+    .from('merchant_branches')
+    .select('id, name, city, address')
+    .eq('id', id)
+    .maybeSingle();
+  if (error) throw error;
+  return (data as BranchInfo | null) ?? null;
+}
+
 export async function listMerchantBranches(
   merchantId: string,
 ): Promise<Array<{ id: string; name: unknown; city: string }>> {

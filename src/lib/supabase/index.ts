@@ -97,9 +97,10 @@ export {
   fetchMerchant,
   fetchMerchantsByIds,
   fetchMyMerchant,
+  fetchBranchById,
   listMerchantBranches,
 } from './queries/merchants';
-export type { ListMerchantsFilter } from './queries/merchants';
+export type { BranchInfo, ListMerchantsFilter } from './queries/merchants';
 export {
   submitMerchantApplication,
   listMerchantApplications,
@@ -125,6 +126,7 @@ export {
   fetchInvoiceByToken,
   listCustomerInvoices,
   listInvoiceItems,
+  listInvoiceItemsByInvoiceIds,
   listMerchantInvoices,
   recordNafathSigning,
   recordRentalPayment,

@@ -133,6 +133,7 @@ export default function Home() {
     contractRows,
     noteRows,
     merchants,
+    invoiceItemsByInvoiceId,
     loading: liveLoading,
   } = useCustomerRentalData(configured, realSession?.user?.id);
 
@@ -141,21 +142,36 @@ export default function Home() {
     [merchants, locale],
   );
 
+  // Data-consistency fix: adapt with the REAL invoice items so the
+  // pending-offer card shows the merchant-entered item name — the
+  // same source /review/:token renders.
   const liveInvoices = useMemo<Invoice[] | null>(
     () =>
       invoiceRows
-        ? invoiceRows.map((r) => adaptInvoice(r, [], nameMap[r.merchant_id]))
+        ? invoiceRows.map((r) =>
+            adaptInvoice(
+              r,
+              invoiceItemsByInvoiceId?.[r.id] ?? [],
+              nameMap[r.merchant_id],
+            ),
+          )
         : null,
-    [invoiceRows, nameMap],
+    [invoiceRows, nameMap, invoiceItemsByInvoiceId],
   );
   const liveContracts = useMemo<Contract[] | null>(
     () =>
       contractRows
         ? contractRows
             .filter((c) => c.status !== 'ended' && c.status !== 'cancelled')
-            .map((r) => adaptContract(r, nameMap[r.merchant_id]))
+            .map((r) =>
+              adaptContract(
+                r,
+                nameMap[r.merchant_id],
+                invoiceItemsByInvoiceId?.[r.invoice_id]?.[0]?.item_name,
+              ),
+            )
         : null,
-    [contractRows, nameMap],
+    [contractRows, nameMap, invoiceItemsByInvoiceId],
   );
   const liveNotes = useMemo<PromissoryNote[] | null>(
     () =>
@@ -167,9 +183,15 @@ export default function Home() {
       contractRows
         ? contractRows
             .filter((c) => c.status === 'ended' || c.status === 'cancelled')
-            .map((r) => adaptContractToHistory(r, nameMap[r.merchant_id]))
+            .map((r) =>
+              adaptContractToHistory(
+                r,
+                nameMap[r.merchant_id],
+                invoiceItemsByInvoiceId?.[r.invoice_id]?.[0]?.item_name,
+              ),
+            )
         : null,
-    [contractRows, nameMap],
+    [contractRows, nameMap, invoiceItemsByInvoiceId],
   );
 
   const invoices = liveInvoices ?? demoInvoices;

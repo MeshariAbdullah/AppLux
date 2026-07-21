@@ -29,6 +29,7 @@ import { useI18n, useT } from '@/lib/i18n';
 import { useStore } from '@/lib/store';
 import {
   adaptContractToMerchantRental,
+  listInvoiceItems,
   fetchContractById,
   fetchMerchant,
   fetchNoteByContractId,
@@ -202,13 +203,21 @@ export default function MerchantRentalDetails() {
       ]);
       if (cancelled) return;
       const customerName = customer?.full_name ?? '—';
+      // Data-consistency fix: the headline is the REAL invoice item
+      // name (same source the customer sees), not a fabricated label.
+      const items = await cachedFetch<Awaited<ReturnType<typeof listInvoiceItems>>>(
+        cacheKeys.invoiceItems(contract.invoice_id),
+        CACHE_TTL.rentalBundle,
+        () => listInvoiceItems(contract.invoice_id),
+      ).catch(() => []);
+      if (cancelled) return;
       setLiveRental(
         adaptContractToMerchantRental(contract, {
           customerName,
           customerInitials: getInitials(customerName),
           customerCity: customer?.city ?? '',
           customerMobile: customer?.mobile ?? '',
-          headlineItem: `Rental ${contract.contract_number}`,
+          headlineItem: items[0]?.item_name ?? contract.contract_number,
           category: merchant?.primary_category,
           note,
         }),

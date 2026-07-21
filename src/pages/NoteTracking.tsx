@@ -22,6 +22,7 @@ import {
   SparkleIcon,
 } from '@/components/icons';
 import { useI18n, useT } from '@/lib/i18n';
+import { resolveMerchantName } from '@/lib/merchantName';
 import { resolvePlatformBeneficiary } from '@/lib/platformIdentity';
 import { useStore } from '@/lib/store';
 import {
@@ -84,8 +85,8 @@ export default function NoteTracking() {
       }
       const merchant = await fetchMerchant(row.merchant_id).catch(() => null);
       if (cancelled) return;
-      const merchantName =
-        merchant?.display_name?.en ?? merchant?.company_name ?? row.beneficiary_name;
+      // Locale-aware merchant name (data-consistency fix — was .en).
+      const merchantName = resolveMerchantName(merchant, locale, row.beneficiary_name);
       setLiveNote(adaptNote(row, merchantName));
 
       const contractRow = await fetchContractById(row.contract_id).catch(() => null);
@@ -97,7 +98,8 @@ export default function NoteTracking() {
     return () => {
       cancelled = true;
     };
-  }, [configured, id]);
+    // locale: the merchant display name is locale-resolved inside.
+  }, [configured, id, locale]);
 
   const note = liveNote ?? demoNote;
   const linkedContract =

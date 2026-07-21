@@ -31,6 +31,8 @@ import type {
 } from '@/lib/data';
 import { buildContractFromTemplate } from '@/lib/contractTemplate';
 import { LEND_PLATFORM_NAME } from '@/lib/platformIdentity';
+import arLocale from '@/locales/ar.json';
+import enLocale from '@/locales/en.json';
 import type { AdminMerchantRequest } from '@/lib/store';
 import type {
   AccountStatus,
@@ -188,10 +190,14 @@ export function adaptInvoice(
 export function adaptContract(
   row: RentalContractRow,
   merchantName?: string,
+  /** Real headline item name (invoice items). When absent the title
+   *  falls back to the REAL contract reference — never the old
+   *  fabricated English "Rental CN-…" label. */
+  itemTitle?: string | null,
 ): Contract {
   return {
     id: row.id,
-    title: `Rental ${row.contract_number}`,
+    title: itemTitle?.trim() || row.contract_number,
     counterparty: merchantName ?? '—',
     startDate: row.start_date,
     endDate: row.end_date,
@@ -220,10 +226,12 @@ export function adaptNote(
 export function adaptContractToHistory(
   row: RentalContractRow,
   merchantName?: string,
+  /** Real headline item name — same rule as adaptContract. */
+  itemTitle?: string | null,
 ): HistoryItem {
   return {
     id: row.id,
-    title: `Rental ${row.contract_number}`,
+    title: itemTitle?.trim() || row.contract_number,
     counterparty: merchantName ?? '—',
     closedAt: row.ended_at ?? row.end_date,
     amount: Number(row.total_amount),
@@ -394,16 +402,50 @@ function dur(startIso: string, days: number): string {
   return new Date(new Date(startIso).getTime() + days * 86_400_000).toISOString();
 }
 
+/** Localized city display names, sourced from the SAME locale files
+ *  the rest of the app renders (single source of truth — no duplicated
+ *  strings). Unknown keys fall back to the raw value rather than
+ *  inventing anything. */
+function localizedCity(cityKey: string | null | undefined): Localized {
+  if (!cityKey) return { ar: '—', en: '—' };
+  const arCities = (arLocale as { register?: { cities?: Record<string, string> } })
+    .register?.cities;
+  const enCities = (enLocale as { register?: { cities?: Record<string, string> } })
+    .register?.cities;
+  return {
+    ar: arCities?.[cityKey] ?? cityKey,
+    en: enCities?.[cityKey] ?? cityKey,
+  };
+}
+
 export function synthesizePackageFromInvoice(
   invoice: RentalInvoiceRow,
   items: RentalInvoiceItemRow[],
   merchant?: MerchantRow | null,
+  /** Real pickup branch (merchant_branches row via the public-select
+   *  policy). When present the customer sees the ACTUAL branch the
+   *  merchant issued from, not a city fallback. */
+  branch?: {
+    name: { ar?: string; en?: string } | null;
+    city: string;
+    address: { ar?: string; en?: string } | null;
+  } | null,
 ): ScannedPackage {
   const issuedAt = invoice.issued_at ?? invoice.created_at;
   const headlineCategory = items[0]?.category ?? 'dress';
-  const durationDays = items[0]?.rental_days ?? 30;
-  const pickupDate = issuedAt;
-  const returnDate = invoice.expires_at ?? dur(issuedAt, durationDays);
+  // Duration mirrors accept_rental_invoice exactly: max(rental_days)
+  // across the invoice items, defaulting to 30 — so the period shown
+  // at review equals the contract period created at acceptance.
+  const durationDays = items.length
+    ? Math.max(...items.map((it) => it.rental_days || 0)) || 30
+    : 30;
+  // Rental period = the merchant-chosen start (rental_invoices
+  // .starts_at, set in the issuance wizard) — NOT the issuance moment
+  // — and the return date derives from that start + duration, exactly
+  // like the contract's end_date. expires_at is the OFFER expiry and
+  // is never a rental date.
+  const pickupDate = invoice.starts_at ?? issuedAt;
+  const returnDate = dur(pickupDate, durationDays);
   // Note beneficiary is the platform legal entity, NOT the merchant.
   // Per the corrected product flow:
   //   * Contract  : merchant  ↔ renter   (the merchant IS a party)
@@ -412,9 +454,20 @@ export function synthesizePackageFromInvoice(
     ar: LEND_PLATFORM_NAME.ar,
     en: LEND_PLATFORM_NAME.en,
   };
-  const cityLocalized = merchant
-    ? { ar: merchant.city, en: merchant.city }
-    : { ar: '—', en: '—' };
+  const cityLocalized = localizedCity(branch?.city ?? merchant?.city);
+  // Pickup point: the REAL issuing branch when the invoice carries
+  // one; otherwise the merchant's city as a translated display name —
+  // never a raw city key, never an invented address.
+  const pickupLocation: Localized = branch
+    ? {
+        ar: [branch.name?.ar ?? branch.name?.en, cityLocalized.ar]
+          .filter(Boolean)
+          .join(' · '),
+        en: [branch.name?.en ?? branch.name?.ar, cityLocalized.en]
+          .filter(Boolean)
+          .join(' · '),
+      }
+    : cityLocalized;
   // Contract is auto-generated from a fixed template so the customer
   // sees the rental's real terms (period, damage policy, late return,
   // cancellation) inside the same review thread — not a disconnected
@@ -443,13 +496,19 @@ export function synthesizePackageFromInvoice(
       pickupDate,
       returnDate,
       durationDays,
-      pickupLocation: cityLocalized,
+      pickupLocation,
     },
     items: items.map<ScannedItem>((it) => ({
       id: it.id,
       name: { ar: it.item_name, en: it.item_name },
-      qty: it.rental_days,
-      unitValue: Number(it.replacement_value ?? it.subtotal),
+      // The schema has no per-line quantity — each invoice item row is
+      // ONE piece (rental_days is the DURATION, already shown in the
+      // rental-details card; the old mapping displayed it as الكمية).
+      qty: 1,
+      // Market/original value = replacement_value ONLY. When the row
+      // doesn't carry one, show the neutral unavailable state — never
+      // substitute the rental fee (subtotal) as a market value.
+      unitValue: it.replacement_value != null ? Number(it.replacement_value) : null,
       serial: undefined,
       attributes:
         it.size_label || it.color

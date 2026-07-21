@@ -385,10 +385,13 @@ export const SEED_STORES: PartnerStore[] = [
 ];
 
 export type ScannedItem = {
+  // NOTE: unitValue may be null in live mode when the invoice item row
+  // carries no replacement_value — surfaces render the neutral
+  // unavailable state instead of a substituted amount.
   id: string;
   name: Localized;
   qty: number;
-  unitValue: number;
+  unitValue: number | null;
   serial?: string;
   attributes?: ItemAttribute[];
 };

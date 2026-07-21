@@ -63,6 +63,10 @@ export const cacheKeys = {
   // ---- customer-scoped ----
   customerInvoices: (uid: string) => `customer:${uid}:invoices`,
   customerContracts: (uid: string) => `customer:${uid}:contracts`,
+  /** Batched invoice-item rows for the customer's invoices/contracts —
+   *  the source of the REAL item names/values on Home and the rentals
+   *  list (data-consistency audit). Same lifecycle as the lists. */
+  customerInvoiceItems: (uid: string) => `customer:${uid}:invoiceItems`,
   customerNotes: (uid: string) => `customer:${uid}:notes`,
   customerPrefix: (uid: string) => `customer:${uid}:`,
 

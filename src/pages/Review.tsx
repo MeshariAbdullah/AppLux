@@ -38,6 +38,7 @@ import {
   acceptRentalInvoice,
   activateRentalWithoutPaymentAndNote,
   confirmContractReceiptPhotos,
+  fetchBranchById,
   fetchContractByInvoiceId,
   fetchInvoiceByToken,
   fetchMerchant,
@@ -102,9 +103,14 @@ export default function Review() {
           return;
         }
         const merchant = await fetchMerchant(res.invoice.merchant_id).catch(() => null);
+        // Real pickup branch (public-select policy) — the customer sees
+        // the branch the merchant actually issued from.
+        const branch = res.invoice.branch_id
+          ? await fetchBranchById(res.invoice.branch_id).catch(() => null)
+          : null;
         if (cancelled) return;
         setLiveMerchantRow(merchant);
-        setLivePkg(synthesizePackageFromInvoice(res.invoice, res.items, merchant));
+        setLivePkg(synthesizePackageFromInvoice(res.invoice, res.items, merchant, branch));
         setLiveInvoiceId(res.invoice.id);
         // Bugs 17/19 resume path: the invoice was already accepted on a
         // previous visit. Its contract exists — if it's still pending,
@@ -222,6 +228,7 @@ export default function Review() {
       if (uid) {
         cacheInvalidate(cacheKeys.customerInvoices(uid));
         cacheInvalidate(cacheKeys.customerContracts(uid));
+        cacheInvalidate(cacheKeys.customerInvoiceItems(uid));
         cacheInvalidate(cacheKeys.customerNotes(uid));
         cacheInvalidate(cacheKeys.eligibility(uid));
       }
@@ -267,6 +274,7 @@ export default function Review() {
         if (supabaseUserId) {
           cacheInvalidate(cacheKeys.customerInvoices(supabaseUserId));
           cacheInvalidate(cacheKeys.customerContracts(supabaseUserId));
+          cacheInvalidate(cacheKeys.customerInvoiceItems(supabaseUserId));
         }
         if (!ENABLE_PAYMENTS_AND_NOTES) {
           // Bugs 17/19: the guided flow moves IMMEDIATELY to the item
@@ -500,7 +508,10 @@ function ReviewHero({ pkg }: { pkg: ScannedPackage }) {
 function InvoiceStep({ pkg }: { pkg: ScannedPackage }) {
   const t = useT();
   const { locale, formatCurrency, formatDate } = useI18n();
-  const itemsTotal = pkg.items.reduce((sum, it) => sum + it.unitValue * it.qty, 0);
+  const itemsTotal = pkg.items.reduce(
+    (sum, it) => sum + (it.unitValue ?? 0) * it.qty,
+    0,
+  );
 
   return (
     <>
@@ -578,7 +589,7 @@ function InvoiceStep({ pkg }: { pkg: ScannedPackage }) {
                 </div>
                 <div className="text-end shrink-0">
                   <div className="text-[13px] font-semibold text-ink-900 num">
-                    {formatCurrency(it.unitValue)}
+                    {it.unitValue != null ? formatCurrency(it.unitValue) : '—'}
                   </div>
                   <div className="mt-0.5 text-[11.5px] text-ink-400">
                     {t('review.invoice.qty')}: <span className="num">{it.qty}</span>
@@ -992,9 +1003,20 @@ function ConfirmStep({
       >
         <Field label={t('review.contract.lessee')} value={userName ?? '—'} />
         <CardDivider />
+        {/* Data-consistency fix: in the current phase the amount the
+            customer commits to is the invoice's persisted total — the
+            same figure the merchant issued and the invoice step shows.
+            The note principal (total + deposit) belongs to the flag-on
+            promissory-note flow only. */}
         <Field
-          label={t('review.note.principal')}
-          value={<span className="num">{formatCurrency(pkg.note.principal)}</span>}
+          label={t(ENABLE_PAYMENTS_AND_NOTES ? 'review.note.principal' : 'review.invoice.grandTotal')}
+          value={
+            <span className="num">
+              {formatCurrency(
+                ENABLE_PAYMENTS_AND_NOTES ? pkg.note.principal : pkg.fees.grandTotal,
+              )}
+            </span>
+          }
         />
         <CardDivider />
         <Field
