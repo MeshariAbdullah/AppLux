@@ -45,9 +45,6 @@ export default function Welcome() {
           LEND
         </div>
         <BrandSlogan size="lg" tone="dark" className="!font-bold" />
-        <p className="text-[13.5px] leading-[1.9] text-white/60 max-w-[28ch]">
-          {t('welcome.entrySubtitle')}
-        </p>
       </div>
 
       {/* Action sheet — C01: 24px top radius, role picker + sign-in. */}
