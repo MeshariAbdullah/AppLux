@@ -295,7 +295,6 @@
       "mobileFormat": "Doesn't look like a Saudi mobile. It must start with 5 and be 9 digits.",
       "mobileUnsupportedCountry": "Only Saudi mobile numbers (+966) are supported here.",
       "mobileVerifyFailed": "We couldn't verify this number right now. Please try again.",
-      "mobileTaken": "This mobile number is already in use",
       "emailRequired": "Enter your email to continue.",
       "emailFormat": "That email doesn't look right.",
       "passwordRequired": "Enter your password to continue.",
@@ -313,7 +312,11 @@
       "tooManyAttempts": "Too many attempts in a short time. Wait a moment and try again.",
       "linkExpired": "This link has expired. Request a new one and try again.",
       "emailNotConfirmed": "Your email is not confirmed yet. Open the confirmation email we sent you, then sign in again.",
-      "merchantAccountOnCustomerLogin": "This is a merchant account. Use the merchant sign-in page."
+      "merchantAccountOnCustomerLogin": "This is a merchant account. Use the merchant sign-in page.",
+      "fullNameLetters": "The name may contain Arabic or English letters and spaces only — no digits or symbols.",
+      "fullNameTwoParts": "Enter at least two name parts separated by a space.",
+      "fullNameTooShort": "Each name part must be at least two letters.",
+      "accountDetailsConflict": "An account could not be created with these details. Check your information or use your existing account."
     },
     "goToMerchantLogin": "Go to merchant sign-in",
     "welcomeBack": "Welcome back"

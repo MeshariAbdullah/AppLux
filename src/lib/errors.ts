@@ -161,15 +161,14 @@ export function translateAuthError(err: unknown, t: TranslateFn): string {
     return t('auth.errors.emailNotConfirmed');
   }
   // GoTrue surfaces ANY failure inside the signup trigger as this one
-  // opaque message. Today the trigger has exactly one constraint that
-  // real input can violate: the customer-mobile unique index
-  // (profiles_mobile_customer_unique) — profile + eligibility inserts
-  // are `on conflict do nothing` and no other CHECK depends on user
-  // input shape the form hasn't already validated. So the safe,
-  // accurate translation is "mobile already in use". Revisit if the
-  // trigger ever gains another input-sensitive constraint.
+  // opaque message. The trigger now has TWO constraints real input can
+  // violate — the customer-mobile unique index
+  // (profiles_mobile_customer_unique) and the customer-National-ID
+  // unique index (profiles_national_id_customer_unique, Bug 2) — so
+  // the safe translation is the generic privacy-preserving conflict
+  // message that never reveals which datum is taken or to whom.
   if (message.includes('database error saving new user')) {
-    return t('auth.errors.mobileTaken');
+    return t('auth.errors.accountDetailsConflict');
   }
   if (
     status === 429 ||

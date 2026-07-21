@@ -8,6 +8,13 @@ import { useI18n, useT } from '@/lib/i18n';
 import { useStore, emptyRegistration, type RegistrationDraft } from '@/lib/store';
 import { useSupabaseAuth, updateProfile } from '@/lib/supabase';
 import { classifyMobile, type MobileIssue } from '@/lib/mobile';
+import {
+  classifyEmail,
+  classifyFullName,
+  classifyNationalId,
+  normalizeDigits,
+  type FullNameIssue,
+} from '@/lib/validation/customer';
 import { cn } from '@/lib/cn';
 import { ArrowIcon, BadgeCheckIcon, MailIcon } from '@/components/icons';
 import {
@@ -78,9 +85,16 @@ export default function Register() {
         next[k] = req;
         continue;
       }
-      if (k === 'nationalId' && !/^[12]\d{9}$/.test(v)) next[k] = t('register.errors.nationalId');
-      if (k === 'mobile' && !/^5\d{8}$/.test(v)) next[k] = t('register.errors.mobile');
-      if (k === 'email' && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)) next[k] = t('register.errors.email');
+      // Bug 2: the demo form reuses the same shared customer validators
+      // as the live signup so behavior never diverges between modes.
+      if (k === 'fullName') {
+        const name = classifyFullName(v);
+        if (name.kind === 'invalid') next[k] = fullNameIssueToMessage(name.issue, t);
+      }
+      if (k === 'nationalId' && classifyNationalId(v).kind === 'invalid')
+        next[k] = t('register.errors.nationalId');
+      if (k === 'mobile' && !/^5\d{8}$/.test(normalizeDigits(v))) next[k] = t('register.errors.mobile');
+      if (k === 'email' && classifyEmail(v).kind === 'invalid') next[k] = t('register.errors.email');
       if (k === 'income' && !(Number(v) > 0)) next[k] = t('register.errors.income');
     }
     return next;
@@ -332,25 +346,50 @@ function mobileIssueToMessage(
   }
 }
 
+/** Full-name issue → translated inline message. */
+function fullNameIssueToMessage(
+  issue: FullNameIssue,
+  t: (k: string, v?: Record<string, string | number>) => string,
+): string {
+  switch (issue) {
+    case 'empty':
+      return t('auth.errors.fullNameRequired');
+    case 'one_part':
+      return t('auth.errors.fullNameTwoParts');
+    case 'too_short':
+      return t('auth.errors.fullNameTooShort');
+    case 'invalid_chars':
+    default:
+      return t('auth.errors.fullNameLetters');
+  }
+}
+
 /**
- * Best-effort detector for a unique-violation on profiles.mobile
- * (the partial unique index installed in
- * 20260502121200_profiles_mobile_customer_unique.sql). Supabase Auth
- * doesn't expose the underlying Postgres code reliably through
+ * Best-effort detector for a unique-violation on the customer identity
+ * columns — profiles.mobile (profiles_mobile_customer_unique,
+ * 20260502121200) or profiles.national_id
+ * (profiles_national_id_customer_unique, 20260502123000). Supabase
+ * Auth doesn't expose the underlying Postgres code reliably through
  * signUp's error, so we sniff a few plausible signals: 23505 code,
- * the constraint name, and the column/table name in the message.
+ * the constraint names, and the column/table name in the message.
  * Conservative on purpose — if we're not sure, we DON'T claim it's a
  * duplicate (the caller falls back to the generic error path).
+ *
+ * Privacy (Bug 2): the caller maps EVERY duplicate — mobile or
+ * National ID — to the same generic "could not create an account with
+ * these details" message, so responses never reveal which datum is
+ * already registered or to whom.
  */
-function isMobileUniqueViolation(err: unknown): boolean {
+function isProfileIdentityConflict(err: unknown): boolean {
   if (!err) return false;
   const anyErr = err as { code?: string; message?: string };
   if (anyErr.code === '23505') return true;
   const msg = (anyErr.message ?? '').toLowerCase();
   return (
     msg.includes('profiles_mobile_customer_unique') ||
-    (msg.includes('duplicate') && msg.includes('mobile')) ||
-    (msg.includes('already exists') && msg.includes('mobile'))
+    msg.includes('profiles_national_id_customer_unique') ||
+    (msg.includes('duplicate') && (msg.includes('mobile') || msg.includes('national_id'))) ||
+    (msg.includes('already exists') && (msg.includes('mobile') || msg.includes('national_id')))
   );
 }
 
@@ -414,17 +453,26 @@ function SupabaseRegister() {
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const next: typeof errors = {};
-    if (!fullName.trim()) next.fullName = t('auth.errors.fullNameRequired');
-    const nationalIdTrimmed = nationalId.trim();
-    if (!nationalIdTrimmed) next.nationalId = t('auth.errors.nationalIdRequired');
-    else if (!/^[12]\d{9}$/.test(nationalIdTrimmed))
-      next.nationalId = t('register.errors.nationalId');
+    // Bug 2: shared customer validators (src/lib/validation/customer.ts)
+    // decide what is ever SENT; the DB constraints stay authoritative.
+    const nameCheck = classifyFullName(fullName);
+    if (nameCheck.kind === 'invalid')
+      next.fullName = fullNameIssueToMessage(nameCheck.issue, t);
+    const idCheck = classifyNationalId(nationalId);
+    if (idCheck.kind === 'invalid')
+      next.nationalId =
+        idCheck.issue === 'empty'
+          ? t('auth.errors.nationalIdRequired')
+          : t('register.errors.nationalId');
     if (!mobile.trim()) next.mobile = t('auth.errors.mobileRequired');
     else if (mobileClassification.kind === 'invalid')
       next.mobile = mobileIssueToMessage(mobileClassification.issue, t);
-    if (!email.trim()) next.email = t('auth.errors.emailRequired');
-    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
-      next.email = t('auth.errors.emailFormat');
+    const emailCheck = classifyEmail(email);
+    if (emailCheck.kind === 'invalid')
+      next.email =
+        emailCheck.issue === 'empty'
+          ? t('auth.errors.emailRequired')
+          : t('auth.errors.emailFormat');
     if (!password.trim()) next.password = t('auth.errors.passwordRequired');
     else if (password.length < 6) next.password = t('auth.errors.passwordMinChars');
     if (!confirmPassword.trim())
@@ -437,11 +485,11 @@ function SupabaseRegister() {
     setSubmitting(true);
     try {
       const result = await signUp({
-        email: email.trim(),
+        email: emailCheck.kind === 'valid' ? emailCheck.canonical : email.trim(),
         password,
-        fullName: fullName.trim(),
+        fullName: nameCheck.kind === 'valid' ? nameCheck.normalized : fullName.trim(),
         mobile: normalizedMobile!.canonical,
-        nationalId: nationalIdTrimmed,
+        nationalId: idCheck.kind === 'valid' ? idCheck.canonical : nationalId.trim(),
       });
       // Two outcomes from Supabase signUp:
       //  (a) project has email-confirmation enabled → result.session is
@@ -468,19 +516,15 @@ function SupabaseRegister() {
           // path; this UPDATE is the safety net.
           await updateProfile(result.session.user.id, {
             mobile: normalizedMobile!.canonical,
-            national_id: nationalIdTrimmed,
+            national_id: idCheck.kind === 'valid' ? idCheck.canonical : nationalId.trim(),
           });
         } catch (err) {
-          // SCRUM-42 Bug 15: a unique-violation on profiles.mobile
-          // means another customer already registered with this
-          // number (partial unique index
-          // `profiles_mobile_customer_unique`). Surface a clean
-          // "already registered" error on the mobile field instead
-          // of silently swallowing — the trigger should have written
-          // it on signup, so if the post-signUp UPDATE fails on
-          // 23505 there's nothing we can do client-side to recover.
-          if (isMobileUniqueViolation(err)) {
-            setErrors({ mobile: t('auth.errors.mobileTaken') });
+          // A unique-violation on profiles.mobile / profiles.national_id
+          // means another customer already registered with this datum.
+          // Bug 2 privacy rule: one generic message, never revealing
+          // WHICH field is taken or whose account holds it.
+          if (isProfileIdentityConflict(err)) {
+            setErrors({ form: t('auth.errors.accountDetailsConflict') });
             setSubmitting(false);
             return;
           }
@@ -491,14 +535,15 @@ function SupabaseRegister() {
         setSubmitting(false);
       }
     } catch (err) {
-      // The handle_new_auth_user trigger ALSO writes profiles.mobile.
-      // If the live data already contains another customer with this
-      // number, the trigger's INSERT will fail with a 23505 unique
-      // violation, which Supabase Auth surfaces as a sign-up error.
-      // Translate that into the same clean "already registered"
-      // message on the mobile field.
-      if (isMobileUniqueViolation(err)) {
-        setErrors({ mobile: t('auth.errors.mobileTaken') });
+      // The handle_new_auth_user trigger writes profiles.mobile AND
+      // profiles.national_id. If the live data already contains another
+      // customer with either datum, the trigger's INSERT fails with a
+      // 23505 unique violation (race-safe — the partial unique indexes
+      // are the server-side enforcement, no pre-check involved), which
+      // Supabase Auth surfaces as a sign-up error. Map it to the same
+      // generic privacy-safe message.
+      if (isProfileIdentityConflict(err)) {
+        setErrors({ form: t('auth.errors.accountDetailsConflict') });
         setSubmitting(false);
         return;
       }
@@ -575,12 +620,16 @@ function SupabaseRegister() {
               placeholder={t('register.nationalIdPh')}
               value={nationalId}
               onChange={(e) => {
-                setNationalId(e.target.value);
+                // Bug 2: Arabic-Indic digits normalize as they are
+                // typed, so maxLength and validation see one canonical
+                // representation.
+                setNationalId(normalizeDigits(e.target.value));
                 if (errors.nationalId)
                   setErrors((p) => ({ ...p, nationalId: undefined }));
               }}
               invalid={Boolean(errors.nationalId)}
               className="num"
+              dir="ltr"
               autoComplete="off"
             />
           </FormField>
@@ -590,22 +639,31 @@ function SupabaseRegister() {
             error={mobileError}
             hint={!mobileError ? t('auth.login.mobileHint') : undefined}
           >
-            <Input
-              inputMode="tel"
-              placeholder="5XXXXXXXX"
-              value={mobile}
-              onChange={(e) => {
-                setMobile(e.target.value);
-                if (errors.mobile) setErrors((p) => ({ ...p, mobile: undefined }));
-              }}
-              onBlur={() => setMobileTouched(true)}
-              leading={
-                <span className="text-ink-500 text-[13px] font-medium num">+966</span>
-              }
-              invalid={Boolean(mobileError)}
-              autoComplete="tel"
-              maxLength={14}
-            />
+            {/* Bug 2 direction rule: the phone control is a single LTR
+                unit in BOTH locales — "+966" on the left, digits typed
+                left-to-right and never visually reversed — while the
+                label/hint/error above and below stay with the page
+                direction. */}
+            <div dir="ltr">
+              <Input
+                inputMode="tel"
+                placeholder="5XXXXXXXX"
+                value={mobile}
+                onChange={(e) => {
+                  setMobile(e.target.value);
+                  if (errors.mobile) setErrors((p) => ({ ...p, mobile: undefined }));
+                }}
+                onBlur={() => setMobileTouched(true)}
+                leading={
+                  <span className="text-ink-500 text-[13px] font-medium num" dir="ltr">
+                    +966
+                  </span>
+                }
+                invalid={Boolean(mobileError)}
+                autoComplete="tel"
+                maxLength={14}
+              />
+            </div>
           </FormField>
           {normalizedMobile && (
             <div

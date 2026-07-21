@@ -21,9 +21,17 @@ export type MobileClassification =
   | { kind: 'valid'; canonical: string; e164: string }
   | { kind: 'invalid'; issue: MobileIssue };
 
+/** Arabic-Indic (٠-٩) and Eastern Arabic-Indic (۰-۹) digits → ASCII —
+ *  keep in sync with src/lib/mobile.ts (Bug 2). */
+function normalizeArabicDigits(raw: string): string {
+  return raw
+    .replace(/[٠-٩]/g, (d) => String(d.charCodeAt(0) - 0x0660))
+    .replace(/[۰-۹]/g, (d) => String(d.charCodeAt(0) - 0x06f0));
+}
+
 export function classifyMobile(raw: string | null | undefined): MobileClassification {
   if (raw === null || raw === undefined) return { kind: 'invalid', issue: 'empty' };
-  const original = String(raw);
+  const original = normalizeArabicDigits(String(raw));
   const trimmed = original.trim();
   if (trimmed.length === 0) return { kind: 'invalid', issue: 'empty' };
 

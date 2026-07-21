@@ -1,0 +1,46 @@
+-- =====================================================================
+-- Bug 2 — unique customer National ID
+-- =====================================================================
+-- profiles.national_id previously had NO uniqueness rule: two customer
+-- accounts could register the same Saudi National ID / Iqama. The
+-- signup trigger (handle_new_auth_user, latest body in
+-- 20260502122800) writes national_id on every customer signup, and
+-- the merchant issuance flow relies on identity data being unambiguous.
+--
+-- This installs the same protection shape mobile already has
+-- (profiles_mobile_customer_unique, 20260502121200): a PARTIAL unique
+-- index over customer rows with a non-null national_id. Merchant /
+-- admin rows and NULL values are unaffected.
+--
+-- Race safety: the index — not any client pre-check — is the
+-- enforcement. Two concurrent signups with the same ID serialize on
+-- the index; the loser's trigger INSERT fails with 23505, GoTrue
+-- surfaces "Database error saving new user", and the client maps that
+-- to the generic privacy-safe message (auth.errors
+-- .accountDetailsConflict) without revealing which datum is taken.
+-- The merchant-side writer (merchant_set_customer_national_id,
+-- 20260502122300) hits the same index; its 23505 surfaces through
+-- translateError's existing 23505 → conflict mapping.
+--
+-- PRE-FLIGHT (run read-only BEFORE applying): the index cannot be
+-- created while duplicate customer National IDs exist. Check with:
+--
+--   select national_id, count(*), array_agg(id)
+--     from public.profiles
+--    where role = 'customer' and national_id is not null
+--    group by national_id having count(*) > 1;
+--
+-- If rows come back, resolve them explicitly first (this migration
+-- deliberately does NOT modify data): decide per pair which account
+-- keeps the ID, null out or correct the other, then apply. Zero rows
+-- → apply directly.
+--
+-- Idempotent: `if not exists` covers re-runs.
+--
+-- ROLLBACK:
+--   drop index if exists public.profiles_national_id_customer_unique;
+-- =====================================================================
+
+create unique index if not exists profiles_national_id_customer_unique
+  on public.profiles (national_id)
+  where role = 'customer' and national_id is not null;
