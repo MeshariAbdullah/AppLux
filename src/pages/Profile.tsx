@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Screen } from '@/components/layout';
 import { Button, ConfirmSheet, StatusChip } from '@/components/ui';
 import { AlertIcon, ChevronIcon } from '@/components/icons';
-import { translateAuthError } from '@/lib/errors';
+import { translateError } from '@/lib/errors';
 import { logEvent } from '@/lib/observability/log';
 import { releaseInfo } from '@/lib/releaseInfo';
 import { useTapReveal } from '@/lib/useTapReveal';
@@ -70,6 +70,7 @@ export default function Profile() {
   };
 
   const onConfirmDelete = async () => {
+    if (deletionSubmitting) return;
     setDeletionError(null);
     setDeletionSubmitting(true);
     try {
@@ -82,7 +83,14 @@ export default function Profile() {
       await onSignOut();
     } catch (err) {
       logEvent('auth_failure', 'warn', { op: 'request_account_deletion' }, err);
-      setDeletionError(translateAuthError(err, t));
+      // Business blockers (P0130-P0133) get dedicated copy via
+      // translateError; anything unexpected — including PGRST202 when
+      // the RPC is missing server-side — falls back to the generic
+      // deletion message. Never a raw code on screen. Close the sheet
+      // so the banner underneath is actually visible; the account
+      // stays signed in and untouched.
+      setDeletionError(translateError(err, t, 'errors.deletionUnavailable'));
+      setConfirmOpen(false);
       setDeletionSubmitting(false);
     }
   };

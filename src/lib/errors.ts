@@ -64,6 +64,16 @@ const RECEIPT_PHOTO_CODES: Record<string, string> = {
   P0117: 'errors.receiptPhotosConfirmRequired', // activation gate
 };
 
+/** Account-deletion business blockers (request_account_deletion,
+ *  20260502123300) — each gets dedicated copy telling the customer
+ *  exactly which rule prevents deleting the account right now. */
+const DELETION_BLOCKED_CODES: Record<string, string> = {
+  P0130: 'errors.deletionActiveRental', // active (incl. overdue) contract
+  P0131: 'errors.deletionPendingContract', // accepted, awaiting activation
+  P0132: 'errors.deletionOpenDamage', // open/escalated damage case
+  P0133: 'errors.deletionFinancialObligation', // unsettled note
+};
+
 /** RPC guard codes that mean "the submitted details are invalid". */
 const RPC_VALIDATION_CODES = new Set([
   'P0082', // invalid National ID format
@@ -87,6 +97,7 @@ export function translateError(
     if (RPC_UNAUTHORIZED_CODES.has(code)) return t('errors.unauthorized');
     if (RPC_VALIDATION_CODES.has(code)) return t('errors.validation');
     if (RECEIPT_PHOTO_CODES[code]) return t(RECEIPT_PHOTO_CODES[code]);
+    if (DELETION_BLOCKED_CODES[code]) return t(DELETION_BLOCKED_CODES[code]);
     if (code === 'P0110') return t('errors.validation'); // empty path guard
     if (code === 'P0114') return t('errors.conflict'); // wrong contract state
     // P0001 = default RAISE — all current uses are state guards

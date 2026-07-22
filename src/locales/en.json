@@ -73,6 +73,11 @@
     "receiptPhotosMax": "A maximum of four photos per contract.",
     "receiptPhotosMin": "Add at least one photo before confirming.",
     "receiptPhotosConfirmRequired": "The rental cannot activate until the receipt photos are uploaded and confirmed.",
+    "deletionActiveRental": "Sorry, you cannot delete your account while you have an active rental contract.",
+    "deletionPendingContract": "Sorry, you cannot delete your account while a rental contract is still in progress.",
+    "deletionOpenDamage": "Sorry, you cannot delete your account while a damage case is being processed.",
+    "deletionFinancialObligation": "Sorry, you cannot delete your account while you have an unsettled financial obligation.",
+    "deletionUnavailable": "Your account could not be deleted right now. Please try again later.",
     "approvedButProvisioningFailed": "The application was approved, but merchant provisioning failed. Approve again to retry — provisioning is safe to re-run.",
     "boundary": {
       "title": "Something went wrong",
