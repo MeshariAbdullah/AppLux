@@ -837,7 +837,7 @@
       "commitmentTitle": "Approve the offer and contract",
       "commitmentBody": "After you approve, you continue to payment. Lend then issues the promissory note and hands you to Nafath to sign it. The rental is only activated once Lend verifies your Nafath approval.",
       "consent1": "I confirm I have reviewed the offer and contract",
-      "consent2": "I accept the damage liabilities outlined above",
+      "consent2": "I accept the damage liabilities",
       "consent3": "I agree to continue to payment and to sign the promissory note via Nafath after payment",
       "nafith": "What happens after approval",
       "nafithNote": "After approval: pay fees → Lend issues the note → sign it in Nafath outside the app → Lend verifies and activates the rental.",
@@ -847,18 +847,11 @@
       "processing": "Recording your approval…",
       "recording": "Confirming approval & continuing to payment",
       "commitmentBodySimple": "Once you confirm, you move straight to documenting the item receipt with photos; the rental then activates and the merchant is notified.",
-      "consent3Simple": "I agree to activate the rental and start its period per the contract above",
+      "consent3Simple": "I agree to activate the rental and start its period per the contract",
       "commitActionSimple": "I agree — continue to receipt photos",
       "recordingSimple": "Confirming approval and moving to receipt photos",
       "afterHintSimple": "After approving you move to the receipt-photos step — the rental activates only after you confirm them.",
       "footerSimple": "After approval: document the receipt with photos, then the rental activates."
-    },
-    "framing": {
-      "eyebrow": "Entering a rental",
-      "title": "You're about to enter a documented rental with {boutique}",
-      "boutiqueFallback": "the boutique",
-      "body": "We take you through the contract, the promissory note and the agreement. Anything you sign is recorded on this rental's official record.",
-      "bodySimple": "We walk you calmly through the offer and the contract. Everything you approve here is recorded on this rental’s official record."
     },
     "activation": {
       "failedTitle": "Approved, but the rental could not be activated",

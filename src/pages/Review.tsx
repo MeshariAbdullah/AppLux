@@ -345,26 +345,9 @@ export default function Review() {
       <ReviewStepper active={step} />
       <Screen padded={false} className="bg-canvas">
         <div className="px-4 pt-4 pb-28 space-y-4">
-          {/* Framing band — names what the customer is about to do.
-              Calm, single sentence, no CTA. Sets the room before the
-              decision. Hidden on the photos step — the offer/contract
-              framing is already behind the customer there. */}
-          {step !== 'photos' && (
-            <section className="rounded-[14px] bg-white ring-1 ring-beige-200 p-5 animate-reveal-up">
-              <div className="text-[10.5px] font-bold text-green-700 uppercase tracking-[0.14em]">
-                {t('review.framing.eyebrow')}
-              </div>
-              <p className="mt-2 editorial-title text-[17px] text-ink-900 leading-snug">
-                {t('review.framing.title', {
-                  boutique: lessorName ?? t('review.framing.boutiqueFallback'),
-                })}
-              </p>
-              <p className="mt-2 text-[12.5px] text-ink-500 leading-relaxed">
-                {t(ENABLE_PAYMENTS_AND_NOTES ? 'review.framing.body' : 'review.framing.bodySimple')}
-              </p>
-            </section>
-          )}
-
+          {/* The generic "بداية إيجار" framing band was removed from
+              EVERY stage (approved review cleanup) — each step begins
+              directly with its actual content. */}
           {/* The embedded rental-journey timeline was removed here —
               the ReviewStepper above is the ONLY step indicator on the
               review experience (approved journey simplification). */}
