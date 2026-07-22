@@ -143,7 +143,7 @@ export default function MerchantDamageDetails() {
   const noteRef = kase.noteRef ?? rental?.noteRef;
   const invoiceRef =
     kase.invoiceRef ??
-    (rental ? `INV-${rental.contractRef.replace('CN-', '')}-LATEST` : undefined);
+    (rental ? `INV-${rental.contractRef.replace(/^(?:CN|LND)-/, '')}-LATEST` : undefined);
 
   return (
     <>

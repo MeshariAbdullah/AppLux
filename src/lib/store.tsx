@@ -572,7 +572,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     const record: ApprovalRecord = {
       token,
       approvedAt: new Date().toISOString(),
-      contractRef: pkg?.contract.reference ?? 'CN-APX-—',
+      contractRef: pkg?.contract.reference ?? 'LND-—',
       noteRef: pkg?.note.reference ?? 'PN-APX-—',
     };
     setApprovals((prev) => ({ ...prev, [token]: record }));
@@ -616,7 +616,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         evidence: input.evidence && input.evidence.length ? input.evidence : undefined,
         contractRef: rental.contractRef,
         noteRef: rental.noteRef,
-        invoiceRef: `INV-${rental.contractRef.replace('CN-', '')}-LATEST`,
+        invoiceRef: `INV-${rental.contractRef.replace(/^(?:CN|LND)-/, '')}-LATEST`,
       };
       setExtraDamages((prev) => [created, ...prev]);
       setRentalOverrides((prev) => ({

@@ -80,7 +80,7 @@ export const SEED_INVOICES: Invoice[] = [
   {
     id: 'inv-1042',
     title: 'فاتورة تأجير — فستان سهرة لافاندير',
-    contractRef: 'CN-2026-018',
+    contractRef: 'LND-Q7F3KD',
     issuedAt: '2026-04-01',
     dueDate: '2026-04-25',
     amount: 1850,
@@ -89,7 +89,7 @@ export const SEED_INVOICES: Invoice[] = [
   {
     id: 'inv-1041',
     title: 'فاتورة عربون — حقيبة أكرا آيكن',
-    contractRef: 'CN-2026-018',
+    contractRef: 'LND-Q7F3KD',
     issuedAt: '2026-03-01',
     dueDate: '2026-03-25',
     amount: 3200,
@@ -98,7 +98,7 @@ export const SEED_INVOICES: Invoice[] = [
   {
     id: 'inv-1039',
     title: 'فاتورة تنظيف وتلميع — بشت الأمراء',
-    contractRef: 'CN-2026-012',
+    contractRef: 'LND-M4XT8B',
     issuedAt: '2026-04-08',
     dueDate: '2026-04-30',
     amount: 420,
@@ -108,7 +108,7 @@ export const SEED_INVOICES: Invoice[] = [
 
 export const SEED_CONTRACTS: Contract[] = [
   {
-    id: 'CN-2026-018',
+    id: 'LND-Q7F3KD',
     title: 'فستان سهرة لافاندير — مقاس 40',
     counterparty: 'دار ميزون دو سواريه',
     startDate: '2026-04-18',
@@ -117,7 +117,7 @@ export const SEED_CONTRACTS: Contract[] = [
     status: 'active',
   },
   {
-    id: 'CN-2026-012',
+    id: 'LND-M4XT8B',
     title: 'بشت الأمراء — صوف إيطالي مطرّز',
     counterparty: 'دار الأناقة للبشوت',
     startDate: '2026-04-10',
@@ -126,7 +126,7 @@ export const SEED_CONTRACTS: Contract[] = [
     status: 'active',
   },
   {
-    id: 'CN-2026-024',
+    id: 'LND-W9RJ6P',
     title: 'ساعة أوريون السويسرية — كرونوغراف',
     counterparty: 'تيمبو لتأجير الساعات',
     startDate: '2026-04-22',
@@ -524,7 +524,7 @@ export const SEED_SCANS: ScannedPackage[] = [
       },
     },
     contract: {
-      reference: 'CN-APX-2026-0412',
+      reference: 'LND-T3GV7N',
       clauses: [
         {
           id: 'c1',
@@ -765,7 +765,7 @@ export const SEED_MERCHANT_RENTALS: MerchantRental[] = [
     paidInstallments: 2,
     totalInstallments: 12,
     status: 'due-soon',
-    contractRef: 'CN-APX-2026-0231',
+    contractRef: 'LND-E8KW2S',
     noteRef: 'PN-APX-2026-0231',
     customerApproved: true,
     contractState: 'signed',
@@ -801,7 +801,7 @@ export const SEED_MERCHANT_RENTALS: MerchantRental[] = [
     paidInstallments: 2,
     totalInstallments: 12,
     status: 'overdue',
-    contractRef: 'CN-APX-2026-0128',
+    contractRef: 'LND-H5PZ4U',
     noteRef: 'PN-APX-2026-0128',
     customerApproved: true,
     contractState: 'signed',
@@ -837,7 +837,7 @@ export const SEED_MERCHANT_RENTALS: MerchantRental[] = [
     paidInstallments: 4,
     totalInstallments: 12,
     status: 'active',
-    contractRef: 'CN-APX-2025-1226',
+    contractRef: 'LND-R2DQ9C',
     noteRef: 'PN-APX-2025-1226',
     customerApproved: true,
     contractState: 'signed',
@@ -872,7 +872,7 @@ export const SEED_MERCHANT_RENTALS: MerchantRental[] = [
     paidInstallments: 1,
     totalInstallments: 12,
     status: 'active',
-    contractRef: 'CN-APX-2026-0324',
+    contractRef: 'LND-Y6BN3F',
     noteRef: 'PN-APX-2026-0324',
     customerApproved: true,
     contractState: 'signed',
@@ -905,7 +905,7 @@ export const SEED_MERCHANT_RENTALS: MerchantRental[] = [
     paidInstallments: 6,
     totalInstallments: 12,
     status: 'overdue',
-    contractRef: 'CN-APX-2025-1019',
+    contractRef: 'LND-U4SM7G',
     noteRef: 'PN-APX-2025-1019',
     customerApproved: true,
     contractState: 'signed',
@@ -941,7 +941,7 @@ export const SEED_MERCHANT_RENTALS: MerchantRental[] = [
     paidInstallments: 7,
     totalInstallments: 12,
     status: 'active',
-    contractRef: 'CN-APX-2025-0915',
+    contractRef: 'LND-A9WX5J',
     noteRef: 'PN-APX-2025-0915',
     customerApproved: true,
     contractState: 'signed',
@@ -1008,7 +1008,7 @@ export const SEED_MERCHANT_DAMAGES: MerchantDamageCase[] = [
     reportedAt: '2026-04-10',
     status: 'investigating',
     notes: 'تمزّق واضح في شريط التطريز عند الخصر وبقع طعام على الطرف السفلي.',
-    contractRef: 'CN-APX-2026-0128',
+    contractRef: 'LND-H5PZ4U',
     noteRef: 'PN-APX-2026-0128',
     invoiceRef: 'INV-APX-2026-0128-04',
   },
@@ -1023,7 +1023,7 @@ export const SEED_MERCHANT_DAMAGES: MerchantDamageCase[] = [
     reportedAt: '2026-03-28',
     status: 'reported',
     notes: 'المستأجر لم يُعِد القطعة بعد انتهاء مدة الإيجار وتعذّر التواصل معه.',
-    contractRef: 'CN-APX-2025-1112',
+    contractRef: 'LND-P7CE2V',
     noteRef: 'PN-APX-2025-1112',
     invoiceRef: 'INV-APX-2025-1112-03',
   },
@@ -1038,7 +1038,7 @@ export const SEED_MERCHANT_DAMAGES: MerchantDamageCase[] = [
     reportedAt: '2026-02-14',
     status: 'settled',
     notes: 'خدش سطحي على الزاوية الأمامية — تمت تسويته بالتراضي عبر التأمين.',
-    contractRef: 'CN-APX-2025-0988',
+    contractRef: 'LND-F3UH8T',
     noteRef: 'PN-APX-2025-0988',
     invoiceRef: 'INV-APX-2025-0988-06',
   },
@@ -1426,7 +1426,7 @@ export type AdminOverdueCase = {
 
 export const SEED_ADMIN_OVERDUE: AdminOverdueCase[] = [
   {
-    id: 'CN-APX-9821',
+    id: 'LND-K6TR4M',
     merchantName: 'تيمبو لتأجير الساعات',
     customerName: 'ماجد الحربي',
     customerInitials: 'م ح',
@@ -1436,7 +1436,7 @@ export const SEED_ADMIN_OVERDUE: AdminOverdueCase[] = [
     bucket: '1-7',
   },
   {
-    id: 'CN-APX-9733',
+    id: 'LND-B8YD5W',
     merchantName: 'ميزون دو سواريه',
     customerName: 'أمل السبيعي',
     customerInitials: 'أ س',
@@ -1446,7 +1446,7 @@ export const SEED_ADMIN_OVERDUE: AdminOverdueCase[] = [
     bucket: '8-30',
   },
   {
-    id: 'CN-APX-9688',
+    id: 'LND-N2VG9E',
     merchantName: 'أكرا — أتيليه الحقائب',
     customerName: 'خالد المطيري',
     customerInitials: 'خ م',
@@ -1456,7 +1456,7 @@ export const SEED_ADMIN_OVERDUE: AdminOverdueCase[] = [
     bucket: '31-60',
   },
   {
-    id: 'CN-APX-9571',
+    id: 'LND-S5JC3X',
     merchantName: 'دار الأناقة للبشوت',
     customerName: 'وضحى الرشيدي',
     customerInitials: 'و ر',
@@ -1559,7 +1559,7 @@ export const SEED_ADMIN_USERS_LIST: AdminUserRecord[] = [
       {
         id: 'ACT-S-03',
         type: 'contract',
-        title: 'توقيع عقد CN-APX-9912',
+        title: 'توقيع عقد LND-G4EP8R',
         merchantName: 'ميزون دو سواريه',
         at: '2026-04-14T10:15:00+03:00',
       },
@@ -1657,7 +1657,7 @@ export const SEED_ADMIN_USERS_LIST: AdminUserRecord[] = [
       {
         id: 'ACT-N-04',
         type: 'contract',
-        title: 'توقيع عقد CN-APX-9834',
+        title: 'توقيع عقد LND-J9QA2Z',
         merchantName: 'تيمبو لتأجير الساعات',
         at: '2026-04-09T17:25:00+03:00',
       },
@@ -1994,7 +1994,7 @@ export const SEED_ADMIN_CASE_DETAILS: Record<string, AdminCaseDetail> = {
       invoiceAmount: 95000,
       invoiceStatus: 'overdue',
       invoiceDueAt: '2026-04-05T00:00:00+03:00',
-      contractRef: 'CN-APX-9821',
+      contractRef: 'LND-K6TR4M',
       contractStatus: 'breached',
       contractStartedAt: '2026-03-01T09:00:00+03:00',
       noteRef: 'PN-APX-9821',
@@ -2076,7 +2076,7 @@ export const SEED_ADMIN_CASE_DETAILS: Record<string, AdminCaseDetail> = {
       invoiceAmount: 4200,
       invoiceStatus: 'pending',
       invoiceDueAt: '2026-04-28T00:00:00+03:00',
-      contractRef: 'CN-APX-9733',
+      contractRef: 'LND-B8YD5W',
       contractStatus: 'closed',
       contractStartedAt: '2026-02-10T10:00:00+03:00',
       noteRef: 'PN-APX-9733',
@@ -2172,7 +2172,7 @@ export const SEED_ADMIN_CASE_DETAILS: Record<string, AdminCaseDetail> = {
       invoiceAmount: 48500,
       invoiceStatus: 'overdue',
       invoiceDueAt: '2026-04-12T00:00:00+03:00',
-      contractRef: 'CN-APX-9688',
+      contractRef: 'LND-N2VG9E',
       contractStatus: 'breached',
       contractStartedAt: '2026-03-20T09:00:00+03:00',
       noteRef: 'PN-APX-9688',
@@ -2234,7 +2234,7 @@ export const SEED_ADMIN_CASE_DETAILS: Record<string, AdminCaseDetail> = {
       invoiceAmount: 2400,
       invoiceStatus: 'pending',
       invoiceDueAt: '2026-05-02T00:00:00+03:00',
-      contractRef: 'CN-APX-9812',
+      contractRef: 'LND-D7MK6Q',
       contractStatus: 'active',
       contractStartedAt: '2026-04-01T14:00:00+03:00',
       noteRef: 'PN-APX-9812',
@@ -2247,8 +2247,8 @@ export const SEED_ADMIN_CASE_DETAILS: Record<string, AdminCaseDetail> = {
       nextActionKey: 'escalateSettlement',
     },
   },
-  'CN-APX-9821-OD': {
-    id: 'CN-APX-9821-OD',
+  'LND-K6TR4M-OD': {
+    id: 'LND-K6TR4M-OD',
     kind: 'overdue',
     summary: 'قسط متأخّر 4 أيام على ساعة سويسرية — العميل لم يستجب لإشعارَين.',
     evidence: [
@@ -2288,7 +2288,7 @@ export const SEED_ADMIN_CASE_DETAILS: Record<string, AdminCaseDetail> = {
       invoiceAmount: 2100,
       invoiceStatus: 'overdue',
       invoiceDueAt: '2026-04-15T00:00:00+03:00',
-      contractRef: 'CN-APX-9821',
+      contractRef: 'LND-K6TR4M',
       contractStatus: 'active',
       contractStartedAt: '2026-01-15T10:00:00+03:00',
       noteRef: 'PN-APX-9821',
@@ -2301,8 +2301,8 @@ export const SEED_ADMIN_CASE_DETAILS: Record<string, AdminCaseDetail> = {
       nextActionKey: 'escalateSettlement',
     },
   },
-  'CN-APX-9733-OD': {
-    id: 'CN-APX-9733-OD',
+  'LND-B8YD5W-OD': {
+    id: 'LND-B8YD5W-OD',
     kind: 'overdue',
     summary: 'متأخّر ١٢ يوماً على فستان سهرة — العميلة تعد بالسداد هذا الأسبوع.',
     evidence: [],
@@ -2334,7 +2334,7 @@ export const SEED_ADMIN_CASE_DETAILS: Record<string, AdminCaseDetail> = {
       invoiceAmount: 1850,
       invoiceStatus: 'overdue',
       invoiceDueAt: '2026-04-09T00:00:00+03:00',
-      contractRef: 'CN-APX-9733',
+      contractRef: 'LND-B8YD5W',
       contractStatus: 'active',
       contractStartedAt: '2025-12-01T11:00:00+03:00',
       noteRef: 'PN-APX-9733',
@@ -2347,8 +2347,8 @@ export const SEED_ADMIN_CASE_DETAILS: Record<string, AdminCaseDetail> = {
       nextActionKey: 'escalateSettlement',
     },
   },
-  'CN-APX-9688-OD': {
-    id: 'CN-APX-9688-OD',
+  'LND-N2VG9E-OD': {
+    id: 'LND-N2VG9E-OD',
     kind: 'overdue',
     summary: 'متأخّر ٣٨ يوماً على حقيبة إديشن محدود — تم بدء محادثة تسوية.',
     evidence: [
@@ -2395,7 +2395,7 @@ export const SEED_ADMIN_CASE_DETAILS: Record<string, AdminCaseDetail> = {
       invoiceAmount: 1800,
       invoiceStatus: 'overdue',
       invoiceDueAt: '2026-03-14T00:00:00+03:00',
-      contractRef: 'CN-APX-9688',
+      contractRef: 'LND-N2VG9E',
       contractStatus: 'active',
       contractStartedAt: '2025-09-20T10:00:00+03:00',
       noteRef: 'PN-APX-9688',
@@ -2408,8 +2408,8 @@ export const SEED_ADMIN_CASE_DETAILS: Record<string, AdminCaseDetail> = {
       nextActionKey: 'escalateNafith',
     },
   },
-  'CN-APX-9571-OD': {
-    id: 'CN-APX-9571-OD',
+  'LND-S5JC3X-OD': {
+    id: 'LND-S5JC3X-OD',
     kind: 'overdue',
     summary: 'متأخّر ٧٤ يوماً على بشت مطرّز — تم تحويل السند لنافذ لبدء الإجراءات.',
     evidence: [
@@ -2455,7 +2455,7 @@ export const SEED_ADMIN_CASE_DETAILS: Record<string, AdminCaseDetail> = {
       invoiceAmount: 1450,
       invoiceStatus: 'overdue',
       invoiceDueAt: '2026-02-06T00:00:00+03:00',
-      contractRef: 'CN-APX-9571',
+      contractRef: 'LND-S5JC3X',
       contractStatus: 'breached',
       contractStartedAt: '2025-08-12T10:00:00+03:00',
       noteRef: 'PN-APX-9571',
