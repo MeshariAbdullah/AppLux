@@ -8,7 +8,7 @@ import {
   useState,
   type ReactNode,
 } from 'react';
-import type { Session } from '@supabase/supabase-js';
+import type { Session, User } from '@supabase/supabase-js';
 import { getSupabase, supabaseConfigured } from './client';
 import type {
   AppRole,
@@ -94,8 +94,17 @@ type SupabaseAuthValue = {
    * when the project requires email confirmation — the user is created
    * but NOT logged in, so the caller must render a "check your email"
    * state instead of redirecting).
+   *
+   * `user` is returned too because with Confirm Email enabled Supabase
+   * OBFUSCATES signups against an already-confirmed address: no error,
+   * `session: null`, and a fake user whose `identities` array is EMPTY
+   * (documented supabase-js v2 behavior). Callers must inspect
+   * `user.identities` before treating a null-session result as "account
+   * created, confirmation email sent".
    */
-  signUp: (input: SignUpInput) => Promise<{ session: Session | null }>;
+  signUp: (
+    input: SignUpInput,
+  ) => Promise<{ session: Session | null; user: User | null }>;
   signIn: (input: SignInInput) => Promise<void>;
   signOut: () => Promise<void>;
   /** Re-fetch profile + eligibility for the current user. */
@@ -288,8 +297,8 @@ function ConfiguredProvider({ children }: { children: ReactNode }) {
   }, [supabase, startUserContextLoad]);
 
   const signUp = useCallback(async (input: SignUpInput) => {
-    const { session: s } = await authSignUp(input);
-    return { session: s };
+    const { session: s, user: u } = await authSignUp(input);
+    return { session: s, user: u };
   }, []);
 
   const signIn = useCallback(async (input: SignInInput) => {

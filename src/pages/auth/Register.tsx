@@ -443,6 +443,7 @@ function SupabaseRegister() {
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (submitting) return;
     const next: typeof errors = {};
     // Bug 2: shared customer validators (src/lib/validation/customer.ts)
     // decide what is ever SENT; the DB constraints stay authoritative.
@@ -521,14 +522,29 @@ function SupabaseRegister() {
           }
           logEvent('rpc_failure', 'warn', { op: 'post_signup_mobile_persist' }, err);
         }
-      } else {
-        // Bug 2: email confirmation is pending — the account exists in
-        // an unverified state and Supabase has emailed the 6-digit
-        // code. Continue the guided flow on the dedicated OTP screen.
+      } else if ((result.user?.identities?.length ?? 0) > 0) {
+        // Bug 2: email confirmation is pending. `session: null` alone is
+        // NOT proof an account was created — with Confirm Email enabled,
+        // Supabase OBFUSCATES signups against an already-confirmed
+        // address (no error, fake user, EMPTY identities array —
+        // documented supabase-js v2 behavior). A non-empty identities
+        // array is the documented evidence of a genuinely new
+        // unconfirmed account (or an existing UNCONFIRMED one, for
+        // which Supabase re-sends the code — the OTP screen is correct
+        // in both cases). Only then continue to the OTP screen.
         navigate('/auth/verify-email', {
           replace: true,
           state: { email: emailCheck.kind === 'valid' ? emailCheck.canonical : email.trim() },
         });
+      } else {
+        // Obfuscated/fake response (identities empty or absent): the
+        // email already belongs to a confirmed account. No auth row was
+        // created, no OTP was emailed — sending the user to the OTP
+        // screen would dead-end them. Same privacy-safe copy as every
+        // other identity conflict; never reveal WHICH datum exists.
+        setErrors({ form: t('auth.errors.accountDetailsConflict') });
+        setSubmitting(false);
+        return;
       }
     } catch (err) {
       // The handle_new_auth_user trigger writes profiles.mobile AND
