@@ -67,7 +67,6 @@ const MerchantDamageNew = lazyWithReload(() => import('@/pages/merchant/Merchant
 const MerchantDamageDetails = lazyWithReload(() => import('@/pages/merchant/MerchantDamageDetails'));
 const MerchantHistoryPage = lazyWithReload(() => import('@/pages/merchant/MerchantHistoryPage'));
 const MerchantProfile = lazyWithReload(() => import('@/pages/merchant/MerchantProfile'));
-const MerchantInvoiceNew = lazyWithReload(() => import('@/pages/merchant/MerchantInvoiceNew'));
 const MerchantRentalSession = lazyWithReload(() => import('@/pages/merchant/MerchantRentalSession'));
 
 // ---- Lazy: admin area ----
@@ -355,13 +354,14 @@ export function AppRoutes() {
             </RequireRole>
           }
         />
+        {/* Legacy issuance form RETIRED (data-consistency audit): its
+            payload wrote the quantity field into rental_days and forced
+            startsAt to "now". No in-app navigation ever pointed here —
+            the redirect only covers direct URLs / stale history, and
+            the approved wizard below is the single issuance path. */}
         <Route
           path="/merchant/invoice/new"
-          element={
-            <RequireRole role="merchant" fallback="/merchant/welcome">
-              <MerchantInvoiceNew />
-            </RequireRole>
-          }
+          element={<Navigate to="/merchant/session/new" replace />}
         />
         <Route
           path="/merchant/session/new"
