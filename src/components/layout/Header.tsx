@@ -71,7 +71,11 @@ export function Header({
           {title && (
             <div
               className={cn(
-                'font-semibold truncate leading-tight tracking-tight',
+                // leading-normal, NOT leading-tight: `truncate` clips
+                // ink at the line box, and IBM Plex Sans Arabic spans
+                // ~1.45em (hamza/dots above, ي dots below) — a 1.25
+                // line box shaved the marks off titles like إيجاراتي.
+                'font-semibold truncate leading-normal tracking-tight',
                 variant === 'hero'
                   ? 'text-[18px] text-white'
                   : 'text-[17px] text-ink-900',
