@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Header, Screen } from '@/components/layout';
 import {
@@ -15,6 +15,7 @@ import {
   CheckIcon,
   ClockIcon,
   DocIcon,
+  DownloadIcon,
   InfoIcon,
   ReceiptIcon,
   ShieldIcon,
@@ -38,9 +39,11 @@ import {
 } from '@/lib/supabase';
 import type {
   MerchantRow,
+  RentalContractRow,
   RentalInvoiceItemRow,
   RentalInvoiceRow,
 } from '@/lib/supabase';
+import { logEvent } from '@/lib/observability/log';
 import type { Contract, Invoice, PromissoryNote } from '@/lib/data';
 import { ContractStatusChip } from '@/components/rental/StatusChips';
 import { RentalJourneyTimeline } from '@/components/rental/RentalJourneyTimeline';
@@ -52,6 +55,7 @@ import {
 } from '@/lib/rentalJourney';
 import {
   buildContractFromTemplate,
+  formatOperatingHoursLabel,
   type ContractTemplateOutput,
 } from '@/lib/contractTemplate';
 import type { TimelineEvent } from '@/components/track/DocTimeline';
@@ -69,7 +73,7 @@ export default function ContractTracking() {
   const navigate = useNavigate();
   const { contracts, invoices, notes, session } = useStore();
   const { configured, profile: supabaseProfile } = useSupabaseAuth();
-  const { formatCurrency, formatDate, locale } = useI18n();
+  const { formatCurrency, formatDate, locale, dir } = useI18n();
 
   const demoContract = useMemo(() => contracts.find((c) => c.id === id), [contracts, id]);
   const [liveContract, setLiveContract] = useState<Contract | null>(null);
@@ -101,6 +105,20 @@ export default function ContractTracking() {
     lesseeLegalName: string | null;
     lesseeNationalId: string | null;
   } | null>(null);
+  // PDF export — raw pieces captured at fetch time so the exported
+  // document is built from EXACTLY the data this screen renders.
+  const [pdfBits, setPdfBits] = useState<{
+    row: RentalContractRow;
+    invoiceRow: RentalInvoiceRow | null;
+    itemName: string | null;
+    durationDays: number;
+    branchHours: { open: string | null; close: string | null } | null;
+  } | null>(null);
+  const [exporting, setExporting] = useState(false);
+  const [exportError, setExportError] = useState<string | null>(null);
+  // Synchronous double-tap guard — state updates lag a render, so two
+  // rapid taps could both pass an `exporting` check.
+  const exportingRef = useRef(false);
 
   useEffect(() => {
     if (!configured || !id) {
@@ -118,6 +136,8 @@ export default function ContractTracking() {
     setLiveNote(null);
     setContractTemplate(null);
     setResumeToken(null);
+    setPdfBits(null);
+    setExportError(null);
     setResolving(true);
     let cancelled = false;
     (async () => {
@@ -184,6 +204,9 @@ export default function ContractTracking() {
           ? await fetchBranchById(row.branch_id).catch(() => null)
           : null;
         if (cancelled) return;
+        const branchHours = branch
+          ? { open: branch.hours_open, close: branch.hours_close }
+          : null;
         setContractTemplate(
           buildContractFromTemplate({
             invoice: invoiceRow,
@@ -192,13 +215,19 @@ export default function ContractTracking() {
             pickupDate: row.start_date,
             returnDate: row.end_date,
             durationDays,
-            branchHours: branch
-              ? { open: branch.hours_open, close: branch.hours_close }
-              : null,
+            branchHours,
           }),
         );
+        setPdfBits({
+          row,
+          invoiceRow,
+          itemName: items[0]?.item_name ?? null,
+          durationDays,
+          branchHours,
+        });
       } else {
         setContractTemplate(null);
+        setPdfBits(null);
       }
 
       const noteRow = await fetchNoteByContractId(row.id).catch(() => null);
@@ -214,6 +243,128 @@ export default function ContractTracking() {
   }, [configured, id, locale]);
 
   const contract = liveContract ?? demoContract;
+
+  // ------- PDF export (approved contracts only) -------
+  // Approved = the contract exists and was accepted into an active (or
+  // since-ended) state. Drafts/offers and pending-photo contracts can
+  // never export; demo mode has no real contract to certify.
+  const canExportPdf = Boolean(
+    pdfBits &&
+      contractTemplate &&
+      (pdfBits.row.status === 'active' || pdfBits.row.status === 'ended'),
+  );
+
+  const onExportPdf = async () => {
+    if (!canExportPdf || !pdfBits || !contractTemplate || exportingRef.current) return;
+    exportingRef.current = true;
+    setExporting(true);
+    setExportError(null);
+    try {
+      const { row, invoiceRow, itemName, durationDays, branchHours } = pdfBits;
+      // Latin digits in both languages (app-wide contract rule).
+      const dateTag = locale === 'ar' ? 'ar-EG-u-nu-latn' : 'en-GB';
+      const fmtPdfDate = (iso: string) =>
+        new Date(iso).toLocaleDateString(dateTag, {
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric',
+        });
+      const fmtPdfCurrency = (n: number) =>
+        `${n.toLocaleString('en-US', { maximumFractionDigits: 0 })} ${locale === 'ar' ? 'ر.س' : 'SAR'}`;
+
+      const { exportContractPdf } = await import('@/lib/pdf/contractPdf');
+      await exportContractPdf({
+        dir,
+        reference: row.contract_number,
+        fileName: `Lend-Contract-${row.contract_number}.pdf`,
+        labels: {
+          brand: 'Lend',
+          docTitle: t('track.contract.pdf.docTitle'),
+          reference: t('review.contract.reference'),
+          status: t('track.contract.pdf.statusLabel'),
+          approvedAt: t('track.contract.pdf.approvedAt'),
+          partiesTitle: t('review.contract.parties'),
+          lessorTitle: t('review.contract.lessor'),
+          lesseeTitle: t('review.contract.lessee'),
+          businessName: t('review.contract.businessName'),
+          crNumber: t('review.contract.crNumber'),
+          fullName: t('review.contract.partyFullName'),
+          nationalId: t('review.contract.partyNationalId'),
+          itemTitle: t('track.contract.pdf.itemTitle'),
+          itemName: t('track.contract.pdf.itemName'),
+          itemValue: t('track.contract.pdf.itemValue'),
+          periodTitle: t('track.contract.pdf.periodTitle'),
+          startDate: t('track.contract.pdf.startDate'),
+          endDate: t('track.contract.pdf.endDate'),
+          duration: t('track.contract.pdf.duration'),
+          financialsTitle: t('track.contract.pdf.financialsTitle'),
+          rentalFee: t('track.contract.rentalFee'),
+          tax: t('track.contract.pdf.tax'),
+          total: t('track.contract.pdf.total'),
+          clausesTitle: t('track.contract.fullContractTitle'),
+          obligationsTitle: t('review.contract.damagesTitle'),
+          electronicRecord: t('track.contract.pdf.electronicRecord'),
+          pageWord: t('track.contract.pdf.pageWord'),
+        },
+        values: {
+          statusLabel:
+            row.status === 'active'
+              ? t('track.contract.pdf.statusActive')
+              : t('track.contract.pdf.statusEnded'),
+          approvedAtLabel: fmtPdfDate(row.signed_at ?? row.created_at),
+          // Snapshot-first parties — identical fallbacks to the record
+          // card above, never fabricated.
+          businessName: partySnapshot?.lessorLegalName ?? contract?.counterparty ?? '—',
+          crNumber: partySnapshot?.lessorCr ?? '—',
+          fullName:
+            partySnapshot?.lesseeLegalName ??
+            supabaseProfile?.full_name ??
+            '—',
+          nationalId: partySnapshot?.lesseeNationalId ?? '—',
+          itemName: itemName ?? contract?.title ?? '—',
+          itemValue: row.original_item_value
+            ? fmtPdfCurrency(Number(row.original_item_value))
+            : null,
+          startLabel: fmtPdfDate(row.start_date),
+          endLabel: fmtPdfDate(row.end_date),
+          durationLabel: t('track.contract.days', { count: durationDays }),
+          hoursLabel: formatOperatingHoursLabel(
+            branchHours?.open,
+            branchHours?.close,
+            locale === 'ar' ? 'ar' : 'en',
+          ),
+          rentalFee: fmtPdfCurrency(Number(row.rental_fee_amount)),
+          tax: fmtPdfCurrency(Number(invoiceRow?.tax_amount ?? 0)),
+          total: fmtPdfCurrency(Number(row.total_amount)),
+        },
+        clauses: contractTemplate.clauses.map((c) => ({
+          title: c.title[locale],
+          body: c.body[locale],
+        })),
+        obligations: [
+          {
+            label: t('review.contract.nonReturn'),
+            amount: fmtPdfCurrency(contractTemplate.damages.nonReturn),
+          },
+          {
+            label: t('review.contract.partialDamage'),
+            amount: fmtPdfCurrency(contractTemplate.damages.partialDamage),
+          },
+          {
+            label: t('review.contract.totalDamage'),
+            amount: fmtPdfCurrency(contractTemplate.damages.totalDamage),
+          },
+        ],
+      });
+    } catch (err) {
+      logEvent('rpc_failure', 'warn', { op: 'export_contract_pdf' }, err);
+      setExportError(t('track.contract.pdf.failed'));
+    } finally {
+      exportingRef.current = false;
+      setExporting(false);
+    }
+  };
+
   const linkedInvoices =
     liveInvoices ??
     (contract ? invoices.filter((i) => i.contractRef === id) : []);
@@ -482,7 +633,9 @@ export default function ContractTracking() {
           </section>
 
           {/* Primary action — expands the inline full-contract panel
-              with all the generated clauses the customer approved. */}
+              with all the generated clauses the customer approved.
+              Below it: the SEPARATE secondary export-to-PDF action
+              (approved contracts only — never drafts/offers). */}
           <div className="pt-2 space-y-3">
             <Button
               variant="primary"
@@ -497,6 +650,26 @@ export default function ContractTracking() {
                 ? t('track.contract.hideFullContract')
                 : t('track.contract.openContract')}
             </Button>
+            {canExportPdf && (
+              <Button
+                variant="secondary"
+                size="lg"
+                block
+                leading={<DownloadIcon size={18} />}
+                onClick={() => void onExportPdf()}
+                loading={exporting}
+                disabled={exporting}
+              >
+                {exporting
+                  ? t('track.contract.pdf.exporting')
+                  : t('track.contract.pdf.exportCta')}
+              </Button>
+            )}
+            {exportError && (
+              <div className="rounded-xl2 bg-danger-50 ring-1 ring-danger-500/25 px-4 py-3 text-[12.5px] text-danger-700 leading-relaxed">
+                {exportError}
+              </div>
+            )}
           </div>
 
           {showFullContract && contractTemplate && (
