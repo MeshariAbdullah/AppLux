@@ -24,6 +24,14 @@ export const HomeIcon = (p: IconProps) => (
   </svg>
 );
 
+export const DownloadIcon = (p: IconProps) => (
+  <svg {...base(p)}>
+    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+    <path d="M7 10l5 5 5-5" />
+    <path d="M12 15V3" />
+  </svg>
+);
+
 export const DocIcon = (p: IconProps) => (
   <svg {...base(p)}>
     <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z" />

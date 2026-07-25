@@ -80,6 +80,19 @@ function fmtTime(t: string, lang: 'ar' | 'en'): string {
   return `${h}:${m} ${suffix}`;
 }
 
+/** Operating-hours label shared by the rental-period clause and the
+ *  PDF export — null when either bound is missing (never invented). */
+export function formatOperatingHoursLabel(
+  open: string | null | undefined,
+  close: string | null | undefined,
+  lang: 'ar' | 'en',
+): string | null {
+  if (!open || !close) return null;
+  return lang === 'ar'
+    ? `من ${fmtTime(open, 'ar')} إلى ${fmtTime(close, 'ar')}`
+    : `${fmtTime(open, 'en')} – ${fmtTime(close, 'en')}`;
+}
+
 /** Arabic count-noun agreement for the rental duration; English digits
  *  stay Latin in both languages (product rule). */
 function durationAr(days: number): string {
