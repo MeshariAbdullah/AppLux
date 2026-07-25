@@ -447,7 +447,9 @@
       "offerTitle": "عرض بانتظار مراجعتك"
     },
     "current": {
-      "title": "إيجار جارٍ",
+      "title": "إيجارك الحالي",
+      "moreOne": "لديك إيجار جارٍ آخر — عرض الكل",
+      "moreMany": "لديك {count} إيجارات جارية أخرى — عرض الكل",
       "daysLeft": "متبقي {days} يوم",
       "daysLeftArabic": "متبقي {days} يوم",
       "endsToday": "ينتهي اليوم",

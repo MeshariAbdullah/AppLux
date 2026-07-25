@@ -236,7 +236,12 @@ export default function Home() {
           invoice,
           merchantName: contract.counterparty,
         };
-      });
+      })
+      // No prior explicit ordering existed for this stack — the chosen
+      // rule is "most currently relevant first": ascending return date,
+      // so the rental that must be handed back soonest leads. The home
+      // hero shows at most two of these (ActiveStack caps + CTA).
+      .sort((a, b) => a.contract.endDate.localeCompare(b.contract.endDate));
   }, [contracts, notes, invoicesByContractRef]);
 
   const mode: DashboardMode = useMemo(() => {
@@ -577,9 +582,14 @@ function ActiveStack({
     'journey.stages.started',
     'journey.stages.closure',
   ];
+  // The home page is an action hub, not a feed (same rule as the
+  // attention stack): render at most TWO ongoing rentals; the rest are
+  // one compact count-aware link into إيجاراتي (/contracts).
+  const visible = rentals.slice(0, 2);
+  const hidden = rentals.length - visible.length;
   return (
     <div className="space-y-3">
-      {rentals.map(({ contract, merchantName }) => {
+      {visible.map(({ contract, merchantName }) => {
         // Approved four-stage mapping: an ACTIVE contract is in stage 3
         // (بدء الإيجار); a pending one is still in customer review.
         const currentIdx = contract.status === 'active' ? 2 : 1;
@@ -654,6 +664,17 @@ function ActiveStack({
           </div>
         );
       })}
+
+      {hidden > 0 && (
+        <Link
+          to="/contracts"
+          className="block text-center text-[12px] font-bold text-green-700 hover:text-green-800"
+        >
+          {hidden === 1
+            ? t('home.current.moreOne')
+            : t('home.current.moreMany', { count: hidden })}
+        </Link>
+      )}
     </div>
   );
 }

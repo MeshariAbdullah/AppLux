@@ -447,7 +447,9 @@
       "offerTitle": "An offer awaits your review"
     },
     "current": {
-      "title": "Live rental",
+      "title": "Your current rental",
+      "moreOne": "You have 1 more active rental — View all",
+      "moreMany": "You have {count} more active rentals — View all",
       "daysLeft": "{days, plural, one {# day left} other {# days left}}",
       "daysLeftArabic": "{days} days remaining",
       "endsToday": "Ends today",
