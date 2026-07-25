@@ -47,11 +47,14 @@ export const DEFAULT_LATE_RETURN_MULTIPLIER = 1.5;
 
 const SAR = (n: number) =>
   `${n.toLocaleString('en-US', { maximumFractionDigits: 0 })} SAR`;
+// Latin (English) numerals in the Arabic contract text by product rule
+// — 'ar-EG' would render ٧٥ where the approved copy shows 75.
 const SARAr = (n: number) =>
-  `${n.toLocaleString('ar-EG', { maximumFractionDigits: 0 })} ر.س`;
+  `${n.toLocaleString('en-US', { maximumFractionDigits: 0 })} ر.س`;
 
 function fmtDateAr(iso: string): string {
-  return new Date(iso).toLocaleDateString('ar-EG', {
+  // -u-nu-latn: Arabic (Gregorian) month names with Latin digits.
+  return new Date(iso).toLocaleDateString('ar-EG-u-nu-latn', {
     year: 'numeric',
     month: 'long',
     day: 'numeric',
@@ -63,6 +66,30 @@ function fmtDateEn(iso: string): string {
     month: 'short',
     day: 'numeric',
   });
+}
+
+/** 'HH:MM[:SS]' (merchant_branches.hours_open/close) → 12-hour label
+ *  with Latin digits — 'م/ص' in Arabic, 'PM/AM' in English. */
+function fmtTime(t: string, lang: 'ar' | 'en'): string {
+  const [hRaw, mRaw] = t.split(':');
+  let h = Number(hRaw);
+  const m = mRaw ?? '00';
+  const pm = h >= 12;
+  h = h % 12 || 12;
+  const suffix = lang === 'ar' ? (pm ? 'م' : 'ص') : pm ? 'PM' : 'AM';
+  return `${h}:${m} ${suffix}`;
+}
+
+/** Arabic count-noun agreement for the rental duration; English digits
+ *  stay Latin in both languages (product rule). */
+function durationAr(days: number): string {
+  if (days === 1) return 'يوم واحد';
+  if (days === 2) return 'يومان';
+  if (days >= 3 && days <= 10) return `${days} أيام`;
+  return `${days} يوماً`;
+}
+function durationEn(days: number): string {
+  return days === 1 ? '1 day' : `${days} days`;
 }
 
 type TemplateInputs = {
@@ -80,6 +107,11 @@ type TemplateInputs = {
    *  omitted, falls back to invoice.late_return_multiplier, then to
    *  DEFAULT_LATE_RETURN_MULTIPLIER. */
   lateReturnMultiplier?: number;
+  /** Pickup branch operating hours (merchant_branches.hours_open /
+   *  hours_close). When BOTH are present the rental-period clause
+   *  states the actual hours; otherwise it uses the general "خلال
+   *  أوقات عمل التاجر" wording. Never invented. */
+  branchHours?: { open: string | null; close: string | null } | null;
 };
 
 export type ContractTemplateOutput = {
@@ -96,6 +128,7 @@ export function buildContractFromTemplate({
   durationDays,
   lightDamageFraction,
   lateReturnMultiplier,
+  branchHours,
 }: TemplateInputs): ContractTemplateOutput {
   const lightFrac =
     lightDamageFraction ??
@@ -126,8 +159,16 @@ export function buildContractFromTemplate({
       id: 'period',
       title: { ar: 'فترة الإيجار', en: 'Rental period' },
       body: {
-        ar: `من ${fmtDateAr(pickupDate)} إلى ${fmtDateAr(returnDate)} (${durationDays} يوماً).`,
-        en: `From ${fmtDateEn(pickupDate)} to ${fmtDateEn(returnDate)} (${durationDays} days).`,
+        ar: `من ${fmtDateAr(pickupDate)} إلى ${fmtDateAr(returnDate)} (${durationAr(durationDays)})، على أن يتم الاستلام والإرجاع خلال أوقات عمل التاجر${
+          branchHours?.open && branchHours?.close
+            ? ` (من ${fmtTime(branchHours.open, 'ar')} إلى ${fmtTime(branchHours.close, 'ar')})`
+            : ''
+        }.`,
+        en: `From ${fmtDateEn(pickupDate)} to ${fmtDateEn(returnDate)} (${durationEn(durationDays)}), with pickup and return completed during the merchant's operating hours${
+          branchHours?.open && branchHours?.close
+            ? ` (${fmtTime(branchHours.open, 'en')} – ${fmtTime(branchHours.close, 'en')})`
+            : ''
+        }.`,
       },
     },
     {
@@ -179,8 +220,8 @@ export function buildContractFromTemplate({
       id: 'late-return',
       title: { ar: 'التأخّر في الإرجاع', en: 'Late return' },
       body: {
-        ar: `يُحتسب على كل يوم تأخّر مبلغ ${SARAr(latePerDay)} (${lateMult}× السعر اليومي)، بحد أقصى قيمة القطعة الكاملة.`,
-        en: `Each day late incurs ${SAR(latePerDay)} (${lateMult}× the daily rate), capped at the full item value.`,
+        ar: `يُحتسب التأخر بعد انتهاء موعد الإرجاع المتفق عليه، مع مراعاة أوقات فتح وإغلاق التاجر. ويُحتسب عن كل يوم تأخير مبلغ ${SARAr(latePerDay)} (${lateMult}× السعر اليومي)، بحد أقصى قيمة القطعة الكاملة.`,
+        en: `Late return is calculated after the agreed return deadline, taking the merchant's opening and closing hours into account. A fee of ${SAR(latePerDay)} per delayed day (${lateMult}× the daily rate) applies, capped at the full value of the item.`,
       },
     },
     {

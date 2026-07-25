@@ -836,7 +836,7 @@
       "partyFullName": "Full name",
       "partyNationalId": "National ID",
       "clauses": "Clauses",
-      "damagesTitle": "Damage liabilities",
+      "damagesTitle": "Financial obligations",
       "damagesHint": "Binding amounts in case of non-return or damage:",
       "nonReturn": "Non-return",
       "partialDamage": "Partial damage",

@@ -429,6 +429,8 @@ export function synthesizePackageFromInvoice(
     name: { ar?: string; en?: string } | null;
     city: string;
     address: { ar?: string; en?: string } | null;
+    hours_open?: string | null;
+    hours_close?: string | null;
   } | null,
 ): ScannedPackage {
   const issuedAt = invoice.issued_at ?? invoice.created_at;
@@ -479,6 +481,9 @@ export function synthesizePackageFromInvoice(
     pickupDate,
     returnDate,
     durationDays,
+    branchHours: branch
+      ? { open: branch.hours_open ?? null, close: branch.hours_close ?? null }
+      : null,
   });
 
   return {

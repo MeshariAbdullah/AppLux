@@ -30,6 +30,7 @@ import {
   adaptNote,
   fetchContractById,
   fetchInvoiceById,
+  fetchBranchById,
   fetchMerchant,
   fetchNoteByContractId,
   listInvoiceItems,
@@ -177,6 +178,12 @@ export default function ContractTracking() {
         const durationDays = items.length
           ? Math.max(...items.map((it) => it.rental_days || 0)) || 30
           : 30;
+        // Same wording source as the review step: real branch hours in
+        // the rental-period clause when the branch has them.
+        const branch = row.branch_id
+          ? await fetchBranchById(row.branch_id).catch(() => null)
+          : null;
+        if (cancelled) return;
         setContractTemplate(
           buildContractFromTemplate({
             invoice: invoiceRow,
@@ -185,6 +192,9 @@ export default function ContractTracking() {
             pickupDate: row.start_date,
             returnDate: row.end_date,
             durationDays,
+            branchHours: branch
+              ? { open: branch.hours_open, close: branch.hours_close }
+              : null,
           }),
         );
       } else {
@@ -508,9 +518,8 @@ export default function ContractTracking() {
                     </div>
                   </div>
                 ))}
-                <div className="rounded-xl2 bg-canvas-100 px-3.5 py-2.5 text-[11.5px] text-ink-500 leading-relaxed">
-                  {contractTemplate.damages.note[locale]}
-                </div>
+                {/* The old percentage/per-day note duplicated the light-
+                    damage and late-return clauses above — removed. */}
               </Card>
             </section>
           )}

@@ -841,9 +841,10 @@ function ContractStep({
               amount={formatCurrency(pkg.damages.totalDamage)}
             />
           </div>
-          <div className="mt-3.5 rounded-xl2 bg-canvas-100 p-3.5 text-[12px] text-ink-500 leading-relaxed">
-            {pkg.damages.note[locale]}
-          </div>
+          {/* The percentage/per-day summary that used to sit here was a
+              duplicate of the الضرر الجزئي and التأخر في الإرجاع terms
+              above — removed so the amounts are stated once, in the
+              contract terms. */}
         </Card>
       </section>
 

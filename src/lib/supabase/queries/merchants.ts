@@ -84,13 +84,17 @@ export type BranchInfo = {
   name: { ar?: string; en?: string } | null;
   city: string;
   address: { ar?: string; en?: string } | null;
+  /** Operating hours ('HH:MM:SS' time or null) — surfaced in the
+   *  rental-period contract clause when both are set. */
+  hours_open: string | null;
+  hours_close: string | null;
 };
 
 export async function fetchBranchById(id: string): Promise<BranchInfo | null> {
   const sb = requireSupabase();
   const { data, error } = await sb
     .from('merchant_branches')
-    .select('id, name, city, address')
+    .select('id, name, city, address, hours_open, hours_close')
     .eq('id', id)
     .maybeSingle();
   if (error) throw error;
