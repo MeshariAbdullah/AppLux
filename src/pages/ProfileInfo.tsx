@@ -26,7 +26,6 @@ export default function ProfileInfo() {
   const mobile = configured ? profile?.mobile : demoSession?.mobile;
   const email = configured ? profile?.email : demoSession?.email;
   const nationalId = configured ? profile?.national_id : demoSession?.nationalId;
-  const cityKey = configured ? profile?.city : demoSession?.city;
 
   const missing = t('profile.info.missing');
 
@@ -45,22 +44,11 @@ export default function ProfileInfo() {
       : mobile.trim()
     : null;
 
-  // City is stored as a key (e.g. "riyadh"); translate via the shared
-  // register.cities list, otherwise fall back to the raw value.
-  const cityLabel = cityKey?.trim()
-    ? (() => {
-        const key = `register.cities.${cityKey.trim()}`;
-        const translated = t(key);
-        return translated === key ? cityKey.trim() : translated;
-      })()
-    : null;
-
   const rows: { label: string; value: string | null; ltr?: boolean }[] = [
     { label: t('profile.info.fullName'), value: fullName?.trim() || null },
     { label: t('profile.info.mobile'), value: displayMobile, ltr: true },
     { label: t('profile.info.email'), value: email?.trim() || null, ltr: true },
     { label: t('profile.info.nationalId'), value: maskedId, ltr: true },
-    { label: t('profile.info.city'), value: cityLabel },
   ];
 
   return (
@@ -87,11 +75,6 @@ export default function ProfileInfo() {
             </div>
           ))}
         </div>
-
-        {/* Read-only notice — this pass has no editing. */}
-        <p className="mt-3 px-1 text-[11.5px] text-ink-400 leading-relaxed">
-          {t('profile.info.readOnlyNote')}
-        </p>
       </Screen>
     </>
   );

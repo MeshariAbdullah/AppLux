@@ -660,9 +660,7 @@
       "mobile": "Mobile number",
       "email": "Email",
       "nationalId": "National ID",
-      "city": "City",
-      "missing": "Not available",
-      "readOnlyNote": "This information is view-only. Contact support to change it."
+      "missing": "Not available"
     },
     "historyEntry": "Rental history",
     "language": "Language",
