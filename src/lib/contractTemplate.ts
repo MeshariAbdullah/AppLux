@@ -114,26 +114,14 @@ export function buildContractFromTemplate({
   const lightDamage = Math.round(totalReplacement * lightFrac);
   const dailyRate = items[0]?.daily_rate ? Number(items[0].daily_rate) : 0;
   const latePerDay = Math.round(dailyRate * lateMult);
-  const merchantName: Localized = merchant?.display_name
-    ? {
-        ar: merchant.display_name.ar || merchant.display_name.en || '',
-        en: merchant.display_name.en || merchant.display_name.ar || '',
-      }
-    : { ar: 'شريك Lend', en: 'Lend Partner' };
-
   const rentalFee = Number(invoice.subtotal_amount);
   const deposit = Number(invoice.security_deposit);
   const total = Number(invoice.total_amount);
 
+  // NOTE: the lessor is a contracting PARTY, not a contract term — its
+  // identity lives in the الأطراف section (with the CR number since
+  // 20260502123500), never in this clause list.
   const clauses: ContractClause[] = [
-    {
-      id: 'lessor',
-      title: { ar: 'المؤجِّر', en: 'Lessor' },
-      body: {
-        ar: merchantName.ar,
-        en: merchantName.en,
-      },
-    },
     {
       id: 'period',
       title: { ar: 'فترة الإيجار', en: 'Rental period' },
