@@ -337,8 +337,6 @@ export default function Home() {
           <ActiveStack
             rentals={activeRentals}
             t={t}
-            formatCurrency={formatCurrency}
-            formatDate={formatDate}
             onOpenContract={(id) => navigate(`/track/contract/${id}`)}
           />
         )}
@@ -556,14 +554,10 @@ function AttentionStack({
 function ActiveStack({
   rentals,
   t,
-  formatCurrency,
-  formatDate,
   onOpenContract,
 }: {
   rentals: ActiveRental[];
   t: (k: string, p?: Record<string, string | number>) => string;
-  formatCurrency: (n: number) => string;
-  formatDate: (iso: string) => string;
   onOpenContract: (id: string) => void;
 }) {
   const STAGE_KEYS = [
@@ -579,7 +573,7 @@ function ActiveStack({
   const hidden = rentals.length - visible.length;
   return (
     <div className="space-y-3">
-      {visible.map(({ contract, merchantName }) => {
+      {visible.map(({ contract }) => {
         // Approved four-stage mapping: an ACTIVE contract is in stage 3
         // (بدء الإيجار); a pending one is still in customer review.
         const currentIdx = contract.status === 'active' ? 2 : 1;
@@ -599,15 +593,12 @@ function ActiveStack({
                 label={t(STAGE_KEYS[currentIdx])}
               />
             </div>
+            {/* Rental title only — the old compressed metadata tail
+                (merchant · amount · return date) was confusing at a
+                glance; those details live on the contract-details page
+                behind the CTA below. */}
             <div className="text-[12.5px] text-ink-500 truncate">
               {contract.title}
-              {merchantName && merchantName !== '—' ? ` — ${merchantName}` : ''}
-              {' · '}
-              <span className="num">{formatCurrency(contract.monthlyAmount)}</span>
-              {' · '}
-              {t('home.current.endsOnShort', {
-                date: formatDate(contract.endDate),
-              })}
             </div>
 
             {/* Four-stage journey dots (same visual language as the
