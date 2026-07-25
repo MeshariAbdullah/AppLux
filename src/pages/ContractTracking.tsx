@@ -91,6 +91,15 @@ export default function ContractTracking() {
   // Bugs 17/19 resume: a pending contract whose receipt photos are not
   // confirmed can re-enter the guided flow via the invoice scan token.
   const [resumeToken, setResumeToken] = useState<string | null>(null);
+  // Party identity snapshots (20260502123500) — kept raw so the record
+  // card shows the values FROZEN at acceptance, not mutable live data.
+  // NULL on legacy contracts → the card falls back to live names.
+  const [partySnapshot, setPartySnapshot] = useState<{
+    lessorLegalName: string | null;
+    lessorCr: string | null;
+    lesseeLegalName: string | null;
+    lesseeNationalId: string | null;
+  } | null>(null);
 
   useEffect(() => {
     if (!configured || !id) {
@@ -124,6 +133,12 @@ export default function ContractTracking() {
       // ENGLISH display name here while Home showed the Arabic one.
       const merchantName = resolveMerchantName(merchant, locale, '—');
       setLiveContract(adaptContract(row, merchantName));
+      setPartySnapshot({
+        lessorLegalName: row.lessor_legal_name ?? merchant?.company_name ?? null,
+        lessorCr: row.lessor_cr_number ?? merchant?.commercial_reg_number ?? null,
+        lesseeLegalName: row.lessee_legal_name ?? null,
+        lesseeNationalId: row.lessee_national_id ?? null,
+      });
 
       let invoiceRow: RentalInvoiceRow | null = null;
       let items: RentalInvoiceItemRow[] = [];
@@ -329,15 +344,40 @@ export default function ContractTracking() {
               {t('track.contract.recordTitle')}
             </div>
             <div className="mt-4 grid grid-cols-2 gap-x-4 gap-y-3.5">
+              {/* Party identity — SNAPSHOT-first (frozen at acceptance,
+                  20260502123500); live fallbacks cover legacy rows. */}
               <Field
-                label={t('track.contract.lessor')}
-                value={contract.counterparty}
+                label={t('review.contract.businessName')}
+                value={partySnapshot?.lessorLegalName ?? contract.counterparty}
               />
               <Field
-                label={t('review.contract.lessee')}
-                // Live mode: the demo session is null — the lessee name
-                // comes from the Supabase profile (name only, no PII).
-                value={supabaseProfile?.full_name ?? session?.fullName ?? '—'}
+                label={t('review.contract.crNumber')}
+                value={
+                  partySnapshot?.lessorCr ? (
+                    <span className="num" dir="ltr">{partySnapshot.lessorCr}</span>
+                  ) : (
+                    '—'
+                  )
+                }
+              />
+              <Field
+                label={t('review.contract.partyFullName')}
+                value={
+                  partySnapshot?.lesseeLegalName ??
+                  supabaseProfile?.full_name ??
+                  session?.fullName ??
+                  '—'
+                }
+              />
+              <Field
+                label={t('review.contract.partyNationalId')}
+                value={
+                  partySnapshot?.lesseeNationalId ? (
+                    <span className="num" dir="ltr">{partySnapshot.lesseeNationalId}</span>
+                  ) : (
+                    '—'
+                  )
+                }
               />
               <Field
                 label={t('track.contract.startOn')}

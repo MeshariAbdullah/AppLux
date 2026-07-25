@@ -98,6 +98,9 @@ export function translateError(
     if (RPC_VALIDATION_CODES.has(code)) return t('errors.validation');
     if (RECEIPT_PHOTO_CODES[code]) return t(RECEIPT_PHOTO_CODES[code]);
     if (DELETION_BLOCKED_CODES[code]) return t(DELETION_BLOCKED_CODES[code]);
+    // Contract party identity incomplete (accept_rental_invoice,
+    // 20260502123500) — dedicated business copy.
+    if (code === 'P0150') return t('errors.contractPartyIncomplete');
     if (code === 'P0110') return t('errors.validation'); // empty path guard
     if (code === 'P0114') return t('errors.conflict'); // wrong contract state
     // P0001 = default RAISE — all current uses are state guards

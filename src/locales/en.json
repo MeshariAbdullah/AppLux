@@ -78,6 +78,7 @@
     "deletionOpenDamage": "Sorry, you cannot delete your account while a damage case is being processed.",
     "deletionFinancialObligation": "Sorry, you cannot delete your account while you have an unsettled financial obligation.",
     "deletionUnavailable": "Your account could not be deleted right now. Please try again later.",
+    "contractPartyIncomplete": "The contract cannot be completed because one party's information is incomplete. Please contact support.",
     "approvedButProvisioningFailed": "The application was approved, but merchant provisioning failed. Approve again to retry — provisioning is safe to re-run.",
     "boundary": {
       "title": "Something went wrong",
@@ -830,6 +831,10 @@
       "parties": "Parties",
       "lessor": "Lessor",
       "lessee": "Lessee",
+      "businessName": "Business name",
+      "crNumber": "Commercial Registration number",
+      "partyFullName": "Full name",
+      "partyNationalId": "National ID",
       "clauses": "Clauses",
       "damagesTitle": "Damage liabilities",
       "damagesHint": "Binding amounts in case of non-return or damage:",

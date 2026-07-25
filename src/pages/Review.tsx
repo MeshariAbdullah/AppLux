@@ -157,6 +157,30 @@ export default function Review() {
   const lesseeName =
     supabaseProfile?.full_name?.trim() || session?.fullName?.trim() || null;
 
+  // Official contracting-party identifiers (shown on the contract step
+  // — this is the one screen where the customer sees their own full
+  // National ID and the merchant CR, because both are required to form
+  // the contract). Real persisted data only; missing values render '—'
+  // and BLOCK approval in live mode — nothing is ever fabricated.
+  const lessorLegalName = configured
+    ? liveMerchantRow?.company_name?.trim() || null
+    : store?.name[locale] ?? null;
+  const lessorCr = configured
+    ? liveMerchantRow?.commercial_reg_number?.trim() || null
+    : null;
+  const lesseeLegalName = configured
+    ? supabaseProfile?.full_name?.trim() || null
+    : session?.fullName?.trim() || null;
+  const lesseeNationalId = configured
+    ? supabaseProfile?.national_id?.trim() || null
+    : session?.nationalId?.trim() || null;
+  // Server backstop: accept_rental_invoice raises P0150 for the same
+  // condition (20260502123500) — this client gate just fails earlier
+  // with the business message instead of a failed RPC.
+  const partyIncomplete =
+    configured &&
+    !(lessorLegalName && lessorCr && lesseeLegalName && lesseeNationalId);
+
   const [step, setStep] = useState<ReviewStepKey>('invoice');
   const [acceptError, setAcceptError] = useState<string | null>(null);
   // Bugs 17/19 — receipt-photo step state. The contract id exists the
@@ -357,6 +381,13 @@ export default function Review() {
               pkg={pkg}
               lessorName={lessorName}
               lesseeName={lesseeName}
+              partyIds={{
+                lessorLegalName,
+                lessorCr,
+                lesseeLegalName,
+                lesseeNationalId,
+              }}
+              partyIncomplete={partyIncomplete}
             />
           )}
           {step === 'confirm' && (
@@ -364,6 +395,7 @@ export default function Review() {
               pkg={pkg}
               userName={lesseeName ?? undefined}
               onApproved={handleApproved}
+              blocked={partyIncomplete}
             />
           )}
           {step === 'photos' && (
@@ -651,12 +683,23 @@ function ContractStep({
   pkg,
   lessorName,
   lesseeName,
+  partyIds,
+  partyIncomplete,
 }: {
   pkg: ScannedPackage;
   /** Parties — resolved by the parent from live merchant + profile
-   *  data (demo store/session as demo-mode fallback). Names only. */
+   *  data (demo store/session as demo-mode fallback). */
   lessorName: string | null;
   lesseeName: string | null;
+  /** Official contracting identifiers — real persisted values only;
+   *  null renders '—' and (in live mode) blocks approval. */
+  partyIds: {
+    lessorLegalName: string | null;
+    lessorCr: string | null;
+    lesseeLegalName: string | null;
+    lesseeNationalId: string | null;
+  };
+  partyIncomplete: boolean;
 }) {
   const t = useT();
   const { locale, formatCurrency } = useI18n();
@@ -686,16 +729,49 @@ function ContractStep({
       <section>
         <SectionHeader title={t('review.contract.parties')} />
         <Card padded className="space-y-3">
+          {/* Lessor — official business identity */}
+          <div className="text-[10.5px] font-semibold text-lavender-700 uppercase tracking-[0.12em]">
+            {t('review.contract.lessor')}
+          </div>
           <Field
-            label={t('review.contract.lessor')}
-            value={lessorName ?? store?.name[locale] ?? '—'}
+            label={t('review.contract.businessName')}
+            value={partyIds.lessorLegalName ?? lessorName ?? store?.name[locale] ?? '—'}
+          />
+          <Field
+            label={t('review.contract.crNumber')}
+            value={
+              partyIds.lessorCr ? (
+                <span className="num" dir="ltr">{partyIds.lessorCr}</span>
+              ) : (
+                '—'
+              )
+            }
           />
           <CardDivider />
+          {/* Lessee — official personal identity */}
+          <div className="text-[10.5px] font-semibold text-lavender-700 uppercase tracking-[0.12em]">
+            {t('review.contract.lessee')}
+          </div>
           <Field
-            label={t('review.contract.lessee')}
-            value={lesseeName ?? '—'}
+            label={t('review.contract.partyFullName')}
+            value={partyIds.lesseeLegalName ?? lesseeName ?? '—'}
+          />
+          <Field
+            label={t('review.contract.partyNationalId')}
+            value={
+              partyIds.lesseeNationalId ? (
+                <span className="num" dir="ltr">{partyIds.lesseeNationalId}</span>
+              ) : (
+                '—'
+              )
+            }
           />
         </Card>
+        {partyIncomplete && (
+          <div className="mt-2.5 rounded-xl2 bg-danger-50 ring-1 ring-danger-500/25 px-4 py-3 text-[12.5px] text-danger-700 leading-relaxed">
+            {t('errors.contractPartyIncomplete')}
+          </div>
+        )}
       </section>
 
       <section>
@@ -908,12 +984,17 @@ function ConfirmStep({
   pkg,
   userName,
   onApproved,
+  blocked = false,
 }: {
   pkg: ScannedPackage;
   userName: string | undefined;
   /** May reject (live accept RPC) — handleSign awaits it so the
    *  processing flag resets when acceptance fails. */
   onApproved: () => void | Promise<void>;
+  /** Party identity incomplete (live mode) — approval is disabled and
+   *  the business message shows; the accept RPC would raise P0150 for
+   *  the same condition anyway. */
+  blocked?: boolean;
 }) {
   const t = useT();
   const { formatCurrency } = useI18n();
@@ -931,7 +1012,7 @@ function ConfirmStep({
   }, []);
 
   const handleSign = () => {
-    if (!allAccepted || processing) return;
+    if (!allAccepted || processing || blocked) return;
     setProcessing(true);
     // Calm 600ms still moment — the content above the button quiets while
     // the system "records" the rental, then we hand off to Approval where
@@ -1038,12 +1119,17 @@ function ConfirmStep({
           a single 1px lavender hairline — visual pause before the act. */}
       <div className="pt-2 space-y-3 animate-reveal-up" style={{ animationDelay: '240ms' }}>
         <div className="h-px bg-lavender-200/60 mx-1" aria-hidden />
+        {blocked && (
+          <div className="rounded-xl2 bg-danger-50 ring-1 ring-danger-500/25 px-4 py-3 text-[12.5px] text-danger-700 leading-relaxed">
+            {t('errors.contractPartyIncomplete')}
+          </div>
+        )}
         <Button
           variant="primary"
           size="lg"
           block
           onClick={handleSign}
-          disabled={!allAccepted || processing}
+          disabled={!allAccepted || processing || blocked}
           loading={processing}
           leading={!processing ? <SignatureIcon size={18} /> : undefined}
         >

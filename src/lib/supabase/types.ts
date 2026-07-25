@@ -229,6 +229,13 @@ export type RentalContractRow = {
    *  the guided acceptance flow (Bugs 17/19). NULL = photos editable
    *  and activation blocked; NOT NULL = photos locked. */
   receipt_photos_confirmed_at: string | null;
+  /** Party identity snapshots captured at acceptance
+   *  (20260502123500). NULL on contracts accepted before the
+   *  migration — display falls back to live data for those. */
+  lessor_legal_name: string | null;
+  lessor_cr_number: string | null;
+  lessee_legal_name: string | null;
+  lessee_national_id: string | null;
   created_at: string;
   updated_at: string;
 };
