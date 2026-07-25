@@ -573,7 +573,7 @@ function ActiveStack({
   const hidden = rentals.length - visible.length;
   return (
     <div className="space-y-3">
-      {visible.map(({ contract }) => {
+      {visible.map(({ contract, merchantName }) => {
         // Approved four-stage mapping: an ACTIVE contract is in stage 3
         // (بدء الإيجار); a pending one is still in customer review.
         const currentIdx = contract.status === 'active' ? 2 : 1;
@@ -593,12 +593,15 @@ function ActiveStack({
                 label={t(STAGE_KEYS[currentIdx])}
               />
             </div>
-            {/* Rental title only — the old compressed metadata tail
-                (merchant · amount · return date) was confusing at a
-                glance; those details live on the contract-details page
-                behind the CTA below. */}
+            {/* Title — store display name (customer-facing, locale-
+                resolved; never the legal company name). ONLY these two:
+                the old amount/date metadata stays removed — those live
+                on the contract-details page behind the CTA. A missing
+                merchant name (or the '—' resolver fallback) renders
+                the title alone; `truncate` ellipsizes long text. */}
             <div className="text-[12.5px] text-ink-500 truncate">
               {contract.title}
+              {merchantName && merchantName !== '—' ? ` — ${merchantName}` : ''}
             </div>
 
             {/* Four-stage journey dots (same visual language as the
