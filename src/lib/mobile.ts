@@ -58,6 +58,30 @@ function normalizeArabicDigits(raw: string): string {
     .replace(/[۰-۹]/g, (d) => String(d.charCodeAt(0) - 0x06f0));
 }
 
+/**
+ * Live input-handler sanitizer for the LOCAL-part mobile field (the one
+ * rendered behind a fixed non-editable `+966` chip). Applied on every
+ * change so the controlled value can never hold more than the 9 local
+ * digits, regardless of typing or pasting:
+ *
+ *   - Arabic-Indic / Eastern Arabic-Indic digits → ASCII
+ *   - spaces, dashes, parentheses, `+` and any other non-digit stripped
+ *   - a pasted country prefix (`+966…`, `966…`, `00966…`) removed
+ *   - accidental leading zero(s) removed (`05…` → `5…`)
+ *   - hard-capped at 9 digits
+ *
+ * Format VALIDITY (starts with 5, exactly 9 digits) stays with
+ * `classifyMobile()` — and the DB CHECK constraint plus the canonical
+ * trigger remain authoritative on the server.
+ */
+export function sanitizeMobileInput(raw: string): string {
+  let digits = normalizeArabicDigits(String(raw)).replace(/\D/g, '');
+  if (digits.startsWith('00966')) digits = digits.slice(5);
+  else if (digits.startsWith('966')) digits = digits.slice(3);
+  digits = digits.replace(/^0+/, '');
+  return digits.slice(0, 9);
+}
+
 export function classifyMobile(raw: string | null | undefined): MobileClassification {
   if (raw === null || raw === undefined) return { kind: 'invalid', issue: 'empty' };
   const original = normalizeArabicDigits(String(raw));

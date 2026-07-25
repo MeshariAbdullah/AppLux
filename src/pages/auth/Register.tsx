@@ -7,7 +7,7 @@ import { logEvent } from '@/lib/observability/log';
 import { useI18n, useT } from '@/lib/i18n';
 import { useStore, emptyRegistration, type RegistrationDraft } from '@/lib/store';
 import { useSupabaseAuth, updateProfile } from '@/lib/supabase';
-import { classifyMobile, type MobileIssue } from '@/lib/mobile';
+import { classifyMobile, sanitizeMobileInput, type MobileIssue } from '@/lib/mobile';
 import {
   classifyEmail,
   classifyFullName,
@@ -336,13 +336,15 @@ function mobileIssueToMessage(
   switch (issue) {
     case 'empty':
       return t('auth.errors.mobileRequired');
+    // The input handler sanitizes to at most 9 local digits behind the
+    // fixed +966 chip, so every remaining failure mode (too short,
+    // wrong first digit, stray prefix) collapses into ONE actionable
+    // instruction.
     case 'incomplete':
-      return t('auth.errors.mobileIncomplete');
     case 'unsupported_country':
-      return t('auth.errors.mobileUnsupportedCountry');
     case 'invalid_format':
     default:
-      return t('auth.errors.mobileFormat');
+      return t('auth.errors.mobileNineDigits');
   }
 }
 
@@ -634,7 +636,11 @@ function SupabaseRegister() {
                 placeholder="5XXXXXXXX"
                 value={mobile}
                 onChange={(e) => {
-                  setMobile(e.target.value);
+                  // Enforced IN the handler, not just at submit:
+                  // Arabic digits → ASCII, separators/+966/leading-0
+                  // stripped, hard 9-digit cap — typing OR pasting can
+                  // never leave more than the 9 local digits.
+                  setMobile(sanitizeMobileInput(e.target.value));
                   if (errors.mobile) setErrors((p) => ({ ...p, mobile: undefined }));
                 }}
                 onBlur={() => setMobileTouched(true)}
@@ -645,7 +651,11 @@ function SupabaseRegister() {
                 }
                 invalid={Boolean(mobileError)}
                 autoComplete="tel"
-                maxLength={14}
+                // Wide enough for a pasted "+966 5X-XXX-XXXX" style
+                // value to REACH the handler (which then sanitizes and
+                // caps it); the controlled value itself never exceeds
+                // 9 digits.
+                maxLength={20}
               />
             </div>
           </FormField>

@@ -29,6 +29,16 @@ function normalizeArabicDigits(raw: string): string {
     .replace(/[۰-۹]/g, (d) => String(d.charCodeAt(0) - 0x06f0));
 }
 
+/** Live input sanitizer for the local-part mobile field — keep in sync
+ *  with src/lib/mobile.ts (single source of parsing rules). */
+export function sanitizeMobileInput(raw: string): string {
+  let digits = normalizeArabicDigits(String(raw)).replace(/\D/g, '');
+  if (digits.startsWith('00966')) digits = digits.slice(5);
+  else if (digits.startsWith('966')) digits = digits.slice(3);
+  digits = digits.replace(/^0+/, '');
+  return digits.slice(0, 9);
+}
+
 export function classifyMobile(raw: string | null | undefined): MobileClassification {
   if (raw === null || raw === undefined) return { kind: 'invalid', issue: 'empty' };
   const original = normalizeArabicDigits(String(raw));

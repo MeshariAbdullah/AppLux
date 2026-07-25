@@ -296,6 +296,7 @@
     },
     "errors": {
       "mobileRequired": "Enter your mobile number to continue.",
+      "mobileNineDigits": "Enter a 9-digit Saudi mobile number starting with 5.",
       "mobileIncomplete": "That number isn't finished yet — Saudi mobiles are 9 digits starting with 5.",
       "mobileFormat": "Doesn't look like a Saudi mobile. It must start with 5 and be 9 digits.",
       "mobileUnsupportedCountry": "Only Saudi mobile numbers (+966) are supported here.",
