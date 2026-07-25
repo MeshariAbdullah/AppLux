@@ -8,10 +8,19 @@
 // So the document is laid out as real DOM pages (A4 at 96dpi,
 // 794×1123px) using the app's own IBM Plex Sans Arabic webfont, each
 // page is rasterized with html2canvas, and jsPDF assembles the pages
-// into one A4 file. Multi-page by construction: content blocks are
-// measured and flowed into as many page divs as needed; every page
-// repeats the brand header + public reference and carries a Latin-
-// digit page number.
+// into one A4 file.
+//
+// Arabic-safety rules learned the hard way:
+//   * NO letter-spacing / text-transform on Arabic text — spacing
+//     detaches the connected glyphs and the rasterizer renders the
+//     joins broken (the "corrupted purple headings" bug).
+//   * Rasterize only after document.fonts.ready AND an explicit
+//     fonts.load() of the families used here.
+//
+// Pagination: content flows as fine-grained blocks; every section
+// heading is BOUND to its first row (no orphan headings), remaining
+// rows flow individually so pages pack tightly instead of moving
+// whole sections and leaving page bottoms blank.
 //
 // Data integrity: the caller passes PRE-FORMATTED strings assembled
 // from the same authenticated, RLS-scoped state the contract-details
@@ -58,7 +67,9 @@ export type ContractPdfInput = {
     clausesTitle: string;
     obligationsTitle: string;
     electronicRecord: string;
-    pageWord: string;
+    /** Page-number template, e.g. "صفحة {n} من {m}" / "Page {n} of {m}"
+     *  — digits stay Latin in both languages. */
+    pageOf: string;
   };
   values: {
     statusLabel: string;
@@ -85,13 +96,22 @@ export type ContractPdfInput = {
 
 const PAGE_W = 794; // A4 @ 96dpi
 const PAGE_H = 1123;
-const MARGIN = 56;
-const HEADER_H = 88;
-const FOOTER_H = 44;
-const CONTENT_H = PAGE_H - HEADER_H - FOOTER_H - MARGIN; // content budget
+const MARGIN = 48;
+const HEADER_H = 78;
+const FOOTER_H = 38;
+const CONTENT_H = PAGE_H - HEADER_H - FOOTER_H - MARGIN;
 
+// IBM Plex Sans Arabic first (the app's font), with real Arabic-capable
+// fallbacks so a slow/blocked webfont still shapes correctly.
 const FONT =
-  "'IBM Plex Sans Arabic', 'Inter', 'Noto Naskh Arabic', system-ui, sans-serif";
+  "'IBM Plex Sans Arabic', 'Noto Naskh Arabic', 'Geeza Pro', 'Segoe UI', system-ui, sans-serif";
+
+// Print palette — high contrast, no tiny gray text.
+const INK = '#14192e';
+const BODY = '#2c2a25';
+const MUTED = '#57534a';
+const ACCENT = '#4c40c9';
+const HAIRLINE = '#e6dfd2';
 
 function el(
   tag: string,
@@ -104,39 +124,77 @@ function el(
   return node;
 }
 
-function kvRow(label: string, value: string, ltrValue = false): HTMLElement {
+function kvRow(
+  label: string,
+  value: string,
+  opts: { ltrValue?: boolean; emphasis?: boolean } = {},
+): HTMLElement {
   const row = el('div', {
     display: 'flex',
     justifyContent: 'space-between',
-    gap: '16px',
-    padding: '7px 0',
-    borderBottom: '1px solid #efe9df',
-    fontSize: '13px',
+    alignItems: 'baseline',
+    gap: '18px',
+    padding: opts.emphasis ? '10px 0' : '8px 0',
+    borderBottom: `1px solid ${HAIRLINE}`,
+    borderTop: opts.emphasis ? `2px solid ${INK}` : '',
+    fontSize: opts.emphasis ? '15px' : '13.5px',
+    lineHeight: '1.7',
   });
-  row.appendChild(el('div', { color: '#6b6459', flexShrink: '0' }, label));
-  const v = el('div', { color: '#161b33', fontWeight: '600', textAlign: 'end' }, value);
-  if (ltrValue) v.dir = 'ltr';
+  row.appendChild(
+    el(
+      'div',
+      {
+        color: opts.emphasis ? INK : MUTED,
+        flexShrink: '0',
+        fontWeight: opts.emphasis ? '800' : '400',
+      },
+      label,
+    ),
+  );
+  const v = el(
+    'div',
+    {
+      color: INK,
+      fontWeight: opts.emphasis ? '800' : '600',
+      textAlign: 'end',
+    },
+    value,
+  );
+  if (opts.ltrValue) v.dir = 'ltr';
   row.appendChild(v);
   return row;
 }
 
+/** Section heading — NO letter-spacing / uppercase: both break Arabic
+ *  glyph joining under rasterization. */
 function sectionTitle(text: string): HTMLElement {
   return el(
     'div',
     {
-      fontSize: '12px',
-      fontWeight: '700',
-      color: '#7a6df0',
-      letterSpacing: '0.08em',
-      textTransform: 'uppercase',
-      margin: '18px 0 6px',
+      fontSize: '15px',
+      fontWeight: '800',
+      color: ACCENT,
+      margin: '16px 0 2px',
+      lineHeight: '1.6',
+      borderBottom: `2px solid ${ACCENT}22`,
+      paddingBottom: '4px',
     },
     text,
   );
 }
 
-/** Builds the paginated A4 page elements. Exposed separately so tests
- *  can assert the document CONTENT without rasterizing anything. */
+function subTitle(text: string): HTMLElement {
+  return el(
+    'div',
+    { fontSize: '13px', fontWeight: '800', color: INK, margin: '10px 0 0', lineHeight: '1.7' },
+    text,
+  );
+}
+
+/** Builds the paginated A4 page elements. Attaches the (offscreen)
+ *  container to the document — pagination needs live layout — and the
+ *  caller removes it. Exposed separately so tests can assert content
+ *  without rasterizing. */
 export function buildContractPdfPages(input: ContractPdfInput): {
   container: HTMLElement;
   pages: HTMLElement[];
@@ -150,9 +208,6 @@ export function buildContractPdfPages(input: ContractPdfInput): {
     zIndex: '-1',
   });
   container.dir = input.dir;
-  // Pagination measures scrollHeight, which is 0 for detached nodes —
-  // the container must live in the document WHILE blocks are flowed.
-  // Callers remove it when done.
   document.body.appendChild(container);
 
   const pages: HTMLElement[] = [];
@@ -172,31 +227,31 @@ export function buildContractPdfPages(input: ContractPdfInput): {
     page.className = 'pdf-page';
     page.dir = input.dir;
 
-    // Repeated header: brand + document title + public reference.
+    // Header — brand + document title on the start side, the public
+    // reference alone on the end side (footer carries only the page
+    // number: no metadata repeated twice).
     const header = el('div', {
       height: `${HEADER_H}px`,
       display: 'flex',
       alignItems: 'flex-end',
       justifyContent: 'space-between',
-      paddingBottom: '10px',
-      borderBottom: '2px solid #161b33',
+      paddingBottom: '12px',
+      borderBottom: `2.5px solid ${INK}`,
       boxSizing: 'border-box',
     });
-    const brandWrap = el('div', {});
+    const brandWrap = el('div', { lineHeight: '1.35' });
     brandWrap.appendChild(
-      el('div', { fontSize: '20px', fontWeight: '800', color: '#161b33' }, L.brand),
+      el('div', { fontSize: '22px', fontWeight: '800', color: INK }, L.brand),
     );
     brandWrap.appendChild(
-      el('div', { fontSize: '12px', color: '#6b6459', marginTop: '2px' }, L.docTitle),
+      el('div', { fontSize: '13px', color: MUTED, marginTop: '2px' }, L.docTitle),
     );
     header.appendChild(brandWrap);
-    const refWrap = el('div', { textAlign: 'end' });
-    refWrap.appendChild(
-      el('div', { fontSize: '10.5px', color: '#6b6459' }, L.reference),
-    );
+    const refWrap = el('div', { textAlign: 'end', lineHeight: '1.4' });
+    refWrap.appendChild(el('div', { fontSize: '11px', color: MUTED }, L.reference));
     const refVal = el(
       'div',
-      { fontSize: '15px', fontWeight: '700', color: '#161b33' },
+      { fontSize: '16px', fontWeight: '800', color: INK },
       input.reference,
     );
     refVal.dir = 'ltr';
@@ -207,7 +262,7 @@ export function buildContractPdfPages(input: ContractPdfInput): {
     content = el('div', {
       maxHeight: `${CONTENT_H}px`,
       overflow: 'hidden',
-      paddingTop: '6px',
+      paddingTop: '4px',
       boxSizing: 'border-box',
     });
     content.className = 'pdf-content';
@@ -221,17 +276,13 @@ export function buildContractPdfPages(input: ContractPdfInput): {
       height: `${FOOTER_H}px`,
       display: 'flex',
       alignItems: 'center',
-      justifyContent: 'space-between',
-      borderTop: '1px solid #efe9df',
-      fontSize: '10.5px',
-      color: '#6b6459',
+      justifyContent: 'flex-end',
+      borderTop: `1px solid ${HAIRLINE}`,
+      fontSize: '11px',
+      color: MUTED,
     });
-    const refSmall = el('div', {}, input.reference);
-    refSmall.dir = 'ltr';
-    footer.appendChild(refSmall);
-    const pageNum = el('div', {});
+    const pageNum = el('div', { lineHeight: '1' });
     pageNum.className = 'pdf-page-number';
-    pageNum.dir = 'ltr';
     footer.appendChild(pageNum);
     page.appendChild(footer);
 
@@ -242,9 +293,7 @@ export function buildContractPdfPages(input: ContractPdfInput): {
 
   newPage();
 
-  // A block either fits in the current page's content area or moves
-  // whole to a fresh page (blocks are small enough that a block always
-  // fits an empty page).
+  // A block either fits the current page or moves whole to a fresh one.
   const push = (block: HTMLElement) => {
     content.appendChild(block);
     if (content.scrollHeight > CONTENT_H && content.childElementCount > 1) {
@@ -254,91 +303,104 @@ export function buildContractPdfPages(input: ContractPdfInput): {
     }
   };
 
+  // Section = heading BOUND to its first row (never an orphan heading),
+  // then the remaining rows flow one by one for tight packing.
+  const pushSection = (title: string, rows: HTMLElement[]) => {
+    if (rows.length === 0) return;
+    const head = el('div', {});
+    head.appendChild(sectionTitle(title));
+    head.appendChild(rows[0]);
+    push(head);
+    for (let i = 1; i < rows.length; i++) push(rows[i]);
+  };
+
   // ---- record meta ----
   const meta = el('div', {});
   meta.appendChild(kvRow(L.status, V.statusLabel));
-  meta.appendChild(kvRow(L.approvedAt, V.approvedAtLabel));
+  meta.appendChild(kvRow(L.approvedAt, V.approvedAtLabel, { ltrValue: false }));
   push(meta);
 
   // ---- parties ----
-  const parties = el('div', {});
-  parties.appendChild(sectionTitle(L.partiesTitle));
-  parties.appendChild(
-    el('div', { fontSize: '12px', fontWeight: '700', color: '#161b33', margin: '6px 0 0' }, L.lessorTitle),
-  );
-  parties.appendChild(kvRow(L.businessName, V.businessName));
-  parties.appendChild(kvRow(L.crNumber, V.crNumber, true));
-  parties.appendChild(
-    el('div', { fontSize: '12px', fontWeight: '700', color: '#161b33', margin: '10px 0 0' }, L.lesseeTitle),
-  );
-  parties.appendChild(kvRow(L.fullName, V.fullName));
-  parties.appendChild(kvRow(L.nationalId, V.nationalId, true));
-  push(parties);
+  pushSection(L.partiesTitle, [
+    (() => {
+      const w = el('div', {});
+      w.appendChild(subTitle(L.lessorTitle));
+      w.appendChild(kvRow(L.businessName, V.businessName));
+      return w;
+    })(),
+    kvRow(L.crNumber, V.crNumber, { ltrValue: true }),
+    (() => {
+      const w = el('div', {});
+      w.appendChild(subTitle(L.lesseeTitle));
+      w.appendChild(kvRow(L.fullName, V.fullName));
+      return w;
+    })(),
+    kvRow(L.nationalId, V.nationalId, { ltrValue: true }),
+  ]);
 
   // ---- item ----
-  const item = el('div', {});
-  item.appendChild(sectionTitle(L.itemTitle));
-  item.appendChild(kvRow(L.itemName, V.itemName));
-  if (V.itemValue) item.appendChild(kvRow(L.itemValue, V.itemValue, true));
-  push(item);
+  pushSection(L.itemTitle, [
+    kvRow(L.itemName, V.itemName),
+    ...(V.itemValue ? [kvRow(L.itemValue, V.itemValue, { ltrValue: true })] : []),
+  ]);
 
   // ---- period ----
-  const period = el('div', {});
-  period.appendChild(sectionTitle(L.periodTitle));
-  period.appendChild(kvRow(L.startDate, V.startLabel, true));
-  period.appendChild(kvRow(L.endDate, V.endLabel, true));
-  period.appendChild(
-    kvRow(L.duration, V.hoursLabel ? `${V.durationLabel} — ${V.hoursLabel}` : V.durationLabel),
-  );
-  push(period);
+  pushSection(L.periodTitle, [
+    kvRow(L.startDate, V.startLabel),
+    kvRow(L.endDate, V.endLabel),
+    kvRow(
+      L.duration,
+      V.hoursLabel ? `${V.durationLabel} — ${V.hoursLabel}` : V.durationLabel,
+    ),
+  ]);
 
-  // ---- financials ----
-  const fin = el('div', {});
-  fin.appendChild(sectionTitle(L.financialsTitle));
-  fin.appendChild(kvRow(L.rentalFee, V.rentalFee, true));
-  fin.appendChild(kvRow(L.tax, V.tax, true));
-  fin.appendChild(kvRow(L.total, V.total, true));
-  push(fin);
+  // ---- financials (total emphasized) ----
+  pushSection(L.financialsTitle, [
+    kvRow(L.rentalFee, V.rentalFee, { ltrValue: true }),
+    kvRow(L.tax, V.tax, { ltrValue: true }),
+    kvRow(L.total, V.total, { ltrValue: true, emphasis: true }),
+  ]);
 
-  // ---- clauses (canonical order, one block per clause) ----
-  const clausesTitle = el('div', {});
-  clausesTitle.appendChild(sectionTitle(L.clausesTitle));
-  push(clausesTitle);
-  input.clauses.forEach((c, i) => {
-    const block = el('div', { padding: '6px 0' });
+  // ---- clauses (canonical order; heading bound to clause 1) ----
+  const clauseBlock = (c: { title: string; body: string }, i: number) => {
+    const block = el('div', { padding: '7px 0' });
     block.appendChild(
       el(
         'div',
-        { fontSize: '13px', fontWeight: '700', color: '#161b33' },
+        { fontSize: '14px', fontWeight: '800', color: INK, lineHeight: '1.7' },
         `${i + 1}. ${c.title}`,
       ),
     );
     block.appendChild(
       el(
         'div',
-        { fontSize: '12.5px', color: '#3d3a33', lineHeight: '1.7', marginTop: '2px' },
+        { fontSize: '13px', color: BODY, lineHeight: '1.75', marginTop: '2px' },
         c.body,
       ),
     );
-    push(block);
-  });
+    return block;
+  };
+  pushSection(
+    L.clausesTitle,
+    input.clauses.map((c, i) => clauseBlock(c, i)),
+  );
 
   // ---- financial obligations ----
-  const obligations = el('div', {});
-  obligations.appendChild(sectionTitle(L.obligationsTitle));
-  input.obligations.forEach((o) => obligations.appendChild(kvRow(o.label, o.amount, true)));
-  push(obligations);
+  pushSection(
+    L.obligationsTitle,
+    input.obligations.map((o) => kvRow(o.label, o.amount, { ltrValue: true })),
+  );
 
   // ---- electronic-record statement ----
   const statement = el('div', {
-    marginTop: '18px',
-    padding: '12px 14px',
+    marginTop: '20px',
+    padding: '14px 16px',
     background: '#faf7f2',
-    border: '1px solid #efe9df',
+    border: `1px solid ${HAIRLINE}`,
     borderRadius: '8px',
-    fontSize: '11.5px',
-    color: '#6b6459',
-    lineHeight: '1.7',
+    fontSize: '12px',
+    color: MUTED,
+    lineHeight: '1.8',
   });
   statement.textContent = input.labels.electronicRecord;
   push(statement);
@@ -346,7 +408,10 @@ export function buildContractPdfPages(input: ContractPdfInput): {
   // Page numbers once the count is known (Latin digits).
   pages.forEach((p, i) => {
     const n = p.querySelector('.pdf-page-number');
-    if (n) n.textContent = `${input.labels.pageWord} ${i + 1} / ${pages.length}`;
+    if (n)
+      n.textContent = input.labels.pageOf
+        .replace('{n}', String(i + 1))
+        .replace('{m}', String(pages.length));
   });
 
   return { container, pages };
@@ -362,11 +427,22 @@ export async function exportContractPdf(
   ]);
   const html2canvas = html2canvasModule.default;
 
-  // The webfont must be ready before rasterizing, or glyphs fall back.
+  // Fonts must be fully ready before layout/rasterization, or Arabic
+  // measures with a fallback and paints garbled. Explicitly request
+  // the weights this document uses, then await the ready barrier.
+  try {
+    await Promise.all([
+      document.fonts?.load?.("400 14px 'IBM Plex Sans Arabic'"),
+      document.fonts?.load?.("600 14px 'IBM Plex Sans Arabic'"),
+      document.fonts?.load?.("800 16px 'IBM Plex Sans Arabic'"),
+    ]);
+  } catch {
+    // Fallback stack still shapes Arabic correctly.
+  }
   await document.fonts?.ready?.catch?.(() => undefined);
 
   // buildContractPdfPages attaches the offscreen container itself (it
-  // needs live layout to paginate).
+  // needs live layout to paginate — with the final, loaded fonts).
   const { container, pages } = buildContractPdfPages(input);
   try {
     const doc = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4' });

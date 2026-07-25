@@ -248,11 +248,31 @@ export default function ContractTracking() {
   // Approved = the contract exists and was accepted into an active (or
   // since-ended) state. Drafts/offers and pending-photo contracts can
   // never export; demo mode has no real contract to certify.
-  const canExportPdf = Boolean(
+  const pdfApproved = Boolean(
     pdfBits &&
       contractTemplate &&
+      pdfBits.row.contract_number &&
       (pdfBits.row.status === 'active' || pdfBits.row.status === 'ended'),
   );
+  // The exact identity values the PDF would print (snapshot-first,
+  // same fallbacks as the record card). An approved contract missing
+  // ANY required contracting identifier must never export — commonly a
+  // pre-123500 contract with no snapshots and no profile National ID.
+  const pdfIdentity = {
+    businessName: partySnapshot?.lessorLegalName ?? contract?.counterparty ?? null,
+    crNumber: partySnapshot?.lessorCr ?? null,
+    fullName: partySnapshot?.lesseeLegalName ?? supabaseProfile?.full_name ?? null,
+    nationalId: partySnapshot?.lesseeNationalId ?? null,
+  };
+  const pdfIdentityComplete = Boolean(
+    pdfIdentity.businessName &&
+      pdfIdentity.businessName !== '—' &&
+      pdfIdentity.crNumber &&
+      pdfIdentity.fullName &&
+      pdfIdentity.nationalId,
+  );
+  const canExportPdf = pdfApproved && pdfIdentityComplete;
+  const exportBlockedByIdentity = pdfApproved && !pdfIdentityComplete;
 
   const onExportPdf = async () => {
     if (!canExportPdf || !pdfBits || !contractTemplate || exportingRef.current) return;
@@ -261,14 +281,17 @@ export default function ContractTracking() {
     setExportError(null);
     try {
       const { row, invoiceRow, itemName, durationDays, branchHours } = pdfBits;
-      // Latin digits in both languages (app-wide contract rule).
+      // Latin digits in both languages (app-wide contract rule). One
+      // consistent Arabic form throughout: "26 يوليو 2026م".
       const dateTag = locale === 'ar' ? 'ar-EG-u-nu-latn' : 'en-GB';
-      const fmtPdfDate = (iso: string) =>
-        new Date(iso).toLocaleDateString(dateTag, {
+      const fmtPdfDate = (iso: string) => {
+        const s = new Date(iso).toLocaleDateString(dateTag, {
           year: 'numeric',
           month: 'long',
           day: 'numeric',
         });
+        return locale === 'ar' ? `${s}م` : s;
+      };
       const fmtPdfCurrency = (n: number) =>
         `${n.toLocaleString('en-US', { maximumFractionDigits: 0 })} ${locale === 'ar' ? 'ر.س' : 'SAR'}`;
 
@@ -304,7 +327,7 @@ export default function ContractTracking() {
           clausesTitle: t('track.contract.fullContractTitle'),
           obligationsTitle: t('review.contract.damagesTitle'),
           electronicRecord: t('track.contract.pdf.electronicRecord'),
-          pageWord: t('track.contract.pdf.pageWord'),
+          pageOf: t('track.contract.pdf.pageOf'),
         },
         values: {
           statusLabel:
@@ -312,15 +335,12 @@ export default function ContractTracking() {
               ? t('track.contract.pdf.statusActive')
               : t('track.contract.pdf.statusEnded'),
           approvedAtLabel: fmtPdfDate(row.signed_at ?? row.created_at),
-          // Snapshot-first parties — identical fallbacks to the record
-          // card above, never fabricated.
-          businessName: partySnapshot?.lessorLegalName ?? contract?.counterparty ?? '—',
-          crNumber: partySnapshot?.lessorCr ?? '—',
-          fullName:
-            partySnapshot?.lesseeLegalName ??
-            supabaseProfile?.full_name ??
-            '—',
-          nationalId: partySnapshot?.lesseeNationalId ?? '—',
+          // Snapshot-first parties — the gate above guarantees all four
+          // are present before this handler can run.
+          businessName: pdfIdentity.businessName ?? '—',
+          crNumber: pdfIdentity.crNumber ?? '—',
+          fullName: pdfIdentity.fullName ?? '—',
+          nationalId: pdfIdentity.nationalId ?? '—',
           itemName: itemName ?? contract?.title ?? '—',
           itemValue: row.original_item_value
             ? fmtPdfCurrency(Number(row.original_item_value))
@@ -650,7 +670,7 @@ export default function ContractTracking() {
                 ? t('track.contract.hideFullContract')
                 : t('track.contract.openContract')}
             </Button>
-            {canExportPdf && (
+            {(canExportPdf || exportBlockedByIdentity) && (
               <Button
                 variant="secondary"
                 size="lg"
@@ -658,12 +678,17 @@ export default function ContractTracking() {
                 leading={<DownloadIcon size={18} />}
                 onClick={() => void onExportPdf()}
                 loading={exporting}
-                disabled={exporting}
+                disabled={exporting || !canExportPdf}
               >
                 {exporting
                   ? t('track.contract.pdf.exporting')
                   : t('track.contract.pdf.exportCta')}
               </Button>
+            )}
+            {exportBlockedByIdentity && (
+              <div className="rounded-xl2 bg-danger-50 ring-1 ring-danger-500/25 px-4 py-3 text-[12.5px] text-danger-700 leading-relaxed">
+                {t('track.contract.pdf.identityIncomplete')}
+              </div>
             )}
             {exportError && (
               <div className="rounded-xl2 bg-danger-50 ring-1 ring-danger-500/25 px-4 py-3 text-[12.5px] text-danger-700 leading-relaxed">
