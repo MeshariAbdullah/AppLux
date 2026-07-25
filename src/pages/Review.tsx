@@ -1159,9 +1159,13 @@ function StepFooter({
       </div>
     );
   }
-  // C09 footer — navy primary on the start side, outlined السابق.
+  // C09 footer — السابق on the START side (right in RTL, matching the
+  // confirm-step footer), متابعة filling the end side. Flex order in
+  // an RTL document places the FIRST child on the right, so السابق
+  // must come first in the DOM.
   return (
     <div className="sticky bottom-0 z-20 border-t border-beige-200 bg-white/95 backdrop-blur px-4 py-3 pb-[calc(env(safe-area-inset-bottom)+12px)] flex items-center gap-2.5">
+      {step !== 'invoice' && prevButton}
       <Button
         variant="primary"
         className="flex-[2] !bg-navy-700 hover:!bg-navy-800 active:!bg-navy-800"
@@ -1175,7 +1179,6 @@ function StepFooter({
       >
         {t('review.nav.next')}
       </Button>
-      {step !== 'invoice' && prevButton}
     </div>
   );
 }
