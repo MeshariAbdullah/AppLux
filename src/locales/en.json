@@ -643,7 +643,12 @@
   },
   "notifications": {
     "title": "Notifications",
-    "empty": "No notifications yet"
+    "empty": "No notifications yet",
+    "unread": "Unread",
+    "offerIssued": {
+      "title": "New rental offer",
+      "body": "You have a new rental offer from {merchantName} awaiting your review."
+    }
   },
   "profile": {
     "title": "My account",

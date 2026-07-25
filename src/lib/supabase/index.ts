@@ -147,6 +147,12 @@ export {
 } from './queries/contracts';
 
 export {
+  listMyNotifications,
+  markNotificationRead,
+} from './queries/notifications';
+export type { NotificationRow, NotificationType } from './types';
+
+export {
   confirmContractReceiptPhotos,
   getReceiptPhotoUrl,
   listContractReceiptPhotos,

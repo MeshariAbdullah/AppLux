@@ -243,6 +243,20 @@ export type ContractReceiptPhotoRow = {
   storage_path: string;
   created_at: string;
 };
+
+/** Customer notifications (20260502123400). Only 'offer_issued'
+ *  exists in this pass; rows are created solely by the DB trigger. */
+export type NotificationType = 'offer_issued';
+export type NotificationRow = {
+  id: string;
+  user_id: string;
+  type: NotificationType;
+  invoice_id: string | null;
+  merchant_display_name: { ar?: string; en?: string } | null;
+  scan_token: string | null;
+  read_at: string | null;
+  created_at: string;
+};
 export type RentalContractInsert = Partial<RentalContractRow> & {
   contract_number: string;
   invoice_id: string;
@@ -426,6 +440,13 @@ export type Database = {
         Row: DamageEvidenceRow;
         Insert: DamageEvidenceInsert;
         Update: Partial<DamageEvidenceRow>;
+        Relationships: [];
+      };
+      notifications: {
+        Row: NotificationRow;
+        // Client code never inserts — rows come from the DB trigger.
+        Insert: never;
+        Update: Partial<Pick<NotificationRow, 'read_at'>>;
         Relationships: [];
       };
       contract_receipt_photos: {
