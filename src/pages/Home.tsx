@@ -300,16 +300,6 @@ export default function Home() {
         {/* ====== C05 greeting ====== */}
         {greetingRow}
 
-        {/* ====== Verified & ready banner ====== */}
-        <div className="rounded-xl2 bg-green-50 ring-1 ring-green-200 px-4 py-3 flex items-center gap-2.5">
-          <span className="h-5 w-5 shrink-0 rounded-full bg-green-700 text-white grid place-items-center">
-            <CheckIcon size={11} strokeWidth={2.5} />
-          </span>
-          <span className="text-[12.5px] font-semibold text-green-700">
-            {t('home.verifiedBanner')}
-          </span>
-        </div>
-
         {/* ====== Compact eligibility (preserved; design card chrome).
               Live values + the only path to /eligibility. ====== */}
         <EligibilityCompact
