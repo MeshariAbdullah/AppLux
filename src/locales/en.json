@@ -592,12 +592,12 @@
   "eligibility": {
     "title": "Rental eligibility",
     "backHome": "Back to home",
-    "subtitle": "Your approved financial limit from Lend",
+    "remainingTitle": "Current rental limit (remaining)",
+    "subtitle": "Current rental limit = total limit − used",
     "limit": "Total limit",
     "used": "Used",
     "remaining": "Remaining",
     "usageOfLimit": "Used of total",
-    "note": "Rental eligibility is determined by your profile and record within Lend.",
     "inactiveTitle": "Eligibility is not active yet",
     "tiers": {
       "standard": "Active",
