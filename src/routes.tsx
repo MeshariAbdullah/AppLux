@@ -36,6 +36,7 @@ const StoreDetails = lazyWithReload(() => import('@/pages/StoreDetails'));
 const Contracts = lazyWithReload(() => import('@/pages/Contracts'));
 const Notifications = lazyWithReload(() => import('@/pages/Notifications'));
 const Profile = lazyWithReload(() => import('@/pages/Profile'));
+const ProfileInfo = lazyWithReload(() => import('@/pages/ProfileInfo'));
 const Scan = lazyWithReload(() => import('@/pages/Scan'));
 const Review = lazyWithReload(() => import('@/pages/Review'));
 const Approval = lazyWithReload(() => import('@/pages/Approval'));
@@ -486,6 +487,7 @@ export function AppRoutes() {
         <Route path="/contracts" element={<Contracts />} />
         <Route path="/notifications" element={<Notifications />} />
         <Route path="/profile" element={<Profile />} />
+        <Route path="/profile/info" element={<ProfileInfo />} />
         <Route path="/scan" element={<Scan />} />
         <Route path="/review/:token" element={<Review />} />
         <Route path="/approval/:token" element={<Approval />} />

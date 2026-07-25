@@ -649,6 +649,16 @@
     "title": "My account",
     "accountSection": "Account",
     "accountEntry": "My information",
+    "info": {
+      "title": "My information",
+      "fullName": "Full name",
+      "mobile": "Mobile number",
+      "email": "Email",
+      "nationalId": "National ID",
+      "city": "City",
+      "missing": "Not available",
+      "readOnlyNote": "This information is view-only. Contact support to change it."
+    },
     "historyEntry": "Rental history",
     "language": "Language",
     "arabic": "العربية",

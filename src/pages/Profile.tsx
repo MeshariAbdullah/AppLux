@@ -169,7 +169,11 @@ export default function Profile() {
 
           {/* ====== Card A — account rows (C13 icon-less rows) ====== */}
           <div className="rounded-[14px] bg-white ring-1 ring-beige-200 px-[18px]">
-            <Row label={t('profile.accountEntry')} dir={dir} />
+            <Row
+              label={t('profile.accountEntry')}
+              dir={dir}
+              onClick={() => navigate('/profile/info')}
+            />
             <Divider />
             <Row
               label={t('profile.historyEntry')}
