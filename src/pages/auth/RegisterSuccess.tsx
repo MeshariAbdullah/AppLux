@@ -19,7 +19,12 @@ export default function RegisterSuccess() {
   // check on the beige canvas, navy CTA. Demo-only screen; behavior
   // unchanged.
   return (
-    <div className="relative flex flex-col min-h-full bg-beige-100 text-navy-700">
+    // Shell contract: every direct shell child is a bar or a
+    // scroller. This full-bleed page scrolls itself; the inner
+    // wrapper keeps min-h-full so short content still fills the
+    // viewport (its background covers the safe areas too).
+    <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain no-scrollbar bg-beige-100">
+      <div className="relative flex flex-col min-h-full bg-beige-100 text-navy-700">
       <div className="relative flex-1 flex flex-col items-center justify-center px-7 text-center">
         <span className="h-[84px] w-[84px] rounded-full bg-green-700 text-white grid place-items-center ring-[14px] ring-green-50">
           <CheckIcon size={34} strokeWidth={2.5} />
@@ -51,6 +56,7 @@ export default function RegisterSuccess() {
         >
           {t('success.continue')}
         </Button>
+      </div>
       </div>
     </div>
   );

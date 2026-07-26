@@ -24,8 +24,11 @@ export function BottomNav() {
   // tab = deep-green icon + bold green label (no filled circle, no
   // underline).
   return (
+    // Static shell row (the shell column is fixed-height and the Screen
+    // above scrolls) — `sticky` was only needed while the document
+    // scrolled, and it jiggled during iOS bounce/keyboard.
     <nav
-      className="sticky bottom-0 z-30 bg-white/95 backdrop-blur-md pb-[env(safe-area-inset-bottom)] border-t border-beige-200"
+      className="shrink-0 z-30 bg-white/95 backdrop-blur-md pb-[env(safe-area-inset-bottom)] border-t border-beige-200"
       aria-label="primary"
     >
       <ul className="grid grid-cols-4 px-2 pt-2.5 pb-3">

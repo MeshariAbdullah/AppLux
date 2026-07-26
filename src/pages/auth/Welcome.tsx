@@ -27,7 +27,12 @@ export default function Welcome() {
   const { configured } = useSupabaseAuth();
 
   return (
-    <div className="relative flex flex-col min-h-full bg-navy-700 text-white">
+    // Shell contract: every direct shell child is a bar or a
+    // scroller. This full-bleed page scrolls itself; the inner
+    // wrapper keeps min-h-full so short content still fills the
+    // viewport (its background covers the safe areas too).
+    <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain no-scrollbar bg-navy-700">
+      <div className="relative flex flex-col min-h-full bg-navy-700 text-white">
       {/* Minimal-weight language control floating over the hero. */}
       <div className="absolute z-10 top-[calc(env(safe-area-inset-top)+14px)] end-5">
         <LangToggle tone="light" compact />
@@ -102,6 +107,7 @@ export default function Welcome() {
             </span>
           </Link>
         )}
+      </div>
       </div>
     </div>
   );

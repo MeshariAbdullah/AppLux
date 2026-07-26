@@ -11,7 +11,11 @@ export function Screen({ children, padded = true, className }: ScreenProps) {
   return (
     <main
       className={cn(
-        'flex-1 overflow-y-auto no-scrollbar scroll-smooth',
+        // THE app scroller: the shell column is fixed-height, so this
+        // flex-1 + min-h-0 region is the only element that scrolls.
+        // overscroll-contain stops its rubber-band from chaining to
+        // the (locked) document.
+        'flex-1 min-h-0 overflow-y-auto overflow-x-hidden overscroll-contain no-scrollbar scroll-smooth [-webkit-overflow-scrolling:touch]',
         padded && 'px-5 pb-10 pt-5 space-y-6',
         className,
       )}

@@ -34,7 +34,12 @@ export default function MerchantWelcome() {
   ];
 
   return (
-    <div className="relative flex flex-col min-h-full bg-navy-700 text-white">
+    // Shell contract: every direct shell child is a bar or a
+    // scroller. This full-bleed page scrolls itself; the inner
+    // wrapper keeps min-h-full so short content still fills the
+    // viewport (its background covers the safe areas too).
+    <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain no-scrollbar bg-navy-700">
+      <div className="relative flex flex-col min-h-full bg-navy-700 text-white">
       {/* Language control floats over the hero with minimal weight —
           the M01 composition has no top bar, so nothing else takes
           vertical space above the centered content. */}
@@ -110,6 +115,7 @@ export default function MerchantWelcome() {
         <p className="text-center text-[11px] text-ink-400 leading-relaxed px-6">
           {t('welcome.terms')}
         </p>
+      </div>
       </div>
     </div>
   );

@@ -22,15 +22,19 @@ const config: CapacitorConfig = {
   appName: 'Lend',
   webDir: 'dist',
   ios: {
-    // `contentInset: 'always'` makes WKWebView respect the iOS safe
-    // areas (notch / home indicator). Our Tailwind layout already
-    // uses env(safe-area-inset-*); this turns those CSS vars on.
-    contentInset: 'always',
-    // Lock the WebView background to Deep Navy (Lend 2026 brand
-    // refresh). Matches the <meta name="theme-color"> in index.html
-    // so there is no colour flash between launch, splash, and first
-    // React render.
-    backgroundColor: '#1B2951',
+    // App-shell fix: `contentInset: 'never'` lets the WKWebView cover
+    // the ENTIRE screen (under the status bar and home indicator);
+    // the CSS env(safe-area-inset-*) paddings already present on
+    // every header/nav then do the safe-area work with the app's own
+    // backgrounds. The previous 'always' inset the webview instead,
+    // and the exposed native window painted the navy backgroundColor
+    // — the "navy strip" above/below the app.
+    contentInset: 'never',
+    // WebView/window background matches the app canvas so anything
+    // momentarily exposed (launch, keyboard transitions) is the same
+    // beige as the app surface — never a foreign navy band. Matches
+    // <meta name="theme-color"> in index.html.
+    backgroundColor: '#F5F5F0',
   },
 };
 

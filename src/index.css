@@ -52,10 +52,19 @@
   --applux-ink: var(--lend-ink);
 }
 
+/* App-shell viewport lock (iOS/Capacitor): the DOCUMENT never scrolls.
+   The only vertical scroller in the app is the shared <Screen> main
+   region (plus the three full-bleed pages' own scroll wrappers). This
+   keeps the header and bottom navigation stable, stops the "whole
+   page moves" website feel, and prevents rubber-band overscroll from
+   exposing anything outside the shell. */
 html,
 body,
 #root {
+  width: 100%;
   height: 100%;
+  overflow: hidden;
+  overscroll-behavior: none;
 }
 
 body {
