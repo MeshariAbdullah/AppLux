@@ -181,7 +181,15 @@ export function adaptInvoice(
     issuedAt: row.issued_at ?? row.created_at,
     dueDate: row.expires_at ?? row.issued_at ?? row.created_at,
     amount: Number(row.total_amount),
-    status: mapInvoiceStatus(row.status),
+    // Offer-decision lifecycle: an EXPIRED issued/viewed offer is no
+    // longer actionable — map it out of the 'due' bucket so home,
+    // contracts, and pending counts stop treating it as pending.
+    status:
+      (row.status === 'issued' || row.status === 'viewed') &&
+      row.expires_at !== null &&
+      new Date(row.expires_at).getTime() <= Date.now()
+        ? 'paid'
+        : mapInvoiceStatus(row.status),
     counterparty: merchantName,
     scanToken: row.scan_token,
   };

@@ -105,6 +105,12 @@ export function translateError(
     // to the MERCHANT, acceptance backstop shown to the CUSTOMER.
     if (code === 'P0160') return t('errors.offerExceedsEligibility');
     if (code === 'P0161') return t('errors.acceptExceedsEligibility');
+    // Offer-decision lifecycle (20260502123700): expiry gates + the
+    // shared already-processed state (P0003 = accept's legacy code for
+    // the same condition).
+    if (code === 'P0170') return t('errors.offerExpiredAccept');
+    if (code === 'P0171') return t('errors.offerExpiredReject');
+    if (code === 'P0172' || code === 'P0003') return t('errors.offerNotActionable');
     if (code === 'P0110') return t('errors.validation'); // empty path guard
     if (code === 'P0114') return t('errors.conflict'); // wrong contract state
     // P0001 = default RAISE — all current uses are state guards

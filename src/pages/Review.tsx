@@ -6,6 +6,7 @@ import {
   Card,
   CardDivider,
   CardSkeleton,
+  ConfirmSheet,
   EmptyState,
   PageSkeleton,
   SectionHeader,
@@ -24,6 +25,7 @@ import {
   ReceiptIcon,
   ShieldIcon,
   SignatureIcon,
+  XIcon,
 } from '@/components/icons';
 import { cacheKeys } from '@/lib/cache/keys';
 import { cacheInvalidate } from '@/lib/cache/memoryCache';
@@ -39,6 +41,7 @@ import {
   activateRentalWithoutPaymentAndNote,
   confirmContractReceiptPhotos,
   fetchBranchById,
+  rejectRentalInvoice,
   fetchContractByInvoiceId,
   fetchInvoiceByToken,
   fetchMerchant,
@@ -112,6 +115,10 @@ export default function Review() {
         setLiveMerchantRow(merchant);
         setLivePkg(synthesizePackageFromInvoice(res.invoice, res.items, merchant, branch));
         setLiveInvoiceId(res.invoice.id);
+        // Offer-decision lifecycle: expiry + terminal states gate the
+        // whole wizard (server enforces the same rules — P0170/P0171).
+        setOfferExpiresAt(res.invoice.expires_at ?? null);
+        setOfferStatus(res.invoice.status);
         // Bugs 17/19 resume path: the invoice was already accepted on a
         // previous visit. Its contract exists — if it's still pending,
         // re-enter the guided flow directly at the receipt-photos step
@@ -183,6 +190,52 @@ export default function Review() {
 
   const [step, setStep] = useState<ReviewStepKey>('invoice');
   const [acceptError, setAcceptError] = useState<string | null>(null);
+  // Offer-decision lifecycle (20260502123700): expiry + rejection.
+  const [offerExpiresAt, setOfferExpiresAt] = useState<string | null>(null);
+  const [offerStatus, setOfferStatus] = useState<string | null>(null);
+  const [rejectOpen, setRejectOpen] = useState(false);
+  const [rejecting, setRejecting] = useState(false);
+  const [rejectError, setRejectError] = useState<string | null>(null);
+  const [rejectedDone, setRejectedDone] = useState(false);
+  // Synchronous double-tap guard — React state lags a render.
+  const rejectingRef = useRef(false);
+  // A 15s clock tick so an offer expiring WHILE the page is open flips
+  // the wizard into the expired state without a reload; the server
+  // remains the authority either way.
+  const [nowTick, setNowTick] = useState(() => Date.now());
+  useEffect(() => {
+    const id = window.setInterval(() => setNowTick(Date.now()), 15_000);
+    return () => window.clearInterval(id);
+  }, []);
+  const offerExpired = Boolean(
+    configured && offerExpiresAt && new Date(offerExpiresAt).getTime() <= nowTick,
+  );
+  const offerRejected = rejectedDone || offerStatus === 'rejected';
+
+  const handleReject = async () => {
+    if (rejectingRef.current || !liveInvoiceId) return;
+    rejectingRef.current = true;
+    setRejecting(true);
+    setRejectError(null);
+    try {
+      await rejectRentalInvoice(liveInvoiceId);
+      // Same invalidations the accept path performs — pending lists and
+      // eligibility-consuming screens refetch fresh data.
+      if (supabaseUserId) {
+        cacheInvalidate(cacheKeys.customerInvoices(supabaseUserId));
+        cacheInvalidate(cacheKeys.customerInvoiceItems(supabaseUserId));
+      }
+      setRejectOpen(false);
+      setRejectedDone(true);
+    } catch (err) {
+      logEvent('rpc_failure', 'warn', { op: 'reject_rental_invoice' }, err);
+      setRejectError(translateError(err, t));
+      setRejectOpen(false);
+    } finally {
+      rejectingRef.current = false;
+      setRejecting(false);
+    }
+  };
   // Bugs 17/19 — receipt-photo step state. The contract id exists the
   // moment acceptance succeeds; photos are uploaded against it, and
   // activation only runs after confirm_contract_receipt_photos.
@@ -230,6 +283,38 @@ export default function Review() {
             action={
               <Button size="sm" onClick={() => navigate('/scan', { replace: true })}>
                 {t('qr.tryAgain')}
+              </Button>
+            }
+          />
+        </Screen>
+      </>
+    );
+  }
+
+  // Offer-decision lifecycle: rejected (now or previously) and expired
+  // offers are terminal — no wizard, no approve/reject actions. The
+  // server enforces the same rules (P0170/P0171/P0172); this is the
+  // matching non-actionable presentation.
+  if (offerRejected || (offerExpired && offerStatus !== 'accepted')) {
+    const expired = !offerRejected;
+    return (
+      <>
+        <Header title={t('review.title')} showBack />
+        <Screen>
+          <EmptyState
+            tone="warn"
+            icon={expired ? <ClockIcon size={22} /> : <XIcon size={22} />}
+            title={t(expired ? 'review.decision.expiredTitle' : 'review.decision.rejectedTitle')}
+            description={t(
+              expired
+                ? 'review.decision.expiredBody'
+                : rejectedDone
+                  ? 'review.decision.rejectedSuccessBody'
+                  : 'review.decision.rejectedBody',
+            )}
+            action={
+              <Button size="sm" onClick={() => navigate('/home', { replace: true })}>
+                {t('eligibility.backHome')}
               </Button>
             }
           />
@@ -396,7 +481,15 @@ export default function Review() {
               userName={lesseeName ?? undefined}
               onApproved={handleApproved}
               blocked={partyIncomplete}
+              onRejectRequest={
+                configured && liveInvoiceId ? () => setRejectOpen(true) : undefined
+              }
             />
+          )}
+          {step === 'confirm' && rejectError && (
+            <div className="rounded-xl2 bg-danger-50 ring-1 ring-danger-500/25 px-4 py-3 text-[12.5px] text-danger-700 leading-relaxed">
+              {rejectError}
+            </div>
           )}
           {step === 'photos' && (
             <ReceiptPhotosStep
@@ -475,6 +568,19 @@ export default function Review() {
           const nxt = next[step];
           if (nxt) setStep(nxt);
         }}
+      />
+
+      <ConfirmSheet
+        open={rejectOpen}
+        onClose={() => setRejectOpen(false)}
+        onConfirm={() => void handleReject()}
+        title={t('review.decision.confirmTitle')}
+        description={t('review.decision.confirmBody')}
+        confirmLabel={rejecting ? t('review.decision.rejecting') : t('review.decision.confirmCta')}
+        cancelLabel={t('review.decision.cancelCta')}
+        icon={<AlertIcon size={22} />}
+        tone="danger"
+        loading={rejecting}
       />
     </>
   );
@@ -986,6 +1092,7 @@ function ConfirmStep({
   userName,
   onApproved,
   blocked = false,
+  onRejectRequest,
 }: {
   pkg: ScannedPackage;
   userName: string | undefined;
@@ -996,6 +1103,8 @@ function ConfirmStep({
    *  the business message shows; the accept RPC would raise P0150 for
    *  the same condition anyway. */
   blocked?: boolean;
+  /** Opens the reject confirmation (live offers only). */
+  onRejectRequest?: () => void;
 }) {
   const t = useT();
   const { formatCurrency } = useI18n();
@@ -1136,6 +1245,15 @@ function ConfirmStep({
         >
           {processing ? t('review.confirm.processing') : t(ENABLE_PAYMENTS_AND_NOTES ? 'review.confirm.commitAction' : 'review.confirm.commitActionSimple')}
         </Button>
+        {onRejectRequest && !processing && (
+          <button
+            type="button"
+            onClick={onRejectRequest}
+            className="w-full h-11 rounded-xl2 bg-white text-danger-600 font-bold text-[13.5px] ring-[1.5px] ring-inset ring-danger-500/30 hover:bg-danger-50 transition-colors"
+          >
+            {t('review.decision.rejectCta')}
+          </button>
+        )}
         {processing ? (
           <p
             className="text-center text-[11px] font-semibold text-lavender-700 uppercase tracking-[0.14em] animate-reveal-up"

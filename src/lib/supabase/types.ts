@@ -555,6 +555,10 @@ export type Database = {
           tier: EligibilityTier;
         }>;
       };
+      reject_rental_invoice: {
+        Args: { p_invoice_id: string };
+        Returns: void;
+      };
       record_contract_handover: {
         Args: { p_contract_id: string; p_photo_path: string };
         Returns: void;

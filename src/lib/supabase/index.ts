@@ -131,6 +131,7 @@ export {
   listMerchantInvoices,
   recordNafathSigning,
   recordRentalPayment,
+  rejectRentalInvoice,
   verifyAndActivateRental,
 } from './queries/invoices';
 export type { CreateInvoiceInput, CreatedInvoice } from './queries/invoices';

@@ -224,6 +224,21 @@ export async function acceptRentalInvoice(invoiceId: string): Promise<string> {
 }
 
 /**
+ * Customer rejects an issued/viewed offer (20260502123700). Terminal,
+ * idempotent, row-locked server-side: P0171 when expired, P0172 for
+ * other non-actionable states — translated to business copy by
+ * translateError. Releases the eligibility reservation automatically
+ * (the reservation model is derived).
+ */
+export async function rejectRentalInvoice(invoiceId: string): Promise<void> {
+  const sb = requireSupabase();
+  const { error } = await sb.rpc('reject_rental_invoice', {
+    p_invoice_id: invoiceId,
+  });
+  if (error) throw error;
+}
+
+/**
  * T2 — record the customer's payment for an accepted invoice. Creates
  * the promissory note in 'pending' state (or returns the existing
  * note id if one was already created). Returns the note id.
