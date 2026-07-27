@@ -7,7 +7,6 @@ import {
   EyeIcon,
   EyeOffIcon,
   InfoIcon,
-  LockIcon,
 } from '@/components/icons';
 import { LendLogo } from '@/components/brand/Logo';
 import { translateAuthError } from '@/lib/errors';
@@ -317,11 +316,6 @@ export default function MerchantLogin() {
                 ? t('auth.login.submitting')
                 : t('merchant.login.submit')}
             </Button>
-
-            <p className="text-center text-[11px] text-ink-400 leading-relaxed inline-flex items-center gap-1 justify-center w-full">
-              <LockIcon size={11} />
-              {t('auth.entry.encrypted')}
-            </p>
 
             <div className="text-center text-[13px] text-ink-500">
               {t('merchant.login.noAccount')}{' '}
