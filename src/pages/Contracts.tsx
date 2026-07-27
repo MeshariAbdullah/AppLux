@@ -11,6 +11,7 @@ import {
 } from '@/components/icons';
 import { ENABLE_PAYMENTS_AND_NOTES } from '@/lib/featureFlags';
 import { useI18n, useT } from '@/lib/i18n';
+import { formatValidUntil } from '@/lib/offerExpiry';
 import { useStore } from '@/lib/store';
 import {
   buildMerchantNameMap,
@@ -213,9 +214,11 @@ export default function Contracts() {
 
 function PendingInvoiceRow({ invoice }: { invoice: Invoice }) {
   const t = useT();
-  const { dir, formatCurrency, formatDate } = useI18n();
-  const days = daysUntil(invoice.dueDate);
-  const expired = days < 0;
+  const { dir, locale, formatCurrency, formatDate } = useI18n();
+  // REAL persisted expiry only (20260502123800) — the old
+  // daysUntil(dueDate) fallback painted fake "انتهت" copy off the
+  // issuance date. Missing expiry → neutral (no hint, no fake state).
+  const validUntil = formatValidUntil(invoice.expiresAt, locale);
   return (
     <Link
       to={`/track/invoice/${invoice.id}`}
@@ -233,13 +236,11 @@ function PendingInvoiceRow({ invoice }: { invoice: Invoice }) {
         <div className="mt-0.5 text-[13.5px] font-semibold text-ink-900 truncate tracking-tight">
           {invoice.title}
         </div>
-        <div className="mt-0.5 text-[11.5px] text-ink-400 truncate num">
-          {expired
-            ? t('contracts.pending.expiredHint')
-            : t('contracts.pending.expiresIn', { days })}
-          {' · '}
-          {formatDate(invoice.dueDate)}
-        </div>
+        {validUntil && (
+          <div className="mt-0.5 text-[11.5px] text-ink-400 truncate num">
+            {t('offer.validUntil', { dateTime: validUntil })}
+          </div>
+        )}
       </div>
       <div className="flex flex-col items-end gap-1 shrink-0">
         <div className="text-[13.5px] font-semibold text-ink-900 num">

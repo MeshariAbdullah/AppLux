@@ -111,6 +111,9 @@ export function translateError(
     if (code === 'P0170') return t('errors.offerExpiredAccept');
     if (code === 'P0171') return t('errors.offerExpiredReject');
     if (code === 'P0172' || code === 'P0003') return t('errors.offerNotActionable');
+    // Offer expiry rule (20260502123800): rental start already passed
+    // at issuance — shown to the MERCHANT.
+    if (code === 'P0180') return t('errors.offerStartPassed');
     if (code === 'P0110') return t('errors.validation'); // empty path guard
     if (code === 'P0114') return t('errors.conflict'); // wrong contract state
     // P0001 = default RAISE — all current uses are state guards

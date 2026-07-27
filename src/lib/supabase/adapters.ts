@@ -179,7 +179,10 @@ export function adaptInvoice(
     title: headline,
     contractRef: row.invoice_number,
     issuedAt: row.issued_at ?? row.created_at,
-    dueDate: row.expires_at ?? row.issued_at ?? row.created_at,
+    // Document date for sorting/labels — NEVER an expiry (the old
+    // `expires_at ?? …` fallback painted fake expiry copy).
+    dueDate: row.issued_at ?? row.created_at,
+    expiresAt: row.expires_at,
     amount: Number(row.total_amount),
     // Offer-decision lifecycle: an EXPIRED issued/viewed offer is no
     // longer actionable — map it out of the 'due' bucket so home,

@@ -84,6 +84,7 @@
     "offerExpiredAccept": "This offer has expired and can no longer be accepted.",
     "offerExpiredReject": "This offer has expired and can no longer be rejected.",
     "offerNotActionable": "This offer is no longer available for action.",
+    "offerStartPassed": "The offer cannot be issued because the rental start time has arrived or passed.",
     "approvedButProvisioningFailed": "The application was approved, but merchant provisioning failed. Approve again to retry — provisioning is safe to re-run.",
     "boundary": {
       "title": "Something went wrong",
@@ -892,7 +893,7 @@
       "cancelCta": "Go back",
       "rejecting": "Rejecting the offer…",
       "expiredTitle": "Offer expired",
-      "expiredBody": "This offer has expired and can no longer be accepted or rejected.",
+      "expiredBody": "This offer has expired and is no longer available for acceptance or rejection. The merchant must issue a new offer.",
       "rejectedTitle": "Offer rejected",
       "rejectedBody": "This offer is no longer available for action.",
       "rejectedSuccessBody": "The offer was rejected and the reserved amount was released back to your rental balance."
@@ -1347,7 +1348,8 @@
         "bodyNamed": "We sent the offer to {name}. The rental starts once the contract is approved.",
         "statusChip": "Awaiting customer review",
         "stageLine": "Stage {current} of {total} · {stage}",
-        "viewRentals": "View rentals"
+        "viewRentals": "View rentals",
+        "validUntil": "Offer valid until {dateTime}"
       }
     },
     "login": {
@@ -2686,5 +2688,8 @@
         "hint": "Status changes and limit updates are logged with the operator and timestamp."
       }
     }
+  },
+  "offer": {
+    "validUntil": "Valid until {dateTime}"
   }
 }

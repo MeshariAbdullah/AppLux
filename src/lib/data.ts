@@ -18,6 +18,10 @@ export type Invoice = {
   dueDate: string;
   amount: number;
   status: InvoiceStatus;
+  /** REAL persisted offer expiry (rental_invoices.expires_at,
+   *  server-assigned since 20260502123800). Null/absent = no known
+   *  expiry — render a neutral state, never a fake fallback. */
+  expiresAt?: string | null;
   /** Merchant display name in the active locale. Populated by
    *  adapters when a merchant lookup is available; '' otherwise. */
   counterparty?: string;

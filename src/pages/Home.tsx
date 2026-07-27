@@ -17,6 +17,7 @@ import {
   WatchIcon,
 } from '@/components/icons';
 import { useI18n, useT } from '@/lib/i18n';
+import { formatValidUntil } from '@/lib/offerExpiry';
 import { useStore } from '@/lib/store';
 import {
   buildMerchantNameMap,
@@ -491,12 +492,15 @@ function AttentionStack({
   formatDate: (iso: string) => string;
   onReview: (invoice: AttentionInvoice) => void;
 }) {
+  // Hook first — unconditional (React rules).
+  const { locale } = useI18n();
   // Show only the most urgent pending invoice. The home page is an
   // action hub, not a feed — if there are more, link to the full list.
   const top = invoices[0];
   if (!top) return null;
   const extra = invoices.length - 1;
-  const daysLeft = daysUntil(top.dueDate);
+  // REAL persisted expiry only — no issued/created fallback.
+  const validUntil = formatValidUntil(top.expiresAt, locale);
   return (
     <div className="space-y-2">
       <div
@@ -519,12 +523,12 @@ function AttentionStack({
           {top.merchantName ? ` — ${top.merchantName}` : ''}
           {' · '}
           <span className="num">{formatCurrency(top.amount)}</span>
-          {' · '}
-          <span className="num">
-            {daysLeft > 0
-              ? t('home.attention.expiresIn', { days: daysLeft })
-              : formatDate(top.dueDate)}
-          </span>
+          {validUntil ? (
+            <>
+              {' · '}
+              <span className="num">{t('offer.validUntil', { dateTime: validUntil })}</span>
+            </>
+          ) : null}
         </div>
         <button
           type="button"

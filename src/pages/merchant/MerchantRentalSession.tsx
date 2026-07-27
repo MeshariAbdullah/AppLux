@@ -16,6 +16,7 @@ import {
 } from '@/components/icons';
 import { logEvent } from '@/lib/observability/log';
 import { useI18n, useT } from '@/lib/i18n';
+import { formatValidUntil } from '@/lib/offerExpiry';
 import {
   createInvoiceWithItems,
   fetchRenterEligibility,
@@ -2190,6 +2191,7 @@ function HandoffCard({
   // Design M11 — centered success layout. Real invoice reference only;
   // the approved four-stage journey with stage 2 (مراجعة العميل)
   // current. No payment / note / Nafath mentions.
+  const { locale } = useI18n();
   const STAGE_KEYS = [
     'journey.stages.request',
     'journey.stages.review',
@@ -2210,6 +2212,15 @@ function HandoffCard({
           ? t('merchant.session.handoff.bodyNamed', { name: renter.full_name })
           : t('merchant.session.handoff.body')}
       </p>
+      {/* System one-hour expiry (20260502123800) — the merchant sees
+          the same persisted deadline the customer sees. */}
+      {formatValidUntil(invoice.expires_at, locale) && (
+        <p className="mt-2 text-[12.5px] font-semibold text-warn-700 num text-center">
+          {t('merchant.session.handoff.validUntil', {
+            dateTime: formatValidUntil(invoice.expires_at, locale)!,
+          })}
+        </p>
+      )}
 
       {/* Reference card: request number + review chip + stage dots */}
       <div className="mt-5 w-full rounded-[14px] bg-white ring-1 ring-beige-200 p-[18px]">

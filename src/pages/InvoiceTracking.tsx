@@ -14,6 +14,7 @@ import {
 } from '@/components/icons';
 import { ENABLE_PAYMENTS_AND_NOTES } from '@/lib/featureFlags';
 import { useI18n, useT } from '@/lib/i18n';
+import { formatValidUntil } from '@/lib/offerExpiry';
 import { useStore } from '@/lib/store';
 import {
   adaptContract,
@@ -227,6 +228,18 @@ export default function InvoiceTracking() {
                 </div>
               </div>
             </div>
+            {/* Real offer expiry (20260502123800) — shown only while
+                the offer is still actionable and only from the
+                persisted expires_at (no fallback, no fake copy). */}
+            {invoice.status === 'due' &&
+              formatValidUntil(invoice.expiresAt, locale) && (
+                <div className="mt-3 flex items-center gap-1.5 text-[12px] text-warn-700 num">
+                  <ClockIcon size={13} className="shrink-0" />
+                  {t('offer.validUntil', {
+                    dateTime: formatValidUntil(invoice.expiresAt, locale)!,
+                  })}
+                </div>
+              )}
             {/* Pre-approval CTA — only when the invoice is still
                 'due' (i.e. the customer hasn't accepted yet) AND we
                 have a scan token to route into the review wizard.

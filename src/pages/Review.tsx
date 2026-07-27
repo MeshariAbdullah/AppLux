@@ -36,6 +36,7 @@ import { useSensitiveFlow } from '@/lib/session/flowGuard';
 import { useI18n, useT } from '@/lib/i18n';
 import { useStore } from '@/lib/store';
 import { resolveMerchantName } from '@/lib/merchantName';
+import { formatValidUntil, isOfferExpired } from '@/lib/offerExpiry';
 import {
   acceptRentalInvoice,
   activateRentalWithoutPaymentAndNote,
@@ -207,9 +208,7 @@ export default function Review() {
     const id = window.setInterval(() => setNowTick(Date.now()), 15_000);
     return () => window.clearInterval(id);
   }, []);
-  const offerExpired = Boolean(
-    configured && offerExpiresAt && new Date(offerExpiresAt).getTime() <= nowTick,
-  );
+  const offerExpired = configured && isOfferExpired(offerExpiresAt, nowTick);
   const offerRejected = rejectedDone || offerStatus === 'rejected';
 
   const handleReject = async () => {
@@ -454,6 +453,20 @@ export default function Review() {
       <ReviewStepper active={step} />
       <Screen padded={false} className="bg-canvas">
         <div className="px-4 pt-4 pb-28 space-y-4">
+          {/* Real offer expiry (20260502123800): the customer sees the
+              exact persisted deadline before deciding. Actionable
+              states only; no fallback when the value is missing. */}
+          {configured &&
+            step !== 'photos' &&
+            offerStatus !== 'accepted' &&
+            formatValidUntil(offerExpiresAt, locale) && (
+              <div className="flex items-center justify-center gap-1.5 text-[12px] font-semibold text-warn-700 num">
+                <ClockIcon size={13} className="shrink-0" />
+                {t('offer.validUntil', {
+                  dateTime: formatValidUntil(offerExpiresAt, locale)!,
+                })}
+              </div>
+            )}
           {/* The generic "بداية إيجار" framing band was removed from
               EVERY stage (approved review cleanup) — each step begins
               directly with its actual content. */}
