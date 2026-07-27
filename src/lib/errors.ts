@@ -101,6 +101,10 @@ export function translateError(
     // Contract party identity incomplete (accept_rental_invoice,
     // 20260502123500) — dedicated business copy.
     if (code === 'P0150') return t('errors.contractPartyIncomplete');
+    // Eligibility reservation (20260502123600): issuance guard shown
+    // to the MERCHANT, acceptance backstop shown to the CUSTOMER.
+    if (code === 'P0160') return t('errors.offerExceedsEligibility');
+    if (code === 'P0161') return t('errors.acceptExceedsEligibility');
     if (code === 'P0110') return t('errors.validation'); // empty path guard
     if (code === 'P0114') return t('errors.conflict'); // wrong contract state
     // P0001 = default RAISE — all current uses are state guards

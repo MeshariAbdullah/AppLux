@@ -88,6 +88,7 @@ export {
 export {
   fetchEligibility,
   fetchEligibilityByUserIds,
+  fetchMyEligibilityBreakdown,
   fetchRenterEligibility,
   upsertEligibility,
 } from './queries/eligibility';
@@ -150,7 +151,7 @@ export {
   listMyNotifications,
   markNotificationRead,
 } from './queries/notifications';
-export type { NotificationRow, NotificationType } from './types';
+export type { EligibilityBreakdown, NotificationRow, NotificationType } from './types';
 
 export {
   confirmContractReceiptPhotos,

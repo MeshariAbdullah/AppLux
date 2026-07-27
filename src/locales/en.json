@@ -79,6 +79,8 @@
     "deletionFinancialObligation": "Sorry, you cannot delete your account while you have an unsettled financial obligation.",
     "deletionUnavailable": "Your account could not be deleted right now. Please try again later.",
     "contractPartyIncomplete": "The contract cannot be completed because one party's information is incomplete. Please contact support.",
+    "offerExceedsEligibility": "The offer cannot be issued because the rental amount exceeds the customer's available balance.",
+    "acceptExceedsEligibility": "The offer cannot be accepted because its amount exceeds your available rental balance.",
     "approvedButProvisioningFailed": "The application was approved, but merchant provisioning failed. Approve again to retry — provisioning is safe to re-run.",
     "boundary": {
       "title": "Something went wrong",
@@ -589,12 +591,13 @@
   "eligibility": {
     "title": "Rental eligibility",
     "backHome": "Back to home",
-    "remainingTitle": "Current rental limit (remaining)",
-    "subtitle": "Current rental limit = total limit − used",
+    "remainingTitle": "Available balance",
+    "subtitle": "Available = total limit − used − reserved",
     "limit": "Total limit",
-    "used": "Used",
-    "remaining": "Remaining",
-    "usageOfLimit": "Used of total",
+    "used": "Used by rentals",
+    "reserved": "Reserved for offers under review",
+    "remaining": "Available balance",
+    "usageOfLimit": "Used + reserved of total",
     "inactiveTitle": "Eligibility is not active yet",
     "tiers": {
       "standard": "Active",

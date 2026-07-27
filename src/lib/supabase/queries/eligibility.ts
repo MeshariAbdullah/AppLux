@@ -1,5 +1,5 @@
 import { requireSupabase } from '../client';
-import type { RentalEligibilityRow } from '../types';
+import type { EligibilityBreakdown, RentalEligibilityRow } from '../types';
 
 export async function fetchEligibility(
   userId: string,
@@ -68,6 +68,12 @@ export async function fetchRenterEligibility(
     user_id: row.user_id,
     limit_amount: Number(row.limit_amount),
     used_amount: Number(row.used_amount),
+    // Present once 20260502123600 is applied; undefined before that
+    // (callers treat missing as 0 reserved).
+    reserved_amount:
+      row.reserved_amount === undefined ? undefined : Number(row.reserved_amount),
+    available_amount:
+      row.available_amount === undefined ? undefined : Number(row.available_amount),
     tier: row.tier,
     assigned_by: null,
     assigned_at: new Date(0).toISOString(),
@@ -111,4 +117,26 @@ export async function upsertEligibility(
     .single();
   if (error) throw error;
   return data;
+}
+
+/**
+ * Customer self-service eligibility breakdown (20260502123600):
+ * limit / committed / reserved-for-pending-offers / available, all
+ * computed server-side from authoritative data. Returns null when the
+ * RPC is not available yet (migration unapplied) or no row exists —
+ * callers fall back to the plain eligibility row with reserved = 0.
+ */
+export async function fetchMyEligibilityBreakdown(): Promise<EligibilityBreakdown | null> {
+  const sb = requireSupabase();
+  const { data, error } = await sb.rpc('get_my_eligibility_breakdown');
+  if (error) return null;
+  const row = Array.isArray(data) ? data[0] : null;
+  if (!row) return null;
+  return {
+    limit: Number(row.limit_amount),
+    used: Number(row.used_amount),
+    reserved: Number(row.reserved_amount),
+    available: Number(row.available_amount),
+    tier: row.tier,
+  };
 }

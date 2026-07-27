@@ -50,6 +50,21 @@ export type RentalEligibilityRow = {
   assigned_at: string;
   notes: string | null;
   updated_at: string;
+  /** DERIVED, RPC-only (20260502123600 get_renter_eligibility):
+   *  exposure reserved by offers awaiting the customer's decision.
+   *  Absent when the reservation migration isn't applied yet. */
+  reserved_amount?: number | null;
+  /** DERIVED, RPC-only: greatest(0, limit − used − reserved). */
+  available_amount?: number | null;
+};
+
+/** Customer self-service breakdown (get_my_eligibility_breakdown). */
+export type EligibilityBreakdown = {
+  limit: number;
+  used: number;
+  reserved: number;
+  available: number;
+  tier: EligibilityTier;
 };
 export type RentalEligibilityInsert = Partial<RentalEligibilityRow> & {
   user_id: string;
@@ -524,6 +539,19 @@ export type Database = {
           user_id: string;
           limit_amount: number;
           used_amount: number;
+          /** Added by 20260502123600 — absent before it is applied. */
+          reserved_amount?: number;
+          available_amount?: number;
+          tier: EligibilityTier;
+        }>;
+      };
+      get_my_eligibility_breakdown: {
+        Args: Record<string, never>;
+        Returns: Array<{
+          limit_amount: number;
+          used_amount: number;
+          reserved_amount: number;
+          available_amount: number;
           tier: EligibilityTier;
         }>;
       };

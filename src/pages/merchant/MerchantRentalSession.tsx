@@ -292,7 +292,13 @@ function deriveVerdict(
   if (!renterEligibility) return { status: 'missing' };
   const limit = Number(renterEligibility.limit_amount);
   const used = Number(renterEligibility.used_amount);
-  const remaining = Math.max(limit - used, 0);
+  // Offer reservations (20260502123600): amounts held by offers still
+  // awaiting the customer's decision reduce what THIS offer may use.
+  // The RPC returns the derived figure; before the migration is
+  // applied the field is absent and reserved counts as 0. The server
+  // trigger (P0160) stays authoritative either way.
+  const reserved = Math.max(Number(renterEligibility.reserved_amount ?? 0), 0);
+  const remaining = Math.max(limit - used - reserved, 0);
   const required = Math.max(originalItemValue, 0);
   if (remaining >= required) return { status: 'approved', limit, used, remaining, required };
   return {

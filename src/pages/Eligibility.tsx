@@ -1,10 +1,16 @@
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Header, Screen } from '@/components/layout';
 import { Button, CardSkeleton, EmptyState } from '@/components/ui';
 import { ShieldIcon } from '@/components/icons';
 import { useI18n, useT } from '@/lib/i18n';
 import { useStore } from '@/lib/store';
-import { adaptEligibility, useSupabaseAuth } from '@/lib/supabase';
+import {
+  adaptEligibility,
+  fetchMyEligibilityBreakdown,
+  useSupabaseAuth,
+  type EligibilityBreakdown,
+} from '@/lib/supabase';
 
 // =====================================================================
 // Eligibility — LIGHTWEIGHT summary page (replaces the "coming soon"
@@ -46,6 +52,23 @@ export default function Eligibility() {
     eligibilityLoading,
   } = useSupabaseAuth();
 
+  // Reservation breakdown (20260502123600): authoritative server-side
+  // limit/used/reserved/available. Falls back to the plain eligibility
+  // row (reserved = 0) while the migration/RPC is not available.
+  const [breakdown, setBreakdown] = useState<EligibilityBreakdown | null>(null);
+  useEffect(() => {
+    if (!configured) return;
+    let cancelled = false;
+    fetchMyEligibilityBreakdown()
+      .then((b) => {
+        if (!cancelled) setBreakdown(b);
+      })
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, [configured]);
+
   // Same source rules as Home: live row when configured, demo store
   // otherwise. `null` (no row) or a zero limit both mean "not active".
   const eligibility = configured
@@ -53,11 +76,19 @@ export default function Eligibility() {
       ? adaptEligibility(dbEligibility)
       : null
     : demoEligibility;
-  const active = Boolean(eligibility && eligibility.limit > 0);
+  const active = Boolean(
+    (breakdown && breakdown.limit > 0) || (eligibility && eligibility.limit > 0),
+  );
+
+  const limit = breakdown?.limit ?? eligibility?.limit ?? 0;
+  const used = breakdown?.used ?? eligibility?.used ?? 0;
+  const reserved = breakdown?.reserved ?? 0;
+  // Never display a negative available balance.
+  const available = Math.max(0, breakdown?.available ?? limit - used - reserved);
 
   const usagePct =
-    active && eligibility
-      ? Math.min(100, Math.round((eligibility.used / eligibility.limit) * 100))
+    active && limit > 0
+      ? Math.min(100, Math.round(((used + reserved) / limit) * 100))
       : 0;
 
   return (
@@ -82,7 +113,7 @@ export default function Eligibility() {
           />
         ) : (
           <>
-            {/* Remaining — the number the customer actually acts on. */}
+            {/* Available — the number the customer actually acts on. */}
             <section className="rounded-xl3 bg-white hairline shadow-soft p-5">
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
@@ -90,7 +121,7 @@ export default function Eligibility() {
                     {t('eligibility.remainingTitle')}
                   </div>
                   <div className="mt-1 editorial-title text-[26px] leading-none text-ink-900 num">
-                    {fmtCurrency(eligibility.remaining)}
+                    {fmtCurrency(available)}
                   </div>
                   {/* The calculation rule, spelled out in words. */}
                   <p className="mt-2 text-[11.5px] text-ink-500 leading-relaxed">
@@ -98,11 +129,11 @@ export default function Eligibility() {
                   </p>
                 </div>
                 <span className="shrink-0 inline-flex items-center text-[10.5px] font-semibold text-lavender-700 bg-lavender-50 ring-1 ring-lavender-200 rounded-full px-2.5 py-1">
-                  {t(`eligibility.tiers.${eligibility.tier}`)}
+                  {t(`eligibility.tiers.${breakdown?.tier ?? eligibility?.tier ?? 'standard'}`)}
                 </span>
               </div>
 
-              {/* Slim usage bar — a hairline, not a chart. */}
+              {/* Slim usage bar — committed + reserved consumption. */}
               <div className="mt-4">
                 <div className="h-1.5 rounded-full bg-canvas-200 overflow-hidden">
                   <span
@@ -117,28 +148,24 @@ export default function Eligibility() {
               </div>
             </section>
 
-            {/* The same rule as a VISUAL equation — the flex row lays
-                out with the page direction, so it reads الحد الكلي −
-                المستهلك = المتبقي in RTL and total − used = remaining
-                in LTR. Same tile chrome as before. */}
-            <div className="flex items-stretch gap-1.5" dir={dir}>
+            {/* The four figures of the rule, each clearly labeled —
+                المتبقي المتاح = الحد الكلي − المستخدم − المحجوز. */}
+            <div className="grid grid-cols-2 gap-1.5" dir={dir}>
               <EquationTile
                 label={t('eligibility.limit')}
-                value={fmtCurrency(eligibility.limit)}
+                value={fmtCurrency(limit)}
               />
-              <span className="self-center text-[15px] font-bold text-ink-400 shrink-0" aria-hidden>
-                −
-              </span>
               <EquationTile
                 label={t('eligibility.used')}
-                value={fmtCurrency(eligibility.used)}
+                value={fmtCurrency(used)}
               />
-              <span className="self-center text-[15px] font-bold text-ink-400 shrink-0" aria-hidden>
-                =
-              </span>
+              <EquationTile
+                label={t('eligibility.reserved')}
+                value={fmtCurrency(reserved)}
+              />
               <EquationTile
                 label={t('eligibility.remaining')}
-                value={fmtCurrency(eligibility.remaining)}
+                value={fmtCurrency(available)}
                 highlight
               />
             </div>
