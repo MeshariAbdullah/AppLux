@@ -7,7 +7,6 @@ import {
   EyeIcon,
   EyeOffIcon,
   InfoIcon,
-  LockIcon,
   ShieldIcon,
 } from '@/components/icons';
 import { translateAuthError } from '@/lib/errors';
@@ -386,11 +385,6 @@ export default function Login() {
                 </Link>
               </>
             )}
-
-            <p className="text-center text-[11px] text-ink-400 leading-relaxed inline-flex items-center gap-1 justify-center w-full">
-              <LockIcon size={11} />
-              {t('auth.login.security.hint')}
-            </p>
 
             <div className="text-center text-[13px] text-ink-500 pt-1">
               {t('auth.noAccount')}{' '}

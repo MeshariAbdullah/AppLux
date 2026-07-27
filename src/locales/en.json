@@ -289,11 +289,7 @@
       "showPassword": "Show password",
       "hidePassword": "Hide password",
       "or": "OR",
-      "continueNafath": "Continue with Nafath",
-      "security": {
-        "title": "Your sign-in is protected",
-        "hint": "Your password is encrypted end-to-end. Lend never sees it in plain text."
-      }
+      "continueNafath": "Continue with Nafath"
     },
     "errors": {
       "mobileRequired": "Enter your mobile number to continue.",
