@@ -830,7 +830,7 @@
     "contract": {
       "title": "Rental contract",
       "subtitle": "Read the key terms carefully before continuing.",
-      "reference": "Contract ref",
+      "reference": "Contract number",
       "parties": "Parties",
       "lessor": "Lessor",
       "lessee": "Lessee",
@@ -1118,6 +1118,7 @@
       "parties": "Contract parties",
       "keyTerms": "Key terms",
       "recordTitle": "Documented contract record",
+      "statusLabel": "Contract status",
       "linkedDocs": "Linked documents",
       "openContract": "Open full contract",
       "hideFullContract": "Hide full contract",

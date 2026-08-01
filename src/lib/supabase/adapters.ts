@@ -209,6 +209,10 @@ export function adaptContract(
   return {
     id: row.id,
     title: itemTitle?.trim() || row.contract_number,
+    // Canonical reference — its own field, so the item-name re-adapt
+    // can never erase it from the UI (the old regression: the number
+    // only lived in `title`'s fallback and vanished once items loaded).
+    contractNumber: row.contract_number,
     counterparty: merchantName ?? '—',
     startDate: row.start_date,
     endDate: row.end_date,

@@ -119,6 +119,8 @@ export default function ContractTracking() {
   // Synchronous double-tap guard — state updates lag a render, so two
   // rapid taps could both pass an `exporting` check.
   const exportingRef = useRef(false);
+  // Which contract id already produced a missing-reference diagnostic.
+  const missingRefLoggedFor = useRef<string | null>(null);
 
   useEffect(() => {
     if (!configured || !id) {
@@ -243,6 +245,23 @@ export default function ContractTracking() {
   }, [configured, id, locale]);
 
   const contract = liveContract ?? demoContract;
+
+  // Diagnostic for a genuinely missing contract reference (rendered as
+  // '—'): every persisted contract should carry contract_number, so its
+  // absence is a data problem worth flagging. Sanitized — no ids. The
+  // ref guard keeps it to ONE event per contract even though the fetch
+  // effect sets liveContract twice (pre- and post-items adapt).
+  useEffect(() => {
+    if (
+      configured &&
+      liveContract &&
+      !liveContract.contractNumber &&
+      missingRefLoggedFor.current !== liveContract.id
+    ) {
+      missingRefLoggedFor.current = liveContract.id;
+      logEvent('rpc_failure', 'warn', { op: 'contract_reference_missing' });
+    }
+  }, [configured, liveContract]);
 
   // ------- PDF export (approved contracts only) -------
   // Approved = the contract exists and was accepted into an active (or
@@ -525,6 +544,21 @@ export default function ContractTracking() {
               {t('track.contract.recordTitle')}
             </div>
             <div className="mt-4 grid grid-cols-2 gap-x-4 gap-y-3.5">
+              {/* Canonical public reference — its own persisted field
+                  (rental_contracts.contract_number), stable across the
+                  item-name re-adapt that used to erase it from the
+                  title. '—' only when the DB value is truly absent. */}
+              <Field
+                label={t('review.contract.reference')}
+                value={
+                  contract.contractNumber ? (
+                    <span className="num" dir="ltr">{contract.contractNumber}</span>
+                  ) : (
+                    '—'
+                  )
+                }
+              />
+              <Field label={t('track.contract.statusLabel')} value={<ContractStatusChip status={contract.status} />} />
               {/* Party identity — SNAPSHOT-first (frozen at acceptance,
                   20260502123500); live fallbacks cover legacy rows. */}
               <Field

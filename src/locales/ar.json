@@ -1118,6 +1118,7 @@
       "parties": "أطراف العقد",
       "keyTerms": "الشروط الأساسية",
       "recordTitle": "السجل الموثَّق للعقد",
+      "statusLabel": "حالة العقد",
       "linkedDocs": "المستندات المرتبطة",
       "openContract": "عرض العقد الكامل",
       "hideFullContract": "إخفاء العقد الكامل",

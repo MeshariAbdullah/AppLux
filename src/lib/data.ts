@@ -35,6 +35,11 @@ export type ContractStatus = 'active' | 'pending' | 'ended';
 export type Contract = {
   id: string;
   title: string;
+  /** Canonical PUBLIC contract reference (rental_contracts
+   *  .contract_number — LND-XXXXXX or legacy CN-…). Displayed under
+   *  رقم العقد; never reconstructed client-side. Optional only for
+   *  legacy demo seeds. */
+  contractNumber?: string;
   counterparty: string;
   startDate: string;
   endDate: string;
@@ -113,6 +118,7 @@ export const SEED_INVOICES: Invoice[] = [
 export const SEED_CONTRACTS: Contract[] = [
   {
     id: 'LND-Q7F3KD',
+    contractNumber: 'LND-Q7F3KD',
     title: 'فستان سهرة لافاندير — مقاس 40',
     counterparty: 'دار ميزون دو سواريه',
     startDate: '2026-04-18',
@@ -122,6 +128,7 @@ export const SEED_CONTRACTS: Contract[] = [
   },
   {
     id: 'LND-M4XT8B',
+    contractNumber: 'LND-M4XT8B',
     title: 'بشت الأمراء — صوف إيطالي مطرّز',
     counterparty: 'دار الأناقة للبشوت',
     startDate: '2026-04-10',
@@ -131,6 +138,7 @@ export const SEED_CONTRACTS: Contract[] = [
   },
   {
     id: 'LND-W9RJ6P',
+    contractNumber: 'LND-W9RJ6P',
     title: 'ساعة أوريون السويسرية — كرونوغراف',
     counterparty: 'تيمبو لتأجير الساعات',
     startDate: '2026-04-22',
