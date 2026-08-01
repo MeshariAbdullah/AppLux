@@ -6,13 +6,18 @@ import {
   Card,
   FormField,
   Input,
+  NumericField,
+  SaudiMobileField,
   Select,
   Textarea,
 } from '@/components/ui';
+import { ActivityPicker, type ActivityKey } from '@/components/merchant/ActivityPicker';
+import { DocumentUploadField } from '@/components/merchant/DocumentUploadField';
 import { translateAuthError } from '@/lib/errors';
 import { logEvent } from '@/lib/observability/log';
 import { useI18n, useT } from '@/lib/i18n';
 import { useStore } from '@/lib/store';
+import { normalizeDigits } from '@/lib/validation/customer';
 import {
   resendSignupConfirmation,
   signUpMerchant,
@@ -23,9 +28,15 @@ import {
   ArrowIcon,
   BuildingIcon,
   CheckIcon,
+  DocIcon,
   MapPinIcon,
   PlusIcon,
 } from '@/components/icons';
+
+/** HTTPS Google-Maps hosts — mirrors the server CHECK + trigger regex. */
+const MAP_URL_RE =
+  /^https:\/\/([a-z0-9-]+\.)*(google\.[a-z.]+\/maps|maps\.google\.[a-z.]+|maps\.app\.goo\.gl|goo\.gl\/maps)/i;
+const UNIFIED_RE = /^700\d{7}$/;
 
 // =====================================================================
 // Merchant registration — SEPARATE ACCOUNT from the start (merchant
@@ -47,8 +58,6 @@ const CITY_KEYS = [
   'abha', 'taif', 'qassim', 'hail', 'najran', 'jazan', 'baha', 'yanbu',
 ] as const;
 
-const CATEGORY_KEYS = ['dress', 'bag', 'watch', 'bisht'] as const;
-
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 // Consent is MANDATORY when (and only when) both production URLs are
@@ -65,6 +74,7 @@ type BranchDraft = {
   city: string;
   address: string;
   phone: string;
+  mapUrl: string;
 };
 
 type Wizard = {
@@ -72,20 +82,27 @@ type Wizard = {
   password: string;
   confirmPassword: string;
   companyName: string;
-  commercialReg: string;
-  category: string;
+  unifiedNumber: string;
+  categories: string[];
   authorizedName: string;
   authorizedId: string;
   contactMobile: string;
   contactEmail: string;
   branches: BranchDraft[];
+  docReceipt: string | null;
+  docFileName: string;
   consent: boolean;
 };
 
-type FieldKey = keyof Omit<Wizard, 'branches' | 'consent'>;
-type BranchErrors = Partial<Record<'name' | 'city' | 'address' | 'phone', string>>;
+type FieldKey = keyof Omit<
+  Wizard,
+  'branches' | 'consent' | 'categories' | 'docReceipt' | 'docFileName'
+>;
+type BranchErrors = Partial<Record<'name' | 'city' | 'address' | 'phone' | 'mapUrl', string>>;
 type Errors = Partial<Record<FieldKey, string>> & {
   branches?: Record<string, BranchErrors>;
+  categories?: string;
+  document?: string;
   consent?: string;
   form?: string;
 };
@@ -93,16 +110,22 @@ type Errors = Partial<Record<FieldKey, string>> & {
 let branchSeq = 0;
 function newBranch(): BranchDraft {
   branchSeq += 1;
-  return { key: `b${branchSeq}`, name: '', city: '', address: '', phone: '' };
+  return { key: `b${branchSeq}`, name: '', city: '', address: '', phone: '', mapUrl: '' };
 }
 
+// 6 steps: credentials → establishment → representative → branches →
+// documents → review. Documents (Step 5) uploads the CR copy before the
+// merchant can reach Review (Step 6).
 const STEPS = [
   { titleKey: 'merchant.register.steps.credentials', subKey: 'merchant.register.steps.credentialsSub' },
   { titleKey: 'merchant.register.steps.company', subKey: 'merchant.register.steps.companySub' },
   { titleKey: 'merchant.register.steps.authorized', subKey: 'merchant.register.steps.authorizedSub' },
   { titleKey: 'merchant.register.steps.branches', subKey: 'merchant.register.steps.branchesSub' },
+  { titleKey: 'merchant.register.steps.documents', subKey: 'merchant.register.steps.documentsSub' },
   { titleKey: 'merchant.register.steps.review', subKey: 'merchant.register.steps.reviewSub' },
 ] as const;
+const DOCUMENTS_STEP = 4;
+const REVIEW_STEP = 5;
 
 /** Review-screen mask: first 2 + last 2 digits visible only. */
 function maskNationalId(id: string): string {
@@ -120,9 +143,10 @@ export default function MerchantRegister() {
 
   const [values, setValues] = useState<Wizard>(() => ({
     email: '', password: '', confirmPassword: '',
-    companyName: '', commercialReg: '', category: '',
+    companyName: '', unifiedNumber: '', categories: [],
     authorizedName: '', authorizedId: '', contactMobile: '', contactEmail: '',
     branches: [newBranch()],
+    docReceipt: null, docFileName: '',
     consent: false,
   }));
   const [step, setStep] = useState(0);
@@ -174,14 +198,14 @@ export default function MerchantRegister() {
     }
     if (s === 1) {
       if (!v.companyName.trim()) next.companyName = req;
-      if (!/^\d{10}$/.test(v.commercialReg.trim()))
-        next.commercialReg = t('merchant.register.errors.commercialReg');
-      if (!CATEGORY_KEYS.includes(v.category as (typeof CATEGORY_KEYS)[number]))
-        next.category = t('merchant.register.errors.categoryRequired');
+      if (!UNIFIED_RE.test(normalizeDigits(v.unifiedNumber).trim()))
+        next.unifiedNumber = t('merchant.register.errors.unifiedNumber');
+      if (v.categories.length < 1)
+        next.categories = t('merchant.register.errors.categoryRequired');
     }
     if (s === 2) {
       if (!v.authorizedName.trim()) next.authorizedName = req;
-      if (!/^[12]\d{9}$/.test(v.authorizedId.trim()))
+      if (!/^[12]\d{9}$/.test(normalizeDigits(v.authorizedId).trim()))
         next.authorizedId = t('merchant.register.errors.authorizedId');
       if (!/^5\d{8}$/.test(v.contactMobile.trim()))
         next.contactMobile = t('merchant.register.errors.mobile');
@@ -197,11 +221,19 @@ export default function MerchantRegister() {
         if (!b.address.trim()) be.address = req;
         if (b.phone.trim() && !/^5\d{8}$/.test(b.phone.trim()))
           be.phone = t('merchant.register.errors.mobile');
+        if (!MAP_URL_RE.test(b.mapUrl.trim()))
+          be.mapUrl = t('merchant.register.errors.mapUrl');
         if (Object.keys(be).length) branchErrs[b.key] = be;
       }
       if (Object.keys(branchErrs).length) next.branches = branchErrs;
     }
-    if (s === 4 && CONSENT_ENABLED && !v.consent) {
+    // Live mode requires the CR copy to be uploaded (server-confirmed)
+    // before Review. Demo mode has no backend to upload to, so it is not
+    // gated here.
+    if (s === DOCUMENTS_STEP && configured && !v.docReceipt) {
+      next.document = t('merchant.register.documents.required');
+    }
+    if (s === REVIEW_STEP && CONSENT_ENABLED && !v.consent) {
       next.consent = t('merchant.register.consent.required');
     }
     return next;
@@ -221,10 +253,10 @@ export default function MerchantRegister() {
         password: values.password,
         application: {
           companyName: values.companyName.trim(),
-          commercialReg: values.commercialReg.trim(),
+          unifiedNumber: normalizeDigits(values.unifiedNumber).trim(),
           authorizedName: values.authorizedName.trim(),
-          authorizedNationalId: values.authorizedId.trim(),
-          category: values.category,
+          authorizedNationalId: normalizeDigits(values.authorizedId).trim(),
+          categories: values.categories,
           contactMobile: values.contactMobile.trim(),
           contactEmail: values.contactEmail.trim() || undefined,
           branches: values.branches.map((b) => ({
@@ -232,7 +264,9 @@ export default function MerchantRegister() {
             city: b.city.trim(),
             address: b.address.trim(),
             phone: b.phone.trim() || null,
+            mapUrl: b.mapUrl.trim(),
           })),
+          docReceipt: values.docReceipt ?? '',
         },
       });
       setSubmitted(true);
@@ -271,7 +305,7 @@ export default function MerchantRegister() {
     // demo view renders; no auth involved.
     updateMerchantDraft({
       companyName: values.companyName,
-      commercialReg: values.commercialReg,
+      commercialReg: normalizeDigits(values.unifiedNumber),
       authorizedName: values.authorizedName,
       authorizedId: values.authorizedId,
       iban: '',
@@ -427,7 +461,14 @@ export default function MerchantRegister() {
             {step + 1} / {STEPS.length}
           </span>
         </div>
-        <div className="mt-3.5 flex gap-1.5" aria-hidden>
+        <div
+          className="mt-3.5 flex gap-1.5"
+          role="progressbar"
+          aria-valuemin={1}
+          aria-valuemax={STEPS.length}
+          aria-valuenow={step + 1}
+          aria-valuetext={t('merchant.register.progress', { current: step + 1, total: STEPS.length })}
+        >
           {STEPS.map((_, i) => (
             <span
               key={i}
@@ -504,72 +545,47 @@ export default function MerchantRegister() {
                   leading={<BuildingIcon size={16} />}
                 />
               </FormField>
-              <FormField label={t('merchant.register.commercialReg')} required error={errors.commercialReg}>
-                <Input
-                  inputMode="numeric"
-                  maxLength={10}
-                  placeholder={t('merchant.register.commercialRegPh')}
-                  value={values.commercialReg}
-                  onChange={onField('commercialReg')}
-                  invalid={Boolean(errors.commercialReg)}
-                  className="num"
+              <FormField
+                label={t('merchant.register.unifiedNumber')}
+                required
+                error={errors.unifiedNumber}
+                hint={!errors.unifiedNumber ? t('merchant.register.unifiedNumberHint') : undefined}
+              >
+                <NumericField
+                  maxDigits={10}
+                  placeholder="700XXXXXXX"
+                  value={values.unifiedNumber}
+                  onValueChange={(next) => {
+                    setValues((v) => ({ ...v, unifiedNumber: next }));
+                    if (errors.unifiedNumber) setErrors((p) => ({ ...p, unifiedNumber: undefined }));
+                  }}
+                  invalid={Boolean(errors.unifiedNumber)}
                 />
               </FormField>
-              {/* M03 category chips — 2-column grid with letter avatars.
-                  Same required validation; the selection is an active
-                  choice, never a default. */}
+              {/* Multi-select store activities (≥1). */}
               <div className="space-y-2">
                 <div className="text-[13px] font-semibold text-ink-800">
-                  {t('merchant.register.category')}
+                  {t('merchant.register.activities.title')}
+                  <span className="ms-1 text-danger-500">*</span>
                 </div>
-                <div
-                  className="grid grid-cols-2 gap-2.5"
-                  role="radiogroup"
-                  aria-label={t('merchant.register.category')}
-                >
-                  {CATEGORY_KEYS.map((c) => {
-                    const label = t(`merchant.register.categories.${c}`);
-                    const selected = values.category === c;
-                    return (
-                      <button
-                        key={c}
-                        type="button"
-                        role="radio"
-                        aria-checked={selected}
-                        onClick={() => {
-                          setValues((v) => ({ ...v, category: c }));
-                          if (errors.category)
-                            setErrors((p) => ({ ...p, category: undefined }));
-                        }}
-                        className={cn(
-                          'flex flex-col items-center gap-2 rounded-[14px] px-3.5 py-4 transition-colors',
-                          selected
-                            ? 'bg-green-50 ring-[1.5px] ring-green-500'
-                            : 'bg-white ring-1 ring-beige-300 hover:ring-navy-200',
-                        )}
-                      >
-                        <span
-                          className={cn(
-                            'h-10 w-10 rounded-full grid place-items-center text-[15px] font-bold',
-                            selected ? 'bg-white text-green-700' : 'bg-beige-100 text-navy-700',
-                          )}
-                        >
-                          {label.charAt(0)}
-                        </span>
-                        <span
-                          className={cn(
-                            'text-[13px]',
-                            selected ? 'font-bold text-green-700' : 'font-semibold text-ink-800',
-                          )}
-                        >
-                          {label}
-                        </span>
-                      </button>
-                    );
-                  })}
-                </div>
-                {errors.category && (
-                  <div className="text-[12px] text-danger-600">{errors.category}</div>
+                <p className="text-[12px] text-ink-400 leading-snug">
+                  {t('merchant.register.activities.helper')}
+                </p>
+                <ActivityPicker
+                  selected={values.categories}
+                  invalid={Boolean(errors.categories)}
+                  onToggle={(key: ActivityKey) => {
+                    setValues((v) => ({
+                      ...v,
+                      categories: v.categories.includes(key)
+                        ? v.categories.filter((c) => c !== key)
+                        : [...v.categories, key],
+                    }));
+                    if (errors.categories) setErrors((p) => ({ ...p, categories: undefined }));
+                  }}
+                />
+                {errors.categories && (
+                  <div className="text-[12px] text-danger-600">{errors.categories}</div>
                 )}
               </div>
             </>
@@ -587,25 +603,25 @@ export default function MerchantRegister() {
                 />
               </FormField>
               <FormField label={t('merchant.register.authorizedId')} required error={errors.authorizedId}>
-                <Input
-                  inputMode="numeric"
-                  maxLength={10}
+                <NumericField
+                  maxDigits={10}
                   placeholder={t('merchant.register.authorizedIdPh')}
                   value={values.authorizedId}
-                  onChange={onField('authorizedId')}
+                  onValueChange={(next) => {
+                    setValues((v) => ({ ...v, authorizedId: next }));
+                    if (errors.authorizedId) setErrors((p) => ({ ...p, authorizedId: undefined }));
+                  }}
                   invalid={Boolean(errors.authorizedId)}
-                  className="num"
                 />
               </FormField>
               <FormField label={t('merchant.register.contactPhone')} required error={errors.contactMobile}>
-                <Input
-                  inputMode="tel"
-                  maxLength={9}
-                  placeholder={t('merchant.register.contactPhonePh')}
+                <SaudiMobileField
                   value={values.contactMobile}
-                  onChange={onField('contactMobile')}
+                  onValueChange={(next) => {
+                    setValues((v) => ({ ...v, contactMobile: next }));
+                    if (errors.contactMobile) setErrors((p) => ({ ...p, contactMobile: undefined }));
+                  }}
                   invalid={Boolean(errors.contactMobile)}
-                  leading={<span className="text-ink-500 text-[13px] font-medium num">+966</span>}
                 />
               </FormField>
               <FormField
@@ -691,16 +707,28 @@ export default function MerchantRegister() {
                         />
                       </FormField>
                       <FormField label={t('merchant.register.branchPhone')} error={be.phone}>
-                        <Input
-                          inputMode="tel"
-                          maxLength={9}
-                          placeholder={t('merchant.register.contactPhonePh')}
+                        <SaudiMobileField
                           value={b.phone}
-                          onChange={(e) => patchBranch(b.key, { phone: e.target.value })}
+                          onValueChange={(next) => patchBranch(b.key, { phone: next })}
                           invalid={Boolean(be.phone)}
-                          leading={
-                            <span className="text-ink-500 text-[13px] font-medium num">+966</span>
-                          }
+                        />
+                      </FormField>
+                      <FormField
+                        label={t('merchant.register.branchMapUrl')}
+                        required
+                        error={be.mapUrl}
+                        hint={!be.mapUrl ? t('merchant.register.branchMapUrlHint') : undefined}
+                      >
+                        <Input
+                          type="url"
+                          dir="ltr"
+                          inputMode="url"
+                          placeholder={t('merchant.register.branchMapUrlPh')}
+                          value={b.mapUrl}
+                          onChange={(e) => patchBranch(b.key, { mapUrl: e.target.value })}
+                          invalid={Boolean(be.mapUrl)}
+                          leading={<MapPinIcon size={15} />}
+                          className="text-left"
                         />
                       </FormField>
                     </Card>
@@ -723,24 +751,56 @@ export default function MerchantRegister() {
             </>
           )}
 
-          {step === 4 && (
+          {step === DOCUMENTS_STEP && (
+            <div className="space-y-3">
+              <div className="flex items-center gap-2.5">
+                <span className="grid h-8 w-8 place-items-center rounded-lg bg-lavender-50 text-lavender-700">
+                  <DocIcon size={16} />
+                </span>
+                <div className="text-[13.5px] font-semibold text-ink-800">
+                  {t('merchant.register.documents.crTitle')}
+                </div>
+              </div>
+              <DocumentUploadField
+                receipt={values.docReceipt}
+                invalid={Boolean(errors.document)}
+                onReceiptChange={(next) => {
+                  setValues((v) => ({
+                    ...v,
+                    docReceipt: next?.receipt ?? null,
+                    docFileName: next?.fileName ?? '',
+                  }));
+                  if (errors.document) setErrors((p) => ({ ...p, document: undefined }));
+                }}
+              />
+              {errors.document && (
+                <div className="text-[12px] text-danger-600">{errors.document}</div>
+              )}
+            </div>
+          )}
+
+          {step === REVIEW_STEP && (
             <div className="space-y-3">
               {/* M06 — ONE compact card of label/value rows so the whole
                   review + consent + footer fit a phone screen. */}
               <div className="rounded-[14px] bg-white ring-1 ring-beige-200 px-[18px] py-1.5">
                 <ReviewRow label={t('merchant.register.email')} value={values.email} ltr />
                 <ReviewRow label={t('merchant.register.companyName')} value={values.companyName} />
-                <ReviewRow label={t('merchant.register.commercialReg')} value={values.commercialReg} ltr />
+                <ReviewRow label={t('merchant.register.unifiedNumber')} value={normalizeDigits(values.unifiedNumber)} ltr />
                 <ReviewRow
-                  label={t('merchant.register.review.categoryLabel')}
-                  value={values.category ? t(`merchant.register.categories.${values.category}`) : '—'}
+                  label={t('merchant.register.review.activitiesLabel')}
+                  value={
+                    values.categories.length
+                      ? values.categories.map((c) => t(`merchant.register.categories.${c}`)).join('، ')
+                      : '—'
+                  }
                 />
                 <ReviewRow label={t('merchant.register.authorizedName')} value={values.authorizedName} />
                 {/* Masked on review — the full id travels only inside the
                     signup payload. */}
                 <ReviewRow
                   label={t('merchant.register.authorizedId')}
-                  value={maskNationalId(values.authorizedId.trim())}
+                  value={maskNationalId(normalizeDigits(values.authorizedId).trim())}
                   ltr
                 />
                 <ReviewRow label={t('merchant.register.contactPhone')} value={`+966 ${values.contactMobile}`} ltr />
@@ -749,9 +809,13 @@ export default function MerchantRegister() {
                     key={b.key}
                     label={t('merchant.register.branchTitle', { index: i + 1 })}
                     value={`${b.name} — ${t(`register.cities.${b.city}`)}`}
-                    last={i === values.branches.length - 1}
                   />
                 ))}
+                <ReviewRow
+                  label={t('merchant.register.documents.crTitle')}
+                  value={values.docReceipt ? t('merchant.register.documents.uploaded') : '—'}
+                  last
+                />
               </div>
 
               {CONSENT_ENABLED && (

@@ -106,7 +106,12 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
       <input
         ref={ref}
         id={inputId}
-        className="flex-1 bg-transparent outline-none placeholder:text-ink-300"
+        className={cn(
+          'flex-1 bg-transparent outline-none placeholder:text-ink-300',
+          // merge caller className (previously dropped) so numeric/dir
+          // styling reaches the actual input in the leading/trailing shell
+          className,
+        )}
         {...rest}
       />
       {trailing && <span className="text-ink-400 shrink-0">{trailing}</span>}

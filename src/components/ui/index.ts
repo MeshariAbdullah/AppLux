@@ -5,6 +5,7 @@ export { Card, CardHeader, CardDivider, StatCard } from './Card';
 export { StatusChip } from './StatusChip';
 export type { StatusTone } from './StatusChip';
 export { FormField, Input, Textarea, Select } from './FormField';
+export { NumericField, SaudiMobileField, normalizeLatinDigits } from './NumericField';
 export { Avatar } from './Avatar';
 export { EmptyState } from './EmptyState';
 export { Skeleton } from './Skeleton';

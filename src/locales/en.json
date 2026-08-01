@@ -1391,21 +1391,17 @@
         "companySub": "Your store name, commercial registration and category.",
         "authorized": "Authorized representative",
         "authorizedSub": "The person authorized to manage the account and sign.",
-        "banking": "Banking details",
-        "bankingSub": "Approved IBAN for receiving collections.",
-        "contact": "Contact details",
-        "contactSub": "Used by our approvals team to coordinate with you.",
         "branches": "Store branches",
         "branchesSub": "Add at least one branch.",
         "credentials": "Create the business account",
         "credentialsSub": "The sign-in details you will use to manage your store.",
         "review": "Review your application",
-        "reviewSub": "Check the details before submitting."
+        "reviewSub": "Check the details before submitting.",
+        "documents": "Establishment documents",
+        "documentsSub": "Upload the required documents to verify the establishment information."
       },
       "companyName": "Store / business name",
       "companyNamePh": "e.g. Durrat Al-Anaqa",
-      "commercialReg": "Commercial registration number",
-      "commercialRegPh": "10 digits",
       "authorizedName": "Representative's full name",
       "authorizedNamePh": "As shown on National ID",
       "authorizedId": "Representative's National ID",
@@ -1434,7 +1430,6 @@
       "submit": "Submit application",
       "errors": {
         "required": "This field is required",
-        "commercialReg": "Commercial registration must be 10 digits",
         "authorizedId": "Invalid National ID",
         "iban": "Invalid IBAN format",
         "email": "Invalid email address",
@@ -1442,14 +1437,14 @@
         "passwordMin": "Password must be at least 6 characters",
         "passwordMismatch": "Passwords do not match",
         "categoryRequired": "Choose a business category",
-        "signupDbFailed": "Could not create the account. Check the commercial registration number — an application with the same CR may already be pending."
+        "signupDbFailed": "Could not create the account. Check the commercial registration number — an application with the same CR may already be pending.",
+        "unifiedNumber": "The unified number must be 10 digits and begin with 700.",
+        "mapUrl": "Enter a valid Google Maps location link for the branch."
       },
       "email": "Email",
       "emailPh": "you@company.com",
       "password": "Password",
       "confirmPassword": "Confirm password",
-      "category": "Store category",
-      "categoryPh": "Choose the primary category",
       "categories": {
         "dress": "Dresses & fashion",
         "bag": "Bags",
@@ -1462,7 +1457,8 @@
         "business": "Business",
         "representative": "Authorized representative",
         "branches": "Branches",
-        "categoryLabel": "Category"
+        "categoryLabel": "Category",
+        "activitiesLabel": "Store activities"
       },
       "consent": {
         "terms": "Terms of Use",
@@ -1485,12 +1481,40 @@
       },
       "prev": "Back",
       "next": {
-        "0": "Next — business information",
+        "0": "Next — establishment info",
         "1": "Next — representative",
         "2": "Next — branches",
-        "3": "Next — review"
+        "3": "Next — documents",
+        "4": "Next — review"
       },
-      "addBranchTitle": "New branch"
+      "addBranchTitle": "New branch",
+      "progress": "Step {current} of {total}",
+      "unifiedNumber": "Establishment Unified Number (700)",
+      "unifiedNumberHint": "Enter the 10-digit establishment unified number beginning with 700.",
+      "activities": {
+        "title": "Store activities",
+        "helper": "Select one or more activities."
+      },
+      "branchMapUrl": "Branch map location link",
+      "branchMapUrlHint": "Open the branch location in Google Maps, choose Share, then paste the link.",
+      "branchMapUrlPh": "Paste the Google Maps location link",
+      "documents": {
+        "crTitle": "Commercial Registration copy",
+        "dropzone": "Drag the file here or tap to choose",
+        "constraints": "PDF, JPG, or PNG — 5 MB max",
+        "uploading": "Uploading…",
+        "uploaded": "Uploaded successfully",
+        "replace": "Replace",
+        "delete": "Delete",
+        "retry": "Retry",
+        "required": "Upload the Commercial Registration copy before continuing.",
+        "errors": {
+          "type": "Unsupported file type. Upload a PDF, JPG, or PNG.",
+          "size": "The file exceeds the 5 MB limit.",
+          "rateLimited": "Too many attempts. Please try again shortly.",
+          "failed": "The document could not be uploaded. Please try again."
+        }
+      }
     },
     "pending": {
       "title": "Application under review",

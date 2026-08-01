@@ -40,6 +40,8 @@ export type MerchantSignUpBranch = {
   address: string;
   /** Canonical 5XXXXXXXX or omitted. */
   phone?: string | null;
+  /** Required HTTPS Google Maps location link. */
+  mapUrl: string;
 };
 
 export type MerchantSignUpInput = {
@@ -47,18 +49,20 @@ export type MerchantSignUpInput = {
   password: string;
   application: {
     companyName: string;
-    /** 10 digits. */
-    commercialReg: string;
+    /** Establishment Unified Number — 700 + 7 digits. */
+    unifiedNumber: string;
     authorizedName: string;
     /** Saudi national id, [12] + 9 digits. */
     authorizedNationalId: string;
-    /** rental_category enum value — applicant-selected, never defaulted. */
-    category: string;
+    /** rental_category enum values — ≥1, applicant-selected. */
+    categories: string[];
     /** Canonical 5XXXXXXXX. */
     contactMobile: string;
     /** Defaults to the login email server-side when empty. */
     contactEmail?: string;
     branches: MerchantSignUpBranch[];
+    /** Opaque single-use receipt for the quarantined CR-copy upload. */
+    docReceipt: string;
   };
 };
 
@@ -80,10 +84,10 @@ export async function signUpMerchant({
         full_name: application.authorizedName,
         merchant_application: {
           company_name: application.companyName,
-          commercial_reg_number: application.commercialReg,
+          unified_number: application.unifiedNumber,
           authorized_name: application.authorizedName,
           authorized_national_id: application.authorizedNationalId,
-          category: application.category,
+          categories: application.categories,
           contact_mobile: application.contactMobile,
           contact_email: application.contactEmail ?? '',
           branches: application.branches.map((b) => ({
@@ -91,7 +95,9 @@ export async function signUpMerchant({
             city: b.city,
             address: b.address,
             phone: b.phone ?? '',
+            map_url: b.mapUrl,
           })),
+          doc_receipt: application.docReceipt,
         },
       },
     },
