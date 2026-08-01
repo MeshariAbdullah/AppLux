@@ -1440,7 +1440,8 @@
         "categoryRequired": "Choose a business category",
         "signupDbFailed": "Could not create the account. Check the commercial registration number — an application with the same CR may already be pending.",
         "unifiedNumber": "The unified number must be 10 digits and begin with 700.",
-        "mapUrl": "Enter a valid Google Maps location link for the branch."
+        "mapUrl": "Enter a valid Google Maps location link for the branch.",
+        "emailExists": "This email is already registered. Please sign in from the merchant login page."
       },
       "email": "Email",
       "emailPh": "you@company.com",
@@ -1470,8 +1471,7 @@
       },
       "emailConfirm": {
         "title": "Check your email",
-        "body": "We sent a confirmation link to {email}. After confirming, sign in from the merchant login to follow your application.",
-        "resend": "Resend confirmation email",
+        "body": "Enter the 6-digit verification code we sent to",
         "resent": "Sent again ✓",
         "toLogin": "Go to merchant login"
       },

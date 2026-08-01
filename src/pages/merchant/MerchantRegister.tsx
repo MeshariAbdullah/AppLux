@@ -1,4 +1,4 @@
-import { useMemo, useState, type ChangeEvent } from 'react';
+import { useMemo, useRef, useState, type ChangeEvent } from 'react';
 import { Link, Navigate, useNavigate } from 'react-router-dom';
 import { Header, Screen } from '@/components/layout';
 import {
@@ -22,7 +22,9 @@ import {
   resendSignupConfirmation,
   signUpMerchant,
   useSupabaseAuth,
+  verifyEmailOtp,
 } from '@/lib/supabase';
+import { classifyMerchantSignup } from '@/lib/auth/merchantSignupOutcome';
 import { cn } from '@/lib/cn';
 import {
   ArrowIcon,
@@ -153,8 +155,14 @@ export default function MerchantRegister() {
   const [errors, setErrors] = useState<Errors>({});
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
-  // Email-confirmation branch: signUp returned a user but NO session.
+  // Email-confirmation branch: signUp returned a genuinely new/unconfirmed
+  // user (identities non-empty) but NO session → GoTrue emailed the 6-digit
+  // code and we show the OTP screen (same template + flow as customers).
   const [awaitingConfirmation, setAwaitingConfirmation] = useState(false);
+  const [otpCode, setOtpCode] = useState('');
+  const [otpError, setOtpError] = useState<string | null>(null);
+  const [verifyingOtp, setVerifyingOtp] = useState(false);
+  const verifyingOtpRef = useRef(false);
   const [resent, setResent] = useState(false);
 
   const cities = useMemo(
@@ -269,15 +277,25 @@ export default function MerchantRegister() {
           docReceipt: values.docReceipt ?? '',
         },
       });
-      setSubmitted(true);
-      if (result.session?.user) {
-        // Immediate session — provider hydrates the merchant/pending
-        // profile; land on the application-status page.
+      // NEVER claim a code was sent without proof. Mirror the customer
+      // logic: session → done; identities non-empty → real code emailed →
+      // OTP screen; otherwise the address is an already-CONFIRMED account
+      // (Supabase obfuscated the signup, no email sent) → friendly error.
+      const outcome = classifyMerchantSignup(result);
+      if (outcome === 'active') {
+        setSubmitted(true);
         navigate('/merchant/pending', { replace: true });
-      } else {
-        // Email confirmation required — the account + application
-        // already exist; show the check-email panel.
+      } else if (outcome === 'confirm') {
+        // The application + branches + document claim were created
+        // atomically at signUp (trigger runs on the auth insert, before
+        // confirmation); the OTP only confirms the email.
+        setSubmitted(true);
         setAwaitingConfirmation(true);
+        setSubmitting(false);
+      } else {
+        // Obfuscated duplicate — no auth row created, no email dispatched.
+        logEvent('auth_failure', 'warn', { op: 'merchant_sign_up_exists' });
+        setErrors({ form: t('merchant.register.errors.emailExists') });
         setSubmitting(false);
       }
     } catch (err) {
@@ -391,25 +409,88 @@ export default function MerchantRegister() {
     );
   }
 
-  // ---- email-confirmation panel ----
+  // ---- email OTP-confirmation panel ----
+  // The project's confirmation template renders {{ .Token }} (a 6-digit
+  // code) — same as the customer flow — so the merchant enters the code
+  // here. verifyEmailOtp yields a session → onAuthStateChange → the
+  // authenticated guard above redirects to /merchant/pending.
+  const verifyOtp = async () => {
+    if (verifyingOtpRef.current) return;
+    const token = normalizeDigits(otpCode.trim());
+    if (!/^\d{6}$/.test(token)) {
+      setOtpError(t('auth.verifyEmail.codeFormat'));
+      return;
+    }
+    verifyingOtpRef.current = true;
+    setVerifyingOtp(true);
+    setOtpError(null);
+    try {
+      await verifyEmailOtp({ email: values.email.trim(), token });
+      // Session propagates via onAuthStateChange; the guard navigates.
+    } catch (err) {
+      logEvent('auth_failure', 'warn', { op: 'merchant_verify_email_otp' }, err);
+      setOtpError(translateAuthError(err, t));
+      setVerifyingOtp(false);
+      verifyingOtpRef.current = false;
+    }
+  };
+
   if (awaitingConfirmation) {
     return (
       <>
         <Header title={t('merchant.register.title')} />
         <Screen className="bg-canvas">
-          <Card padded className="text-center space-y-3">
-            <div className="mx-auto h-11 w-11 rounded-xl bg-lavender-50 text-lavender-700 grid place-items-center ring-1 ring-lavender-200">
-              <CheckIcon size={20} />
+          <Card padded className="space-y-4">
+            <div className="text-center space-y-2">
+              <div className="mx-auto h-11 w-11 rounded-xl bg-lavender-50 text-lavender-700 grid place-items-center ring-1 ring-lavender-200">
+                <CheckIcon size={20} />
+              </div>
+              <div className="text-[15px] font-semibold text-ink-900">
+                {t('merchant.register.emailConfirm.title')}
+              </div>
+              <p className="text-[12.5px] text-ink-500 leading-relaxed">
+                {t('merchant.register.emailConfirm.body')}{' '}
+                <span className="font-semibold text-ink-800 break-all" dir="ltr">
+                  {values.email.trim()}
+                </span>
+              </p>
             </div>
-            <div className="text-[15px] font-semibold text-ink-900">
-              {t('merchant.register.emailConfirm.title')}
-            </div>
-            <p className="text-[12.5px] text-ink-500 leading-relaxed">
-              {t('merchant.register.emailConfirm.body', { email: values.email.trim() })}
-            </p>
-            <Button
-              variant="secondary"
-              block
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                void verifyOtp();
+              }}
+              noValidate
+              className="space-y-3"
+            >
+              <FormField label={t('auth.verifyEmail.codeLabel')} error={otpError ?? undefined}>
+                <Input
+                  inputMode="numeric"
+                  autoComplete="one-time-code"
+                  maxLength={6}
+                  dir="ltr"
+                  className="num text-center tracking-[0.4em] text-[18px]"
+                  placeholder="000000"
+                  value={otpCode}
+                  onChange={(e) => {
+                    setOtpCode(normalizeDigits(e.target.value).replace(/\D/g, ''));
+                    if (otpError) setOtpError(null);
+                  }}
+                  invalid={Boolean(otpError)}
+                />
+              </FormField>
+              <Button
+                type="submit"
+                block
+                loading={verifyingOtp}
+                disabled={verifyingOtp || otpCode.length < 6}
+                className="!bg-navy-700 hover:!bg-navy-800 active:!bg-navy-800"
+              >
+                {t('auth.verifyEmail.verifyCta')}
+              </Button>
+            </form>
+            <button
+              type="button"
               onClick={() => {
                 resendSignupConfirmation(values.email.trim())
                   .then(() => {
@@ -417,17 +498,18 @@ export default function MerchantRegister() {
                     window.setTimeout(() => setResent(false), 3000);
                   })
                   .catch((err) => {
-                    logEvent('auth_failure', 'warn', { op: 'resend_confirmation' }, err);
+                    logEvent('auth_failure', 'warn', { op: 'merchant_resend_email_otp' }, err);
                   });
               }}
+              className="w-full text-[13px] font-bold text-green-700 hover:text-green-800"
             >
               {resent
                 ? t('merchant.register.emailConfirm.resent')
-                : t('merchant.register.emailConfirm.resend')}
-            </Button>
+                : t('auth.verifyEmail.resendCta')}
+            </button>
             <Link
               to="/merchant/login"
-              className="block text-[13px] font-semibold text-gold-700"
+              className="block text-center text-[12.5px] text-ink-400 hover:text-ink-600"
             >
               {t('merchant.register.emailConfirm.toLogin')}
             </Link>
