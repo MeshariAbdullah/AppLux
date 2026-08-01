@@ -29,7 +29,35 @@
 
 import { serve } from 'https://deno.land/std@0.177.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
-import { preflight, jsonResponse as json } from '../_shared/cors.ts';
+
+// === CORS (inlined so this file is a self-contained Dashboard paste) ===
+// supabase-js functions.invoke always sends `authorization` (anon key as
+// Bearer) and `x-client-info`; the browser preflights with OPTIONS. Those
+// header names MUST be echoed here or the preflight is rejected and the
+// POST never runs. Keep in sync with any other browser-invoked function.
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+};
+
+/** Answer the CORS preflight immediately — BEFORE any parsing, auth,
+ *  database, or upload logic. Returns null for non-OPTIONS requests. */
+function preflight(req: Request): Response | null {
+  if (req.method === 'OPTIONS') {
+    return new Response('ok', { status: 200, headers: corsHeaders });
+  }
+  return null;
+}
+
+/** JSON response with CORS headers on EVERY reply (success + errors). */
+function json(body: unknown, init: ResponseInit = {}): Response {
+  return new Response(JSON.stringify(body), {
+    ...init,
+    headers: { ...corsHeaders, 'Content-Type': 'application/json', ...(init.headers ?? {}) },
+  });
+}
+// === end CORS ===
 
 const BUCKET = 'merchant-documents';
 const MAX_BYTES = 5 * 1024 * 1024;

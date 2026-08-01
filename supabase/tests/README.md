@@ -21,12 +21,14 @@ means every assertion held.
 
 ## Edge Function CORS
 
-- `edge_cors_test.mjs` — transpiles `supabase/functions/_shared/cors.ts`
-  with esbuild and asserts the browser CORS contract for the
-  merchant-doc-upload function: OPTIONS preflight → 200, `authorization`
-  / `x-client-info` / `apikey` / `content-type` all allowed, POST/OPTIONS
-  methods, and CORS headers on both success and error JSON responses.
-  Run with `node supabase/tests/edge_cors_test.mjs`.
+- `edge_cors_test.mjs` — extracts the inlined CORS block from
+  `merchant-doc-upload/index.ts` (a self-contained single file for the
+  Dashboard editor), transpiles it with esbuild, and asserts the browser
+  CORS contract: OPTIONS preflight → 200, `authorization` /
+  `x-client-info` / `apikey` / `content-type` all allowed, POST/OPTIONS
+  methods, CORS headers on both success and error responses, and that the
+  file re-introduces no shared import. Run with
+  `node supabase/tests/edge_cors_test.mjs`.
 
 ## Running locally
 
