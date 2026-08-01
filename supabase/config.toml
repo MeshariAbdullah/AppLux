@@ -1,0 +1,14 @@
+# Supabase Edge Function configuration.
+#
+# merchant-doc-upload is intentionally PUBLIC (no JWT): the merchant
+# onboarding wizard has no session when it uploads the Commercial
+# Registration copy in Step 5. It is protected instead by the service-role
+# quarantine design — magic-byte validation, per-IP rate limiting, optional
+# CAPTCHA, single-use opaque receipts, and 24h orphan cleanup. See
+# supabase/functions/merchant-doc-upload/index.ts.
+[functions.merchant-doc-upload]
+verify_jwt = false
+
+# Scheduled cleanup is invoked by the platform scheduler, not end users.
+[functions.merchant-doc-cleanup]
+verify_jwt = false
