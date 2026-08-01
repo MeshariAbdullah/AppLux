@@ -136,6 +136,20 @@ export async function listMerchantActivities(
   return ((data ?? []) as Array<{ category: RentalCategoryDB }>).map((r) => r.category);
 }
 
+/** Server-authoritative availability of an establishment Unified Number
+ *  (700). Anonymous onboarding calls this at Step 2 so a duplicate is
+ *  caught before the merchant fills the rest of the wizard. Returns a
+ *  neutral boolean; the DB unique index remains the final authority.
+ *  Throws on network/RPC failure so the caller can show "try again". */
+export async function checkUnifiedNumberAvailable(unified: string): Promise<boolean> {
+  const sb = requireSupabase();
+  const { data, error } = await sb.rpc('check_unified_number_available', {
+    p_unified: unified,
+  });
+  if (error) throw error;
+  return data === true;
+}
+
 /** Activities for many merchants at once (discovery list) → map keyed by
  *  merchant_id, each ordered by position. One IN() query. */
 export async function listActivitiesForMerchants(

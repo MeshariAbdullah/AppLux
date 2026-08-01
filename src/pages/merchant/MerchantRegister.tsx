@@ -19,6 +19,7 @@ import { useI18n, useT } from '@/lib/i18n';
 import { useStore } from '@/lib/store';
 import { normalizeDigits } from '@/lib/validation/customer';
 import {
+  checkUnifiedNumberAvailable,
   resendSignupConfirmation,
   signUpMerchant,
   useSupabaseAuth,
@@ -164,6 +165,32 @@ export default function MerchantRegister() {
   const [verifyingOtp, setVerifyingOtp] = useState(false);
   const verifyingOtpRef = useRef(false);
   const [resent, setResent] = useState(false);
+  // Establishment Unified Number server-side availability. Cached per
+  // normalized value so blur + Next + submit don't re-probe. `checking`
+  // gates the Next button on Step 2 while a probe is in flight.
+  const [checkingUnified, setCheckingUnified] = useState(false);
+  const unifiedCacheRef = useRef<Map<string, 'ok' | 'taken' | 'error'>>(new Map());
+
+  /** Server-authoritative availability → cached verdict. Demo mode (no
+   *  backend) always resolves 'ok'. Never throws. */
+  const probeUnified = async (raw: string): Promise<'ok' | 'taken' | 'error'> => {
+    const num = normalizeDigits(raw).trim();
+    if (!configured) return 'ok';
+    const cached = unifiedCacheRef.current.get(num);
+    if (cached && cached !== 'error') return cached;
+    setCheckingUnified(true);
+    try {
+      const available = await checkUnifiedNumberAvailable(num);
+      const verdict = available ? 'ok' : 'taken';
+      unifiedCacheRef.current.set(num, verdict);
+      return verdict;
+    } catch (err) {
+      logEvent('rpc_failure', 'warn', { op: 'check_unified_number' }, err);
+      return 'error';
+    } finally {
+      setCheckingUnified(false);
+    }
+  };
 
   const cities = useMemo(
     () => CITY_KEYS.map((c) => ({ key: c, label: t(`register.cities.${c}`) })),
@@ -255,6 +282,19 @@ export default function MerchantRegister() {
   const submitLive = async () => {
     setSubmitting(true);
     setErrors((prev) => ({ ...prev, form: undefined }));
+    // Race guard: re-verify Unified Number availability at the moment of
+    // submit. A duplicate that appeared since Step 2 is sent back to Step
+    // 2 — never surfaced as a generic Review banner.
+    const pre = await probeUnified(values.unifiedNumber);
+    if (pre === 'taken') {
+      returnToStep2Taken();
+      return;
+    }
+    if (pre === 'error') {
+      setErrors({ form: t('merchant.register.errors.unifiedNumberCheckFailed') });
+      setSubmitting(false);
+      return;
+    }
     try {
       const result = await signUpMerchant({
         email: values.email.trim(),
@@ -304,16 +344,29 @@ export default function MerchantRegister() {
           ? ((err as { message: string }).message ?? '').toLowerCase()
           : '';
       logEvent('auth_failure', 'warn', { op: 'merchant_sign_up' }, err);
-      // GoTrue flattens trigger failures into one opaque message. For
-      // MERCHANT signup the realistic in-trigger failure is a pending
-      // application with the same CR (client pre-validation covers the
-      // rest) — map it to actionable copy instead of the customer
-      // duplicate-mobile heuristic.
-      setErrors({
-        form: eMsg.includes('database error saving new user')
-          ? t('merchant.register.errors.signupDbFailed')
-          : translateAuthError(err, t),
-      });
+      // GoTrue flattens EVERY trigger failure (23505 unique, P0120 guard)
+      // into one opaque "database error saving new user". The two
+      // realistic causes after our client pre-validation are (a) a
+      // Unified Number race and (b) an expired/invalid document receipt.
+      // Disambiguate with a FRESH availability probe and route to the
+      // exact responsible step — never a dead-end Review banner.
+      if (eMsg.includes('database error saving new user')) {
+        unifiedCacheRef.current.delete(normalizeDigits(values.unifiedNumber).trim());
+        const verdict = await probeUnified(values.unifiedNumber);
+        if (verdict === 'taken') {
+          returnToStep2Taken();
+          return;
+        }
+        // Available → the quarantined CR receipt expired/was consumed.
+        // Send the merchant back to Step 5 to re-upload; keep all else.
+        setValues((v) => ({ ...v, docReceipt: null, docFileName: '' }));
+        setStep(DOCUMENTS_STEP);
+        setErrors({ document: t('merchant.register.documents.expired') });
+        setSubmitting(false);
+        window.setTimeout(() => focusFirstError(DOCUMENTS_STEP, { document: 'x' }), 60);
+        return;
+      }
+      setErrors({ form: translateAuthError(err, t) });
       setSubmitting(false);
     }
   };
@@ -343,11 +396,69 @@ export default function MerchantRegister() {
     navigate('/merchant/pending', { replace: true });
   };
 
+  // Scroll + focus the first invalid field of a step so the user lands
+  // exactly on what to fix (approved UX rule).
+  const focusFirstError = (s: number, errs: Errors) => {
+    const focus = (id: string) => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.scrollIntoView({ block: 'center', behavior: 'smooth' });
+      (el as HTMLElement).focus?.();
+    };
+    if (s === 3 && errs.branches) {
+      for (const b of values.branches) {
+        const be = errs.branches[b.key];
+        if (be) {
+          const sub = (['name', 'city', 'address', 'phone', 'mapUrl'] as const).find((k) => be[k]);
+          if (sub) return focus(`f-b-${b.key}-${sub}`);
+        }
+      }
+    }
+    const order: Record<number, Array<[keyof Errors | 'categories' | 'document', string]>> = {
+      0: [['email', 'f-email'], ['password', 'f-password'], ['confirmPassword', 'f-confirmPassword']],
+      1: [['companyName', 'f-companyName'], ['unifiedNumber', 'f-unifiedNumber'], ['categories', 'f-categories']],
+      2: [['authorizedName', 'f-authorizedName'], ['authorizedId', 'f-authorizedId'], ['contactMobile', 'f-contactMobile'], ['contactEmail', 'f-contactEmail']],
+      4: [['document', 'f-document']],
+      5: [['consent', 'f-consent']],
+    };
+    for (const [k, id] of order[s] ?? []) {
+      if ((errs as Record<string, unknown>)[k as string]) return focus(id);
+    }
+  };
+
+  /** Bounce back to Step 2 with the Unified Number flagged as taken —
+   *  used for a final-submit race. All other data + the document receipt
+   *  stay in component state, untouched. */
+  const returnToStep2Taken = () => {
+    setStep(1);
+    setErrors({ unifiedNumber: t('merchant.register.errors.unifiedNumberTaken') });
+    setSubmitting(false);
+    window.setTimeout(() => focusFirstError(1, { unifiedNumber: 'x' }), 60);
+  };
+
   const goNext = async () => {
     const e = validateStep(step);
     if (stepHasErrors(e)) {
       setErrors(e);
+      focusFirstError(step, e);
       return;
+    }
+    // Step 2 (Establishment): server-authoritative availability BEFORE
+    // advancing, so a duplicate is caught here — never at final submit.
+    if (step === 1) {
+      const verdict = await probeUnified(values.unifiedNumber);
+      if (verdict !== 'ok') {
+        const withErr: Errors = {
+          ...e,
+          unifiedNumber:
+            verdict === 'taken'
+              ? t('merchant.register.errors.unifiedNumberTaken')
+              : t('merchant.register.errors.unifiedNumberCheckFailed'),
+        };
+        setErrors(withErr);
+        focusFirstError(1, withErr);
+        return;
+      }
     }
     if (step < STEPS.length - 1) {
       setStep((s) => s + 1);
@@ -583,6 +694,7 @@ export default function MerchantRegister() {
             <>
               <FormField label={t('merchant.register.email')} required error={errors.email}>
                 <Input
+                  id="f-email"
                   type="email"
                   placeholder={t('merchant.register.emailPh')}
                   value={values.email}
@@ -593,6 +705,7 @@ export default function MerchantRegister() {
               </FormField>
               <FormField label={t('merchant.register.password')} required error={errors.password}>
                 <Input
+                  id="f-password"
                   type="password"
                   value={values.password}
                   onChange={onField('password')}
@@ -606,6 +719,7 @@ export default function MerchantRegister() {
                 error={errors.confirmPassword}
               >
                 <Input
+                  id="f-confirmPassword"
                   type="password"
                   value={values.confirmPassword}
                   onChange={onField('confirmPassword')}
@@ -620,6 +734,7 @@ export default function MerchantRegister() {
             <>
               <FormField label={t('merchant.register.companyName')} required error={errors.companyName}>
                 <Input
+                  id="f-companyName"
                   placeholder={t('merchant.register.companyNamePh')}
                   value={values.companyName}
                   onChange={onField('companyName')}
@@ -631,9 +746,16 @@ export default function MerchantRegister() {
                 label={t('merchant.register.unifiedNumber')}
                 required
                 error={errors.unifiedNumber}
-                hint={!errors.unifiedNumber ? t('merchant.register.unifiedNumberHint') : undefined}
+                hint={
+                  errors.unifiedNumber
+                    ? undefined
+                    : checkingUnified
+                      ? t('merchant.register.unifiedNumberChecking')
+                      : t('merchant.register.unifiedNumberHint')
+                }
               >
                 <NumericField
+                  id="f-unifiedNumber"
                   maxDigits={10}
                   placeholder="700XXXXXXX"
                   value={values.unifiedNumber}
@@ -641,11 +763,21 @@ export default function MerchantRegister() {
                     setValues((v) => ({ ...v, unifiedNumber: next }));
                     if (errors.unifiedNumber) setErrors((p) => ({ ...p, unifiedNumber: undefined }));
                   }}
+                  onBlur={() => {
+                    const num = normalizeDigits(values.unifiedNumber).trim();
+                    if (!UNIFIED_RE.test(num)) return; // format handled on Next
+                    void probeUnified(num).then((verdict) => {
+                      if (verdict === 'taken')
+                        setErrors((p) => ({ ...p, unifiedNumber: t('merchant.register.errors.unifiedNumberTaken') }));
+                      else if (verdict === 'error')
+                        setErrors((p) => ({ ...p, unifiedNumber: t('merchant.register.errors.unifiedNumberCheckFailed') }));
+                    });
+                  }}
                   invalid={Boolean(errors.unifiedNumber)}
                 />
               </FormField>
               {/* Multi-select store activities (≥1). */}
-              <div className="space-y-2">
+              <div id="f-categories" className="space-y-2">
                 <div className="text-[13px] font-semibold text-ink-800">
                   {t('merchant.register.activities.title')}
                   <span className="ms-1 text-danger-500">*</span>
@@ -677,6 +809,7 @@ export default function MerchantRegister() {
             <>
               <FormField label={t('merchant.register.authorizedName')} required error={errors.authorizedName}>
                 <Input
+                  id="f-authorizedName"
                   placeholder={t('merchant.register.authorizedNamePh')}
                   value={values.authorizedName}
                   onChange={onField('authorizedName')}
@@ -686,6 +819,7 @@ export default function MerchantRegister() {
               </FormField>
               <FormField label={t('merchant.register.authorizedId')} required error={errors.authorizedId}>
                 <NumericField
+                  id="f-authorizedId"
                   maxDigits={10}
                   placeholder={t('merchant.register.authorizedIdPh')}
                   value={values.authorizedId}
@@ -698,6 +832,7 @@ export default function MerchantRegister() {
               </FormField>
               <FormField label={t('merchant.register.contactPhone')} required error={errors.contactMobile}>
                 <SaudiMobileField
+                  id="f-contactMobile"
                   value={values.contactMobile}
                   onValueChange={(next) => {
                     setValues((v) => ({ ...v, contactMobile: next }));
@@ -712,6 +847,7 @@ export default function MerchantRegister() {
                 hint={!errors.contactEmail ? t('merchant.register.contactEmailHint') : undefined}
               >
                 <Input
+                  id="f-contactEmail"
                   type="email"
                   placeholder={values.email || t('merchant.register.contactEmailPh')}
                   value={values.contactEmail}
@@ -757,6 +893,7 @@ export default function MerchantRegister() {
                       </div>
                       <FormField label={t('merchant.register.branchName')} required error={be.name}>
                         <Input
+                          id={`f-b-${b.key}-name`}
                           placeholder={t('merchant.register.branchNamePh')}
                           value={b.name}
                           onChange={(e) => patchBranch(b.key, { name: e.target.value })}
@@ -765,6 +902,7 @@ export default function MerchantRegister() {
                       </FormField>
                       <FormField label={t('merchant.register.branchCity')} required error={be.city}>
                         <Select
+                          id={`f-b-${b.key}-city`}
                           value={b.city}
                           onChange={(e) => patchBranch(b.key, { city: e.target.value })}
                           invalid={Boolean(be.city)}
@@ -781,6 +919,7 @@ export default function MerchantRegister() {
                       </FormField>
                       <FormField label={t('merchant.register.branchAddress')} required error={be.address}>
                         <Textarea
+                          id={`f-b-${b.key}-address`}
                           rows={2}
                           placeholder={t('merchant.register.addressPh')}
                           value={b.address}
@@ -790,6 +929,7 @@ export default function MerchantRegister() {
                       </FormField>
                       <FormField label={t('merchant.register.branchPhone')} error={be.phone}>
                         <SaudiMobileField
+                          id={`f-b-${b.key}-phone`}
                           value={b.phone}
                           onValueChange={(next) => patchBranch(b.key, { phone: next })}
                           invalid={Boolean(be.phone)}
@@ -802,6 +942,7 @@ export default function MerchantRegister() {
                         hint={!be.mapUrl ? t('merchant.register.branchMapUrlHint') : undefined}
                       >
                         <Input
+                          id={`f-b-${b.key}-mapUrl`}
                           type="url"
                           dir="ltr"
                           inputMode="url"
@@ -834,7 +975,7 @@ export default function MerchantRegister() {
           )}
 
           {step === DOCUMENTS_STEP && (
-            <div className="space-y-3">
+            <div id="f-document" className="space-y-3">
               <div className="flex items-center gap-2.5">
                 <span className="grid h-8 w-8 place-items-center rounded-lg bg-lavender-50 text-lavender-700">
                   <DocIcon size={16} />
@@ -903,6 +1044,7 @@ export default function MerchantRegister() {
               {CONSENT_ENABLED && (
                 <label className="flex items-start gap-3 rounded-xl2 bg-white hairline p-3.5 cursor-pointer">
                   <input
+                    id="f-consent"
                     type="checkbox"
                     checked={values.consent}
                     onChange={(e) => {
@@ -957,6 +1099,7 @@ export default function MerchantRegister() {
                   type="submit"
                   size="lg"
                   loading={submitting}
+                  disabled={submitting}
                   className={cn(
                     '!bg-navy-700 hover:!bg-navy-800 active:!bg-navy-800',
                     step === 0 ? 'flex-1' : 'flex-[2]',

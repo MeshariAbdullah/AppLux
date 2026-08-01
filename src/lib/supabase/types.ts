@@ -539,6 +539,12 @@ export type Database = {
         Args: { p_invoice_id: string };
         Returns: string;
       };
+      /** Neutral availability check for the establishment Unified Number
+       *  (700) — onboarding Step 2 (20260502124100). */
+      check_unified_number_available: {
+        Args: { p_unified: string };
+        Returns: boolean;
+      };
       provision_merchant_from_application: {
         Args: { p_application_id: string };
         Returns: string;

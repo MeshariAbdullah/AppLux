@@ -105,6 +105,7 @@ export {
   listMerchantBranches,
   listMerchantActivities,
   listActivitiesForMerchants,
+  checkUnifiedNumberAvailable,
 } from './queries/merchants';
 export {
   listApplicationDocuments,
