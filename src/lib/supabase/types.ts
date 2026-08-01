@@ -545,6 +545,18 @@ export type Database = {
         Args: { p_unified: string };
         Returns: boolean;
       };
+      /** Neutral signup-email availability — onboarding Step 1
+       *  (20260502124200). */
+      check_email_available: {
+        Args: { p_email: string };
+        Returns: boolean;
+      };
+      /** Neutral CR-document receipt validity — onboarding Step 5
+       *  (20260502124200). */
+      check_upload_receipt_valid: {
+        Args: { p_receipt: string };
+        Returns: boolean;
+      };
       provision_merchant_from_application: {
         Args: { p_application_id: string };
         Returns: string;

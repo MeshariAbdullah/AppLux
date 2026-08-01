@@ -106,6 +106,8 @@ export {
   listMerchantActivities,
   listActivitiesForMerchants,
   checkUnifiedNumberAvailable,
+  checkEmailAvailable,
+  checkUploadReceiptValid,
 } from './queries/merchants';
 export {
   listApplicationDocuments,

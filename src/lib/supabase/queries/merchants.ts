@@ -150,6 +150,25 @@ export async function checkUnifiedNumberAvailable(unified: string): Promise<bool
   return data === true;
 }
 
+/** Neutral signup-email availability (Step 1). False = a CONFIRMED
+ *  account already uses it; unconfirmed = available (OTP resend). GoTrue
+ *  signup remains the authority. Throws on RPC/network failure. */
+export async function checkEmailAvailable(email: string): Promise<boolean> {
+  const sb = requireSupabase();
+  const { data, error } = await sb.rpc('check_email_available', { p_email: email });
+  if (error) throw error;
+  return data === true;
+}
+
+/** Neutral validity of a quarantined CR-document receipt (Step 5 /
+ *  pre-submit): true only when still uploaded + unexpired + right type. */
+export async function checkUploadReceiptValid(receipt: string): Promise<boolean> {
+  const sb = requireSupabase();
+  const { data, error } = await sb.rpc('check_upload_receipt_valid', { p_receipt: receipt });
+  if (error) throw error;
+  return data === true;
+}
+
 /** Activities for many merchants at once (discovery list) → map keyed by
  *  merchant_id, each ordered by position. One IN() query. */
 export async function listActivitiesForMerchants(

@@ -1440,9 +1440,10 @@
         "categoryRequired": "Choose a business category",
         "unifiedNumber": "The unified number must be 10 digits and begin with 700.",
         "mapUrl": "Enter a valid Google Maps location link for the branch.",
-        "emailExists": "This email is already registered. Please sign in from the merchant login page.",
         "unifiedNumberTaken": "This establishment number is already used by another merchant account or application.",
-        "unifiedNumberCheckFailed": "Couldn't verify the establishment number right now. Please try again."
+        "unifiedNumberCheckFailed": "Couldn't verify the establishment number right now. Please try again.",
+        "emailTaken": "This email is already registered. Use another email or sign in.",
+        "emailCheckFailed": "Couldn't verify the email right now. Please try again."
       },
       "email": "Email",
       "emailPh": "you@company.com",
@@ -1516,9 +1517,10 @@
           "rateLimited": "Too many attempts. Please try again shortly.",
           "failed": "The document could not be uploaded. Please try again."
         },
-        "expired": "The uploaded document expired. Re-upload the Commercial Registration copy."
+        "expired": "The document upload expired. Re-upload the Commercial Registration copy."
       },
-      "unifiedNumberChecking": "Checking establishment number availability…"
+      "unifiedNumberChecking": "Checking establishment number availability…",
+      "emailChecking": "Checking email…"
     },
     "pending": {
       "title": "Application under review",
