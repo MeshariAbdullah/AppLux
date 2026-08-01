@@ -88,29 +88,72 @@ export type BranchInfo = {
    *  rental-period contract clause when both are set. */
   hours_open: string | null;
   hours_close: string | null;
+  phone: string | null;
+  /** Google Maps location link (null for legacy branches). */
+  map_url: string | null;
 };
+
+const BRANCH_COLS = 'id, name, city, address, phone, hours_open, hours_close, map_url';
 
 export async function fetchBranchById(id: string): Promise<BranchInfo | null> {
   const sb = requireSupabase();
   const { data, error } = await sb
     .from('merchant_branches')
-    .select('id, name, city, address, hours_open, hours_close')
+    .select(BRANCH_COLS)
     .eq('id', id)
     .maybeSingle();
   if (error) throw error;
   return (data as BranchInfo | null) ?? null;
 }
 
+/** All public branches of a merchant (active merchants only, via RLS),
+ *  ordered primary-first. Includes phone + map_url for the store page. */
 export async function listMerchantBranches(
   merchantId: string,
-): Promise<Array<{ id: string; name: unknown; city: string }>> {
+): Promise<BranchInfo[]> {
   const sb = requireSupabase();
   const { data, error } = await sb
     .from('merchant_branches')
-    .select('id, name, city')
-    .eq('merchant_id', merchantId);
+    .select(BRANCH_COLS)
+    .eq('merchant_id', merchantId)
+    .order('is_primary', { ascending: false });
   if (error) throw error;
-  return (data ?? []) as Array<{ id: string; name: unknown; city: string }>;
+  return (data ?? []) as BranchInfo[];
+}
+
+/** All activity categories of a merchant (active merchants only, via
+ *  merchant_activities_public_select). */
+export async function listMerchantActivities(
+  merchantId: string,
+): Promise<RentalCategoryDB[]> {
+  const sb = requireSupabase();
+  const { data, error } = await sb
+    .from('merchant_activities')
+    .select('category, position')
+    .eq('merchant_id', merchantId)
+    .order('position', { ascending: true });
+  if (error) throw error;
+  return ((data ?? []) as Array<{ category: RentalCategoryDB }>).map((r) => r.category);
+}
+
+/** Activities for many merchants at once (discovery list) → map keyed by
+ *  merchant_id, each ordered by position. One IN() query. */
+export async function listActivitiesForMerchants(
+  merchantIds: string[],
+): Promise<Record<string, RentalCategoryDB[]>> {
+  if (merchantIds.length === 0) return {};
+  const sb = requireSupabase();
+  const { data, error } = await sb
+    .from('merchant_activities')
+    .select('merchant_id, category, position')
+    .in('merchant_id', merchantIds)
+    .order('position', { ascending: true });
+  if (error) throw error;
+  const map: Record<string, RentalCategoryDB[]> = {};
+  for (const r of (data ?? []) as Array<{ merchant_id: string; category: RentalCategoryDB }>) {
+    (map[r.merchant_id] ??= []).push(r.category);
+  }
+  return map;
 }
 
 export async function fetchMyMerchant(

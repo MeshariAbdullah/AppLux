@@ -171,6 +171,7 @@ export type MerchantApplicationBranchRow = {
   city: string;
   address: string;
   phone: string | null;
+  map_url: string | null;
   position: number;
   created_at: string;
   updated_at: string;
@@ -189,6 +190,20 @@ export async function listApplicationBranches(
     .order('position', { ascending: true });
   if (error) throw error;
   return (data ?? []) as MerchantApplicationBranchRow[];
+}
+
+/** Activities submitted with an application (admin review). */
+export async function listApplicationActivities(
+  applicationId: string,
+): Promise<string[]> {
+  const sb = requireSupabase();
+  const { data, error } = await sb
+    .from('merchant_application_activities')
+    .select('category, position')
+    .eq('application_id', applicationId)
+    .order('position', { ascending: true });
+  if (error) throw error;
+  return ((data ?? []) as Array<{ category: string }>).map((r) => r.category);
 }
 
 /**

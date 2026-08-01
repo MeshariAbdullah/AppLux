@@ -20,9 +20,13 @@ import { useStore } from '@/lib/store';
 import {
   adaptMerchantToStore,
   fetchMerchant,
+  listMerchantActivities,
+  listMerchantBranches,
   useSupabaseAuth,
 } from '@/lib/supabase';
-import type { PartnerStore, StoreBranch } from '@/lib/data';
+import { openExternalUrl } from '@/lib/openExternal';
+import { cn } from '@/lib/cn';
+import type { PartnerStore, StoreBranch, StoreCategory } from '@/lib/data';
 import { StoreLogo, categoryIcon } from '@/components/stores/StoreLogo';
 
 export default function StoreDetails() {
@@ -74,9 +78,35 @@ export default function StoreDetails() {
     };
   }, [configured, id, stores]);
 
+  // Real branches (incl. Google Maps links) + the full activity set —
+  // active-merchant public reads. Non-blocking: the store renders with
+  // the merchant row first, then upgrades when these resolve.
+  const [liveBranches, setLiveBranches] = useState<Awaited<ReturnType<typeof listMerchantBranches>> | null>(null);
+  const [liveActivities, setLiveActivities] = useState<Awaited<ReturnType<typeof listMerchantActivities>> | null>(null);
+  useEffect(() => {
+    if (!configured || !id) return;
+    let cancelled = false;
+    setLiveBranches(null);
+    setLiveActivities(null);
+    void Promise.all([
+      listMerchantBranches(id).catch(() => []),
+      listMerchantActivities(id).catch(() => []),
+    ]).then(([b, a]) => {
+      if (cancelled) return;
+      setLiveBranches(b);
+      setLiveActivities(a);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [configured, id]);
+
   const store: PartnerStore | null = configured
     ? liveMerchantRow
-      ? adaptMerchantToStore(liveMerchantRow)
+      ? adaptMerchantToStore(liveMerchantRow, {
+          branches: liveBranches ?? undefined,
+          activities: liveActivities ?? undefined,
+        })
       : null
     : demoStore;
   const loading = configured ? liveLoading : demoLoading;
@@ -132,10 +162,26 @@ export default function StoreDetails() {
             <div className="min-w-0 flex-1">
               <div className="text-[19px] font-bold leading-tight truncate">{name}</div>
               <div className="mt-0.5 text-[12.5px] text-white/60 truncate">
-                {t(`stores.filters.${store.category}`)} · {cityLabel}
+                {(store.activities && store.activities.length ? store.activities : [store.category])
+                  .map((a) => t(`stores.filters.${a}`))
+                  .join(' · ')}{' '}
+                · {cityLabel}
               </div>
             </div>
           </div>
+          {/* All activity chips */}
+          {store.activities && store.activities.length > 1 && (
+            <div className="mt-3 flex flex-wrap gap-1.5">
+              {store.activities.map((a: StoreCategory) => (
+                <span
+                  key={a}
+                  className="inline-flex items-center rounded-full bg-white/10 px-2.5 py-1 text-[11px] font-semibold text-white/80"
+                >
+                  {t(`stores.filters.${a}`)}
+                </span>
+              ))}
+            </div>
+          )}
           <div className="mt-4 flex items-center gap-2 flex-wrap">
             {store.verified && (
               <span className="inline-flex items-center gap-1 rounded-full bg-green-500/20 text-green-200 px-3 py-1.5 text-[11px] font-bold">
@@ -348,20 +394,32 @@ function BranchCard({ branch }: { branch: StoreBranch }) {
         </div>
       </div>
       <div className="mt-4 flex items-center gap-2">
-        <a
-          href={`tel:${branch.phone}`}
-          className="flex-1 inline-flex items-center justify-center gap-1.5 h-10 rounded-xl2 bg-canvas-100 text-ink-800 text-[12.5px] font-semibold hover:bg-canvas-200 transition-colors"
-        >
-          <PhoneIcon size={14} />
-          <span className="num">{branch.phone}</span>
-        </a>
-        <button
-          type="button"
-          className="inline-flex items-center justify-center gap-1.5 h-10 px-3.5 rounded-xl2 bg-white hairline text-ink-700 text-[12.5px] font-semibold hover:bg-canvas-100 transition-colors"
-        >
-          <MapPinIcon size={14} />
-          {t('stores.openMap')}
-        </button>
+        {branch.phone ? (
+          <a
+            href={`tel:+966${branch.phone}`}
+            className="flex-1 inline-flex items-center justify-center gap-1.5 h-10 rounded-xl2 bg-canvas-100 text-ink-800 text-[12.5px] font-semibold hover:bg-canvas-200 transition-colors"
+          >
+            <PhoneIcon size={14} />
+            <span className="num" dir="ltr">+966 {branch.phone}</span>
+          </a>
+        ) : null}
+        {branch.mapUrl ? (
+          <button
+            type="button"
+            onClick={() => openExternalUrl(branch.mapUrl)}
+            className={cn(
+              'inline-flex items-center justify-center gap-1.5 h-10 px-3.5 rounded-xl2 bg-green-50 text-green-700 text-[12.5px] font-semibold hover:bg-green-100 transition-colors',
+              branch.phone ? '' : 'flex-1',
+            )}
+          >
+            <MapPinIcon size={14} />
+            {t('stores.openMap')}
+          </button>
+        ) : (
+          <span className="inline-flex items-center gap-1.5 h-10 px-3.5 rounded-xl2 bg-canvas-100 text-ink-300 text-[12px] font-medium">
+            {t('stores.mapUnavailable')}
+          </span>
+        )}
       </div>
     </Card>
   );

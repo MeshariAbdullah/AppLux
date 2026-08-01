@@ -1,4 +1,7 @@
-import { getSupabase } from '../client';
+import { getSupabase, requireSupabase } from '../client';
+import type { MerchantDocumentRow } from '../types';
+
+const DOCUMENTS_BUCKET = 'merchant-documents';
 
 // =====================================================================
 // Merchant onboarding document upload — client side of the quarantine
@@ -79,4 +82,36 @@ export async function uploadMerchantDocument(
     throw new MerchantDocUploadError('unknown');
   }
   return { receipt: body.receipt, fileName: body.fileName ?? file.name, size: body.size ?? file.size };
+}
+
+// ---- Admin / merchant read side --------------------------------------
+
+/** Documents attached to an application (admin review + merchant status).
+ *  RLS scopes this to the owning applicant/merchant or admins. */
+export async function listApplicationDocuments(
+  applicationId: string,
+): Promise<MerchantDocumentRow[]> {
+  const sb = requireSupabase();
+  const { data, error } = await sb
+    .from('merchant_documents')
+    .select('*')
+    .eq('application_id', applicationId)
+    .order('uploaded_at', { ascending: true });
+  if (error) throw error;
+  return (data ?? []) as MerchantDocumentRow[];
+}
+
+/** Mint a SHORT-LIVED signed URL for one document object. The caller
+ *  must be authorized by RLS (owning merchant or admin); never a public
+ *  URL. Returns null if unauthorized/expired. */
+export async function getMerchantDocumentSignedUrl(
+  storagePath: string,
+  expiresInSeconds = 120,
+): Promise<string | null> {
+  const sb = requireSupabase();
+  const { data, error } = await sb.storage
+    .from(DOCUMENTS_BUCKET)
+    .createSignedUrl(storagePath, expiresInSeconds);
+  if (error) return null;
+  return data?.signedUrl ?? null;
 }

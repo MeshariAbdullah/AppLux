@@ -11,6 +11,7 @@ import { useStore } from '@/lib/store';
 import type { PartnerStore, StoreCategory } from '@/lib/data';
 import {
   adaptMerchantToStore,
+  listActivitiesForMerchants,
   listMerchants,
   useSupabaseAuth,
 } from '@/lib/supabase';
@@ -69,6 +70,23 @@ export default function Stores() {
     }
   }, [liveError]);
 
+  // Batched activities for all listed merchants, so the category filter
+  // matches a store when ANY of its activities matches (not just the
+  // primary). One IN() query; the list renders without waiting on it.
+  const [activityMap, setActivityMap] = useState<Record<string, string[]>>({});
+  useEffect(() => {
+    if (!configured || !liveRows || liveRows.length === 0) return;
+    let cancelled = false;
+    listActivitiesForMerchants(liveRows.map((r) => r.id))
+      .then((m) => {
+        if (!cancelled) setActivityMap(m);
+      })
+      .catch((err: unknown) => logEvent('rpc_failure', 'warn', { op: 'list_merchant_activities_batch' }, err));
+    return () => {
+      cancelled = true;
+    };
+  }, [configured, liveRows]);
+
   // Demo-mode visual parity: the brief skeleton beat the page always had.
   const [demoSettled, setDemoSettled] = useState(configured);
   useEffect(() => {
@@ -82,8 +100,12 @@ export default function Stores() {
     // Phase 9 rule preserved: never fall back to demo seeds in live
     // mode. Error or pre-load renders as an empty list behind the
     // skeleton.
-    return (liveRows ?? []).map(adaptMerchantToStore);
-  }, [configured, demoStores, liveRows]);
+    return (liveRows ?? []).map((r) =>
+      adaptMerchantToStore(r, {
+        activities: (activityMap[r.id] as never) ?? undefined,
+      }),
+    );
+  }, [configured, demoStores, liveRows, activityMap]);
 
   const loading = configured ? liveLoading : !demoSettled;
 
@@ -91,7 +113,10 @@ export default function Stores() {
   const q = query.trim().toLowerCase();
   const filtered = useMemo(() => {
     let rows = stores;
-    if (filter !== 'all') rows = rows.filter((s) => s.category === filter);
+    if (filter !== 'all')
+      rows = rows.filter((s) =>
+        (s.activities && s.activities.length ? s.activities : [s.category]).includes(filter),
+      );
     if (q) {
       rows = rows.filter((s) => {
         const name = (s.name[locale] || s.name.ar || '').toLowerCase();

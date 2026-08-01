@@ -76,9 +76,14 @@ export type MerchantRow = {
   owner_user_id: string;
   application_id: string | null;
   company_name: string;
-  commercial_reg_number: string;
+  /** Legacy — nullable since onboarding uploads a CR copy instead of
+   *  typing the number (20260502123900). */
+  commercial_reg_number: string | null;
+  /** Establishment Unified Number (700 + 7 digits). */
+  unified_number: string | null;
   display_name: LocalizedJson;
   about: LocalizedJson | null;
+  /** First/primary activity; the full set is in merchant_activities. */
   primary_category: RentalCategoryDB;
   city: string;
   verified: boolean;
@@ -93,18 +98,64 @@ export type MerchantRow = {
 export type MerchantInsert = Partial<MerchantRow> & {
   owner_user_id: string;
   company_name: string;
-  commercial_reg_number: string;
   display_name: LocalizedJson;
   primary_category: RentalCategoryDB;
   city: string;
 };
 export type MerchantUpdate = Partial<MerchantRow>;
 
+/** merchant_activities / merchant_application_activities row (20260502123900). */
+export type MerchantActivityRow = {
+  merchant_id: string;
+  category: RentalCategoryDB;
+  position: number;
+  created_at: string;
+};
+
+/** Live branch row (merchant_branches) — previously untyped. */
+export type MerchantBranchRow = {
+  id: string;
+  merchant_id: string;
+  name: LocalizedJson;
+  city: string;
+  address: LocalizedJson | null;
+  phone: string | null;
+  hours_open: string | null;
+  hours_close: string | null;
+  is_primary: boolean;
+  map_url: string | null;
+  geo_lat: number | null;
+  geo_lng: number | null;
+  created_at: string;
+  updated_at: string;
+};
+
+/** merchant_documents metadata (20260502123900). */
+export type MerchantDocumentRow = {
+  id: string;
+  application_id: string | null;
+  merchant_id: string | null;
+  doc_type: string;
+  storage_path: string;
+  original_name: string;
+  mime_type: string;
+  file_size: number;
+  upload_status: string;
+  review_status: 'pending' | 'approved' | 'rejected';
+  uploaded_at: string;
+  reviewed_at: string | null;
+  reviewed_by: string | null;
+  rejection_reason: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
 export type MerchantApplicationRow = {
   id: string;
   applicant_user_id: string;
   company_name: string;
-  commercial_reg_number: string;
+  commercial_reg_number: string | null;
+  unified_number: string | null;
   authorized_name: string;
   authorized_national_id: string;
   city: string;

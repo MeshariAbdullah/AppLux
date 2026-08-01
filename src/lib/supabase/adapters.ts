@@ -95,20 +95,60 @@ function deriveInitials(name: Localized): string {
   return tokens.map((t) => t[0]?.toUpperCase() ?? '').join('') || source.slice(0, 2);
 }
 
-export function adaptMerchantToStore(row: MerchantRow): PartnerStore {
+/** Real branch rows → StoreBranch (incl. map link). */
+type StoreBranchInput = {
+  id: string;
+  name: unknown;
+  city: string;
+  address: unknown;
+  phone: string | null;
+  hours_open: string | null;
+  hours_close: string | null;
+  map_url: string | null;
+};
+
+export function adaptMerchantToStore(
+  row: MerchantRow,
+  extras?: {
+    branches?: StoreBranchInput[];
+    activities?: RentalCategoryDB[];
+  },
+): PartnerStore {
   const name = localized(row.display_name);
   const description = localized(row.about);
 
-  // The MVP `merchants` table is single-branch; the UI's branch list is
-  // therefore a one-element array stitched from the merchant's own city.
-  // Real branches arrive in Phase 4 via the merchant_branches table.
-  const primaryBranch: StoreBranch = {
-    id: `${row.id}-primary`,
-    name,
-    address: { ar: row.city, en: row.city },
-    phone: '',
-    hours: { ar: '', en: '' },
-  };
+  const branches: StoreBranch[] =
+    extras?.branches && extras.branches.length
+      ? extras.branches.map((b) => {
+          const addr = (b.address as { ar?: string; en?: string } | null) ?? null;
+          return {
+          id: b.id,
+          name: localized(b.name as never) || name,
+          address: { ar: addr?.ar ?? b.city, en: addr?.en ?? b.city },
+          phone: b.phone ?? '',
+          hours:
+            b.hours_open && b.hours_close
+              ? { ar: `${b.hours_open} - ${b.hours_close}`, en: `${b.hours_open} - ${b.hours_close}` }
+              : { ar: '', en: '' },
+          mapUrl: b.map_url ?? undefined,
+          };
+        })
+      : [
+          // Fallback (list view, no per-store branch fetch): a single
+          // synthetic branch from the merchant city, no map link.
+          {
+            id: `${row.id}-primary`,
+            name,
+            address: { ar: row.city, en: row.city },
+            phone: '',
+            hours: { ar: '', en: '' },
+          },
+        ];
+
+  const activities: StoreCategory[] = (extras?.activities && extras.activities.length
+    ? extras.activities
+    : [row.primary_category]
+  ).map((c) => SINGULAR_TO_PLURAL[c] ?? 'dresses');
 
   return {
     id: row.id,
@@ -122,7 +162,8 @@ export function adaptMerchantToStore(row: MerchantRow): PartnerStore {
     hours: { ar: '', en: '' },
     logoTone: 'gold',
     verified: row.verified,
-    branches: [primaryBranch],
+    branches,
+    activities,
   };
 }
 
@@ -645,7 +686,8 @@ export function adaptMerchantApplication(
     companyName: row.company_name,
     authorizedName: row.authorized_name,
     authorizedId: row.authorized_national_id,
-    commercialReg: row.commercial_reg_number,
+    commercialReg: row.commercial_reg_number ?? '',
+    unifiedNumber: row.unified_number ?? '',
     vatNumber: '',
     iban: '',
     contactEmail: row.contact_email ?? '',

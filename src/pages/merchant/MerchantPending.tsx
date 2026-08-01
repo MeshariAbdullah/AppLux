@@ -218,7 +218,7 @@ export default function MerchantPending() {
       ? {
           refId: liveApp.id.slice(0, 8).toUpperCase(),
           companyName: liveApp.company_name,
-          commercialReg: liveApp.commercial_reg_number,
+          commercialReg: liveApp.unified_number ?? liveApp.commercial_reg_number ?? '',
           authorizedName: liveApp.authorized_name,
           iban: null,
           contactEmail: liveApp.contact_email ?? null,

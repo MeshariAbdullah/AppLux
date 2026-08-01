@@ -38,13 +38,28 @@ import {
   decideMerchantApplication,
   fetchMerchantApplication,
   listApplicationBranches,
+  listApplicationActivities,
+  listApplicationDocuments,
+  getMerchantDocumentSignedUrl,
   useSupabaseAuth,
   type MerchantApplicationBranchRow,
+  type MerchantDocumentRow,
+  type RentalCategoryDB,
 } from '@/lib/supabase';
 import type {
   AdminMerchantDecisionStatus,
   AdminMerchantDocStatus,
+  StoreCategory,
 } from '@/lib/data';
+import { openExternalUrl } from '@/lib/openExternal';
+
+/** DB rental_category → customer StoreCategory (plural keys). */
+const DB_TO_STORE_CATEGORY: Record<RentalCategoryDB, StoreCategory> = {
+  dress: 'dresses',
+  bag: 'bags',
+  watch: 'watches',
+  bisht: 'bishts',
+};
 
 
 function docTone(s: AdminMerchantDocStatus): StatusTone {
@@ -100,8 +115,10 @@ export default function AdminMerchantDetails() {
         logEvent('rpc_failure', 'warn', { op: 'list_application_branches' }, err);
         return [] as MerchantApplicationBranchRow[];
       }),
+      listApplicationActivities(id).catch(() => [] as string[]),
+      listApplicationDocuments(id).catch(() => [] as MerchantDocumentRow[]),
     ])
-      .then(([row, branches]) => {
+      .then(([row, branches, activities, documents]) => {
         if (cancelled) return;
         // Feed the submitted draft branches into the same view shape
         // the demo store uses — the existing branches section renders
@@ -110,12 +127,24 @@ export default function AdminMerchantDetails() {
           row
             ? {
                 ...adaptMerchantApplication(row),
+                activities: activities
+                  .map((c) => DB_TO_STORE_CATEGORY[c as RentalCategoryDB])
+                  .filter(Boolean) as StoreCategory[],
                 branches: branches.map((b) => ({
                   id: b.id,
                   name: b.name,
                   city: b.city,
                   address: b.address,
                   phone: b.phone ?? '—',
+                  mapUrl: b.map_url ?? undefined,
+                })),
+                documents: documents.map((d) => ({
+                  id: d.id,
+                  type: d.doc_type,
+                  fileName: d.original_name,
+                  path: d.storage_path,
+                  reviewStatus: d.review_status,
+                  uploadedAt: d.uploaded_at,
                 })),
               }
             : null,
@@ -258,15 +287,26 @@ export default function AdminMerchantDetails() {
                 {request.initials}
               </span>
               <div className="min-w-0 flex-1">
-                <div className="inline-flex items-center gap-1.5 rounded-full bg-gold-400/15 ring-1 ring-gold-400/30 px-2.5 py-1 text-[11px] font-semibold text-gold-200">
-                  <ShieldIcon size={12} />
-                  {t(`admin.merchantRequest.category.${request.category}`)}
+                <div className="flex flex-wrap gap-1.5">
+                  {(request.activities && request.activities.length
+                    ? request.activities
+                    : [request.category]
+                  ).map((a) => (
+                    <span
+                      key={a}
+                      className="inline-flex items-center gap-1.5 rounded-full bg-gold-400/15 ring-1 ring-gold-400/30 px-2.5 py-1 text-[11px] font-semibold text-gold-200"
+                    >
+                      <ShieldIcon size={12} />
+                      {t(`admin.merchantRequest.category.${a}`)}
+                    </span>
+                  ))}
                 </div>
                 <h1 className="mt-3 editorial-title text-[22px] leading-tight text-white">
                   {request.companyName}
                 </h1>
                 <div className="mt-1 text-[12px] text-white/65">
-                  {request.authorizedName} · <span className="num">{request.commercialReg}</span>
+                  {request.authorizedName} ·{' '}
+                  <span className="num" dir="ltr">{request.unifiedNumber || request.commercialReg}</span>
                 </div>
               </div>
             </div>
@@ -309,8 +349,8 @@ export default function AdminMerchantDetails() {
           >
             <Card padded className="space-y-0">
               <Field
-                label={t('admin.merchantRequest.fields.commercialReg')}
-                value={request.commercialReg}
+                label={t('admin.merchantRequest.fields.unifiedNumber')}
+                value={request.unifiedNumber || request.commercialReg || '—'}
                 numeric
               />
               <CardDivider className="my-2" />
@@ -409,6 +449,16 @@ export default function AdminMerchantDetails() {
                         <PhoneIcon size={10} />
                         {b.phone}
                       </div>
+                      {b.mapUrl && (
+                        <button
+                          type="button"
+                          onClick={() => openExternalUrl(b.mapUrl)}
+                          className="mt-1.5 inline-flex items-center gap-1.5 text-[11.5px] font-semibold text-lavender-700 hover:underline"
+                        >
+                          <MapPinIcon size={11} />
+                          {t('admin.merchantRequest.openMap')}
+                        </button>
+                      )}
                     </div>
                   </div>
                   {i < request.branches.length - 1 && (
@@ -443,18 +493,40 @@ export default function AdminMerchantDetails() {
                 />
               </div>
               <div className="h-px bg-canvas-200/80" />
-              <div className="space-y-2">
-                {DOC_KEYS.map((k) => (
-                  <DocRow
-                    key={k}
-                    label={t(`admin.merchantRequest.docFields.${k}`)}
-                    status={request.docs[k]}
-                    statusLabel={t(
-                      `admin.merchantRequest.docStatus.${request.docs[k]}`,
-                    )}
-                  />
-                ))}
-              </div>
+              {/* Real uploaded documents (quarantine-claimed). Secure
+                  preview = short-lived signed URL minted on demand. */}
+              {request.documents && request.documents.length > 0 && (
+                <div className="space-y-2">
+                  {request.documents.map((d) => (
+                    <UploadedDocRow
+                      key={d.id}
+                      label={t(`admin.merchantRequest.docFields.${d.type === 'commercial_registration' ? 'commercialReg' : 'authorizedId'}`)}
+                      fileName={d.fileName}
+                      reviewStatus={d.reviewStatus}
+                      statusLabel={t(`admin.merchantRequest.docStatus.${d.reviewStatus === 'approved' ? 'verified' : d.reviewStatus}`)}
+                      onView={async () => {
+                        const url = await getMerchantDocumentSignedUrl(d.path);
+                        if (url) openExternalUrl(url);
+                      }}
+                      viewLabel={t('admin.merchantRequest.viewDoc')}
+                    />
+                  ))}
+                </div>
+              )}
+              {(!request.documents || request.documents.length === 0) && (
+                <div className="space-y-2">
+                  {DOC_KEYS.map((k) => (
+                    <DocRow
+                      key={k}
+                      label={t(`admin.merchantRequest.docFields.${k}`)}
+                      status={request.docs[k]}
+                      statusLabel={t(
+                        `admin.merchantRequest.docStatus.${request.docs[k]}`,
+                      )}
+                    />
+                  ))}
+                </div>
+              )}
             </Card>
           </Section>
 
@@ -644,6 +716,45 @@ function DocRow({
         dot
         label={statusLabel}
       />
+    </div>
+  );
+}
+
+function UploadedDocRow({
+  label,
+  fileName,
+  reviewStatus,
+  statusLabel,
+  onView,
+  viewLabel,
+}: {
+  label: ReactNode;
+  fileName: string;
+  reviewStatus: 'pending' | 'approved' | 'rejected';
+  statusLabel: ReactNode;
+  onView: () => void;
+  viewLabel: string;
+}) {
+  const tone = reviewStatus === 'approved' ? 'success' : reviewStatus === 'rejected' ? 'danger' : 'warn';
+  return (
+    <div className="flex items-center justify-between gap-3">
+      <span className="inline-flex items-center gap-2 text-[12.5px] text-ink-700 min-w-0">
+        <DocIcon size={13} className="text-ink-400 shrink-0" />
+        <span className="min-w-0">
+          <span className="block truncate">{label}</span>
+          <span className="block truncate text-[11px] text-ink-400">{fileName}</span>
+        </span>
+      </span>
+      <div className="flex items-center gap-2 shrink-0">
+        <button
+          type="button"
+          onClick={onView}
+          className="text-[11.5px] font-semibold text-lavender-700 hover:underline"
+        >
+          {viewLabel}
+        </button>
+        <StatusChip size="sm" tone={tone} dot label={statusLabel} />
+      </div>
     </div>
   );
 }

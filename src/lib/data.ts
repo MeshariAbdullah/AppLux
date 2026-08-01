@@ -186,6 +186,9 @@ export type StoreBranch = {
   address: Localized;
   phone: string;
   hours: Localized;
+  /** Google Maps location link (undefined for legacy branches → the
+   *  customer sees a neutral unavailable state instead of a CTA). */
+  mapUrl?: string;
 };
 
 export type PartnerStore = {
@@ -201,6 +204,9 @@ export type PartnerStore = {
   logoTone: 'brand' | 'gold' | 'ink' | 'success';
   verified: boolean;
   branches: StoreBranch[];
+  /** All store activities (localized category keys). Falls back to
+   *  [category] when the multi-activity set hasn't been loaded. */
+  activities?: StoreCategory[];
 };
 
 export const SEED_STORES: PartnerStore[] = [
@@ -1126,6 +1132,8 @@ export type AdminMerchantBranch = {
   city: string;
   address: string;
   phone: string;
+  /** Google Maps location link (optional for legacy branches). */
+  mapUrl?: string;
 };
 
 export type AdminMerchantDocStatus = 'verified' | 'pending' | 'missing';
@@ -1136,12 +1144,28 @@ export type AdminMerchantDocs = {
   authorizedId: AdminMerchantDocStatus;
 };
 
+/** A verification document surfaced to admins (real quarantine-claimed
+ *  upload). `path` is used to mint a short-lived signed URL — never a
+ *  public URL, never shown to the admin directly. */
+export type AdminMerchantDocument = {
+  id: string;
+  type: string;
+  fileName: string;
+  path: string;
+  reviewStatus: 'pending' | 'approved' | 'rejected';
+  uploadedAt: string;
+};
+
 export type AdminPendingMerchant = {
   id: string;
   companyName: string;
   authorizedName: string;
   authorizedId: string;
   commercialReg: string;
+  /** Establishment Unified Number (700). */
+  unifiedNumber?: string;
+  /** All selected activities (localized store-category keys). */
+  activities?: StoreCategory[];
   vatNumber: string;
   iban: string;
   contactEmail: string;
@@ -1154,6 +1178,8 @@ export type AdminPendingMerchant = {
   initials: string;
   branches: AdminMerchantBranch[];
   docs: AdminMerchantDocs;
+  /** Real uploaded verification documents (empty for legacy/demo). */
+  documents?: AdminMerchantDocument[];
   notes?: string;
 };
 

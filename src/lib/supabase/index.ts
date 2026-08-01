@@ -38,6 +38,9 @@ export type {
   MerchantRow,
   MerchantStatusDB,
   MerchantUpdate,
+  MerchantDocumentRow,
+  MerchantActivityRow,
+  MerchantBranchRow,
   NoteStatus,
   ProfileInsert,
   ProfileRow,
@@ -100,7 +103,13 @@ export {
   fetchMyMerchant,
   fetchBranchById,
   listMerchantBranches,
+  listMerchantActivities,
+  listActivitiesForMerchants,
 } from './queries/merchants';
+export {
+  listApplicationDocuments,
+  getMerchantDocumentSignedUrl,
+} from './queries/merchantDocuments';
 export type { BranchInfo, ListMerchantsFilter } from './queries/merchants';
 export {
   submitMerchantApplication,
@@ -111,6 +120,7 @@ export {
   decideMerchantApplication,
   provisionMerchantFromApplication,
   listApplicationBranches,
+  listApplicationActivities,
   approveMerchantApplication,
 } from './queries/merchant-applications';
 export type {

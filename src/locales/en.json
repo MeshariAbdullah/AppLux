@@ -554,7 +554,7 @@
     "emptyHint": "Try a different keyword or filter.",
     "notice": "Rentals start at the store: the merchant issues your offer and contract, and you review and approve them in the app.",
     "callBranch": "Call branch",
-    "openMap": "Open in maps",
+    "openMap": "Open branch location",
     "notFound": "Store not found",
     "goBack": "Back to list",
     "verifiedOnly": "Verified only",
@@ -590,7 +590,8 @@
       "step1": "Visit a branch and pick the item",
       "step2": "Give the merchant your Lend-registered mobile number",
       "step3": "Review the offer and contract, then approve in the app"
-    }
+    },
+    "mapUnavailable": "Location unavailable"
   },
   "eligibility": {
     "title": "Rental eligibility",
@@ -2325,7 +2326,8 @@
         "expectedVolume": "Expected monthly volume",
         "phone": "Phone",
         "email": "Email",
-        "headOffice": "Head office"
+        "headOffice": "Head office",
+        "unifiedNumber": "Establishment Unified Number"
       },
       "docs": {
         "verified": "Verified",
@@ -2341,7 +2343,8 @@
       "docStatus": {
         "verified": "Verified",
         "pending": "Pending",
-        "missing": "Missing"
+        "missing": "Missing",
+        "rejected": "Rejected"
       },
       "notesLabel": "Reviewer notes",
       "notesHint": "Saved with the decision and visible in the audit trail.",
@@ -2382,7 +2385,9 @@
         "title": "Audit trail",
         "hint": "Approve and reject actions are logged with the reviewer, timestamp and notes."
       },
-      "noBranches": "No branches were submitted with this application (legacy pre-separation flow)."
+      "noBranches": "No branches were submitted with this application (legacy pre-separation flow).",
+      "openMap": "Open location on map",
+      "viewDoc": "View"
     },
     "users": {
       "title": "User management",
