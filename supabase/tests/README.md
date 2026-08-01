@@ -19,6 +19,15 @@ means every assertion held.
   and — critically — a failed signup does **not** consume the receipt so a
   retry is idempotent).
 
+## Edge Function CORS
+
+- `edge_cors_test.mjs` — transpiles `supabase/functions/_shared/cors.ts`
+  with esbuild and asserts the browser CORS contract for the
+  merchant-doc-upload function: OPTIONS preflight → 200, `authorization`
+  / `x-client-info` / `apikey` / `content-type` all allowed, POST/OPTIONS
+  methods, and CORS headers on both success and error JSON responses.
+  Run with `node supabase/tests/edge_cors_test.mjs`.
+
 ## Running locally
 
 Replay the migration chain into a scratch Postgres, then:

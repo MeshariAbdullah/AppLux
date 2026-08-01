@@ -29,22 +29,10 @@
 
 import { serve } from 'https://deno.land/std@0.177.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
+import { preflight, jsonResponse as json } from '../_shared/cors.ts';
 
 const BUCKET = 'merchant-documents';
 const MAX_BYTES = 5 * 1024 * 1024;
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'apikey, content-type',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
-};
-
-function json(body: unknown, init: ResponseInit = {}) {
-  return new Response(JSON.stringify(body), {
-    ...init,
-    headers: { ...corsHeaders, 'Content-Type': 'application/json', ...(init.headers ?? {}) },
-  });
-}
 
 async function sha256Hex(input: string | Uint8Array): Promise<string> {
   const data = typeof input === 'string' ? new TextEncoder().encode(input) : input;
@@ -106,9 +94,21 @@ async function verifyCaptcha(token: string | null): Promise<boolean> {
 }
 
 serve(async (req) => {
-  if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
+  // Answer the CORS preflight before ANY other logic.
+  const pre = preflight(req);
+  if (pre) return pre;
   if (req.method !== 'POST') return json({ error: 'method_not_allowed' }, { status: 405 });
 
+  try {
+    return await handleUpload(req);
+  } catch (err) {
+    // Unexpected exception — still reply WITH CORS + a sanitized error.
+    console.error('[merchant-doc-upload] unhandled', err);
+    return json({ error: 'unknown' }, { status: 500 });
+  }
+});
+
+async function handleUpload(req: Request): Promise<Response> {
   const url = Deno.env.get('SUPABASE_URL');
   const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
   if (!url || !serviceKey) return json({ error: 'not_configured' }, { status: 503 });
@@ -198,4 +198,4 @@ serve(async (req) => {
   }
 
   return json({ receipt: rawToken, fileName: sanitizeName(file.name, kind.ext), size: file.size });
-});
+}
