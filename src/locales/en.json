@@ -1303,7 +1303,6 @@
         "hint": "We only check: can this rental proceed?",
         "verdict": {
           "approved": "Renter eligible",
-          "approvedHint": "You can issue the rental package now.",
           "insufficient": "Not eligible for this amount",
           "insufficientHint": "Reduce the item value or cancel the session.",
           "review": "Review required",

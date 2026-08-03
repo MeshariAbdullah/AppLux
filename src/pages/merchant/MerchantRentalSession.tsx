@@ -1879,9 +1879,14 @@ function EligibilityCard({
               <div className="text-[13.5px] font-semibold">
                 {t(`merchant.session.eligibility.verdict.${outcome}`)}
               </div>
-              <div className="mt-0.5 text-[12px] opacity-80 leading-relaxed">
-                {t(`merchant.session.eligibility.verdict.${outcome}Hint`)}
-              </div>
+              {/* The eligible (approved) state needs no helper line — the
+                  status + badge + CTA are self-explanatory. Insufficient /
+                  review keep their guidance. */}
+              {outcome !== 'approved' && (
+                <div className="mt-0.5 text-[12px] opacity-80 leading-relaxed">
+                  {t(`merchant.session.eligibility.verdict.${outcome}Hint`)}
+                </div>
+              )}
             </div>
           </div>
 
