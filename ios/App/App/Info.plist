@@ -45,5 +45,9 @@
 	</array>
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<true/>
+	<key>NSCameraUsageDescription</key>
+	<string>نحتاج الوصول إلى الكاميرا لالتقاط صور توثيق الضرر. / We need camera access to capture damage-evidence photos.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>نحتاج الوصول إلى مكتبة الصور لإرفاق صور توثيق الضرر. / We need photo-library access to attach damage-evidence photos.</string>
 </dict>
 </plist>
