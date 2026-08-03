@@ -169,6 +169,19 @@ export async function checkUploadReceiptValid(receipt: string): Promise<boolean>
   return data === true;
 }
 
+export type ReceiptStatus = 'valid' | 'expired' | 'claimed' | 'deleted' | 'missing';
+
+/** Machine-readable CR-document receipt status — lets the client route
+ *  precisely and never mislabel an unrelated failure as "receipt
+ *  expired". Throws on RPC/network failure. */
+export async function checkUploadReceiptStatus(receipt: string): Promise<ReceiptStatus> {
+  const sb = requireSupabase();
+  const { data, error } = await sb.rpc('check_upload_receipt_status', { p_receipt: receipt });
+  if (error) throw error;
+  const s = String(data);
+  return (['valid', 'expired', 'claimed', 'deleted', 'missing'].includes(s) ? s : 'missing') as ReceiptStatus;
+}
+
 /** Activities for many merchants at once (discovery list) → map keyed by
  *  merchant_id, each ordered by position. One IN() query. */
 export async function listActivitiesForMerchants(

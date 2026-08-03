@@ -108,7 +108,9 @@ export {
   checkUnifiedNumberAvailable,
   checkEmailAvailable,
   checkUploadReceiptValid,
+  checkUploadReceiptStatus,
 } from './queries/merchants';
+export type { ReceiptStatus } from './queries/merchants';
 export {
   listApplicationDocuments,
   getMerchantDocumentSignedUrl,

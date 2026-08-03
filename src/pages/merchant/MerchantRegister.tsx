@@ -21,11 +21,12 @@ import { normalizeDigits } from '@/lib/validation/customer';
 import {
   checkEmailAvailable,
   checkUnifiedNumberAvailable,
-  checkUploadReceiptValid,
+  checkUploadReceiptStatus,
   resendSignupConfirmation,
   signUpMerchant,
   useSupabaseAuth,
   verifyEmailOtp,
+  type ReceiptStatus,
 } from '@/lib/supabase';
 import { classifyMerchantSignup } from '@/lib/auth/merchantSignupOutcome';
 import { useAvailability } from '@/lib/auth/useAvailability';
@@ -297,17 +298,12 @@ export default function MerchantRegister() {
       setSubmitting(false);
       return;
     }
-    // Document receipt still valid (→ Step 5) — catch an expiry BEFORE
-    // signup where the safe endpoint can see it.
-    if (values.docReceipt) {
-      let receiptOk = true;
-      try {
-        receiptOk = await checkUploadReceiptValid(values.docReceipt);
-      } catch {
-        receiptOk = true; // network hiccup — let signup be the authority
-      }
-      if (!receiptOk) {
-        returnToStep5ReceiptExpired();
+    // Document receipt (→ Step 5) — prove status BEFORE signup where the
+    // safe endpoint can see it.
+    {
+      const status = await proveReceipt();
+      if (status !== 'valid') {
+        routeReceiptInvalid(status);
         return;
       }
     }
@@ -368,14 +364,24 @@ export default function MerchantRegister() {
       // Disambiguate with a FRESH availability probe and route to the
       // exact responsible step — never a dead-end Review banner.
       if (eMsg.includes('database error saving new user')) {
-        // Disambiguate with fresh probes → route to the responsible step.
+        // Disambiguate with FRESH probes → route to the proven cause. Never
+        // infer "receipt expired" from the opaque message alone.
         unifiedAvail.invalidate(values.unifiedNumber);
         if ((await unifiedAvail.probe(values.unifiedNumber)) === 'taken') {
           returnToStep2Taken();
           return;
         }
-        // Available → the quarantined CR receipt expired/was consumed.
-        returnToStep5ReceiptExpired();
+        const status = await proveReceipt();
+        if (status !== 'valid') {
+          routeReceiptInvalid(status);
+          return;
+        }
+        // Neither the Unified Number nor the receipt is actually the
+        // problem — an unknown trigger/DB failure. Do NOT mislabel it as
+        // receipt expiry; show a generic retry and log a sanitized op id.
+        logEvent('auth_failure', 'warn', { op: 'merchant_sign_up_db_error' });
+        setErrors({ form: t('merchant.register.errors.submitUnexpected') });
+        setSubmitting(false);
         return;
       }
       setErrors({ form: translateAuthError(err, t) });
@@ -453,12 +459,32 @@ export default function MerchantRegister() {
     setSubmitting(false);
     window.setTimeout(() => focusFirstError(1, { unifiedNumber: 'x' }), 60);
   };
-  const returnToStep5ReceiptExpired = () => {
+  /** Route back to Step 5 with the copy that matches the PROVEN receipt
+   *  status. Only ever called with a non-'valid' status. */
+  const routeReceiptInvalid = (status: ReceiptStatus) => {
     setValues((v) => ({ ...v, docReceipt: null, docFileName: '' }));
     setStep(DOCUMENTS_STEP);
-    setErrors({ document: t('merchant.register.documents.expired') });
+    setErrors({
+      document: t(
+        status === 'expired'
+          ? 'merchant.register.documents.expired'
+          : 'merchant.register.documents.invalid',
+      ),
+    });
     setSubmitting(false);
     window.setTimeout(() => focusFirstError(DOCUMENTS_STEP, { document: 'x' }), 60);
+  };
+
+  /** Prove the receipt's status server-side. A network failure returns
+   *  'valid' so we never bounce the merchant to Step 5 without proof —
+   *  the signup trigger stays the authority in that case. */
+  const proveReceipt = async (): Promise<ReceiptStatus> => {
+    if (!values.docReceipt) return 'missing';
+    try {
+      return await checkUploadReceiptStatus(values.docReceipt);
+    } catch {
+      return 'valid';
+    }
   };
 
   const goNext = async () => {
@@ -502,17 +528,9 @@ export default function MerchantRegister() {
     }
     // Step 5 (Documents): confirm the quarantined receipt is still valid.
     if (step === DOCUMENTS_STEP && configured && values.docReceipt) {
-      let receiptOk = true;
-      try {
-        receiptOk = await checkUploadReceiptValid(values.docReceipt);
-      } catch {
-        receiptOk = true; // network hiccup — signup remains the authority
-      }
-      if (!receiptOk) {
-        setValues((v) => ({ ...v, docReceipt: null, docFileName: '' }));
-        const withErr: Errors = { document: t('merchant.register.documents.expired') };
-        setErrors(withErr);
-        focusFirstError(DOCUMENTS_STEP, withErr);
+      const status = await proveReceipt();
+      if (status !== 'valid') {
+        routeReceiptInvalid(status);
         return;
       }
     }

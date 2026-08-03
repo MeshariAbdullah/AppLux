@@ -557,6 +557,12 @@ export type Database = {
         Args: { p_receipt: string };
         Returns: boolean;
       };
+      /** Machine-readable CR-document receipt status — onboarding Step 5
+       *  (20260502124300): valid|expired|claimed|deleted|missing. */
+      check_upload_receipt_status: {
+        Args: { p_receipt: string };
+        Returns: string;
+      };
       provision_merchant_from_application: {
         Args: { p_application_id: string };
         Returns: string;

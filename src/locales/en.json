@@ -1443,7 +1443,8 @@
         "unifiedNumberTaken": "This establishment number is already used by another merchant account or application.",
         "unifiedNumberCheckFailed": "Couldn't verify the establishment number right now. Please try again.",
         "emailTaken": "This email is already registered. Use another email or sign in.",
-        "emailCheckFailed": "Couldn't verify the email right now. Please try again."
+        "emailCheckFailed": "Couldn't verify the email right now. Please try again.",
+        "submitUnexpected": "The application couldn’t be submitted due to an unexpected error. Please try again."
       },
       "email": "Email",
       "emailPh": "you@company.com",
@@ -1517,7 +1518,8 @@
           "rateLimited": "Too many attempts. Please try again shortly.",
           "failed": "The document could not be uploaded. Please try again."
         },
-        "expired": "The document upload expired. Re-upload the Commercial Registration copy."
+        "expired": "The document upload expired. Re-upload the Commercial Registration copy.",
+        "invalid": "The document is no longer valid. Re-upload the Commercial Registration copy."
       },
       "unifiedNumberChecking": "Checking establishment number availability…",
       "emailChecking": "Checking email…"
