@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Header, Screen } from '@/components/layout';
-import { Button, FormField, Input, Select } from '@/components/ui';
+import { Button, FormField, Input, NumericField, Select } from '@/components/ui';
 import {
   AlertIcon,
   ArrowIcon,
@@ -1363,6 +1363,7 @@ function VerifyCard({
                   >
                     <Input
                       inputMode="numeric"
+                      dir="ltr"
                       placeholder={t(
                         'merchant.session.verify.nationalId.placeholder',
                       )}
@@ -1371,7 +1372,7 @@ function VerifyCard({
                       maxLength={10}
                       invalid={Boolean(nationalIdError)}
                       leading={<UserIcon size={14} className="text-lavender-600" />}
-                      className="num tracking-[0.2em]"
+                      className="num tracking-[0.2em] text-left"
                     />
                   </FormField>
                   <Button
@@ -1409,6 +1410,7 @@ function VerifyCard({
                   >
                     <Input
                       inputMode="numeric"
+                      dir="ltr"
                       placeholder="1234"
                       value={challenge}
                       onChange={(e) =>
@@ -1661,11 +1663,12 @@ function OperationCard({
           >
             <Input
               type="datetime-local"
+              dir="ltr"
               value={operation.startsAt}
               min={minDateTime}
               onChange={(e) => setOperation({ startsAt: e.target.value })}
               invalid={Boolean(startError)}
-              className="num"
+              className="num text-left"
             />
           </FormField>
 
@@ -1707,22 +1710,21 @@ function OperationCard({
               )}
             </FormField>
             <FormField label={t('merchant.session.operation.daysLabel')} required>
-              <Input
+              <NumericField
                 inputMode="numeric"
                 value={operation.rentalDays}
-                onChange={(e) => setOperation({ rentalDays: e.target.value })}
-                className="num"
+                onValueChange={(v) => setOperation({ rentalDays: v })}
               />
             </FormField>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <FormField label={t('merchant.session.operation.rateLabel')} required>
-              <Input
+              <NumericField
                 inputMode="decimal"
+                digitsOnly="decimal"
                 value={operation.dailyRate}
-                onChange={(e) => setOperation({ dailyRate: e.target.value })}
-                className="num"
+                onValueChange={(v) => setOperation({ dailyRate: v })}
                 trailing={
                   <span className="text-ink-400 text-[12px] font-medium">
                     {t('common.sar')}
@@ -1735,11 +1737,11 @@ function OperationCard({
               required
               hint={t('merchant.session.operation.itemValueHint')}
             >
-              <Input
+              <NumericField
                 inputMode="decimal"
+                digitsOnly="decimal"
                 value={operation.originalItemValue}
-                onChange={(e) => setOperation({ originalItemValue: e.target.value })}
-                className="num"
+                onValueChange={(v) => setOperation({ originalItemValue: v })}
                 placeholder="0"
                 trailing={
                   <span className="text-ink-400 text-[12px] font-medium">

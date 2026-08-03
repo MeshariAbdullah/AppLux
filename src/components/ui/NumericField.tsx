@@ -1,4 +1,4 @@
-import { forwardRef, type InputHTMLAttributes } from 'react';
+import { forwardRef, type InputHTMLAttributes, type ReactNode } from 'react';
 import { Input } from './FormField';
 import { normalizeDigits } from '@/lib/validation/customer';
 import { cn } from '@/lib/cn';
@@ -26,14 +26,18 @@ type NumericFieldProps = Omit<
   /** Receives the already digit-normalized (Latin) string. */
   onValueChange: (next: string) => void;
   invalid?: boolean;
-  /** Keep only [0-9] (default true). Set false for map links etc. */
-  digitsOnly?: boolean;
+  /** Keep only [0-9] (default). false → normalize digits but keep the
+   *  rest; 'decimal' → keep [0-9.] (currency/quantity fields). */
+  digitsOnly?: boolean | 'decimal';
   maxDigits?: number;
+  /** Adornments forwarded to the shared Input (e.g. a currency suffix). */
+  leading?: ReactNode;
+  trailing?: ReactNode;
 };
 
 export const NumericField = forwardRef<HTMLInputElement, NumericFieldProps>(
   function NumericField(
-    { value, onValueChange, invalid, digitsOnly = true, maxDigits, inputMode = 'numeric', className, ...rest },
+    { value, onValueChange, invalid, digitsOnly = true, maxDigits, inputMode = 'numeric', leading, trailing, className, ...rest },
     ref,
   ) {
     return (
@@ -43,9 +47,12 @@ export const NumericField = forwardRef<HTMLInputElement, NumericFieldProps>(
         inputMode={inputMode}
         invalid={invalid}
         value={value}
+        leading={leading}
+        trailing={trailing}
         onChange={(e) => {
           let next = normalizeDigits(e.target.value);
-          if (digitsOnly) next = next.replace(/\D/g, '');
+          if (digitsOnly === true) next = next.replace(/\D/g, '');
+          else if (digitsOnly === 'decimal') next = next.replace(/[^0-9.]/g, '');
           if (maxDigits) next = next.slice(0, maxDigits);
           onValueChange(next);
         }}
