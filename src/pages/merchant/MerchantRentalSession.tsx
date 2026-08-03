@@ -252,13 +252,18 @@ function readOriginalItemValue(draft: OperationDraft): number {
   return Number(draft.originalItemValue) || 0;
 }
 
-/** Local-timezone "YYYY-MM-DDTHH:MM" for <input type="datetime-local">. */
-function nowForDateTimeInput(): string {
-  const d = new Date();
+/** Local-timezone "YYYY-MM-DDTHH:MM" for a given instant (ms). */
+function dateTimeInputFrom(ms: number): string {
+  const d = new Date(ms);
   const pad = (n: number) => String(n).padStart(2, '0');
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(
     d.getHours(),
   )}:${pad(d.getMinutes())}`;
+}
+
+/** Local-timezone "YYYY-MM-DDTHH:MM" for <input type="datetime-local">. */
+function nowForDateTimeInput(): string {
+  return dateTimeInputFrom(Date.now());
 }
 
 /**
@@ -326,6 +331,15 @@ export default function MerchantRentalSession() {
   // in-memory only, so a forced logout would discard the whole draft.
   useSensitiveFlow(session.step !== 'start');
   const [merchantId, setMerchantId] = useState<string | null>(null);
+  // Live clock so the start-date picker's `min` and the "must be in the
+  // future" check advance while the screen stays open (stale-screen /
+  // long-idle cases). Ticks every 15s; the server P0180 guard is the
+  // authority regardless of the device clock.
+  const [nowMs, setNowMs] = useState<number>(() => Date.now());
+  useEffect(() => {
+    const id = window.setInterval(() => setNowMs(Date.now()), 15000);
+    return () => window.clearInterval(id);
+  }, []);
   const [merchantPrimaryCategory, setMerchantPrimaryCategory] =
     useState<RentalCategoryDB | null>(null);
   // Full merchant row — used by the new ContractCard preview so the
@@ -669,6 +683,17 @@ export default function MerchantRentalSession() {
     if (Number(op.rentalDays) < 1) return;
     if (!(Number(op.originalItemValue) > 0)) return;
 
+    // Revalidate the rental start against a FRESH server-aligned clock at
+    // the moment of Continue (covers "chose a future time, then it passed
+    // while the screen stayed open" and the exact-boundary tap). Refresh
+    // nowMs so OperationCard shows the inline start error + disables. The
+    // server P0180 guard remains the final authority.
+    const startAt = parseDateTimeLocal(op.startsAt);
+    if (!startAt || startAt.getTime() <= Date.now()) {
+      setNowMs(Date.now());
+      return;
+    }
+
     if (!supabaseAuth.configured) {
       if (DEV_DEMO_FALLBACK && session.verify.renter) {
         updateEligibility({
@@ -823,6 +848,16 @@ export default function MerchantRentalSession() {
       setStep('issued');
     } catch (err) {
       logEvent('rpc_failure', 'warn', { op: 'create_invoice_with_items' }, err);
+      const code = (err as { code?: unknown })?.code;
+      if (code === 'P0180') {
+        // The rental start passed between setup and issuance — return to
+        // the setup step with the inline start error (data preserved),
+        // rather than stranding the merchant on a generic banner.
+        updateIssue({ submitting: false, error: null });
+        setNowMs(Date.now());
+        setStep('operation');
+        return;
+      }
       updateIssue({
         submitting: false,
         error: translateError(err, t),
@@ -945,6 +980,7 @@ export default function MerchantRentalSession() {
               loading={session.eligibility.loading}
               error={session.eligibility.error}
               onContinue={handleOperationContinue}
+              nowMs={nowMs}
             />
           )}
 
@@ -1538,6 +1574,7 @@ function OperationCard({
   loading,
   error,
   onContinue,
+  nowMs,
 }: {
   t: (k: string) => string;
   operation: OperationDraft;
@@ -1553,10 +1590,22 @@ function OperationCard({
   loading: boolean;
   error: string | null;
   onContinue: () => void;
+  nowMs: number;
 }) {
   // Computed end. Recomputes every render (cheap) — no memo needed.
   const rentalEnd = computeRentalEnd(operation.startsAt, operation.rentalDays);
-  const startInvalid = !parseDateTimeLocal(operation.startsAt);
+  const parsedStart = parseDateTimeLocal(operation.startsAt);
+  const startInvalid = !parsedStart;
+  // Business rule: starts_at > now(). datetime-local has minute
+  // granularity, so the current minute (:00) is <= now (has seconds) and
+  // is correctly treated as past. `nowMs` ticks so this advances live.
+  const startPast = parsedStart !== null && parsedStart.getTime() <= nowMs;
+  const minDateTime = dateTimeInputFrom(nowMs);
+  const startError = startInvalid
+    ? t('merchant.session.operation.startsAtRequired')
+    : startPast
+      ? t('merchant.session.operation.startsAtPast')
+      : undefined;
   return (
     <StepShell
       number={2}
@@ -1607,17 +1656,15 @@ function OperationCard({
           <FormField
             label={t('merchant.session.operation.startsAtLabel')}
             required
-            hint={
-              startInvalid
-                ? t('merchant.session.operation.startsAtRequired')
-                : t('merchant.session.operation.startsAtHint')
-            }
-            error={startInvalid ? t('merchant.session.operation.startsAtRequired') : undefined}
+            hint={!startError ? t('merchant.session.operation.startsAtHint') : undefined}
+            error={startError}
           >
             <Input
               type="datetime-local"
               value={operation.startsAt}
+              min={minDateTime}
               onChange={(e) => setOperation({ startsAt: e.target.value })}
+              invalid={Boolean(startError)}
               className="num"
             />
           </FormField>
@@ -1748,9 +1795,9 @@ function OperationCard({
               !(Number(operation.rentalDays) >= 1) ||
               !(Number(operation.originalItemValue) > 0) ||
               startInvalid ||
+              startPast ||
               !rentalEnd ||
-              (rentalEnd?.getTime() ?? 0) <=
-                (parseDateTimeLocal(operation.startsAt)?.getTime() ?? 0)
+              (rentalEnd?.getTime() ?? 0) <= (parsedStart?.getTime() ?? 0)
             }
           >
             {t('merchant.session.operation.continueCta')}

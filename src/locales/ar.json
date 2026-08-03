@@ -1295,7 +1295,8 @@
         "itemValueTileHint": "أساس الأهلية والسند لأمر.",
         "itemValueSummary": "القيمة الأصلية للقطعة · {value}",
         "continueCta": "متابعة إلى فحص الأهلية",
-        "summary": "{days} أيام بسعر {rate} لليوم"
+        "summary": "{days} أيام بسعر {rate} لليوم",
+        "startsAtPast": "يجب أن يكون موعد بداية الإيجار بعد الوقت الحالي."
       },
       "eligibility": {
         "title": "فحص الأهلية",

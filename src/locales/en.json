@@ -1295,7 +1295,8 @@
         "itemValueTileHint": "Basis for eligibility + promissory note.",
         "itemValueSummary": "Original item value · {value}",
         "continueCta": "Continue to eligibility check",
-        "summary": "{days}-day rental at {rate} per day"
+        "summary": "{days}-day rental at {rate} per day",
+        "startsAtPast": "The rental start time must be in the future."
       },
       "eligibility": {
         "title": "Eligibility check",
