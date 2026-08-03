@@ -42,3 +42,21 @@ psql -d lend -v ON_ERROR_STOP=1 -f supabase/tests/merchant_signup_claim_test.sql
 Fixtures use dedicated test UUIDs (`11111111-…`, `22222222-…`) and rely on
 the signup trigger to create profiles from `auth.users` inserts, so run each
 suite against a freshly replayed database.
+
+## pgcrypto schema (important)
+
+Supabase installs `pgcrypto` in the **`extensions`** schema. Before replaying,
+create it there so the schema-qualified `extensions.digest(...)` calls (and
+the 42883 regression guard) resolve exactly as in production:
+
+```
+create schema if not exists extensions;
+create extension pgcrypto with schema extensions;   -- BEFORE the migration chain
+```
+
+- `pgcrypto_digest_schema_fix_test.sql` — PG SHA-256 hex equals the
+  Edge/Web-Crypto output, the ASCII token hash is unchanged vs the old
+  `digest(text,…)`, a fresh receipt is found by the status RPC and claimed
+  by the signup trigger with no `function digest(...) does not exist`
+  (42883), invalid receipts are rejected, and no unqualified `digest(` call
+  remains in the three functions.
