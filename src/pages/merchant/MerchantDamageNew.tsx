@@ -33,6 +33,7 @@ import { getInitials } from '@/lib/format/initials';
 import { isRentalFinalized } from '@/lib/format/rentalFinalization';
 import { useSensitiveFlow } from '@/lib/session/flowGuard';
 import { useI18n, useT } from '@/lib/i18n';
+import { prepareEvidenceImage, PrepareImageError } from '@/lib/image/prepareEvidenceImage';
 import { useStore } from '@/lib/store';
 import {
   adaptContractToMerchantRental,
@@ -103,6 +104,13 @@ function suggestedClaim(
   if (severity === 'partial') return Math.round(itemValue * 0.3);
   return itemValue; // total AND non-return both anchor on item value
 }
+
+/** One captured/selected evidence photo: a compressed JPEG to upload +
+ *  an object-URL preview (owned here; revoked on remove/unmount). */
+type EvidenceItem = { id: string; previewUrl: string; file: File };
+
+const MAX_EVIDENCE = 8;
+let evidenceSeq = 0;
 
 export default function MerchantDamageNew() {
   const t = useT();
@@ -186,10 +194,15 @@ export default function MerchantDamageNew() {
   const [claim, setClaim] = useState<string>('');
   const [claimTouched, setClaimTouched] = useState(false);
   const [notes, setNotes] = useState('');
-  const [evidence, setEvidence] = useState<string[]>([]);
-  // Original File objects kept alongside the dataURL previews so we can
-  // upload to Storage when configured. Index-aligned with `evidence`.
-  const [evidenceFiles, setEvidenceFiles] = useState<File[]>([]);
+  // Each evidence item holds a COMPRESSED JPEG File (upload) + an object-
+  // URL preview (never a full-resolution Base64 string, which would
+  // jettison the WKWebView). previewUrl is revoked on remove/unmount.
+  const [evidence, setEvidence] = useState<EvidenceItem[]>([]);
+  const [evidenceError, setEvidenceError] = useState<string | null>(null);
+  const [processing, setProcessing] = useState(false);
+  // Synchronous re-entrancy guard: never open two native pickers at once
+  // (double-tap / opening while one is already up).
+  const captureBusyRef = useRef(false);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
@@ -197,6 +210,16 @@ export default function MerchantDamageNew() {
   // Session hardening: never idle-logout while the damage-case create
   // (+ evidence upload) is in flight (see src/lib/session/flowGuard.ts).
   useSensitiveFlow(submitting);
+
+  // Free every preview object URL on unmount (no leaked native memory).
+  const evidenceRef = useRef<EvidenceItem[]>(evidence);
+  evidenceRef.current = evidence;
+  useEffect(
+    () => () => {
+      evidenceRef.current.forEach((e) => URL.revokeObjectURL(e.previewUrl));
+    },
+    [],
+  );
 
   if (!rental) {
     if (resolving) {
@@ -248,42 +271,75 @@ export default function MerchantDamageNew() {
     }
   };
 
-  const openGallery = () => galleryInputRef.current?.click();
-  const openCamera = () => cameraInputRef.current?.click();
+  // Open exactly one native picker at a time. captureBusyRef is cleared
+  // when the user returns to the app (a file was chosen OR the picker was
+  // cancelled — both fire window 'focus'), so cancel is a no-op, never an
+  // error or a stuck button.
+  const openPicker = (which: 'camera' | 'gallery') => {
+    if (captureBusyRef.current || processing) return;
+    captureBusyRef.current = true;
+    setEvidenceError(null);
+    logEvent('info', 'info', { op: 'evidence_capture_open', source: which });
+    const release = () => {
+      window.setTimeout(() => {
+        captureBusyRef.current = false;
+      }, 300);
+      window.removeEventListener('focus', release);
+    };
+    window.addEventListener('focus', release);
+    (which === 'camera' ? cameraInputRef : galleryInputRef).current?.click();
+  };
+  const openGallery = () => openPicker('gallery');
+  const openCamera = () => openPicker('camera');
 
-  const onFiles = (
+  const onFiles = async (
     files: FileList | null,
     sourceRef: React.RefObject<HTMLInputElement | null>,
   ) => {
-    if (!files) return;
-    const accepted: File[] = [];
-    const pending: Promise<string>[] = [];
-    Array.from(files).forEach((f) => {
-      if (!f.type.startsWith('image/')) return;
-      accepted.push(f);
-      pending.push(
-        new Promise((resolve, reject) => {
-          const reader = new FileReader();
-          reader.onload = () => resolve(reader.result as string);
-          reader.onerror = () => reject(new Error('read-failed'));
-          reader.readAsDataURL(f);
-        }),
-      );
-    });
-    Promise.all(pending)
-      .then((datas) => {
-        setEvidence((prev) => [...prev, ...datas].slice(0, 8));
-        setEvidenceFiles((prev) => [...prev, ...accepted].slice(0, 8));
-      })
-      .catch(() => {
-        /* ignore */
-      });
+    // Snapshot the files into a stable array BEFORE touching the input —
+    // FileList is live, so resetting input.value would empty it.
+    const list = files ? Array.from(files) : [];
+    // Reset the input so re-selecting the same file re-fires the change.
     if (sourceRef.current) sourceRef.current.value = '';
+    // Cancellation → empty files → nothing added, no error.
+    if (list.length === 0) return;
+    const remaining = MAX_EVIDENCE - evidence.length;
+    if (remaining <= 0) {
+      setEvidenceError(t('merchant.damage.new.evidence.errors.max'));
+      return;
+    }
+    const batch = list.slice(0, remaining);
+    setProcessing(true);
+    const prepared: EvidenceItem[] = [];
+    let failures = 0;
+    for (const f of batch) {
+      try {
+        const p = await prepareEvidenceImage(f);
+        // eslint-disable-next-line no-plusplus
+        prepared.push({ id: `ev-${(evidenceSeq += 1)}`, previewUrl: p.previewUrl, file: p.file });
+      } catch (err) {
+        failures += 1;
+        logEvent('rpc_failure', 'warn', {
+          op: 'evidence_prepare_failed',
+          cause: err instanceof PrepareImageError ? err.kind : 'unknown',
+        });
+      }
+    }
+    // Prior successful items are never dropped; a partial failure only
+    // surfaces a soft message.
+    if (prepared.length) {
+      setEvidence((prev) => [...prev, ...prepared].slice(0, MAX_EVIDENCE));
+    }
+    setEvidenceError(failures > 0 ? t('merchant.damage.new.evidence.errors.capture') : null);
+    setProcessing(false);
   };
 
   const removeEvidence = (idx: number) => {
-    setEvidence((prev) => prev.filter((_, i) => i !== idx));
-    setEvidenceFiles((prev) => prev.filter((_, i) => i !== idx));
+    setEvidence((prev) => {
+      const item = prev[idx];
+      if (item) URL.revokeObjectURL(item.previewUrl);
+      return prev.filter((_, i) => i !== idx);
+    });
   };
 
   const claimValue = Number(claim) || 0;
@@ -349,9 +405,9 @@ export default function MerchantDamageNew() {
 
         // Best-effort evidence upload — failures are logged but don't
         // unwind the case creation (the merchant already has the row).
-        if (evidenceFiles.length > 0) {
+        if (evidence.length > 0) {
           await Promise.all(
-            evidenceFiles.map((file) =>
+            evidence.map(({ file }) =>
               uploadDamageEvidence({
                 caseId: created.id,
                 file,
@@ -390,7 +446,7 @@ export default function MerchantDamageNew() {
       severity,
       claimAmount: claimValue,
       notes,
-      evidence,
+      evidence: evidence.map((e) => e.previewUrl),
     });
     if (created) {
       navigate(`/merchant/damages/${created.id}`, { replace: true });
@@ -587,7 +643,7 @@ export default function MerchantDamageNew() {
                 accept="image/*"
                 multiple
                 className="sr-only"
-                onChange={(e) => onFiles(e.target.files, galleryInputRef)}
+                onChange={(e) => void onFiles(e.target.files, galleryInputRef)}
               />
               <input
                 ref={cameraInputRef}
@@ -595,7 +651,7 @@ export default function MerchantDamageNew() {
                 accept="image/*"
                 capture="environment"
                 className="sr-only"
-                onChange={(e) => onFiles(e.target.files, cameraInputRef)}
+                onChange={(e) => void onFiles(e.target.files, cameraInputRef)}
               />
 
               {/* Photography tips — shown only when no evidence yet */}
@@ -623,12 +679,13 @@ export default function MerchantDamageNew() {
               )}
 
               {/* Capture buttons */}
-              {evidence.length < 8 && (
+              {evidence.length < MAX_EVIDENCE && (
                 <div className="grid grid-cols-2 gap-2">
                   <button
                     type="button"
                     onClick={openCamera}
-                    className="h-11 rounded-xl bg-ink-900 text-white text-[12.5px] font-semibold inline-flex items-center justify-center gap-1.5 active:scale-[0.98] transition-transform shadow-soft"
+                    disabled={processing}
+                    className="h-11 rounded-xl bg-ink-900 text-white text-[12.5px] font-semibold inline-flex items-center justify-center gap-1.5 active:scale-[0.98] transition-transform shadow-soft disabled:opacity-60 disabled:active:scale-100"
                   >
                     <CameraIcon size={15} />
                     {t('merchant.damage.new.evidence.takePhoto')}
@@ -636,7 +693,8 @@ export default function MerchantDamageNew() {
                   <button
                     type="button"
                     onClick={openGallery}
-                    className="h-11 rounded-xl bg-white hairline text-ink-800 text-[12.5px] font-semibold inline-flex items-center justify-center gap-1.5 hover:bg-canvas-100"
+                    disabled={processing}
+                    className="h-11 rounded-xl bg-white hairline text-ink-800 text-[12.5px] font-semibold inline-flex items-center justify-center gap-1.5 hover:bg-canvas-100 disabled:opacity-60"
                   >
                     <ImageIcon size={15} />
                     {t('merchant.damage.new.evidence.fromGallery')}
@@ -644,13 +702,31 @@ export default function MerchantDamageNew() {
                 </div>
               )}
 
+              {processing && (
+                <div
+                  className="flex items-center gap-2 text-[12px] text-ink-500"
+                  aria-live="polite"
+                >
+                  <span className="h-4 w-4 animate-spin rounded-full border-2 border-lavender-300 border-t-lavender-600" />
+                  {t('merchant.damage.new.evidence.processing')}
+                </div>
+              )}
+              {evidenceError && (
+                <div
+                  className="rounded-xl2 bg-danger-50 ring-1 ring-danger-500/25 px-3.5 py-2.5 text-[12px] text-danger-700 leading-relaxed"
+                  role="alert"
+                >
+                  {evidenceError}
+                </div>
+              )}
+
               {/* Previews */}
               {evidence.length > 0 && (
                 <>
                   <div className="grid grid-cols-3 gap-2">
-                    {evidence.map((src, i) => (
+                    {evidence.map((item, i) => (
                       <div
-                        key={`${i}-${src.length}`}
+                        key={item.id}
                         className="relative group aspect-square overflow-hidden rounded-xl bg-canvas-200 hairline"
                       >
                         <button
@@ -660,7 +736,7 @@ export default function MerchantDamageNew() {
                           aria-label={t('merchant.damage.new.evidence.preview')}
                         >
                           <img
-                            src={src}
+                            src={item.previewUrl}
                             alt=""
                             className="h-full w-full object-cover"
                           />
@@ -750,7 +826,7 @@ export default function MerchantDamageNew() {
 
       <ImageLightbox
         open={lightboxIndex !== null}
-        images={evidence}
+        images={evidence.map((e) => e.previewUrl)}
         startIndex={lightboxIndex ?? 0}
         onClose={() => setLightboxIndex(null)}
         caption={(i, total) =>

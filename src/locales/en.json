@@ -1913,6 +1913,11 @@
             "lit": "Shoot in clear light without shadows that hide the damage.",
             "angles": "Capture multiple angles so size and location are clear.",
             "reference": "Place a size reference next to the damage (a key, hand, ruler)."
+          },
+          "processing": "Preparing the photo…",
+          "errors": {
+            "capture": "Could not capture the photo. Try again or choose one from the gallery.",
+            "max": "You’ve reached the maximum of 8 photos."
           }
         },
         "notes": {
