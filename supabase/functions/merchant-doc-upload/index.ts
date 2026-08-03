@@ -61,6 +61,7 @@ function json(body: unknown, init: ResponseInit = {}): Response {
 
 const BUCKET = 'merchant-documents';
 const MAX_BYTES = 5 * 1024 * 1024;
+const TICKET_TTL_MS = 30 * 60 * 1000; // 30 minutes — mirror the DB default
 
 async function sha256Hex(input: string | Uint8Array): Promise<string> {
   const data = typeof input === 'string' ? new TextEncoder().encode(input) : input;
@@ -218,6 +219,10 @@ async function handleUpload(req: Request): Promise<Response> {
     file_size: file.size,
     ip_hash: ipHash,
     uploaded_at: new Date().toISOString(),
+    // Belt-and-suspenders: set expires_at explicitly so a ticket is never
+    // created with a NULL expiry even if a deployed table is missing the
+    // column default. The DB also enforces NOT NULL + a 30-min default.
+    expires_at: new Date(Date.now() + TICKET_TTL_MS).toISOString(),
   });
   if (ins.error) {
     await admin.storage.from(BUCKET).remove([storagePath]); // no orphan
