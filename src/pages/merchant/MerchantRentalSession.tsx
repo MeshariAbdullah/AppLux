@@ -221,6 +221,19 @@ const INITIAL_SESSION: SessionState = {
 };
 
 const CATEGORIES: RentalCategoryDB[] = ['dress', 'bag', 'watch', 'bisht'];
+
+// Canonical localized label key per category enum. A naive `${c}s`
+// pluralization is WRONG for English-irregular stems (dress→dresses,
+// watch→watches), so it produced the missing keys `stores.filters.dresss`
+// / `stores.filters.watchs` and rendered the raw key. Map to the real
+// keys that already exist in ar.json/en.json; the stored value stays the
+// enum (`dress`…), only the visible label is localized.
+const CATEGORY_LABEL_KEYS: Record<RentalCategoryDB, string> = {
+  dress: 'stores.filters.dresses',
+  bag: 'stores.filters.bags',
+  watch: 'stores.filters.watches',
+  bisht: 'stores.filters.bishts',
+};
 const STEPS: SessionStep[] = [
   'start',
   'verify',
@@ -1699,7 +1712,7 @@ function OperationCard({
               >
                 {CATEGORIES.map((c) => (
                   <option key={c} value={c}>
-                    {t(`stores.filters.${c}s`)}
+                    {t(CATEGORY_LABEL_KEYS[c])}
                   </option>
                 ))}
               </Select>

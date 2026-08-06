@@ -107,7 +107,12 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
         ref={ref}
         id={inputId}
         className={cn(
-          'flex-1 bg-transparent outline-none placeholder:text-ink-300',
+          // `min-w-0` is essential: a flex child's default `min-width:auto`
+          // resolves to the input's intrinsic width (~default size=20),
+          // which refuses to shrink below ~181px. In a narrow grid cell
+          // that overflows the shell — pushing the value to the page edge
+          // and the trailing suffix off-screen. `min-w-0` lets flex-1 fit.
+          'flex-1 min-w-0 bg-transparent outline-none placeholder:text-ink-300',
           // merge caller className (previously dropped) so numeric/dir
           // styling reaches the actual input in the leading/trailing shell
           className,
