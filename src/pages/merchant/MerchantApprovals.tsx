@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { Header, Screen } from '@/components/layout';
 import {
   Card,
@@ -139,7 +140,7 @@ function ApprovalCard({ approval }: { approval: MerchantApproval }) {
     ) : (
       <ShieldIcon size={13} />
     );
-  return (
+  const card = (
     <Card padded className="space-y-3">
       <div className="flex items-center gap-3">
         <span className="h-10 w-10 shrink-0 rounded-xl bg-gold-50 text-gold-700 grid place-items-center">
@@ -181,5 +182,13 @@ function ApprovalCard({ approval }: { approval: MerchantApproval }) {
         </div>
       </div>
     </Card>
+  );
+  // Each row opens ITS offer's tracking page (canonical invoice id).
+  // A row with no id renders inert rather than navigating anywhere.
+  if (!approval.id) return card;
+  return (
+    <Link to={`/merchant/approvals/${approval.id}`} className="block">
+      {card}
+    </Link>
   );
 }

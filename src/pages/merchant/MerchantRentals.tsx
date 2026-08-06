@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { Screen } from '@/components/layout';
 import { MerchantTabBar } from '@/components/merchant/MerchantTabBar';
@@ -7,6 +7,7 @@ import { InfoIcon, SearchIcon } from '@/components/icons';
 import { CACHE_TTL, cacheKeys } from '@/lib/cache/keys';
 import { useCachedQuery } from '@/lib/cache/useCachedQuery';
 import { getInitials } from '@/lib/format/initials';
+import { logEvent } from '@/lib/observability/log';
 import { rentalStatusTone as toneForStatus } from '@/lib/format/statusTones';
 import { useI18n, useT } from '@/lib/i18n';
 import { useStore } from '@/lib/store';
@@ -341,8 +342,40 @@ export default function MerchantRentals() {
 // Cards
 // ---------------------------------------------------------------------
 
-/** Issued offer awaiting the customer — taps through to the approvals
- *  queue (there is no contract yet to open). */
+/**
+ * A card that navigates to ITS OWN record. `to` must be built from the
+ * row's canonical persisted id — when that id is missing the card
+ * renders inert (no navigation to some unrelated page) and emits one
+ * sanitized diagnostic so the data gap is visible in observability.
+ */
+function CardLink({
+  to,
+  diag,
+  children,
+}: {
+  to: string | null;
+  diag: string;
+  children: ReactNode;
+}) {
+  const warnedRef = useRef(false);
+  if (!to) {
+    if (!warnedRef.current) {
+      warnedRef.current = true;
+      logEvent('missing_route_id', 'warn', { op: diag });
+    }
+    return <div className="block">{children}</div>;
+  }
+  return (
+    <Link to={to} className="block">
+      {children}
+    </Link>
+  );
+}
+
+/** Issued offer awaiting the customer — opens THAT offer's tracking
+ *  page, addressed by the canonical rental_invoices.id. (It used to
+ *  hardcode the generic /merchant/approvals queue — the "tapped a
+ *  rental card, landed on الموافقات المعلقة" bug.) */
 function ReviewCard({
   entry,
   formatCurrency,
@@ -354,7 +387,10 @@ function ReviewCard({
 }) {
   const t = useT();
   return (
-    <Link to="/merchant/approvals" className="block">
+    <CardLink
+      to={entry.id ? `/merchant/approvals/${entry.id}` : null}
+      diag="rentals_review_card"
+    >
       <div className="rounded-[14px] bg-white ring-1 ring-beige-200 px-[18px] py-4 space-y-2 transition-transform active:scale-[0.995]">
         <div className="flex items-center justify-between gap-3">
           <span className="text-[14px] font-bold text-ink-900 truncate">
@@ -379,7 +415,7 @@ function ReviewCard({
           )}
         </div>
       </div>
-    </Link>
+    </CardLink>
   );
 }
 
@@ -397,7 +433,10 @@ function RentalCard({ rental }: { rental: MerchantRental }) {
   const days = rentalPeriodDays(rental.startDate, rental.endDate);
   const returned = rental.status === 'returned';
   return (
-    <Link to={`/merchant/rentals/${rental.id}`} className="block">
+    <CardLink
+      to={rental.id ? `/merchant/rentals/${rental.id}` : null}
+      diag="rentals_rental_card"
+    >
       <div
         className={cn(
           'rounded-[14px] bg-white ring-1 ring-beige-200 px-[18px] py-4 space-y-2 transition-transform active:scale-[0.995]',
@@ -429,6 +468,6 @@ function RentalCard({ rental }: { rental: MerchantRental }) {
           {t('merchant.rentals.rentalPeriod', { count: days })}
         </div>
       </div>
-    </Link>
+    </CardLink>
   );
 }

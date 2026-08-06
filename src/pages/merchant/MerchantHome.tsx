@@ -276,7 +276,9 @@ export default function MerchantHome() {
               <span dir="ltr" className="num">{inv.invoice_number}</span>
             </>
           ),
-          to: '/merchant/approvals',
+          // The row is one specific offer — open THAT offer, not the
+          // generic approvals queue.
+          to: `/merchant/approvals/${inv.id}`,
         });
       }
     } else {
@@ -293,7 +295,7 @@ export default function MerchantHome() {
               <span dir="ltr" className="num">{a.id}</span>
             </>
           ),
-          to: '/merchant/approvals',
+          to: `/merchant/approvals/${a.id}`,
         });
       }
     }

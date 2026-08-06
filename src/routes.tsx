@@ -63,6 +63,7 @@ const MerchantRentalContract = lazyWithReload(() => import('@/pages/merchant/Mer
 const MerchantRentalNote = lazyWithReload(() => import('@/pages/merchant/MerchantRentalNote'));
 const MerchantRentalClose = lazyWithReload(() => import('@/pages/merchant/MerchantRentalClose'));
 const MerchantApprovals = lazyWithReload(() => import('@/pages/merchant/MerchantApprovals'));
+const MerchantOfferDetails = lazyWithReload(() => import('@/pages/merchant/MerchantOfferDetails'));
 const MerchantDamages = lazyWithReload(() => import('@/pages/merchant/MerchantDamages'));
 const MerchantDamageNew = lazyWithReload(() => import('@/pages/merchant/MerchantDamageNew'));
 const MerchantDamageDetails = lazyWithReload(() => import('@/pages/merchant/MerchantDamageDetails'));
@@ -318,6 +319,14 @@ export function AppRoutes() {
           element={
             <RequireRole role="merchant" fallback="/merchant/welcome">
               <MerchantApprovals />
+            </RequireRole>
+          }
+        />
+        <Route
+          path="/merchant/approvals/:id"
+          element={
+            <RequireRole role="merchant" fallback="/merchant/welcome">
+              <MerchantOfferDetails />
             </RequireRole>
           }
         />

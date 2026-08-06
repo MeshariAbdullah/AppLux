@@ -1809,6 +1809,33 @@
         "awaiting-review": "Awaiting internal review"
       }
     },
+    "offer": {
+      "title": "Offer details",
+      "eyebrow": "Rental offer",
+      "customer": "Customer",
+      "invoiceRef": "Offer number",
+      "amount": "Contract value",
+      "sentAt": "Sent on",
+      "startsAt": "Rental start",
+      "validUntil": "Valid until {at}",
+      "expiredBanner": "This offer has expired and can no longer be accepted.",
+      "status": {
+        "draft": "Draft",
+        "issued": "Awaiting customer approval",
+        "viewed": "Viewed by the customer",
+        "accepted": "Accepted by the customer",
+        "rejected": "Declined by the customer",
+        "cancelled": "Cancelled",
+        "superseded": "Replaced by a newer offer"
+      },
+      "acceptedHint": "The customer accepted this offer and the contract was created.",
+      "openContract": "Open contract",
+      "notFound": {
+        "title": "Offer not found",
+        "body": "The offer may have been removed, or the link is incorrect.",
+        "back": "Back to approvals"
+      }
+    },
     "damages": {
       "title": "Damage cases",
       "subtitle": "Damage claims, non-returns and settlement progress.",
