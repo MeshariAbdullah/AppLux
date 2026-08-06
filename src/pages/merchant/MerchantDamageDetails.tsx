@@ -1,4 +1,4 @@
-import { useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom';
 import { Header, Screen } from '@/components/layout';
 import {
@@ -29,13 +29,24 @@ import {
   UsersIcon,
 } from '@/components/icons';
 import { cn } from '@/lib/cn';
+import { CACHE_TTL, cacheKeys } from '@/lib/cache/keys';
+import { cachedFetch } from '@/lib/cache/memoryCache';
+import { getInitials } from '@/lib/format/initials';
 import { useI18n, useT } from '@/lib/i18n';
 import {
   damageSeverityTone as toneForSeverity,
   damageStatusTone as toneForStatus,
 } from '@/lib/format/statusTones';
 import { useStore } from '@/lib/store';
-import { useSupabaseAuth } from '@/lib/supabase';
+import {
+  adaptDamageCaseToMerchant,
+  fetchContractById,
+  fetchDamageCase,
+  fetchNoteByContractId,
+  fetchProfile,
+  listCaseEvidenceUrls,
+  useSupabaseAuth,
+} from '@/lib/supabase';
 import type { MerchantDamageCase } from '@/lib/data';
 
 type StepKey = 'review' | 'settlement' | 'nafith' | 'execution';
@@ -93,21 +104,101 @@ export default function MerchantDamageDetails() {
   const { merchantDamages, merchantRentals } = useStore();
   const { configured } = useSupabaseAuth();
 
-  const kase = useMemo(
+  const demoCase = useMemo(
     () => merchantDamages.find((d) => d.id === id),
     [id, merchantDamages],
   );
 
+  // Live fetch — this page used to read ONLY the demo store, so in
+  // configured mode every real case id (including the one returned by
+  // a just-successful createDamageCase) rendered "الحالة غير موجودة".
+  // Now the row is fetched by its UUID; "not found" renders ONLY after
+  // the fetch completed and confirmed absence — never as a loading
+  // flash.
+  const [liveCase, setLiveCase] = useState<MerchantDamageCase | null>(null);
+  const [liveContractId, setLiveContractId] = useState<string | null>(null);
+  const [resolving, setResolving] = useState<boolean>(() =>
+    Boolean(configured && id && !demoCase),
+  );
+
+  useEffect(() => {
+    if (!configured || !id || demoCase) {
+      setLiveCase(null);
+      return;
+    }
+    let cancelled = false;
+    // Phase 9 entity-leak fix.
+    setLiveCase(null);
+    setLiveContractId(null);
+    setResolving(true);
+    (async () => {
+      const row = await fetchDamageCase(id).catch(() => null);
+      if (cancelled || !row) return;
+      const [contract, customer, evidenceUrls] = await Promise.all([
+        cachedFetch(
+          cacheKeys.contract(row.contract_id),
+          CACHE_TTL.rentalBundle,
+          () => fetchContractById(row.contract_id),
+        ).catch(() => null),
+        fetchProfile(row.customer_user_id).catch(() => null),
+        // Signed photo URLs; best-effort — a signing failure just
+        // renders the "no evidence" placeholder, never blocks the case.
+        listCaseEvidenceUrls(row.id).catch(() => []),
+      ]);
+      if (cancelled) return;
+      const note = contract
+        ? await cachedFetch(
+            cacheKeys.noteByContract(contract.id),
+            CACHE_TTL.rentalBundle,
+            () => fetchNoteByContractId(contract.id),
+          ).catch(() => null)
+        : null;
+      if (cancelled) return;
+      const customerName = customer?.full_name ?? '—';
+      setLiveContractId(row.contract_id);
+      setLiveCase(
+        adaptDamageCaseToMerchant(row, {
+          customerName,
+          customerInitials: getInitials(customerName),
+          headlineItem: contract
+            ? `Rental ${contract.contract_number}`
+            : undefined,
+          contractRef: contract?.contract_number,
+          noteRef: note?.reference_number,
+          evidenceUrls,
+        }),
+      );
+    })()
+      .finally(() => {
+        if (!cancelled) setResolving(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [configured, id, demoCase]);
+
+  const kase = liveCase ?? demoCase;
+
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
 
-  // Phase 9: this page reads from the demo store today. In live mode
-  // the store returns an empty array, so a direct visit to a damage-case
-  // URL has no row to render. Until a Supabase fetch is wired, surface
-  // an explicit empty state instead of bouncing back to the list (which
-  // is what the old `<Navigate />` did — and looks like a 404 to the
-  // user).
   if (!kase) {
+    if (resolving) {
+      // Fetch still in flight — quiet placeholder, NEVER the
+      // not-found state.
+      return (
+        <>
+          <Header title={t('merchant.damageCase.eyebrow')} showBack />
+          <Screen className="bg-canvas">
+            <div className="min-h-[40vh] grid place-items-center">
+              <span className="h-7 w-7 rounded-full border-2 border-canvas-200 border-t-lavender-600 animate-spin" />
+            </div>
+          </Screen>
+        </>
+      );
+    }
     if (configured) {
+      // Fetch finished and confirmed absence (deleted row / RLS
+      // denied / bad id) — the explicit empty state with a back action.
       return (
         <>
           <Header title={t('merchant.damageCase.eyebrow')} showBack />
@@ -134,6 +225,9 @@ export default function MerchantDamageDetails() {
   }
 
   const rental = merchantRentals.find((r) => r.id === kase.rentalId);
+  // Route target for the linked rental: the demo row's id, or the live
+  // contract UUID resolved by the fetch above.
+  const rentalRouteId = rental?.id ?? liveContractId ?? undefined;
   const steps = computeSteps(kase);
   const currentStep =
     STEP_ORDER.find((k) => steps[k] === 'current') ?? 'execution';
@@ -206,15 +300,16 @@ export default function MerchantDamageDetails() {
             </div>
           </div>
 
-          {/* Linked rental */}
-          {rental && (
+          {/* Linked rental — demo rows carry the full rental snapshot;
+              live cases link via the contract id resolved by the fetch. */}
+          {rentalRouteId && (
             <Card padded className="space-y-3">
               <SectionHeader
                 title={t('merchant.damageCase.linkedRental')}
                 className="mb-0"
               />
               <Link
-                to={`/merchant/rentals/${rental.id}`}
+                to={`/merchant/rentals/${rentalRouteId}`}
                 className="flex items-center gap-3 w-full group"
               >
                 <span className="h-10 w-10 shrink-0 rounded-xl bg-canvas-100 text-ink-700 grid place-items-center">
@@ -222,13 +317,15 @@ export default function MerchantDamageDetails() {
                 </span>
                 <div className="min-w-0 flex-1">
                   <div className="text-[13.5px] font-semibold text-ink-900 truncate">
-                    {rental.item}
+                    {rental?.item ?? kase.item}
                   </div>
                   <div className="mt-0.5 flex items-center gap-1.5 text-[11.5px] text-ink-400 truncate">
                     <UsersIcon size={11} />
-                    <span className="truncate">{rental.customerName}</span>
+                    <span className="truncate">
+                      {rental?.customerName ?? kase.customerName}
+                    </span>
                     <span className="text-ink-300">·</span>
-                    <span className="num">{rental.id}</span>
+                    <span className="num">{contractRef ?? rentalRouteId}</span>
                   </div>
                 </div>
                 <ChevronIcon
@@ -256,7 +353,9 @@ export default function MerchantDamageDetails() {
                   label={t('merchant.rental.docs.contract')}
                   refValue={contractRef}
                   to={
-                    rental ? `/merchant/rentals/${rental.id}/contract` : undefined
+                    rentalRouteId
+                      ? `/merchant/rentals/${rentalRouteId}/contract`
+                      : undefined
                   }
                   dir={dir}
                 />
@@ -270,7 +369,11 @@ export default function MerchantDamageDetails() {
                   tone="bg-gold-50 text-gold-700"
                   label={t('merchant.rental.docs.note')}
                   refValue={noteRef}
-                  to={rental ? `/merchant/rentals/${rental.id}/note` : undefined}
+                  to={
+                    rentalRouteId
+                      ? `/merchant/rentals/${rentalRouteId}/note`
+                      : undefined
+                  }
                   dir={dir}
                 />
                 <CardDivider />

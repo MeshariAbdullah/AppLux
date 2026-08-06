@@ -39,6 +39,7 @@ import {
   adaptContractToMerchantRental,
   createDamageCase,
   fetchContractById,
+  fetchContractDamageCase,
   fetchMerchant,
   fetchProfile,
   uploadDamageEvidence,
@@ -155,6 +156,17 @@ export default function MerchantDamageNew() {
         () => fetchContractById(id),
       ).catch(() => null);
       if (cancelled || !contract) return;
+      // Resume-not-duplicate: if this contract already has an
+      // unresolved case, open IT instead of offering a second report
+      // (the DB's one-unresolved-case index would reject it anyway).
+      const existing = await fetchContractDamageCase(contract.id).catch(
+        () => null,
+      );
+      if (cancelled) return;
+      if (existing && (existing.status === 'open' || existing.status === 'escalated')) {
+        navigate(`/merchant/damages/${existing.id}`, { replace: true });
+        return;
+      }
       const [m, c] = await Promise.all([
         cachedFetch(
           cacheKeys.merchantEntity(contract.merchant_id),
@@ -186,7 +198,7 @@ export default function MerchantDamageNew() {
     return () => {
       cancelled = true;
     };
-  }, [supabaseAuth.configured, id, demoRental]);
+  }, [supabaseAuth.configured, id, demoRental, navigate]);
 
   const rental = liveRental ?? demoRental;
 
@@ -391,11 +403,11 @@ export default function MerchantDamageNew() {
         });
 
         // Phase 4A invalidation — IMMEDIATELY after mutation success,
-        // before the navigate below: the AFTER-INSERT trigger closed
-        // the contract server-side, so drop the cached contract, note,
-        // and merchant contracts list. Lists + sibling detail pages
-        // (and the 2c92172 finalized guards) read fresh state next
-        // render.
+        // before the navigate below. Since 20260502124500 the insert
+        // does NOT touch the contract (it stays active, in dispute),
+        // but sibling pages must still refetch so they pick up the
+        // new case and render the dispute state instead of the
+        // Close/Report actions.
         cacheInvalidate(cacheKeys.contract(contract.id));
         cacheInvalidate(cacheKeys.noteByContract(contract.id));
         {
@@ -423,18 +435,38 @@ export default function MerchantDamageNew() {
         navigate(`/merchant/damages/${created.id}`, { replace: true });
         return;
       } catch (err) {
+        // Unique violation (damage_cases_one_unresolved_per_contract):
+        // a case for this contract already exists — a double-tap racing
+        // past the submitting flag, or a parallel session. That is a
+        // RESUME, not an error: open the existing case.
+        if ((err as { code?: unknown })?.code === '23505') {
+          const existing = await fetchContractDamageCase(rental.id).catch(
+            () => null,
+          );
+          if (existing) {
+            cacheInvalidate(cacheKeys.contract(rental.id));
+            navigate(`/merchant/damages/${existing.id}`, { replace: true });
+            return;
+          }
+        }
         // In configured mode the real path is authoritative — a failure
         // must NOT silently fall through to the demo store (that would
         // park a fake case id in local state while nothing exists on
         // the server). Surface the error, keep the form intact, let
-        // the merchant retry.
+        // the merchant retry. NO navigation, NO lifecycle change — the
+        // rental stays exactly as it was.
         const eventId = logEvent(
           'damage_case_failed',
           'error',
           { op: 'create_damage_case' },
           err,
         );
-        setSubmitError(withSupportId(translateError(err, t), eventId));
+        setSubmitError(
+          withSupportId(
+            translateError(err, t, 'merchant.damage.new.errors.createFailed'),
+            eventId,
+          ),
+        );
         setSubmitting(false);
         setConfirmOpen(false);
         return;

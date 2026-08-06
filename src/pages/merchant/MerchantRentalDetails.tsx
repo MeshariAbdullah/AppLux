@@ -31,6 +31,7 @@ import {
   adaptContractToMerchantRental,
   listInvoiceItems,
   fetchContractById,
+  fetchContractDamageCase,
   fetchMerchant,
   fetchNoteByContractId,
   fetchProfile,
@@ -185,7 +186,7 @@ export default function MerchantRentalDetails() {
         // a back action once `resolving` flips to false in finally.
         return;
       }
-      const [merchant, customer, note] = await Promise.all([
+      const [merchant, customer, note, damageCase] = await Promise.all([
         cachedFetch(
           cacheKeys.merchantEntity(contract.merchant_id),
           CACHE_TTL.merchantEntity,
@@ -200,6 +201,10 @@ export default function MerchantRentalDetails() {
           CACHE_TTL.rentalBundle,
           () => fetchNoteByContractId(contract.id),
         ).catch(() => null),
+        // Damage/non-return case — DELIBERATELY LIVE (never cached):
+        // it decides whether the Close/Report actions render at all,
+        // so it must reflect the DB at the moment the page opens.
+        fetchContractDamageCase(contract.id).catch(() => null),
       ]);
       if (cancelled) return;
       const customerName = customer?.full_name ?? '—';
@@ -220,6 +225,7 @@ export default function MerchantRentalDetails() {
           headlineItem: items[0]?.item_name ?? contract.contract_number,
           category: merchant?.primary_category,
           note,
+          damageCase,
         }),
       );
     })()
@@ -296,11 +302,19 @@ export default function MerchantRentalDetails() {
   );
   const activityPreview = sortedTimeline.slice(0, 5);
 
-  // Design M13 — position on the approved four-stage journey. A
-  // finalized contract has completed all four stages; an active one is
-  // in stage 3 (بدء الإيجار); anything pre-approval sits in stage 2.
+  // Design M13 — position on the approved four-stage journey. A CLEANLY
+  // closed contract has completed all four stages; an open damage /
+  // non-return case parks the journey at the closure stage (current,
+  // NOT complete — the rental is disputed, not returned); an active one
+  // is in stage 3 (بدء الإيجار); anything pre-approval sits in stage 2.
   const journeyIdx =
-    closureState !== 'active' ? 4 : rental.customerApproved ? 2 : 1;
+    closureState === 'closed'
+      ? 4
+      : closureState === 'damaged'
+        ? 3
+        : rental.customerApproved
+          ? 2
+          : 1;
 
   return (
     <>

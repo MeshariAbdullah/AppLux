@@ -111,6 +111,13 @@ export function translateError(
     if (code === 'P0170') return t('errors.offerExpiredAccept');
     if (code === 'P0171') return t('errors.offerExpiredReject');
     if (code === 'P0172' || code === 'P0003') return t('errors.offerNotActionable');
+    // Damage-case lifecycle (20260502124500): the clean close refuses
+    // while a damage/non-return case is unresolved — shown to the
+    // MERCHANT with the specific business rule, never a raw code.
+    if (code === 'P0022') return t('errors.closeBlockedByOpenCase');
+    // Case raised against a contract that never started (pending /
+    // cancelled) — a state conflict.
+    if (code === 'P0023') return t('errors.conflict');
     // Offer expiry rule (20260502123800): rental start already passed
     // at issuance — shown to the MERCHANT.
     if (code === 'P0180') return t('errors.offerStartPassed');

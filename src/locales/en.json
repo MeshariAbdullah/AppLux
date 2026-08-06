@@ -76,6 +76,7 @@
     "deletionActiveRental": "Sorry, you cannot delete your account while you have an active rental contract.",
     "deletionPendingContract": "Sorry, you cannot delete your account while a rental contract is still in progress.",
     "deletionOpenDamage": "Sorry, you cannot delete your account while a damage case is being processed.",
+    "closeBlockedByOpenCase": "The contract can't be closed as returned while a damage or non-return report is under review. Continue from the case page.",
     "deletionFinancialObligation": "Sorry, you cannot delete your account while you have an unsettled financial obligation.",
     "deletionUnavailable": "Your account could not be deleted right now. Please try again later.",
     "contractPartyIncomplete": "The contract cannot be completed because one party's information is incomplete. Please contact support.",
@@ -1936,6 +1937,9 @@
           "title": "Open this damage case?",
           "description": "Open a damage case worth {amount} on the rental for {item} ({customer})? The rental will be locked and this cannot be undone.",
           "confirm": "Open case"
+        },
+        "errors": {
+          "createFailed": "Could not create the report. Please try again."
         }
       }
     },

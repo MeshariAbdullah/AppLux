@@ -37,6 +37,7 @@ import {
   adaptContractToMerchantRental,
   closeRentalContract,
   fetchContractById,
+  fetchContractDamageCase,
   fetchMerchant,
   fetchNoteByContractId,
   fetchProfile,
@@ -88,7 +89,7 @@ export default function MerchantRentalClose() {
         () => fetchContractById(id),
       ).catch(() => null);
       if (cancelled || !contract) return;
-      const [m, c, note] = await Promise.all([
+      const [m, c, note, damageCase] = await Promise.all([
         cachedFetch(
           cacheKeys.merchantEntity(contract.merchant_id),
           CACHE_TTL.merchantEntity,
@@ -100,6 +101,10 @@ export default function MerchantRentalClose() {
           CACHE_TTL.rentalBundle,
           () => fetchNoteByContractId(contract.id),
         ).catch(() => null),
+        // LIVE (never cached): an open case must redirect this page
+        // out on arrival — the server P0022 guard is the authority,
+        // this fetch keeps the UI from offering the action at all.
+        fetchContractDamageCase(contract.id).catch(() => null),
       ]);
       if (cancelled) return;
       const customerName = c?.full_name ?? '—';
@@ -112,6 +117,7 @@ export default function MerchantRentalClose() {
           headlineItem: `Rental ${contract.contract_number}`,
           category: m?.primary_category,
           note,
+          damageCase,
         }),
       );
     })()
@@ -186,10 +192,10 @@ export default function MerchantRentalClose() {
         // Real path goes through the close_rental_contract RPC which
         // atomically: flips contract to 'ended', decrements
         // rental_eligibility.used_amount, and settles the linked note
-        // when there are no live damage cases. Damage-driven closure
-        // happens automatically via the AFTER INSERT trigger on
-        // damage_cases — that path raises a case AND closes the
-        // contract in one server-side transaction.
+        // when there are no live damage cases. Since 20260502124500
+        // this RPC is the ONLY clean-close path: raising a damage /
+        // non-return case no longer touches the contract, and the RPC
+        // itself refuses (P0022) while a case is unresolved.
         await closeRentalContract(rental.id);
         // Phase 4A invalidation — IMMEDIATELY after mutation success,
         // before any navigation: drop the cached contract, its note

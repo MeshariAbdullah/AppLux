@@ -14,6 +14,9 @@ import type {
   Invoice,
   InvoiceStatus as UIInvoiceStatus,
   Localized,
+  MerchantDamageCase,
+  MerchantDamageSeverity,
+  MerchantDamageStatus,
   MerchantNafithState,
   MerchantRental,
   MerchantRentalCategory,
@@ -334,10 +337,24 @@ export function adaptContractToMerchantRental(
      *  Pass the actual note (or null) so noteState / nafithState /
      *  timeline reflect the real DB state. */
     note?: PromissoryNoteRow | null;
+    /** The contract's latest non-dismissed damage/non-return case (see
+     *  fetchContractDamageCase), or null. An unresolved case puts the
+     *  rental in the DISPUTE state — closureStatus 'damaged' +
+     *  damageCaseId — instead of active/closed, and any non-dismissed
+     *  case suppresses the synthetic "asset returned" event: a raised
+     *  case means the asset did NOT come back clean, so ended_at must
+     *  never read as "تم إرجاع الأصل". */
+    damageCase?: DamageCaseRow | null;
   } = {},
 ): MerchantRental {
   const status = deriveRentalStatus(row);
   const note = ctx.note;
+  const damageCase = ctx.damageCase ?? null;
+  const caseUnresolved =
+    damageCase !== null &&
+    (damageCase.status === 'open' || damageCase.status === 'escalated');
+  const caseNonDismissed =
+    damageCase !== null && damageCase.status !== 'dismissed';
 
   // Contract is "signed" once contract.signed_at is set. In the
   // lifecycle-split flow that happens in verify_and_activate_rental
@@ -396,7 +413,12 @@ export function adaptContractToMerchantRental(
   if (row.signed_at) {
     timeline.push({ key: 'activated', at: row.signed_at });
   }
-  if (row.ended_at) {
+  // "تم إرجاع الأصل" is ONLY true for a clean close. Any non-dismissed
+  // damage/non-return case means the asset did not come back clean, so
+  // the event is suppressed even when ended_at is set (e.g. a settled
+  // claim ended the contract, or a legacy row closed by the old
+  // damage-insert trigger).
+  if (row.ended_at && !caseNonDismissed) {
     timeline.push({ key: 'returned', at: row.ended_at });
   }
 
@@ -406,8 +428,16 @@ export function adaptContractToMerchantRental(
   // through to the read-only path. The demo store already populates
   // this field; the live adapter was missing it — bug source for
   // "closed rental still shows Close/Damage buttons."
-  const closureStatus =
-    row.status === 'ended' || row.status === 'cancelled' ? 'closed' : undefined;
+  //
+  // An UNRESOLVED case wins over everything: the rental renders in the
+  // dispute state ('damaged' — banner + open-case CTA, Close/Report
+  // hidden) whether the contract is still active (post-20260502124500
+  // lifecycle) or was ended by the legacy trigger.
+  const closureStatus = caseUnresolved
+    ? 'damaged'
+    : row.status === 'ended' || row.status === 'cancelled'
+      ? 'closed'
+      : undefined;
   const closedAt = row.ended_at ?? null;
 
   return {
@@ -437,6 +467,7 @@ export function adaptContractToMerchantRental(
     totalInstallments: 1,
     status,
     closureStatus,
+    damageCaseId: caseNonDismissed ? damageCase.id : undefined,
     closedAt: closedAt ?? undefined,
     contractRef: row.contract_number,
     noteRef: ctx.noteRef ?? note?.reference_number ?? row.contract_number,
@@ -673,6 +704,54 @@ export function adaptDamageCase(
     stage: mapCaseStage(row.stage),
     claimAmount: Number(row.claim_amount),
     reportedAt: row.raised_at,
+  };
+}
+
+// ---------------------------------------------------------------------
+// Merchant: damage_cases → MerchantDamageCase (case details page)
+// ---------------------------------------------------------------------
+
+function mapMerchantCaseStatus(row: DamageCaseRow): MerchantDamageStatus {
+  // UI vocabulary predates the DB enum: 'open' shows as freshly
+  // reported, 'escalated' as under investigation, and both terminal
+  // states ('settled'/'dismissed') as settled — the details page only
+  // distinguishes in-progress vs done.
+  if (row.status === 'open') return 'reported';
+  if (row.status === 'escalated') return 'investigating';
+  return 'settled';
+}
+
+export function adaptDamageCaseToMerchant(
+  row: DamageCaseRow,
+  ctx: {
+    customerName?: string;
+    customerInitials?: string;
+    headlineItem?: string;
+    contractRef?: string;
+    noteRef?: string;
+    invoiceRef?: string;
+    /** Pre-signed evidence photo URLs (listCaseEvidenceUrls). */
+    evidenceUrls?: string[];
+  } = {},
+): MerchantDamageCase {
+  return {
+    // Human case reference for display; route navigation keeps using
+    // the row's UUID (the page reads it from the URL, not from here).
+    id: row.case_number,
+    rentalId: row.contract_id,
+    customerName: ctx.customerName ?? '—',
+    customerInitials: ctx.customerInitials ?? '—',
+    item: ctx.headlineItem ?? `Case ${row.case_number}`,
+    severity: mapCaseSeverity(row.severity) as MerchantDamageSeverity,
+    claimAmount: Number(row.claim_amount),
+    reportedAt: row.raised_at,
+    status: mapMerchantCaseStatus(row),
+    notes: row.description || undefined,
+    evidence:
+      ctx.evidenceUrls && ctx.evidenceUrls.length ? ctx.evidenceUrls : undefined,
+    contractRef: ctx.contractRef,
+    noteRef: ctx.noteRef,
+    invoiceRef: ctx.invoiceRef,
   };
 }
 

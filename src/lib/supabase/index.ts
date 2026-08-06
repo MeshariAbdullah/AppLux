@@ -188,9 +188,11 @@ export {
 export {
   createDamageCase,
   fetchDamageCase,
+  fetchContractDamageCase,
   listAllDamageCases,
   listMerchantDamageCases,
   listCaseEvidence,
+  listCaseEvidenceUrls,
   uploadDamageEvidence,
   DAMAGE_EVIDENCE_BUCKET,
 } from './queries/damages';
@@ -206,6 +208,7 @@ export {
   adaptContractToHistory,
   adaptContractToMerchantRental,
   adaptDamageCase,
+  adaptDamageCaseToMerchant,
   adaptEligibility,
   adaptInvoice,
   adaptMerchantApplication,

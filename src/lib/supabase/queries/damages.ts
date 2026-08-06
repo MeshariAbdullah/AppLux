@@ -45,6 +45,29 @@ export async function fetchDamageCase(id: string): Promise<DamageCaseRow | null>
   return data;
 }
 
+/**
+ * The contract's damage/non-return case, newest first, ignoring
+ * dismissed ones. Drives the dispute state on the rental pages
+ * (banner + resume-instead-of-duplicate) — the DB enforces at most
+ * one unresolved ('open'/'escalated') case per contract
+ * (damage_cases_one_unresolved_per_contract, 20260502124500).
+ */
+export async function fetchContractDamageCase(
+  contractId: string,
+): Promise<DamageCaseRow | null> {
+  const sb = requireSupabase();
+  const { data, error } = await sb
+    .from('damage_cases')
+    .select('*')
+    .eq('contract_id', contractId)
+    .neq('status', 'dismissed')
+    .order('raised_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (error) throw error;
+  return data;
+}
+
 export async function listMerchantDamageCases(
   merchantId: string,
   filter?: { status?: DamageStatus; limit?: number },
@@ -87,6 +110,28 @@ export async function listCaseEvidence(
     .order('uploaded_at', { ascending: true });
   if (error) throw error;
   return data ?? [];
+}
+
+/**
+ * Signed preview URLs for a case's photo evidence, in upload order.
+ * Best-effort per item: an entry that fails to sign is skipped rather
+ * than failing the page (the case row is still fully renderable).
+ */
+export async function listCaseEvidenceUrls(
+  caseId: string,
+  expiresInSeconds = 60 * 60,
+): Promise<string[]> {
+  const sb = requireSupabase();
+  const rows = await listCaseEvidence(caseId);
+  const urls = await Promise.all(
+    rows.map(async (row) => {
+      const { data } = await sb.storage
+        .from(DAMAGE_EVIDENCE_BUCKET)
+        .createSignedUrl(row.storage_path, expiresInSeconds);
+      return data?.signedUrl ?? null;
+    }),
+  );
+  return urls.filter((u): u is string => Boolean(u));
 }
 
 // ---------------------------------------------------------------------
