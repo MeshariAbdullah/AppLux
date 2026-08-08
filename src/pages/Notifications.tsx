@@ -92,6 +92,12 @@ export default function Notifications() {
     return preferred || name?.ar || name?.en || '';
   };
 
+  // Copy key per notification type. Dispute types (20260502124700)
+  // reuse localized notifications.<type>.{title,body}; offer_issued
+  // keeps its historical key.
+  const copyKey = (n: NotificationRow) =>
+    n.type === 'offer_issued' ? 'offerIssued' : n.type;
+
   const open = (n: NotificationRow) => {
     if (!n.read_at) {
       // Optimistic — the row flips locally; the DB write is RLS-safe.
@@ -104,8 +110,12 @@ export default function Notifications() {
         logEvent('rpc_failure', 'warn', { op: 'mark_notification_read' }, err),
       );
     }
-    // Deep link: the public review token route; fall back to the
-    // rentals list when no token exists.
+    // Deep links: dispute notifications open the exact case by its
+    // canonical UUID; offers keep the public review-token route.
+    if (n.case_id) {
+      navigate(`/disputes/${n.case_id}`);
+      return;
+    }
     navigate(n.scan_token ? `/review/${n.scan_token}` : '/contracts');
   };
 
@@ -154,10 +164,10 @@ export default function Notifications() {
                           : 'font-bold text-ink-900',
                       )}
                     >
-                      {t('notifications.offerIssued.title')}
+                      {t(`notifications.${copyKey(n)}.title`)}
                     </span>
                     <span className="mt-0.5 block text-[12.5px] text-ink-500 leading-relaxed">
-                      {t('notifications.offerIssued.body', {
+                      {t(`notifications.${copyKey(n)}.body`, {
                         merchantName: merchantName(n),
                       })}
                     </span>

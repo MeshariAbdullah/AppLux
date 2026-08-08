@@ -43,6 +43,7 @@ const Approval = lazyWithReload(() => import('@/pages/Approval'));
 const Tracking = lazyWithReload(() => import('@/pages/Tracking'));
 const InvoiceTracking = lazyWithReload(() => import('@/pages/InvoiceTracking'));
 const ContractTracking = lazyWithReload(() => import('@/pages/ContractTracking'));
+const DisputeDetails = lazyWithReload(() => import('@/pages/DisputeDetails'));
 const NoteTracking = lazyWithReload(() => import('@/pages/NoteTracking'));
 const Diagnostics = lazyWithReload(() => import('@/pages/Diagnostics'));
 const Nafath = lazyWithReload(() => import('@/pages/auth/Nafath'));
@@ -504,6 +505,7 @@ export function AppRoutes() {
         <Route path="/track/invoice/:id" element={<InvoiceTracking />} />
         <Route path="/track/contract/:id" element={<ContractTracking />} />
         <Route path="/track/note/:id" element={<NoteTracking />} />
+        <Route path="/disputes/:id" element={<DisputeDetails />} />
       </Route>
 
       {/* Phase 6C hidden diagnostics — reachable by direct URL or the

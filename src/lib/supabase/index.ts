@@ -26,6 +26,12 @@ export type {
   DamageSeverity,
   DamageStage,
   DamageStatus,
+  DisputeEventRow,
+  DisputeOutcome,
+  DisputeParty,
+  DisputePhase,
+  DisputeProposalResponseRow,
+  DisputeProposalRow,
   EligibilityTier,
   EvidenceType,
   InvoiceStatus,
@@ -197,6 +203,22 @@ export {
   DAMAGE_EVIDENCE_BUCKET,
 } from './queries/damages';
 export type { CreateDamageCaseInput, UploadEvidenceInput } from './queries/damages';
+
+export {
+  fetchDisputeCase,
+  listDisputeProposals,
+  listDisputeEvents,
+  listDisputeEvidence,
+  customerAcceptClaim,
+  customerObjectToClaim,
+  submitSettlementProposal,
+  respondToSettlementProposal,
+  respondToLendProposal,
+} from './queries/disputes';
+export type {
+  DisputeEvidenceItem,
+  DisputeProposalWithResponses,
+} from './queries/disputes';
 
 export {
   SupabaseAuthProvider,

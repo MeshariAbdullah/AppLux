@@ -115,6 +115,19 @@ export function translateError(
     // while a damage/non-return case is unresolved — shown to the
     // MERCHANT with the specific business rule, never a raw code.
     if (code === 'P0022') return t('errors.closeBlockedByOpenCase');
+    // Phase-1 dispute lifecycle (20260502124700) — P0200..P0211.
+    if (code === 'P0200') return t('errors.disputeNotParty');
+    if (code === 'P0201') return t('errors.disputePhase');
+    if (code === 'P0202') return t('errors.disputeReasonRequired');
+    if (code === 'P0203') return t('errors.disputePendingProposal');
+    if (code === 'P0204') return t('errors.disputeRoundsExhausted');
+    if (code === 'P0205') return t('errors.disputeProposalHandled');
+    if (code === 'P0206') return t('errors.disputeOwnProposal');
+    if (code === 'P0207') return t('errors.disputeProposalHandled');
+    if (code === 'P0208') return t('errors.disputeAlreadyResponded');
+    if (code === 'P0209') return t('errors.disputeNotFound');
+    if (code === 'P0210') return t('errors.validation');
+    if (code === 'P0211') return t('errors.unauthorized');
     // Case raised against a contract that never started (pending /
     // cancelled) — a state conflict.
     if (code === 'P0023') return t('errors.conflict');

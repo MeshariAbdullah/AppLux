@@ -68,6 +68,7 @@ const ROUTE_PATTERNS: Array<[RegExp, string]> = [
   [/^\/merchant\/rentals\/[^/]+\/contract$/, '/merchant/rentals/:id/contract'],
   [/^\/merchant\/rentals\/[^/]+\/note$/, '/merchant/rentals/:id/note'],
   [/^\/merchant\/rentals\/[^/]+\/damage\/new$/, '/merchant/rentals/:id/damage/new'],
+  [/^\/disputes\/[^/]+$/, '/disputes/:id'],
   [/^\/merchant\/approvals\/[^/]+$/, '/merchant/approvals/:id'],
   [/^\/merchant\/damages\/[^/]+$/, '/merchant/damages/:id'],
   [/^\/admin\/merchants\/[^/]+$/, '/admin/merchants/:id'],

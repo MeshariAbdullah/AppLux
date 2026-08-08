@@ -100,7 +100,16 @@
       "body": "Your session is active, but the profile fetch failed. Check your connection and try again.",
       "retryCta": "Try again",
       "signOutCta": "Sign out"
-    }
+    },
+    "disputeNotParty": "You don't have access to this case.",
+    "disputePhase": "This action is no longer available in the case's current stage.",
+    "disputeReasonRequired": "An objection reason is required.",
+    "disputePendingProposal": "A settlement offer is awaiting a response before a new one can be submitted.",
+    "disputeRoundsExhausted": "Both direct settlement rounds have been used.",
+    "disputeProposalHandled": "This offer was already handled.",
+    "disputeOwnProposal": "You can't respond to your own offer.",
+    "disputeAlreadyResponded": "Your response to this offer is already recorded.",
+    "disputeNotFound": "Case not found."
   },
   "welcome": {
     "eyebrow": "Lend",
@@ -654,6 +663,46 @@
     "offerIssued": {
       "title": "New rental offer",
       "body": "You have a new rental offer from {merchantName} awaiting your review."
+    },
+    "dispute_claim_submitted": {
+      "title": "New report on your rental",
+      "body": "{merchantName} filed a report linked to your rental contract. Please review and respond."
+    },
+    "dispute_proposal_received": {
+      "title": "New settlement offer",
+      "body": "You have a new settlement offer from {merchantName} awaiting your response."
+    },
+    "dispute_proposal_accepted": {
+      "title": "Your offer was accepted",
+      "body": "The other party accepted your settlement offer."
+    },
+    "dispute_proposal_rejected": {
+      "title": "Your offer was rejected",
+      "body": "The other party rejected your settlement offer."
+    },
+    "dispute_moved_to_lend": {
+      "title": "Case moved to Lend",
+      "body": "The two direct settlement rounds ended; Lend will assist as a neutral mediator."
+    },
+    "dispute_lend_proposal": {
+      "title": "Settlement proposal from Lend",
+      "body": "Lend submitted a settlement proposal for the case. Please review and respond."
+    },
+    "dispute_resolved": {
+      "title": "Case closed with agreement",
+      "body": "The agreement was documented and the case is closed."
+    },
+    "dispute_unresolved": {
+      "title": "Case closed without agreement",
+      "body": "Settlement attempts ended without agreement between the parties."
+    },
+    "dispute_customer_accepted": {
+      "title": "Your acceptance is documented",
+      "body": "Your acceptance of the claim was documented and the case is closed."
+    },
+    "dispute_customer_objected": {
+      "title": "Your objection is recorded",
+      "body": "Your objection was recorded and direct settlement has started."
     }
   },
   "profile": {
@@ -2764,5 +2813,156 @@
   },
   "offer": {
     "validUntil": "Valid until {dateTime}"
+  },
+  "disputes": {
+    "title": "Case details",
+    "eyebrow": "Report linked to the rental contract",
+    "caseNumber": "Case number",
+    "phase": {
+      "awaiting_customer": "Awaiting your response",
+      "direct_settlement": "Direct settlement between the parties",
+      "lend_mediation": "Lend is assisting with settlement",
+      "resolved": "Case closed"
+    },
+    "claim": {
+      "title": "Report details",
+      "type": "Report type",
+      "types": {
+        "partial": "Partial damage",
+        "total": "Total damage",
+        "non_return": "Non-return"
+      },
+      "merchant": "Store",
+      "contract": "Contract number",
+      "item": "Rented item",
+      "amount": "Claimed amount",
+      "description": "Merchant description",
+      "raisedAt": "Reported on",
+      "neutralNote": "Filing a report does not prove the claim, and objecting does not end it. The goal is to document the case and reach a fair settlement."
+    },
+    "evidence": {
+      "merchantTitle": "Merchant photos & evidence",
+      "customerTitle": "Your evidence",
+      "receiptTitle": "Original receipt photos",
+      "receiptHint": "The photos you documented when receiving the item.",
+      "none": "No photos attached.",
+      "imageUnavailable": "Image unavailable"
+    },
+    "contractLink": "View the signed contract",
+    "await": {
+      "title": "What's needed from you",
+      "hint": "Review the report and evidence, then choose one option:",
+      "accept": "Accept the claim",
+      "object": "Object to the claim",
+      "acceptSheet": {
+        "title": "Confirm claim acceptance",
+        "body": "You are agreeing to the merchant's current claim of {amount}. This closes the case directly and is final within the Lend dispute flow.",
+        "confirm": "Confirm acceptance",
+        "cancel": "Back"
+      },
+      "objectForm": {
+        "title": "Object to the claim",
+        "reasonLabel": "Objection reason",
+        "reasonPlaceholder": "Explain why you object to the claim…",
+        "reasonRequired": "An objection reason is required.",
+        "evidenceLabel": "Supporting evidence (optional)",
+        "evidenceHint": "You can attach photos that support your objection.",
+        "addPhoto": "Add photo",
+        "remove": "Remove",
+        "submit": "Submit objection",
+        "uploadPartial": "Objection submitted; some photos failed to upload. You can add them later."
+      }
+    },
+    "settlement": {
+      "title": "Direct settlement",
+      "roundsNotice": "You have two direct settlement rounds. If no agreement is reached, the case automatically moves to Lend for settlement assistance.",
+      "round": "Round {current} of {total}",
+      "yourObjection": "Your objection",
+      "proposalFrom": {
+        "merchant": "Offer from the store",
+        "customer": "Your offer",
+        "lend": "Lend proposal"
+      },
+      "amount": "Offer amount",
+      "note": "Note",
+      "status": {
+        "pending": "Awaiting response",
+        "accepted": "Accepted",
+        "rejected": "Rejected"
+      },
+      "respondedBy": {
+        "merchant": "Store response",
+        "customer": "Your response"
+      },
+      "accept": "Accept offer",
+      "reject": "Reject offer",
+      "counterHint": "After rejecting you can submit your own offer in the next round.",
+      "submitTitle": "Submit a settlement offer",
+      "amountLabel": "Proposed amount",
+      "noteLabel": "Note (optional)",
+      "submit": "Send offer",
+      "waitingOther": "Waiting for the other party to respond to the current offer.",
+      "rejectSheet": {
+        "title": "Reject offer",
+        "bodyFinalRound": "This is the final direct-settlement offer. Rejecting it automatically moves the case to Lend for settlement assistance.",
+        "body": "Rejecting this offer moves you to the final direct settlement round.",
+        "confirm": "Confirm rejection",
+        "cancel": "Back"
+      }
+    },
+    "lend": {
+      "title": "Lend settlement assistance",
+      "body": "The two direct settlement rounds ended without agreement. Lend is now reviewing the documented case as a neutral mediator between the parties.",
+      "waiting": "Waiting for Lend's settlement proposal.",
+      "proposalTitle": "Lend settlement proposal",
+      "proposedAt": "Proposed on",
+      "accept": "Accept proposal",
+      "reject": "Reject proposal",
+      "yourResponse": {
+        "accepted": "You accepted the proposal",
+        "rejected": "You rejected the proposal"
+      },
+      "waitingOther": "Your response is recorded. Waiting for the other party.",
+      "rejectSheet": {
+        "title": "Reject Lend proposal",
+        "body": "Rejecting the proposal ends settlement through Lend and closes the case without agreement.",
+        "confirm": "Confirm rejection",
+        "cancel": "Back"
+      }
+    },
+    "resolved": {
+      "claim_accepted": {
+        "title": "Claim accepted",
+        "body": "You accepted the merchant's claim of {amount}. The case is closed and your acceptance is documented."
+      },
+      "direct_settlement": {
+        "title": "The parties reached an agreement",
+        "body": "A direct settlement of {amount} was agreed, documented, and the case is closed."
+      },
+      "lend_settlement": {
+        "title": "Agreement reached with Lend's help",
+        "body": "Both parties accepted the settlement proposal of {amount}. The agreement is documented and the case is closed."
+      },
+      "unresolved": {
+        "title": "No agreement was reached",
+        "body": "Settlement through Lend ended without agreement between the parties. A neutral, documented case file will be available to both parties later.",
+        "neutral": "Closing the case is not a ruling in favor of either party."
+      },
+      "dismissed": {
+        "title": "Report dismissed",
+        "body": "This report was closed with no obligation on you."
+      },
+      "agreedAmount": "Agreed amount",
+      "resolvedAt": "Closed on"
+    },
+    "notFound": {
+      "title": "Case unavailable",
+      "body": "The link may be incorrect, or you may not have access to this case.",
+      "back": "Back to my rentals"
+    },
+    "contractBanner": {
+      "title": "A report is linked to this contract",
+      "cta": "View case details"
+    }
   }
 }

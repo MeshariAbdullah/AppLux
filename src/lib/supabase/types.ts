@@ -317,14 +317,27 @@ export type ContractReceiptPhotoRow = {
   created_at: string;
 };
 
-/** Customer notifications (20260502123400). Only 'offer_issued'
- *  exists in this pass; rows are created solely by the DB trigger. */
-export type NotificationType = 'offer_issued';
+/** Customer notifications (20260502123400 + dispute types from
+ *  20260502124700). Rows are created solely by DB triggers/RPCs. */
+export type NotificationType =
+  | 'offer_issued'
+  | 'dispute_claim_submitted'
+  | 'dispute_customer_accepted'
+  | 'dispute_customer_objected'
+  | 'dispute_proposal_received'
+  | 'dispute_proposal_accepted'
+  | 'dispute_proposal_rejected'
+  | 'dispute_moved_to_lend'
+  | 'dispute_lend_proposal'
+  | 'dispute_resolved'
+  | 'dispute_unresolved';
 export type NotificationRow = {
   id: string;
   user_id: string;
   type: NotificationType;
   invoice_id: string | null;
+  case_id: string | null;
+  metadata: Record<string, unknown> | null;
   merchant_display_name: { ar?: string; en?: string } | null;
   scan_token: string | null;
   read_at: string | null;
@@ -376,7 +389,56 @@ export type PromissoryNoteUpdate = Partial<PromissoryNoteRow>;
 
 export type DamageSeverity = 'partial' | 'total' | 'non_return';
 export type DamageStage    = 'review' | 'settlement' | 'nafith' | 'execution';
-export type DamageStatus   = 'open' | 'settled' | 'escalated' | 'dismissed';
+export type DamageStatus   = 'open' | 'settled' | 'escalated' | 'dismissed' | 'unresolved';
+
+// Phase-1 dispute lifecycle (20260502124700). dispute_phase is the
+// canonical flow position; dispute_outcome the terminal business
+// result. Legacy `stage` never drives the new lifecycle.
+export type DisputePhase =
+  | 'awaiting_customer'
+  | 'direct_settlement'
+  | 'lend_mediation'
+  | 'resolved';
+export type DisputeOutcome =
+  | 'claim_accepted'
+  | 'direct_settlement'
+  | 'lend_settlement'
+  | 'unresolved'
+  | 'dismissed';
+export type DisputeParty = 'merchant' | 'customer' | 'lend';
+
+export type DisputeProposalResponseRow = {
+  id: string;
+  proposal_id: string;
+  party: 'merchant' | 'customer';
+  responded_by_user_id: string | null;
+  accepted: boolean;
+  created_at: string;
+};
+
+export type DisputeProposalRow = {
+  id: string;
+  case_id: string;
+  kind: 'direct' | 'lend';
+  round: number | null;
+  proposed_by_party: DisputeParty;
+  proposed_by_user_id: string | null;
+  amount: number;
+  note: string | null;
+  status: 'pending' | 'accepted' | 'rejected';
+  created_at: string;
+  resolved_at: string | null;
+};
+
+export type DisputeEventRow = {
+  id: string;
+  case_id: string;
+  event_type: string;
+  actor_user_id: string | null;
+  actor_party: DisputeParty | null;
+  metadata: Record<string, unknown>;
+  created_at: string;
+};
 export type EvidenceType   = 'photo' | 'video' | 'document';
 
 export type DamageCaseRow = {
@@ -395,6 +457,12 @@ export type DamageCaseRow = {
   resolved_at: string | null;
   resolved_by_user_id: string | null;
   resolution_notes: string | null;
+  // Phase-1 dispute lifecycle columns (20260502124700).
+  dispute_phase: DisputePhase;
+  dispute_outcome: DisputeOutcome | null;
+  customer_response_at: string | null;
+  customer_objection_reason: string | null;
+  agreed_amount: number | null;
   created_at: string;
   updated_at: string;
 };
@@ -538,6 +606,27 @@ export type Database = {
       accept_rental_invoice: {
         Args: { p_invoice_id: string };
         Returns: string;
+      };
+      // Phase-1 dispute lifecycle RPCs (20260502124700).
+      customer_accept_claim: {
+        Args: { p_case_id: string };
+        Returns: undefined;
+      };
+      customer_object_to_claim: {
+        Args: { p_case_id: string; p_reason: string };
+        Returns: undefined;
+      };
+      submit_settlement_proposal: {
+        Args: { p_case_id: string; p_amount: number; p_note: string | null };
+        Returns: string;
+      };
+      respond_to_settlement_proposal: {
+        Args: { p_proposal_id: string; p_accept: boolean };
+        Returns: undefined;
+      };
+      respond_to_lend_proposal: {
+        Args: { p_case_id: string; p_accept: boolean };
+        Returns: undefined;
       };
       /** Neutral availability check for the establishment Unified Number
        *  (700) — onboarding Step 2 (20260502124100). */

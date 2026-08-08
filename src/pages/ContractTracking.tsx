@@ -30,6 +30,7 @@ import {
   adaptInvoice,
   adaptNote,
   fetchContractById,
+  fetchContractDamageCase,
   fetchInvoiceById,
   fetchBranchById,
   fetchMerchant,
@@ -37,6 +38,7 @@ import {
   listInvoiceItems,
   useSupabaseAuth,
 } from '@/lib/supabase';
+import type { DamageCaseRow } from '@/lib/supabase';
 import type {
   MerchantRow,
   RentalContractRow,
@@ -96,6 +98,10 @@ export default function ContractTracking() {
   // Bugs 17/19 resume: a pending contract whose receipt photos are not
   // confirmed can re-enter the guided flow via the invoice scan token.
   const [resumeToken, setResumeToken] = useState<string | null>(null);
+  // Phase-1 dispute lifecycle: the contract's latest non-dismissed
+  // case, if any — drives the neutral dispute banner. Canonical state
+  // only (dispute_phase / dispute_outcome); legacy stage is not read.
+  const [disputeCase, setDisputeCase] = useState<DamageCaseRow | null>(null);
   // Party identity snapshots (20260502123500) — kept raw so the record
   // card shows the values FROZEN at acceptance, not mutable live data.
   // NULL on legacy contracts → the card falls back to live names.
@@ -138,6 +144,7 @@ export default function ContractTracking() {
     setLiveNote(null);
     setContractTemplate(null);
     setResumeToken(null);
+    setDisputeCase(null);
     setPdfBits(null);
     setExportError(null);
     setResolving(true);
@@ -149,8 +156,13 @@ export default function ContractTracking() {
         setResolving(false);
         return;
       }
-      const merchant = await fetchMerchant(row.merchant_id).catch(() => null);
+      const [merchant, caseRow] = await Promise.all([
+        fetchMerchant(row.merchant_id).catch(() => null),
+        // LIVE — never cached: decides whether the dispute banner shows.
+        fetchContractDamageCase(row.id).catch(() => null),
+      ]);
       if (cancelled) return;
+      setDisputeCase(caseRow);
       // Data-consistency fix: locale-aware resolution (same helper as
       // every other surface) — the Arabic UI previously showed the
       // ENGLISH display name here while Home showed the Arabic one.
@@ -496,6 +508,37 @@ export default function ContractTracking() {
               </div>
             </div>
           </div>
+
+          {/* Phase-1 dispute: a case linked to this contract — always a
+              NEUTRAL banner (active or terminal), never returned/closed
+              wording, deep-linking the exact case UUID. */}
+          {disputeCase && (
+            <div className="rounded-xl2 bg-lavender-50 ring-1 ring-lavender-200 p-4 space-y-3">
+              <div className="flex items-center justify-between gap-2">
+                <div className="text-[13px] font-semibold text-lavender-800 leading-tight">
+                  {t('disputes.contractBanner.title')}
+                </div>
+                <span className="text-[11px] font-semibold num text-ink-500" dir="ltr">
+                  {disputeCase.case_number}
+                </span>
+              </div>
+              <p className="text-[12px] text-ink-600 leading-relaxed">
+                {t(
+                  disputeCase.dispute_phase === 'resolved'
+                    ? `disputes.resolved.${disputeCase.dispute_outcome ?? 'unresolved'}.title`
+                    : `disputes.phase.${disputeCase.dispute_phase}`,
+                )}
+              </p>
+              <Button
+                variant="primary"
+                size="md"
+                block
+                onClick={() => navigate(`/disputes/${disputeCase.id}`)}
+              >
+                {t('disputes.contractBanner.cta')}
+              </Button>
+            </div>
+          )}
 
           {/* Bugs 17/19: the rental cannot start until the receipt
               photos are uploaded + confirmed — this is the resume path
