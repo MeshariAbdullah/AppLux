@@ -49,6 +49,7 @@ import {
   type RentalContractRow,
 } from '@/lib/supabase';
 import { adminPhaseLabelKey, adminPhaseTone } from './AdminCases';
+import { exportDisputeFilePdf } from '@/lib/pdf/disputeFilePdf';
 
 // =====================================================================
 // AdminCaseDetails — /admin/cases/:id (canonical case UUID).
@@ -460,6 +461,28 @@ function AdminCaseDetailsInner({
                   )}
                 </div>
               </div>
+              {kase.dispute_outcome === 'unresolved' && (
+                <Button
+                  size="lg"
+                  block
+                  loading={busy}
+                  disabled={busy}
+                  onClick={() =>
+                    runAction('export_dispute_file', async () => {
+                      await exportDisputeFilePdf({
+                        caseId: kase.id,
+                        dir: locale === 'ar' ? 'rtl' : 'ltr',
+                        locale,
+                        t,
+                        formatCurrency,
+                        formatDate,
+                      });
+                    })
+                  }
+                >
+                  {t('disputeFile.cta')}
+                </Button>
+              )}
             </Card>
           )}
 

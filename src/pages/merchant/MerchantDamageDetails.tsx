@@ -32,6 +32,7 @@ import { translateError, withSupportId } from '@/lib/errors';
 import { useI18n, useT } from '@/lib/i18n';
 import { useSensitiveFlow } from '@/lib/session/flowGuard';
 import { useStore } from '@/lib/store';
+import { exportDisputeFilePdf } from '@/lib/pdf/disputeFilePdf';
 import {
   fetchContractById,
   fetchDisputeCase,
@@ -503,6 +504,22 @@ export default function MerchantDamageDetails() {
               kase={kase}
               formatCurrency={formatCurrency}
               formatDate={formatDate}
+              onDownloadFile={
+                kase.dispute_outcome === 'unresolved'
+                  ? () =>
+                      runAction('export_dispute_file', async () => {
+                        await exportDisputeFilePdf({
+                          caseId: kase.id,
+                          dir,
+                          locale: dir === 'rtl' ? 'ar' : 'en',
+                          t,
+                          formatCurrency,
+                          formatDate,
+                        });
+                      })
+                  : undefined
+              }
+              busy={busy}
             />
           )}
 
@@ -883,11 +900,15 @@ function ResolvedPanel({
   kase,
   formatCurrency,
   formatDate,
+  onDownloadFile,
+  busy,
 }: {
   t: (k: string, v?: Record<string, string | number>) => string;
   kase: DamageCaseRow;
   formatCurrency: (n: number) => string;
   formatDate: (d: string) => string;
+  onDownloadFile?: () => void;
+  busy?: boolean;
 }) {
   const outcome = kase.dispute_outcome ?? 'unresolved';
   const isAgreement =
@@ -936,6 +957,11 @@ function ResolvedPanel({
           />
         )}
       </div>
+      {onDownloadFile && (
+        <Button size="lg" block loading={busy} disabled={busy} onClick={onDownloadFile}>
+          {t('disputeFile.cta')}
+        </Button>
+      )}
     </Card>
   );
 }

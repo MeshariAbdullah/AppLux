@@ -32,6 +32,7 @@ import { translateError, withSupportId } from '@/lib/errors';
 import { useI18n, useT } from '@/lib/i18n';
 import { prepareEvidenceImage, PrepareImageError } from '@/lib/image/prepareEvidenceImage';
 import { useSensitiveFlow } from '@/lib/session/flowGuard';
+import { exportDisputeFilePdf } from '@/lib/pdf/disputeFilePdf';
 import {
   customerAcceptClaim,
   customerObjectToClaim,
@@ -414,6 +415,22 @@ export default function DisputeDetails() {
               kase={kase}
               formatCurrency={formatCurrency}
               formatDate={formatDate}
+              onDownloadFile={
+                kase.dispute_outcome === 'unresolved'
+                  ? () =>
+                      runAction('export_dispute_file', async () => {
+                        await exportDisputeFilePdf({
+                          caseId: kase.id,
+                          dir,
+                          locale,
+                          t,
+                          formatCurrency,
+                          formatDate,
+                        });
+                      })
+                  : undefined
+              }
+              busy={busy}
             />
           )}
 
@@ -992,11 +1009,15 @@ function ResolvedPanel({
   kase,
   formatCurrency,
   formatDate,
+  onDownloadFile,
+  busy,
 }: {
   t: (k: string, v?: Record<string, string | number>) => string;
   kase: DamageCaseRow;
   formatCurrency: (n: number) => string;
   formatDate: (d: string) => string;
+  onDownloadFile?: () => void;
+  busy?: boolean;
 }) {
   // NULL outcome can only come from an out-of-band/legacy settle —
   // render it with the neutral unresolved-style framing.
@@ -1046,6 +1067,11 @@ function ResolvedPanel({
           />
         )}
       </div>
+      {onDownloadFile && (
+        <Button size="lg" block loading={busy} disabled={busy} onClick={onDownloadFile}>
+          {t('disputeFile.cta')}
+        </Button>
+      )}
     </Card>
   );
 }
