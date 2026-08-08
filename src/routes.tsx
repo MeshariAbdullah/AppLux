@@ -441,6 +441,16 @@ export function AppRoutes() {
           }
         />
         <Route
+          path="/admin/cases/:id"
+          element={
+            <RequireRole role="admin" fallback="/welcome">
+              <AdminCaseDetails />
+            </RequireRole>
+          }
+        />
+        {/* Legacy deep links (:kind carried no data) — the component
+            redirects them to the canonical /admin/cases/:id. */}
+        <Route
           path="/admin/cases/:kind/:id"
           element={
             <RequireRole role="admin" fallback="/welcome">

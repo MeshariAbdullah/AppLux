@@ -14,6 +14,21 @@ export async function fetchContractById(
   return data;
 }
 
+/** Batch read keyed by id — admin case list joins contract numbers. */
+export async function fetchContractsByIds(
+  ids: readonly string[],
+): Promise<Map<string, RentalContractRow>> {
+  const unique = [...new Set(ids)].filter(Boolean);
+  if (unique.length === 0) return new Map();
+  const sb = requireSupabase();
+  const { data, error } = await sb
+    .from('rental_contracts')
+    .select('*')
+    .in('id', unique);
+  if (error) throw error;
+  return new Map((data ?? []).map((r) => [r.id, r]));
+}
+
 /** Resume support for the guided acceptance flow (Bugs 17/19): an
  *  accepted invoice's contract, so a reopened /review/:token can jump
  *  straight to the receipt-photos step. RLS scopes this to the

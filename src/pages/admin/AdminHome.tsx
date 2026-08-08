@@ -1,4 +1,4 @@
-import { useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Header, Screen } from '@/components/layout';
 import {
@@ -9,7 +9,13 @@ import {
   StatusChip,
 } from '@/components/ui';
 import { LangToggle } from '@/components/auth/LangToggle';
-import { demoMode, useSupabaseAuth } from '@/lib/supabase';
+import {
+  demoMode,
+  listAllDamageCases,
+  useSupabaseAuth,
+  type DamageCaseRow,
+} from '@/lib/supabase';
+import { adminPhaseLabelKey, adminPhaseTone } from './AdminCases';
 import {
   AlertIcon,
   BadgeCheckIcon,
@@ -36,11 +42,8 @@ import {
 import { logEvent } from '@/lib/observability/log';
 import { useI18n, useT } from '@/lib/i18n';
 import {
-  SEED_ADMIN_ACTIVE_CASES,
   SEED_ADMIN_LIMITS,
   SEED_ADMIN_MERCHANTS,
-  SEED_ADMIN_OVERDUE,
-  SEED_ADMIN_OVERDUE_BUCKETS,
   SEED_ADMIN_PENDING_MERCHANTS,
   SEED_ADMIN_USERS,
   type AdminActiveCase,
@@ -109,21 +112,32 @@ export default function AdminHome() {
         pendingRequests: 0,
         avgLimitPerUser: 0,
       };
-  const activeCases = demoMode ? SEED_ADMIN_ACTIVE_CASES : [];
-  const overdueCases = demoMode ? SEED_ADMIN_OVERDUE : [];
-  const buckets = demoMode ? SEED_ADMIN_OVERDUE_BUCKETS : [];
-
-  const overdueTotal = useMemo(
-    () => buckets.reduce((sum, b) => sum + b.count, 0),
-    [buckets],
-  );
-  const overdueAmount = useMemo(
-    () => buckets.reduce((sum, b) => sum + b.amount, 0),
-    [buckets],
+  // Phase-1 disputes: LIVE case rows (no seed data, no fake overdue
+  // model — the legacy overdue widgets were pure demo fiction and are
+  // removed). Counters render 0 while loading, never demo rows.
+  const [liveCases, setLiveCases] = useState<DamageCaseRow[]>([]);
+  useEffect(() => {
+    if (!configured) {
+      setLiveCases([]);
+      return;
+    }
+    let cancelled = false;
+    listAllDamageCases()
+      .then((rows) => {
+        if (!cancelled) setLiveCases(rows);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [configured]);
+  const openCases = useMemo(
+    () => liveCases.filter((c) => c.dispute_phase !== 'resolved'),
+    [liveCases],
   );
   const activeClaimTotal = useMemo(
-    () => activeCases.reduce((sum, c) => sum + c.claimAmount, 0),
-    [activeCases],
+    () => openCases.reduce((sum, c) => sum + Number(c.claim_amount), 0),
+    [openCases],
   );
 
   const utilizationPct = Math.round(limits.utilization * 100);
@@ -151,7 +165,7 @@ export default function AdminHome() {
       icon: <GavelIcon size={18} />,
       to: '/admin/cases',
       tone: 'bg-danger-50 text-danger-600 ring-danger-500/20',
-      count: activeCases.length,
+      count: openCases.length,
     },
     {
       title: t('admin.home.modules.limits'),
@@ -242,13 +256,13 @@ export default function AdminHome() {
               />
               <HeroStat
                 label={t('admin.home.hero.cases')}
-                value={formatNumber(activeCases.length + overdueTotal)}
+                value={formatNumber(openCases.length)}
               />
             </div>
           </div>
 
           {/* Alerts */}
-          {(overdueTotal > 0 || pendingMerchants.length > 0) && (
+          {pendingMerchants.length > 0 && (
             <section>
               <SectionHeader title={t('admin.home.alerts.title')} />
               <div className="space-y-2.5">
@@ -265,19 +279,7 @@ export default function AdminHome() {
                     dir={dir}
                   />
                 )}
-                {overdueTotal > 0 && (
-                  <AlertRow
-                    tone="danger"
-                    icon={<ClockIcon size={16} />}
-                    title={t('admin.home.alerts.overdue', { count: overdueTotal })}
-                    hint={t('admin.home.alerts.overdueHint', {
-                      amount: formatCurrency(overdueAmount),
-                    })}
-                    to="/admin/cases"
-                    cta={t('admin.home.alerts.review')}
-                    dir={dir}
-                  />
-                )}
+
               </div>
             </section>
           )}
@@ -306,19 +308,11 @@ export default function AdminHome() {
               />
               <SummaryTile
                 label={t('admin.home.summary.activeCases')}
-                value={formatNumber(activeCases.length)}
+                value={formatNumber(openCases.length)}
                 subValue={formatCurrency(activeClaimTotal)}
                 icon={<GavelIcon size={16} />}
                 tone="bg-danger-50 text-danger-600"
-                emphasize={activeCases.length > 0}
-              />
-              <SummaryTile
-                label={t('admin.home.summary.overdue')}
-                value={formatNumber(overdueTotal)}
-                subValue={formatCurrency(overdueAmount)}
-                icon={<ClockIcon size={16} />}
-                tone="bg-warn-50 text-warn-600"
-                emphasize={overdueTotal > 0}
+                emphasize={openCases.length > 0}
               />
             </div>
           </section>
@@ -496,62 +490,38 @@ export default function AdminHome() {
               }
             />
             <Card padded className="space-y-1">
-              {activeCases.slice(0, 3).map((c, i) => (
-                <div key={c.id}>
-                  <CaseRow
-                    item={c}
-                    formatCurrency={formatCurrency}
-                    t={t}
-                    dir={dir}
-                  />
-                  {i < Math.min(2, activeCases.length - 1) && (
-                    <div className="h-px bg-canvas-200/80" />
-                  )}
+              {openCases.length === 0 ? (
+                <div className="py-2 text-[12.5px] text-ink-500">
+                  {t('admin.cases.empty')}
                 </div>
-              ))}
-            </Card>
-          </section>
-
-          {/* Overdue cases */}
-          <section>
-            <SectionHeader
-              title={t('admin.home.overdue.title')}
-              action={
-                <Link
-                  to="/admin/cases"
-                  className="text-[12.5px] font-semibold text-gold-700"
-                >
-                  {t('common.viewAll')}
-                </Link>
-              }
-            />
-            <Card padded className="space-y-3">
-              <div className="grid grid-cols-4 gap-2">
-                {buckets.map((b) => (
-                  <BucketTile
-                    key={b.bucket}
-                    bucket={b.bucket}
-                    count={b.count}
-                    label={t(`admin.home.overdue.buckets.${b.bucket}`)}
-                  />
-                ))}
-              </div>
-              <div className="h-px bg-canvas-200/80" />
-              <div className="space-y-1">
-                {overdueCases.slice(0, 3).map((o, i) => (
-                  <div key={o.id}>
-                    <OverdueRow
-                      item={o}
-                      formatCurrency={formatCurrency}
-                      t={t}
-                      dir={dir}
-                    />
-                    {i < Math.min(2, overdueCases.length - 1) && (
+              ) : (
+                openCases.slice(0, 3).map((c, i) => (
+                  <div key={c.id}>
+                    <Link
+                      to={`/admin/cases/${c.id}`}
+                      className="flex items-center justify-between gap-3 py-2"
+                    >
+                      <span className="min-w-0">
+                        <span className="block text-[13px] font-semibold text-ink-900 num" dir="ltr">
+                          {c.case_number}
+                        </span>
+                        <span className="block text-[11.5px] text-ink-400 num">
+                          {formatCurrency(Number(c.claim_amount))}
+                        </span>
+                      </span>
+                      <StatusChip
+                        size="sm"
+                        tone={adminPhaseTone(c)}
+                        dot
+                        label={t(adminPhaseLabelKey(c))}
+                      />
+                    </Link>
+                    {i < Math.min(2, openCases.length - 1) && (
                       <div className="h-px bg-canvas-200/80" />
                     )}
                   </div>
-                ))}
-              </div>
+                ))
+              )}
             </Card>
           </section>
 

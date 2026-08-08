@@ -1,5 +1,5 @@
-import { useMemo, useState, type ReactNode } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { useCallback, useEffect, useState, type ReactNode } from 'react';
+import { Navigate, useNavigate, useParams } from 'react-router-dom';
 import { Header, Screen } from '@/components/layout';
 import {
   Button,
@@ -8,1078 +8,690 @@ import {
   ConfirmSheet,
   EmptyState,
   FormField,
+  ImageLightbox,
+  Input,
+  SectionHeader,
   StatusChip,
   Textarea,
   type StatusTone,
 } from '@/components/ui';
 import {
   AlertIcon,
-  ArrowIcon,
   BadgeCheckIcon,
-  BuildingIcon,
-  CarIcon,
-  CheckIcon,
-  ChevronIcon,
   ClockIcon,
-  DocIcon,
   GavelIcon,
-  HistoryIcon,
+  ImageIcon,
   InfoIcon,
-  MapPinIcon,
-  PackageIcon,
-  ReceiptIcon,
   ShieldIcon,
-  SignatureIcon,
-  SparkleIcon,
-  TimelineIcon,
-  UserIcon,
-  WalletIcon,
 } from '@/components/icons';
 import { cn } from '@/lib/cn';
-import {
-  caseSeverityTone as severityTone,
-  caseStageTone as stageTone,
-} from '@/lib/format/statusTones';
+import { logEvent } from '@/lib/observability/log';
+import { translateError, withSupportId } from '@/lib/errors';
 import { useI18n, useT } from '@/lib/i18n';
-import { useStore } from '@/lib/store';
-import { demoMode, useSupabaseAuth } from '@/lib/supabase';
 import {
-  SEED_ADMIN_ACTIVE_CASES,
-  SEED_ADMIN_OVERDUE,
-  type AdminActiveCase,
-  type AdminCaseAuditAction,
-  type AdminCaseContractStatus,
-  type AdminCaseEvidence,
-  type AdminCaseEvidenceKind,
-  type AdminCaseEvidenceSource,
-  type AdminCaseInvoiceStatus,
-  type AdminCaseKind,
-  type AdminCaseNoteDocStatus,
-  type AdminCaseNoteRole,
-  type AdminCaseSeverity,
-  type AdminCaseStage,
-  type AdminOverdueCase,
-} from '@/lib/data';
+  fetchContractById,
+  fetchDisputeCase,
+  fetchMerchant,
+  fetchProfile,
+  getReceiptPhotoUrl,
+  lendSubmitMediationProposal,
+  listContractReceiptPhotos,
+  listDisputeEvents,
+  listDisputeEvidence,
+  listDisputeProposals,
+  listInvoiceItems,
+  useSupabaseAuth,
+  type DamageCaseRow,
+  type DisputeEventRow,
+  type DisputeEvidenceItem,
+  type DisputeProposalWithResponses,
+  type MerchantRow,
+  type RentalContractRow,
+} from '@/lib/supabase';
+import { adminPhaseLabelKey, adminPhaseTone } from './AdminCases';
 
+// =====================================================================
+// AdminCaseDetails — /admin/cases/:id (canonical case UUID).
+//
+// Fully LIVE replacement for the legacy demo-only page (which read the
+// seed store, always rendered not-found in production, and simulated
+// "escalation" through review/settlement/nafith/execution stages in
+// localStorage). Lend's role here is a NEUTRAL MEDIATOR: the only
+// action is the single lend_submit_mediation_proposal RPC, available
+// exactly while dispute_phase = lend_mediation and no proposal exists.
+// No forced settle, no liability marking, no phase overrides, no
+// legacy legal wording. Everything renders from canonical
+// dispute_phase / dispute_outcome, real proposals + per-party
+// responses, and persisted dispute_events.
+//
+// Backward compatibility: the old /admin/cases/:kind/:id links redirect
+// here (see routes.tsx) — the legacy `:kind` segment carried no data.
+// =====================================================================
 
-function invoiceTone(s: AdminCaseInvoiceStatus): StatusTone {
-  if (s === 'paid') return 'success';
-  if (s === 'pending') return 'warn';
-  return 'danger';
-}
-
-function contractTone(s: AdminCaseContractStatus): StatusTone {
-  if (s === 'active' || s === 'signed') return 'success';
-  if (s === 'closed') return 'neutral';
-  return 'danger';
-}
-
-function noteTone(s: AdminCaseNoteDocStatus): StatusTone {
-  if (s === 'collected') return 'success';
-  if (s === 'issued') return 'brand';
-  if (s === 'pending') return 'warn';
-  return 'danger';
-}
-
-type EvidenceVisual = {
-  gradient: string;
-  ring: string;
-  icon: ReactNode;
-  chipClass: string;
-};
-
-function evidenceVisual(kind: AdminCaseEvidenceKind): EvidenceVisual {
-  switch (kind) {
-    case 'damage-exterior':
-      return {
-        gradient: 'from-danger-500/85 via-danger-600/90 to-danger-700',
-        ring: 'ring-danger-500/30',
-        icon: <GavelIcon size={22} />,
-        chipClass: 'bg-danger-50 text-danger-700',
-      };
-    case 'damage-interior':
-      return {
-        gradient: 'from-danger-400/80 via-danger-500/85 to-danger-600',
-        ring: 'ring-danger-500/25',
-        icon: <PackageIcon size={22} />,
-        chipClass: 'bg-danger-50 text-danger-700',
-      };
-    case 'dashboard':
-      return {
-        gradient: 'from-brand-500/80 via-brand-600/85 to-brand-700',
-        ring: 'ring-brand-500/25',
-        icon: <CarIcon size={22} />,
-        chipClass: 'bg-canvas-100 text-ink-800',
-      };
-    case 'odometer':
-      return {
-        gradient: 'from-gold-400 via-gold-500 to-gold-600',
-        ring: 'ring-gold-500/30',
-        icon: <ClockIcon size={22} />,
-        chipClass: 'bg-gold-50 text-gold-700',
-      };
-    case 'signature':
-      return {
-        gradient: 'from-ink-700 via-ink-800 to-ink-900',
-        ring: 'ring-ink-900/40',
-        icon: <SignatureIcon size={22} />,
-        chipClass: 'bg-canvas-100 text-ink-700',
-      };
-    case 'receipt':
-      return {
-        gradient: 'from-brand-400/80 via-brand-500/85 to-brand-600',
-        ring: 'ring-brand-500/25',
-        icon: <ReceiptIcon size={22} />,
-        chipClass: 'bg-canvas-100 text-ink-800',
-      };
-    case 'missing':
-      return {
-        gradient: 'from-warn-400 via-warn-500 to-warn-600',
-        ring: 'ring-warn-500/30',
-        icon: <AlertIcon size={22} />,
-        chipClass: 'bg-warn-50 text-warn-700',
-      };
-    case 'location':
-    default:
-      return {
-        gradient: 'from-brand-500/80 via-brand-600/90 to-ink-800',
-        ring: 'ring-brand-500/25',
-        icon: <MapPinIcon size={22} />,
-        chipClass: 'bg-canvas-100 text-ink-800',
-      };
-  }
-}
-
-function evidenceSourceTone(s: AdminCaseEvidenceSource): StatusTone {
-  if (s === 'operator') return 'brand';
-  if (s === 'merchant') return 'gold';
-  return 'neutral';
-}
-
-type NoteVisual = {
-  bubble: string;
-  badge: string;
-  icon: ReactNode;
-};
-
-function noteVisual(role: AdminCaseNoteRole): NoteVisual {
-  if (role === 'merchant') {
-    return {
-      bubble: 'bg-brand-50/80 ring-brand-500/15 text-ink-800',
-      badge: 'bg-brand-100 text-gold-700',
-      icon: <BuildingIcon size={11} />,
-    };
-  }
-  if (role === 'operator') {
-    return {
-      bubble: 'bg-gold-50 ring-gold-500/20 text-ink-800',
-      badge: 'bg-gold-50 text-gold-700',
-      icon: <ShieldIcon size={11} />,
-    };
-  }
-  return {
-    bubble: 'bg-canvas-100 hairline text-ink-800',
-    badge: 'bg-canvas-200 text-ink-600',
-    icon: <SparkleIcon size={11} />,
-  };
-}
-
-type AuditVisual = {
-  dotClass: string;
-  icon: ReactNode;
-};
-
-function auditVisual(action: AdminCaseAuditAction): AuditVisual {
-  switch (action) {
-    case 'reported':
-      return {
-        dotClass: 'bg-canvas-100 text-ink-800 ring-brand-500/20',
-        icon: <InfoIcon size={12} />,
-      };
-    case 'evidence-added':
-      return {
-        dotClass: 'bg-canvas-100 text-ink-800 ring-brand-500/20',
-        icon: <PackageIcon size={12} />,
-      };
-    case 'reviewed':
-      return {
-        dotClass: 'bg-success-50 text-success-700 ring-success-500/20',
-        icon: <BadgeCheckIcon size={12} />,
-      };
-    case 'note-added':
-      return {
-        dotClass: 'bg-canvas-100 text-ink-700 hairline',
-        icon: <DocIcon size={12} />,
-      };
-    case 'escalated-settlement':
-      return {
-        dotClass: 'bg-gold-50 text-gold-700 ring-gold-500/25',
-        icon: <ArrowIcon size={12} />,
-      };
-    case 'escalated-nafith':
-      return {
-        dotClass: 'bg-warn-50 text-warn-700 ring-warn-500/25',
-        icon: <GavelIcon size={12} />,
-      };
-    case 'escalated-execution':
-      return {
-        dotClass: 'bg-danger-50 text-danger-700 ring-danger-500/25',
-        icon: <AlertIcon size={12} />,
-      };
-    case 'settled':
-      return {
-        dotClass: 'bg-success-50 text-success-700 ring-success-500/20',
-        icon: <CheckIcon size={12} />,
-      };
-    default:
-      return {
-        dotClass: 'bg-canvas-100 text-ink-700 hairline',
-        icon: <InfoIcon size={12} />,
-      };
-  }
-}
-
-function escalationStageTone(s: AdminCaseStage): StatusTone {
-  if (s === 'review') return 'brand';
-  if (s === 'settlement') return 'gold';
-  if (s === 'nafith') return 'warn';
-  return 'danger';
-}
-
-type CaseHeader = {
-  kind: AdminCaseKind;
-  merchantName: string;
+type Bundle = {
+  kase: DamageCaseRow;
+  contract: RentalContractRow | null;
+  merchant: MerchantRow | null;
   customerName: string;
-  customerInitials: string;
-  item: string;
-  severity?: AdminCaseSeverity;
-  claimAmount?: number;
-  reportedAt?: string;
-  daysOverdue?: number;
-  bucketAmount?: number;
+  itemName: string | null;
+  proposals: DisputeProposalWithResponses[];
+  events: DisputeEventRow[];
+  evidence: DisputeEvidenceItem[];
+  receiptUrls: string[];
 };
-
-function findHeader(
-  kind: AdminCaseKind,
-  id: string,
-  demoMode: boolean,
-): CaseHeader | null {
-  // Phase 9: SEED_ADMIN_* lookups are demo-only. In live mode the
-  // header comes back null and the page renders the case-not-found
-  // empty state until a live Supabase fetch is wired up.
-  if (!demoMode) return null;
-  if (kind === 'damage') {
-    const c: AdminActiveCase | undefined = SEED_ADMIN_ACTIVE_CASES.find(
-      (x) => x.id === id,
-    );
-    if (!c) return null;
-    return {
-      kind,
-      merchantName: c.merchantName,
-      customerName: c.customerName,
-      customerInitials: c.customerInitials,
-      item: c.item,
-      severity: c.severity,
-      claimAmount: c.claimAmount,
-      reportedAt: c.reportedAt,
-    };
-  }
-  const c: AdminOverdueCase | undefined = SEED_ADMIN_OVERDUE.find(
-    (x) => x.id === id,
-  );
-  if (!c) return null;
-  return {
-    kind,
-    merchantName: c.merchantName,
-    customerName: c.customerName,
-    customerInitials: c.customerInitials,
-    item: c.item,
-    daysOverdue: c.daysOverdue,
-    bucketAmount: c.amount,
-  };
-}
 
 export default function AdminCaseDetails() {
   const t = useT();
+  const { formatCurrency, formatDate, locale } = useI18n();
   const navigate = useNavigate();
-  const { dir, formatCurrency, formatDate } = useI18n();
-  const { kind: rawKind = 'damage', id = '' } = useParams<{
-    kind: string;
-    id: string;
-  }>();
-
-  const kind: AdminCaseKind = rawKind === 'overdue' ? 'overdue' : 'damage';
-  const detailKey = kind === 'overdue' ? `${id}-OD` : id;
-
-  const { adminCases, addCaseNote, escalateCase } = useStore();
+  const params = useParams();
   const { configured } = useSupabaseAuth();
 
-  const detail = useMemo(
-    () => adminCases.find((c) => c.id === detailKey) ?? null,
-    [adminCases, detailKey],
-  );
-  const header = useMemo(
-    () => findHeader(kind, id, demoMode),
-    [kind, id],
-  );
+  // Canonical route: /admin/cases/:id. Legacy route: /admin/cases/:kind/:id
+  // (kind was 'damage' | 'overdue' — meaningless). When both params are
+  // present we redirect to the canonical URL, preserving the UUID.
+  const legacyKind = params.kind;
+  const id = params.id;
+  if (legacyKind && id) {
+    return <Navigate to={`/admin/cases/${id}`} replace />;
+  }
 
-  const [noteDraft, setNoteDraft] = useState('');
-  const [noteFlash, setNoteFlash] = useState(false);
-  const [escalateFlash, setEscalateFlash] = useState(false);
-  const [escalateConfirmOpen, setEscalateConfirmOpen] = useState(false);
+  return <AdminCaseDetailsInner key={id} id={id ?? null} configured={configured} t={t}
+    formatCurrency={formatCurrency} formatDate={formatDate} locale={locale} navigate={navigate} />;
+}
 
-  const handleAddNote = () => {
-    const trimmed = noteDraft.trim();
-    if (!trimmed) return;
-    const next = addCaseNote(detailKey, trimmed);
-    if (next) {
-      setNoteDraft('');
-      setNoteFlash(true);
-      window.setTimeout(() => setNoteFlash(false), 1800);
+function AdminCaseDetailsInner({
+  id,
+  configured,
+  t,
+  formatCurrency,
+  formatDate,
+  locale,
+  navigate,
+}: {
+  id: string | null;
+  configured: boolean;
+  t: (k: string, v?: Record<string, string | number>) => string;
+  formatCurrency: (n: number) => string;
+  formatDate: (d: string) => string;
+  locale: 'ar' | 'en';
+  navigate: (to: string, opts?: { replace?: boolean }) => void;
+}) {
+  const [bundle, setBundle] = useState<Bundle | null>(null);
+  const [resolving, setResolving] = useState<boolean>(() => Boolean(configured && id));
+  const [actionError, setActionError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  const load = useCallback(async (): Promise<Bundle | null> => {
+    if (!configured || !id) return null;
+    const kase = await fetchDisputeCase(id).catch(() => null);
+    if (!kase) return null;
+    const [contract, merchant, customer, proposals, events, evidence] = await Promise.all([
+      fetchContractById(kase.contract_id).catch(() => null),
+      fetchMerchant(kase.merchant_id).catch(() => null),
+      fetchProfile(kase.customer_user_id).catch(() => null),
+      listDisputeProposals(kase.id).catch(() => []),
+      listDisputeEvents(kase.id).catch(() => []),
+      listDisputeEvidence(kase.id).catch(() => []),
+    ]);
+    let itemName: string | null = null;
+    let receiptUrls: string[] = [];
+    if (contract) {
+      const [items, photos] = await Promise.all([
+        listInvoiceItems(contract.invoice_id).catch(() => []),
+        listContractReceiptPhotos(contract.id).catch(() => []),
+      ]);
+      itemName = items[0]?.item_name ?? null;
+      receiptUrls = (
+        await Promise.all(photos.map((p) => getReceiptPhotoUrl(p.storage_path)))
+      ).filter((u): u is string => Boolean(u));
     }
-  };
+    return {
+      kase,
+      contract,
+      merchant,
+      customerName: customer?.full_name ?? '—',
+      itemName,
+      proposals,
+      events,
+      evidence,
+      receiptUrls,
+    };
+  }, [configured, id]);
 
-  const handleEscalate = () => {
-    const next = escalateCase(detailKey);
-    setEscalateConfirmOpen(false);
-    if (next) {
-      setEscalateFlash(true);
-      window.setTimeout(() => setEscalateFlash(false), 1800);
+  const refetch = useCallback(async () => {
+    setBundle(await load());
+  }, [load]);
+
+  useEffect(() => {
+    if (!configured || !id) {
+      setBundle(null);
+      setResolving(false);
+      return;
     }
-  };
+    let cancelled = false;
+    setBundle(null);
+    setResolving(true);
+    load()
+      .then((b) => {
+        if (!cancelled) setBundle(b);
+      })
+      .finally(() => {
+        if (!cancelled) setResolving(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [configured, id, load]);
 
-  if (!detail || !header) {
+  if (!bundle) {
+    if (resolving) {
+      return (
+        <>
+          <Header title={t('admin.cases.title')} showBack />
+          <Screen className="bg-canvas">
+            <div className="min-h-[40vh] grid place-items-center">
+              <span className="h-7 w-7 rounded-full border-2 border-canvas-200 border-t-lavender-600 animate-spin" />
+            </div>
+          </Screen>
+        </>
+      );
+    }
     return (
       <>
-        <Header title={t('admin.case.title')} showBack />
-        <Screen padded={false} className="bg-canvas">
-          <div className="px-4 pt-6">
-            <EmptyState
-              icon={<InfoIcon size={22} />}
-              title={t('admin.case.notFound.title')}
-              description={t('admin.case.notFound.hint')}
-              action={
-                <Button onClick={() => navigate('/admin/cases')}>
-                  {t('admin.case.notFound.cta')}
-                </Button>
-              }
-            />
-          </div>
+        <Header title={t('admin.cases.title')} showBack />
+        <Screen className="bg-canvas">
+          <EmptyState
+            tone="warn"
+            icon={<AlertIcon size={22} />}
+            title={t('admin.disputes.notFound.title')}
+            description={t('admin.disputes.notFound.body')}
+            action={
+              <Button size="sm" onClick={() => navigate('/admin/cases', { replace: true })}>
+                {t('admin.disputes.notFound.back')}
+              </Button>
+            }
+          />
         </Screen>
       </>
     );
   }
 
-  const { linked, escalation, summary } = detail;
-  const stage = escalation.currentStage;
+  const { kase, contract, merchant, customerName, itemName, proposals, events, evidence, receiptUrls } = bundle;
+  const merchantName =
+    merchant?.display_name?.[locale] ?? merchant?.display_name?.ar ?? merchant?.company_name ?? '—';
+  const merchantEvidence = evidence.filter((e) => e.row.uploaded_by_user_id !== kase.customer_user_id);
+  const customerEvidence = evidence.filter((e) => e.row.uploaded_by_user_id === kase.customer_user_id);
+  const directProposals = proposals.filter((p) => p.kind === 'direct');
+  const lendProposal = proposals.find((p) => p.kind === 'lend') ?? null;
+  const sevKey = kase.severity === 'non_return' ? 'non-return' : kase.severity;
+
+  const runAction = async (op: string, fn: () => Promise<void>) => {
+    if (busy) return;
+    setBusy(true);
+    setActionError(null);
+    try {
+      await fn();
+      await refetch();
+    } catch (err) {
+      const code = (err as { code?: unknown })?.code;
+      if (code === 'P0201' || code === 'P0207') await refetch().catch(() => {});
+      const eventId = logEvent('dispute_action_failed', 'warn', { op }, err);
+      setActionError(withSupportId(translateError(err, t), eventId));
+    } finally {
+      setBusy(false);
+    }
+  };
 
   return (
     <>
-      <Header
-        title={t('admin.case.title')}
-        subtitle={header.customerName}
-        showBack
-      />
+      <Header title={kase.case_number} subtitle={merchantName} showBack />
       <Screen padded={false} className="bg-canvas">
-        <div className="px-5 pt-5 pb-10 space-y-5">
-          {/* Hero */}
-          <div className="relative overflow-hidden rounded-xl3 bg-gradient-to-br from-ink-900 via-ink-800 to-ink-900 text-white p-6 shadow-plush">
-            <div
-              aria-hidden
-              className="pointer-events-none absolute inset-0 pattern-dots opacity-25"
-            />
-            <div
-              aria-hidden
-              className="pointer-events-none absolute -top-14 end-[-15%] h-56 w-56 rounded-full bg-gold-400/22 blur-3xl"
-            />
-            <div className="relative flex items-start gap-3">
-              <span
-                className={cn(
-                  'h-12 w-12 shrink-0 rounded-2xl ring-1 grid place-items-center',
-                  kind === 'damage'
-                    ? 'bg-danger-500/15 ring-danger-400/30 text-danger-200'
-                    : 'bg-warn-500/15 ring-warn-400/30 text-warn-200',
-                )}
-              >
-                {kind === 'damage' ? (
-                  <GavelIcon size={20} />
-                ) : (
-                  <ClockIcon size={20} />
-                )}
+        <div className="px-5 pt-5 pb-10 space-y-4">
+          {/* hero */}
+          <Card padded className="space-y-3">
+            <div className="flex items-start gap-3">
+              <span className="h-11 w-11 shrink-0 rounded-2xl bg-canvas-100 ring-1 ring-canvas-200 text-ink-700 grid place-items-center">
+                <ShieldIcon size={20} />
               </span>
               <div className="min-w-0 flex-1">
-                <div className="inline-flex items-center gap-1.5 rounded-full bg-gold-400/15 ring-1 ring-gold-400/30 px-2.5 py-1 text-[11px] font-semibold text-gold-200">
-                  <ShieldIcon size={12} />
-                  {t(`admin.case.kind.${kind}`)}
+                <div className="text-[10.5px] text-ink-400 uppercase tracking-[0.08em]">
+                  {t('merchant.damageCase.eyebrow')}
                 </div>
-                <h1 className="mt-3 editorial-title text-[22px] leading-tight truncate num text-white">
-                  {detail.id}
-                </h1>
-                <div className="mt-1.5 text-[12px] text-white/65 truncate">
-                  {header.merchantName} · {header.item}
+                <div className="mt-0.5 text-[16px] font-bold text-ink-900 num" dir="ltr">
+                  {kase.case_number}
                 </div>
               </div>
+              <StatusChip tone={adminPhaseTone(kase)} dot label={t(adminPhaseLabelKey(kase))} />
             </div>
+          </Card>
 
-            <p className="relative mt-3 text-[12.5px] text-white/75 leading-relaxed">
-              {summary}
-            </p>
-
-            <div className="relative mt-4 flex flex-wrap items-center gap-2">
-              {kind === 'damage' && header.severity && (
-                <StatusChip
-                  size="md"
-                  tone={severityTone(header.severity)}
-                  dot={false}
-                  label={t(`merchant.damages.severity.${header.severity}`)}
-                />
-              )}
-              {kind === 'overdue' && typeof header.daysOverdue === 'number' && (
-                <StatusChip
-                  size="md"
-                  tone="danger"
-                  dot
-                  label={t('admin.home.overdue.daysOverdue', {
-                    count: header.daysOverdue,
-                  })}
-                />
-              )}
-              <StatusChip
-                size="md"
-                tone={stageTone(stage)}
-                dot
-                label={t(`admin.home.activeCases.stage.${stage}`)}
-              />
+          {actionError && (
+            <div className="rounded-xl2 bg-danger-50 ring-1 ring-danger-500/25 px-3.5 py-2.5 text-[12.5px] text-danger-700">
+              {actionError}
             </div>
+          )}
 
-            <div className="relative mt-4 grid grid-cols-2 gap-2">
-              <HeroTile
-                label={t('admin.case.hero.customer')}
-                value={
-                  <span className="inline-flex items-center gap-1.5">
-                    <span className="h-5 w-5 shrink-0 rounded-md bg-white/15 grid place-items-center text-[9.5px] font-bold">
-                      {header.customerInitials}
+          {/* claim + contract + parties */}
+          <Card padded className="space-y-3">
+            <SectionHeader title={t('disputes.claim.title')} className="mb-0" />
+            <FactRow label={t('disputes.claim.type')} value={t(`merchant.damages.severity.${sevKey}`)} />
+            <FactRow label={t('admin.disputes.merchantLabel')} value={merchantName} />
+            <FactRow label={t('admin.disputes.customerLabel')} value={customerName} />
+            <FactRow
+              label={t('admin.disputes.contractLabel')}
+              value={<span className="num" dir="ltr">{contract?.contract_number ?? '—'}</span>}
+            />
+            {itemName && <FactRow label={t('admin.disputes.itemLabel')} value={itemName} />}
+            {contract && (
+              <>
+                <FactRow
+                  label={t('admin.disputes.periodLabel')}
+                  value={
+                    <span className="num" dir="ltr">
+                      {formatDate(contract.start_date)} → {formatDate(contract.end_date)}
                     </span>
-                    <span className="truncate">{header.customerName}</span>
-                  </span>
-                }
-              />
-              <HeroTile
-                label={
-                  kind === 'damage'
-                    ? t('admin.case.hero.claim')
-                    : t('admin.case.hero.outstanding')
-                }
-                value={formatCurrency(
-                  kind === 'damage'
-                    ? header.claimAmount ?? 0
-                    : header.bucketAmount ?? 0,
-                )}
-              />
-            </div>
-          </div>
-
-          {/* Parties & case meta */}
-          <Section
-            title={t('admin.case.sections.overview')}
-            icon={<InfoIcon size={14} />}
-          >
-            <Card padded className="space-y-0">
-              <Field
-                label={t('admin.case.fields.merchant')}
-                value={
-                  <span className="inline-flex items-center gap-1.5">
-                    <BuildingIcon size={12} className="text-ink-400" />
-                    {header.merchantName}
-                  </span>
-                }
-              />
-              <CardDivider className="my-2" />
-              <Field
-                label={t('admin.case.fields.customer')}
-                value={
-                  <span className="inline-flex items-center gap-1.5">
-                    <UserIcon size={12} className="text-ink-400" />
-                    {header.customerName}
-                  </span>
-                }
-              />
-              <CardDivider className="my-2" />
-              <Field
-                label={t('admin.case.fields.item')}
-                value={header.item}
-              />
-              {kind === 'damage' && header.reportedAt && (
-                <>
-                  <CardDivider className="my-2" />
-                  <Field
-                    label={t('admin.case.fields.reportedAt')}
-                    value={formatDate(header.reportedAt, {
-                      dateStyle: 'medium',
-                      timeStyle: 'short',
-                    })}
-                    numeric
-                  />
-                </>
-              )}
-              {kind === 'overdue' && typeof header.daysOverdue === 'number' && (
-                <>
-                  <CardDivider className="my-2" />
-                  <Field
-                    label={t('admin.case.fields.daysOverdue')}
-                    value={t('admin.home.overdue.daysOverdue', {
-                      count: header.daysOverdue,
-                    })}
-                    numeric
-                  />
-                </>
-              )}
-            </Card>
-          </Section>
-
-          {/* Linked invoice */}
-          <Section
-            title={t('admin.case.sections.invoice')}
-            icon={<ReceiptIcon size={14} />}
-          >
-            <Card padded className="space-y-3">
-              <div className="flex items-start gap-3">
-                <span className="h-10 w-10 shrink-0 rounded-xl bg-canvas-100 text-ink-700 grid place-items-center">
-                  <ReceiptIcon size={18} />
-                </span>
-                <div className="min-w-0 flex-1">
-                  <div className="text-[13px] font-semibold text-ink-900 truncate num">
-                    {linked.invoiceRef}
-                  </div>
-                  <div className="mt-0.5 text-[11.5px] text-ink-400">
-                    {t('admin.case.invoice.due', {
-                      date: formatDate(linked.invoiceDueAt),
-                    })}
-                  </div>
-                </div>
-                <StatusChip
-                  size="sm"
-                  tone={invoiceTone(linked.invoiceStatus)}
-                  dot
-                  label={t(`admin.case.invoice.status.${linked.invoiceStatus}`)}
+                  }
                 />
-              </div>
-              <div className="h-px bg-canvas-200/80" />
-              <div className="flex items-center justify-between gap-2">
-                <span className="text-[11.5px] text-ink-500 inline-flex items-center gap-1.5">
-                  <WalletIcon size={12} />
-                  {t('admin.case.invoice.amount')}
-                </span>
-                <span className="text-[14px] font-bold text-ink-900 num">
-                  {formatCurrency(linked.invoiceAmount)}
-                </span>
-              </div>
-            </Card>
-          </Section>
-
-          {/* Linked contract */}
-          <Section
-            title={t('admin.case.sections.contract')}
-            icon={<DocIcon size={14} />}
-          >
-            <Card padded className="space-y-3">
-              <div className="flex items-start gap-3">
-                <span className="h-10 w-10 shrink-0 rounded-xl bg-gold-50 text-gold-700 grid place-items-center">
-                  <DocIcon size={18} />
-                </span>
-                <div className="min-w-0 flex-1">
-                  <div className="text-[13px] font-semibold text-ink-900 truncate num">
-                    {linked.contractRef}
-                  </div>
-                  <div className="mt-0.5 text-[11.5px] text-ink-400">
-                    {t('admin.case.contract.startedAt', {
-                      date: formatDate(linked.contractStartedAt),
-                    })}
-                  </div>
-                </div>
-                <StatusChip
-                  size="sm"
-                  tone={contractTone(linked.contractStatus)}
-                  dot
-                  label={t(
-                    `admin.case.contract.status.${linked.contractStatus}`,
-                  )}
+                <FactRow
+                  label={t('admin.disputes.itemValueLabel')}
+                  value={<span className="num">{formatCurrency(Number(contract.original_item_value))}</span>}
                 />
-              </div>
-              <div className="h-px bg-canvas-200/80" />
-              <div className="flex items-center justify-between gap-2">
-                <span className="text-[11.5px] text-ink-500 inline-flex items-center gap-1.5">
-                  <MapPinIcon size={12} />
-                  {t('admin.case.contract.parties')}
-                </span>
-                <span className="text-[12px] font-semibold text-ink-700 truncate max-w-[60%] text-end">
-                  {header.merchantName} · {header.customerName}
-                </span>
-              </div>
-            </Card>
-          </Section>
-
-          {/* Linked promissory note */}
-          <Section
-            title={t('admin.case.sections.note')}
-            icon={<SignatureIcon size={14} />}
-          >
-            <Card padded className="space-y-3">
-              <div className="flex items-start gap-3">
-                <span className="h-10 w-10 shrink-0 rounded-xl bg-danger-50 text-danger-600 grid place-items-center">
-                  <SignatureIcon size={18} />
-                </span>
-                <div className="min-w-0 flex-1">
-                  <div className="text-[13px] font-semibold text-ink-900 truncate num">
-                    {linked.noteRef}
-                  </div>
-                  <div className="mt-0.5 text-[11.5px] text-ink-400">
-                    {t('admin.case.note.principalLabel')}
-                  </div>
-                </div>
-                <StatusChip
-                  size="sm"
-                  tone={noteTone(linked.noteStatus)}
-                  dot
-                  label={t(`admin.case.note.status.${linked.noteStatus}`)}
+                <FactRow
+                  label={t('admin.disputes.contractStateLabel')}
+                  value={contract.status}
                 />
-              </div>
-              <div className="h-px bg-canvas-200/80" />
-              <div className="flex items-center justify-between gap-2">
-                <span className="text-[11.5px] text-ink-500 inline-flex items-center gap-1.5">
-                  <PackageIcon size={12} />
-                  {t('admin.case.note.principal')}
-                </span>
-                <span className="text-[14px] font-bold text-ink-900 num">
-                  {formatCurrency(linked.noteAmount)}
-                </span>
-              </div>
-              {linked.noteStatus === 'forwarded-nafith' && (
-                <div className="rounded-xl bg-danger-50 ring-1 ring-inset ring-danger-500/20 px-3 py-2 flex items-start gap-2 text-[11.5px] text-danger-700">
-                  <AlertIcon size={14} className="shrink-0 mt-0.5" />
-                  <span>{t('admin.case.note.forwardedHint')}</span>
-                </div>
-              )}
-            </Card>
-          </Section>
-
-          {/* Evidence */}
-          <Section
-            title={t('admin.case.sections.evidence')}
-            icon={<PackageIcon size={14} />}
-            count={detail.evidence.length}
-          >
-            {detail.evidence.length === 0 ? (
-              <Card padded>
-                <EmptyState
-                  icon={<InfoIcon size={20} />}
-                  title={t('admin.case.evidence.empty.title')}
-                  description={t('admin.case.evidence.empty.hint')}
-                />
-              </Card>
-            ) : (
-              <div className="grid grid-cols-2 gap-2">
-                {detail.evidence.map((ev) => (
-                  <EvidenceTile key={ev.id} evidence={ev} />
-                ))}
-              </div>
+              </>
             )}
-          </Section>
+            <FactRow
+              label={t('disputes.claim.amount')}
+              value={<span className="num">{formatCurrency(Number(kase.claim_amount))}</span>}
+            />
+            <FactRow
+              label={t('disputes.claim.raisedAt')}
+              value={<span className="num">{formatDate(kase.raised_at)}</span>}
+            />
+            {kase.description && (
+              <>
+                <CardDivider />
+                <p className="text-[13px] text-ink-700 leading-relaxed whitespace-pre-line">
+                  {kase.description}
+                </p>
+              </>
+            )}
+          </Card>
 
-          {/* Escalation */}
-          <Section
-            title={t('admin.case.sections.escalation')}
-            icon={<GavelIcon size={14} />}
-          >
-            <Card padded className="space-y-3">
-              <div className="flex items-center gap-2 flex-wrap">
-                <span className="text-[11px] font-semibold uppercase tracking-wide text-ink-400">
-                  {t('admin.case.escalation.current')}
-                </span>
-                <StatusChip
-                  size="sm"
-                  tone={escalationStageTone(escalation.currentStage)}
-                  dot
-                  label={t(
-                    `admin.home.activeCases.stage.${escalation.currentStage}`,
-                  )}
-                />
-                {escalation.nextStage && (
-                  <>
-                    <ChevronIcon
-                      size={12}
-                      className={cn(
-                        'text-ink-300',
-                        dir === 'rtl' ? 'rotate-180' : '',
+          {/* customer response */}
+          {kase.customer_response_at && (
+            <Card padded className="space-y-2">
+              <SectionHeader
+                title={t('admin.disputes.customerResponseTitle')}
+                className="mb-0"
+                action={
+                  <span className="text-[11px] text-ink-400 num">
+                    {formatDate(kase.customer_response_at)}
+                  </span>
+                }
+              />
+              <div className="text-[13px] font-semibold text-ink-900">
+                {kase.customer_objection_reason
+                  ? t('admin.disputes.objected')
+                  : t('admin.disputes.accepted')}
+              </div>
+              {kase.customer_objection_reason && (
+                <p className="text-[13px] text-ink-700 leading-relaxed whitespace-pre-line">
+                  {kase.customer_objection_reason}
+                </p>
+              )}
+            </Card>
+          )}
+
+          {/* evidence */}
+          <EvidenceCard
+            title={t('merchant.damageCase.evidence')}
+            items={merchantEvidence}
+            emptyLabel={t('disputes.evidence.none')}
+          />
+          {customerEvidence.length > 0 && (
+            <EvidenceCard
+              title={t('merchant.disputes.customerEvidenceTitle')}
+              items={customerEvidence}
+              emptyLabel={t('disputes.evidence.none')}
+            />
+          )}
+          {receiptUrls.length > 0 && (
+            <Card padded className="space-y-2.5">
+              <SectionHeader title={t('merchant.disputes.receiptTitle')} className="mb-0" />
+              <PhotoGrid urls={receiptUrls} />
+            </Card>
+          )}
+
+          {/* direct settlement history */}
+          {directProposals.length > 0 && (
+            <Card padded className="space-y-2.5">
+              <SectionHeader title={t('disputes.settlement.title')} className="mb-0" />
+              {directProposals.map((p) => (
+                <div key={p.id} className="rounded-xl2 bg-canvas-100 hairline p-3.5 space-y-1.5">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-[12.5px] font-semibold text-ink-900">
+                      {t(
+                        p.proposed_by_party === 'merchant'
+                          ? 'admin.disputes.responses.merchant'
+                          : 'admin.disputes.responses.customer',
                       )}
-                    />
+                      {p.round != null && (
+                        <span className="text-ink-400 font-normal">
+                          {' · '}
+                          {t('disputes.settlement.round', { current: p.round, total: 2 })}
+                        </span>
+                      )}
+                    </span>
                     <StatusChip
                       size="sm"
-                      tone={escalationStageTone(escalation.nextStage)}
+                      tone={p.status === 'accepted' ? 'success' : p.status === 'rejected' ? 'neutral' : 'warn'}
                       dot={false}
-                      label={t(
-                        `admin.home.activeCases.stage.${escalation.nextStage}`,
-                      )}
+                      label={t(`disputes.settlement.status.${p.status}`)}
                     />
-                  </>
-                )}
-              </div>
-
-              <p className="text-[12px] text-ink-500 leading-relaxed">
-                {escalation.nextStage
-                  ? t('admin.case.escalation.hint')
-                  : t('admin.case.escalation.awaitingHint')}
-              </p>
-
-              {escalateFlash && (
-                <div className="rounded-xl bg-success-50 ring-1 ring-inset ring-success-500/25 px-3 py-2 flex items-center gap-2 text-[12px] font-semibold text-success-700">
-                  <CheckIcon size={14} />
-                  {t('admin.case.escalation.flash')}
+                  </div>
+                  <div className="text-[15px] font-bold text-ink-900 num">
+                    {formatCurrency(Number(p.amount))}
+                  </div>
+                  {p.note && <p className="text-[12px] text-ink-600 leading-relaxed">{p.note}</p>}
+                  <div className="text-[11px] text-ink-400 num">{formatDate(p.created_at)}</div>
                 </div>
-              )}
-
-              {/* Escalation is demo-only — `escalateCase` mutates only
-                  the in-memory store. No real escalation RPC exists.
-                  Hidden when configured. */}
-              {!configured && (
-                <Button
-                  onClick={() =>
-                    escalation.nextStage && setEscalateConfirmOpen(true)
-                  }
-                  disabled={!escalation.nextStage}
-                  variant={escalation.nextStage ? 'primary' : 'ghost'}
-                  className="w-full"
-                >
-                  {t(`admin.case.escalation.action.${escalation.nextActionKey}`)}
-                </Button>
-              )}
+              ))}
             </Card>
-          </Section>
+          )}
 
-          {/* Notes */}
-          <Section
-            title={t('admin.case.sections.notes')}
-            icon={<DocIcon size={14} />}
-            count={detail.notes.length}
-          >
+          {/* Lend mediation */}
+          {(kase.dispute_phase === 'lend_mediation' || lendProposal) && (
+            <LendMediationCard
+              t={t}
+              kase={kase}
+              lendProposal={lendProposal}
+              busy={busy}
+              formatCurrency={formatCurrency}
+              formatDate={formatDate}
+              onSubmit={(amount, note) =>
+                runAction('lend_submit_mediation_proposal', async () => {
+                  await lendSubmitMediationProposal(kase.id, amount, note || undefined);
+                })
+              }
+            />
+          )}
+
+          {/* terminal */}
+          {kase.dispute_phase === 'resolved' && (
             <Card padded className="space-y-3">
-              {detail.notes.length === 0 ? (
-                <EmptyState
-                  icon={<InfoIcon size={20} />}
-                  title={t('admin.case.notes.empty.title')}
-                  description={t('admin.case.notes.empty.hint')}
-                />
-              ) : (
-                <ul className="space-y-2">
-                  {detail.notes.map((n) => (
-                    <li key={n.id}>
-                      <NoteBubble
-                        role={n.role}
-                        author={n.author}
-                        at={formatDate(n.at, {
-                          dateStyle: 'medium',
-                          timeStyle: 'short',
-                        })}
-                        roleLabel={t(`admin.case.notes.role.${n.role}`)}
-                        text={n.text}
-                      />
-                    </li>
-                  ))}
-                </ul>
-              )}
-
-              {/* Notes are a demo-only feature today — `addCaseNote`
-                  mutates the in-memory store and there is no real
-                  damage_cases.notes column. Hidden when configured to
-                  avoid a write that looks real but isn't. The existing
-                  notes (above) still display as read-only history. */}
-              {!configured && (
-                <>
-                  <CardDivider />
-
-                  <FormField
-                    label={t('admin.case.notes.addLabel')}
-                    hint={t('admin.case.notes.addHint')}
-                  >
-                    <Textarea
-                      value={noteDraft}
-                      onChange={(e) => setNoteDraft(e.target.value)}
-                      placeholder={t('admin.case.notes.addPlaceholder')}
-                      rows={3}
-                    />
-                  </FormField>
-
-                  {noteFlash && (
-                    <div className="rounded-xl bg-success-50 ring-1 ring-inset ring-success-500/25 px-3 py-2 flex items-center gap-2 text-[12px] font-semibold text-success-700">
-                      <CheckIcon size={14} />
-                      {t('admin.case.notes.flash')}
-                    </div>
+              <div className="flex items-start gap-3">
+                <span
+                  className={cn(
+                    'h-11 w-11 shrink-0 rounded-2xl grid place-items-center ring-1',
+                    adminPhaseTone(kase) === 'success'
+                      ? 'bg-success-50 text-success-600 ring-success-500/20'
+                      : 'bg-canvas-100 text-ink-500 ring-canvas-200',
                   )}
-
-                  <Button
-                    onClick={handleAddNote}
-                    disabled={noteDraft.trim().length === 0}
-                    className="w-full"
-                  >
-                    {t('admin.case.notes.submit')}
-                  </Button>
-                </>
-              )}
+                >
+                  {adminPhaseTone(kase) === 'success' ? (
+                    <BadgeCheckIcon size={20} />
+                  ) : (
+                    <InfoIcon size={20} />
+                  )}
+                </span>
+                <div className="min-w-0 flex-1">
+                  <div className="text-[15px] font-bold text-ink-900">
+                    {t(adminPhaseLabelKey(kase))}
+                  </div>
+                  {kase.dispute_outcome === 'unresolved' && (
+                    <p className="mt-1 text-[12.5px] text-ink-600 leading-relaxed">
+                      {t('admin.disputes.unresolvedNote')}
+                    </p>
+                  )}
+                  {kase.agreed_amount != null && (
+                    <p className="mt-1 text-[12.5px] text-ink-600 num">
+                      {t('disputes.resolved.agreedAmount')} ·{' '}
+                      {formatCurrency(Number(kase.agreed_amount))}
+                    </p>
+                  )}
+                  {kase.resolved_at && (
+                    <p className="mt-0.5 text-[11.5px] text-ink-400 num">
+                      {formatDate(kase.resolved_at)}
+                    </p>
+                  )}
+                </div>
+              </div>
             </Card>
-          </Section>
+          )}
 
-          {/* Audit trail */}
-          <Section
-            title={t('admin.case.sections.audit')}
-            icon={<TimelineIcon size={14} />}
-            count={detail.audit.length}
-          >
-            <Card padded>
-              {detail.audit.length === 0 ? (
-                <EmptyState
-                  icon={<HistoryIcon size={20} />}
-                  title={t('admin.case.audit.empty.title')}
-                  description={t('admin.case.audit.empty.hint')}
-                />
-              ) : (
-                <ol className="relative">
-                  <span
-                    aria-hidden
-                    className="absolute top-1 bottom-1 w-px bg-canvas-200 start-[13px]"
-                  />
-                  {detail.audit.map((a, i) => {
-                    const av = auditVisual(a.action);
-                    return (
-                      <li
-                        key={a.id}
-                        className={cn(
-                          'relative flex items-start gap-3',
-                          i < detail.audit.length - 1 ? 'pb-3' : '',
-                        )}
-                      >
-                        <span
-                          className={cn(
-                            'relative z-10 h-6 w-6 shrink-0 rounded-full ring-1 grid place-items-center',
-                            av.dotClass,
-                          )}
-                        >
-                          {av.icon}
-                        </span>
-                        <div className="min-w-0 flex-1 pt-0.5">
-                          <div className="text-[12.5px] font-semibold text-ink-900">
-                            {t(`admin.case.audit.action.${a.action}`)}
-                          </div>
-                          <div className="mt-0.5 text-[11px] text-ink-500 num">
-                            {a.actor} ·{' '}
-                            {formatDate(a.at, {
-                              dateStyle: 'medium',
-                              timeStyle: 'short',
-                            })}
-                          </div>
-                          {a.detail && (
-                            <div className="mt-1 text-[11.5px] text-ink-600">
-                              {a.detail}
-                            </div>
-                          )}
-                        </div>
-                      </li>
-                    );
-                  })}
-                </ol>
-              )}
+          {/* persisted event history */}
+          {events.length > 0 && (
+            <Card padded className="space-y-2.5">
+              <SectionHeader title={t('merchant.disputes.events.title')} className="mb-0" />
+              <div className="space-y-2.5">
+                {events.map((e) => (
+                  <div key={e.id} className="flex items-start gap-2.5">
+                    <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-canvas-300" />
+                    <div className="min-w-0 flex-1 flex items-baseline justify-between gap-2 text-[12px]">
+                      <span className="text-ink-700">
+                        {t(`merchant.disputes.events.${e.event_type}`)}
+                      </span>
+                      <span className="text-ink-400 num shrink-0">{formatDate(e.created_at)}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </Card>
-          </Section>
-
-          <Link
-            to="/admin/cases"
-            className="block text-center text-[12.5px] font-semibold text-gold-700 py-2"
-          >
-            {t('admin.case.backToList')}
-          </Link>
+          )}
         </div>
       </Screen>
+    </>
+  );
+}
 
-      <ConfirmSheet
-        open={escalateConfirmOpen}
-        onClose={() => setEscalateConfirmOpen(false)}
-        onConfirm={handleEscalate}
-        title={t('admin.case.escalation.confirmSheet.title')}
-        description={
-          escalation.nextStage
-            ? t('admin.case.escalation.confirmSheet.description', {
-                stage: t(
-                  `admin.home.activeCases.stage.${escalation.nextStage}`,
-                ),
-              })
-            : ''
-        }
-        confirmLabel={t(
-          `admin.case.escalation.action.${escalation.nextActionKey}`,
-        )}
-        cancelLabel={t('common.cancel')}
-        icon={<AlertIcon size={18} />}
-        tone="warn"
+// ---------------------------------------------------------------------
+
+function FactRow({ label, value }: { label: ReactNode; value: ReactNode }) {
+  return (
+    <div className="flex items-center justify-between gap-3 text-[12.5px]">
+      <span className="text-ink-400 shrink-0">{label}</span>
+      <span className="font-semibold text-ink-900 text-end min-w-0 truncate">{value}</span>
+    </div>
+  );
+}
+
+function PhotoGrid({ urls }: { urls: string[] }) {
+  const [lightbox, setLightbox] = useState<number | null>(null);
+  return (
+    <>
+      <div className="grid grid-cols-3 gap-2">
+        {urls.map((u, i) => (
+          <button
+            key={`${i}-${u.slice(-12)}`}
+            type="button"
+            onClick={() => setLightbox(i)}
+            className="relative aspect-square overflow-hidden rounded-xl bg-canvas-200 hairline active:scale-[0.98] transition-transform"
+          >
+            <img src={u} alt="" className="h-full w-full object-cover" loading="lazy" />
+          </button>
+        ))}
+      </div>
+      <ImageLightbox
+        open={lightbox !== null}
+        images={urls}
+        startIndex={lightbox ?? 0}
+        onClose={() => setLightbox(null)}
       />
     </>
   );
 }
 
-function Section({
+function EvidenceCard({
   title,
-  icon,
-  count,
-  children,
+  items,
+  emptyLabel,
 }: {
   title: ReactNode;
-  icon: ReactNode;
-  count?: number;
-  children: ReactNode;
+  items: DisputeEvidenceItem[];
+  emptyLabel: ReactNode;
 }) {
+  const urls = items.map((e) => e.url).filter((u): u is string => Boolean(u));
   return (
-    <section>
-      <div className="flex items-center gap-1.5 mb-2 px-1">
-        <span className="text-ink-500">{icon}</span>
-        <h2 className="text-[12.5px] font-semibold uppercase tracking-wide text-ink-500">
-          {title}
-        </h2>
-        {typeof count === 'number' && (
-          <span className="ms-auto text-[11px] font-semibold text-ink-500 num bg-canvas-200 rounded-full px-2 py-0.5">
-            {count}
+    <Card padded className="space-y-2.5">
+      <SectionHeader
+        title={title}
+        className="mb-0"
+        action={
+          <span className="text-[11px] font-semibold num rounded-full px-2 py-0.5 bg-canvas-200 text-ink-500">
+            {items.length}
           </span>
-        )}
-      </div>
-      {children}
-    </section>
-  );
-}
-
-function EvidenceTile({ evidence }: { evidence: AdminCaseEvidence }) {
-  const t = useT();
-  const { formatDate } = useI18n();
-  const v = evidenceVisual(evidence.kind);
-  return (
-    <div className="rounded-2xl bg-white hairline overflow-hidden flex flex-col">
-      <div
-        className={cn(
-          'relative aspect-[4/3] bg-gradient-to-br text-white grid place-items-center ring-1 ring-inset',
-          v.gradient,
-          v.ring,
-        )}
-      >
-        <div
-          aria-hidden
-          className="absolute inset-0 pattern-dots opacity-25 pointer-events-none"
-        />
-        <div className="relative flex flex-col items-center gap-1">
-          <span className="h-10 w-10 rounded-xl bg-white/15 ring-1 ring-white/20 grid place-items-center backdrop-blur">
-            {v.icon}
-          </span>
-          <span className="text-[10px] font-semibold uppercase tracking-wide text-white/80">
-            {t(`admin.case.evidence.kind.${evidence.kind}`)}
-          </span>
+        }
+      />
+      {urls.length === 0 ? (
+        <div className="rounded-xl2 bg-canvas-100 hairline p-3 flex items-center gap-2.5 text-[12px] text-ink-500">
+          <ImageIcon size={15} className="shrink-0 text-ink-400" />
+          {emptyLabel}
         </div>
-        <span
-          className={cn(
-            'absolute top-1.5 end-1.5 text-[9.5px] font-semibold uppercase tracking-wide rounded-full px-1.5 py-0.5',
-            v.chipClass,
-          )}
-        >
-          {t(`admin.case.evidence.source.${evidence.source}`)}
-        </span>
-      </div>
-      <div className="p-2.5 space-y-1">
-        <p className="text-[12px] text-ink-800 leading-snug line-clamp-2">
-          {evidence.caption}
-        </p>
-        <div className="flex items-center gap-1 text-[10.5px] text-ink-400 num">
-          <ClockIcon size={10} />
-          <span>{formatDate(evidence.uploadedAt)}</span>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function NoteBubble({
-  role,
-  author,
-  at,
-  roleLabel,
-  text,
-}: {
-  role: AdminCaseNoteRole;
-  author: string;
-  at: string;
-  roleLabel: string;
-  text: string;
-}) {
-  const v = noteVisual(role);
-  return (
-    <div
-      className={cn(
-        'rounded-2xl ring-1 ring-inset px-3 py-2.5',
-        v.bubble,
+      ) : (
+        <PhotoGrid urls={urls} />
       )}
-    >
-      <div className="flex items-center gap-1.5 flex-wrap">
-        <span
-          className={cn(
-            'inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide',
-            v.badge,
-          )}
-        >
-          {v.icon}
-          {roleLabel}
-        </span>
-        <span className="text-[11.5px] font-semibold text-ink-700 truncate max-w-[55%]">
-          {author}
-        </span>
-        <span className="ms-auto text-[10.5px] text-ink-400 num">{at}</span>
-      </div>
-      <p className="mt-1.5 text-[12.5px] leading-relaxed">{text}</p>
-    </div>
+    </Card>
   );
 }
 
-function Field({
-  label,
-  value,
-  numeric,
+/** Lend mediation: the single proposal form (when none exists yet) or
+ *  the proposal + independent per-party response tracking. Admin has
+ *  NO override on either response and no other lifecycle action. */
+function LendMediationCard({
+  t,
+  kase,
+  lendProposal,
+  busy,
+  formatCurrency,
+  formatDate,
+  onSubmit,
 }: {
-  label: ReactNode;
-  value: ReactNode;
-  numeric?: boolean;
+  t: (k: string, v?: Record<string, string | number>) => string;
+  kase: DamageCaseRow;
+  lendProposal: DisputeProposalWithResponses | null;
+  busy: boolean;
+  formatCurrency: (n: number) => string;
+  formatDate: (d: string) => string;
+  onSubmit: (amount: number, note: string) => void;
 }) {
-  return (
-    <div className="flex items-start justify-between gap-3 py-1">
-      <span className="text-[12px] text-ink-400 shrink-0">{label}</span>
-      <span
-        className={cn(
-          'text-[13px] font-semibold text-ink-900 text-end break-words',
-          numeric && 'num',
-        )}
-      >
-        {value}
-      </span>
-    </div>
-  );
-}
+  const [amount, setAmount] = useState('');
+  const [note, setNote] = useState('');
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const amountValue = Number(amount);
+  const amountValid = Number.isFinite(amountValue) && amountValue >= 0 && amount.trim() !== '';
 
-function HeroTile({
-  label,
-  value,
-}: {
-  label: ReactNode;
-  value: ReactNode;
-}) {
+  const responseFor = (party: 'merchant' | 'customer') =>
+    lendProposal?.dispute_proposal_responses.find((r) => r.party === party) ?? null;
+
+  const partyRow = (party: 'merchant' | 'customer') => {
+    const r = responseFor(party);
+    const tone: StatusTone = !r ? 'warn' : r.accepted ? 'success' : 'neutral';
+    return (
+      <div className="flex items-center justify-between gap-2 text-[12.5px]">
+        <span className="text-ink-700 font-semibold">
+          {t(`admin.disputes.responses.${party}`)}
+        </span>
+        <span className="flex items-center gap-2">
+          {r && <span className="text-[11px] text-ink-400 num">{formatDate(r.created_at)}</span>}
+          <StatusChip
+            size="sm"
+            tone={tone}
+            dot={false}
+            label={t(
+              `admin.disputes.responses.${!r ? 'pending' : r.accepted ? 'accepted' : 'rejected'}`,
+            )}
+          />
+        </span>
+      </div>
+    );
+  };
+
   return (
-    <div className="rounded-2xl bg-white/5 ring-1 ring-white/10 p-2.5 backdrop-blur">
-      <div className="text-white/55 uppercase tracking-wide text-[10px]">
-        {label}
+    <Card padded className="space-y-3.5">
+      <SectionHeader title={t('admin.disputes.mediation.title')} className="mb-0" />
+      <div className="rounded-xl2 bg-lavender-50 ring-1 ring-lavender-200 px-3.5 py-2.5 text-[12px] text-lavender-800 leading-relaxed flex items-start gap-2">
+        <InfoIcon size={14} className="shrink-0 mt-0.5" />
+        {t('admin.disputes.mediation.neutralNotice')}
       </div>
-      <div className="mt-0.5 font-bold text-white num text-[13px] leading-tight truncate">
-        {value}
-      </div>
-    </div>
+
+      {!lendProposal && kase.dispute_phase === 'lend_mediation' && (
+        <div className="space-y-3">
+          <FormField label={t('admin.disputes.mediation.amountLabel')} required>
+            <Input
+              inputMode="decimal"
+              dir="ltr"
+              className="num text-left"
+              value={amount}
+              onChange={(e) => setAmount(e.target.value.replace(/[^0-9.]/g, ''))}
+              placeholder="0"
+            />
+          </FormField>
+          <FormField label={t('admin.disputes.mediation.noteLabel')}>
+            <Textarea value={note} onChange={(e) => setNote(e.target.value)} rows={2} />
+          </FormField>
+          <Button
+            size="lg"
+            block
+            loading={busy}
+            disabled={busy || !amountValid}
+            onClick={() => setConfirmOpen(true)}
+          >
+            {t('admin.disputes.mediation.submit')}
+          </Button>
+          <ConfirmSheet
+            open={confirmOpen}
+            onClose={() => setConfirmOpen(false)}
+            onConfirm={() => {
+              setConfirmOpen(false);
+              onSubmit(amountValue, note.trim());
+            }}
+            title={t('admin.disputes.mediation.confirmTitle')}
+            description={t('admin.disputes.mediation.confirmBody')}
+            confirmLabel={t('admin.disputes.mediation.confirm')}
+            cancelLabel={t('admin.disputes.mediation.cancel')}
+            icon={<GavelIcon size={18} />}
+            tone="success"
+          />
+        </div>
+      )}
+
+      {lendProposal && (
+        <div className="space-y-3">
+          <div className="rounded-xl2 bg-canvas-100 hairline p-3.5 space-y-1.5">
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-[12.5px] font-semibold text-ink-900">
+                {t('admin.disputes.mediation.submitted')}
+              </span>
+              <span className="text-[11px] text-ink-400 num">
+                {formatDate(lendProposal.created_at)}
+              </span>
+            </div>
+            <div className="text-[16px] font-bold text-ink-900 num">
+              {formatCurrency(Number(lendProposal.amount))}
+            </div>
+            {lendProposal.note && (
+              <p className="text-[12px] text-ink-600 leading-relaxed">{lendProposal.note}</p>
+            )}
+          </div>
+          <div className="space-y-2">
+            <div className="text-[12px] font-semibold text-ink-500">
+              {t('admin.disputes.responses.title')}
+            </div>
+            {partyRow('merchant')}
+            {partyRow('customer')}
+            {kase.dispute_phase === 'lend_mediation' && (
+              <p className="text-[11.5px] text-ink-400 leading-relaxed flex items-start gap-1.5">
+                <ClockIcon size={12} className="shrink-0 mt-0.5" />
+                {t('admin.disputes.responses.oneNotEnough')}
+              </p>
+            )}
+          </div>
+        </div>
+      )}
+    </Card>
   );
 }

@@ -161,6 +161,7 @@ export {
   closeRentalContract,
   fetchContractById,
   fetchContractByInvoiceId,
+  fetchContractsByIds,
   getHandoverPhotoUrl,
   HANDOVER_BUCKET,
   HANDOVER_PREFIX,
@@ -214,6 +215,7 @@ export {
   submitSettlementProposal,
   respondToSettlementProposal,
   respondToLendProposal,
+  lendSubmitMediationProposal,
 } from './queries/disputes';
 export type {
   DisputeEvidenceItem,

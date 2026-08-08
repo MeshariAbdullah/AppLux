@@ -628,6 +628,10 @@ export type Database = {
         Args: { p_case_id: string; p_accept: boolean };
         Returns: undefined;
       };
+      lend_submit_mediation_proposal: {
+        Args: { p_case_id: string; p_amount: number; p_note: string | null };
+        Returns: string;
+      };
       /** Neutral availability check for the establishment Unified Number
        *  (700) — onboarding Step 2 (20260502124100). */
       check_unified_number_available: {

@@ -2883,6 +2883,56 @@
         "title": "Audit trail",
         "hint": "Status changes and limit updates are logged with the operator and timestamp."
       }
+    },
+    "disputes": {
+      "filters": {
+        "all": "All",
+        "awaiting_customer": "Awaiting renter",
+        "direct_settlement": "Parties settling",
+        "lend_mediation": "Needs Lend",
+        "agreed": "Closed with agreement",
+        "unresolved": "No agreement",
+        "dismissed": "Dismissed"
+      },
+      "needsAction": "Lend action needed",
+      "merchantLabel": "Store",
+      "customerLabel": "Renter",
+      "contractLabel": "Contract",
+      "itemLabel": "Item",
+      "itemValueLabel": "Original item value",
+      "periodLabel": "Rental period",
+      "contractStateLabel": "Contract state",
+      "mediation": {
+        "title": "Lend settlement proposal",
+        "neutralNotice": "Lend is proposing a settlement to help the parties reach agreement. This proposal does not constitute a determination of legal liability for either party.",
+        "amountLabel": "Proposed amount",
+        "noteLabel": "Neutral note (optional)",
+        "submit": "Send proposal",
+        "confirmTitle": "Confirm sending the proposal",
+        "confirmBody": "The proposal will reach both parties for their response. Only one proposal is submitted per case.",
+        "confirm": "Send",
+        "cancel": "Back",
+        "submitted": "Proposal sent"
+      },
+      "responses": {
+        "title": "Party responses to the Lend proposal",
+        "merchant": "Store",
+        "customer": "Renter",
+        "pending": "Awaiting response",
+        "accepted": "Accepted the proposal",
+        "rejected": "Rejected the proposal",
+        "oneNotEnough": "One party's acceptance does not close the case — both must accept."
+      },
+      "customerResponseTitle": "Renter's response",
+      "accepted": "Accepted the claim",
+      "objected": "Objected to the claim",
+      "unresolvedNote": "Settlement attempts through Lend ended without agreement. This outcome is not a ruling in favor of either party.",
+      "notFound": {
+        "title": "Case not found",
+        "body": "The link may be incorrect, or the case was removed.",
+        "back": "Back to cases"
+      },
+      "emptyFiltered": "No cases in this filter."
     }
   },
   "offer": {

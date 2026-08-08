@@ -139,6 +139,23 @@ export async function respondToSettlementProposal(
   if (error) throw error;
 }
 
+/** Lend/admin only (server-guarded, P0211): submit the single
+ *  mediation proposal for a case in lend_mediation. */
+export async function lendSubmitMediationProposal(
+  caseId: string,
+  amount: number,
+  note?: string,
+): Promise<string> {
+  const sb = requireSupabase();
+  const { data, error } = await sb.rpc('lend_submit_mediation_proposal', {
+    p_case_id: caseId,
+    p_amount: amount,
+    p_note: note ?? null,
+  });
+  if (error) throw error;
+  return data as string;
+}
+
 export async function respondToLendProposal(
   caseId: string,
   accept: boolean,
