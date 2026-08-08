@@ -1,99 +1,120 @@
-import { useEffect, useMemo, useState, type ReactNode } from 'react';
-import { Link, Navigate, useNavigate, useParams } from 'react-router-dom';
+import { useCallback, useEffect, useState, type ReactNode } from 'react';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import { Header, Screen } from '@/components/layout';
 import {
   Button,
   Card,
   CardDivider,
+  ConfirmSheet,
   EmptyState,
+  FormField,
   ImageLightbox,
+  Input,
   SectionHeader,
   StatusChip,
+  Textarea,
+  type StatusTone,
 } from '@/components/ui';
 import {
   AlertIcon,
   BadgeCheckIcon,
-  CameraIcon,
-  CarIcon,
-  ChevronIcon,
   ClockIcon,
   DocIcon,
   GavelIcon,
   ImageIcon,
   InfoIcon,
-  PackageIcon,
-  ReceiptIcon,
   ShieldIcon,
-  SignatureIcon,
-  SparkleIcon,
   UsersIcon,
 } from '@/components/icons';
 import { cn } from '@/lib/cn';
-import { CACHE_TTL, cacheKeys } from '@/lib/cache/keys';
-import { cachedFetch } from '@/lib/cache/memoryCache';
-import { getInitials } from '@/lib/format/initials';
+import { logEvent } from '@/lib/observability/log';
+import { translateError, withSupportId } from '@/lib/errors';
 import { useI18n, useT } from '@/lib/i18n';
-import {
-  damageSeverityTone as toneForSeverity,
-  damageStatusTone as toneForStatus,
-} from '@/lib/format/statusTones';
+import { useSensitiveFlow } from '@/lib/session/flowGuard';
 import { useStore } from '@/lib/store';
 import {
-  adaptDamageCaseToMerchant,
   fetchContractById,
-  fetchDamageCase,
-  fetchNoteByContractId,
+  fetchDisputeCase,
   fetchProfile,
-  listCaseEvidenceUrls,
+  getReceiptPhotoUrl,
+  listContractReceiptPhotos,
+  listDisputeEvents,
+  listDisputeEvidence,
+  listDisputeProposals,
+  listInvoiceItems,
+  respondToLendProposal,
+  respondToSettlementProposal,
+  submitSettlementProposal,
   useSupabaseAuth,
+  type DamageCaseRow,
+  type DisputeEventRow,
+  type DisputeEvidenceItem,
+  type DisputeProposalWithResponses,
+  type RentalContractRow,
 } from '@/lib/supabase';
-import type { MerchantDamageCase } from '@/lib/data';
+import { disputePhaseLabelKey, disputePhaseTone } from './MerchantDamages';
 
-type StepKey = 'review' | 'settlement' | 'nafith' | 'execution';
-type StepState = 'done' | 'current' | 'pending';
+// =====================================================================
+// MerchantDamageDetails — /merchant/damages/:id
+//
+// Rebuilt around the Phase-1 dispute lifecycle (20260502124700). The
+// page renders ONLY canonical server state — dispute_phase /
+// dispute_outcome, real proposal + response rows, and the persisted
+// dispute_events timeline. The legacy 4-step decoration ("تنفيذ عبر
+// نافذ" / "محكمة التنفيذ"), the note DocLink, and every stage-driven
+// label are gone from this surface. Neutral tone throughout: a claim
+// is documented, not proven; Lend assists, it does not enforce.
+// =====================================================================
 
-const STEP_ORDER: StepKey[] = ['review', 'settlement', 'nafith', 'execution'];
+type Bundle = {
+  kase: DamageCaseRow;
+  contract: RentalContractRow | null;
+  customerName: string;
+  itemName: string | null;
+  proposals: DisputeProposalWithResponses[];
+  events: DisputeEventRow[];
+  evidence: DisputeEvidenceItem[];
+  receiptUrls: string[];
+};
 
-function computeSteps(c: MerchantDamageCase): Record<StepKey, StepState> {
-  const out: Record<StepKey, StepState> = {
-    review: 'pending',
-    settlement: 'pending',
-    nafith: 'pending',
-    execution: 'pending',
+const TIMELINE_STEPS = ['submitted', 'awaiting', 'direct', 'lend', 'outcome'] as const;
+type TimelineStep = (typeof TIMELINE_STEPS)[number];
+type StepState = 'done' | 'current' | 'pending' | 'skipped';
+
+/** Map canonical phase/outcome (+ real events) onto the 5-step neutral
+ *  journey. Steps the flow never entered render as skipped, never as
+ *  completed — nothing is synthesized. */
+function timelineStates(kase: DamageCaseRow, events: DisputeEventRow[]): Record<TimelineStep, StepState> {
+  const has = (type: string) => events.some((e) => e.event_type === type);
+  const out: Record<TimelineStep, StepState> = {
+    submitted: 'done',
+    awaiting: 'pending',
+    direct: 'pending',
+    lend: 'pending',
+    outcome: 'pending',
   };
-  if (c.status === 'reported') {
-    out.review = 'current';
-  } else if (c.status === 'investigating') {
-    out.review = 'done';
-    if (c.severity === 'partial') {
-      out.settlement = 'current';
-    } else {
-      out.settlement = 'done';
-      out.nafith = 'current';
-    }
-  } else {
-    // settled
-    out.review = 'done';
-    out.settlement = 'done';
-    if (c.severity !== 'partial') {
-      out.nafith = 'done';
-      out.execution = 'done';
-    }
+  switch (kase.dispute_phase) {
+    case 'awaiting_customer':
+      out.awaiting = 'current';
+      break;
+    case 'direct_settlement':
+      out.awaiting = 'done';
+      out.direct = 'current';
+      break;
+    case 'lend_mediation':
+      out.awaiting = 'done';
+      out.direct = 'done';
+      out.lend = 'current';
+      break;
+    case 'resolved':
+      out.awaiting = 'done';
+      // Only mark stages the case actually passed through.
+      out.direct = has('customer_objected') ? 'done' : 'skipped';
+      out.lend = has('moved_to_lend_mediation') ? 'done' : 'skipped';
+      out.outcome = 'done';
+      break;
   }
   return out;
-}
-
-function stepIcon(key: StepKey): ReactNode {
-  switch (key) {
-    case 'review':
-      return <ShieldIcon size={14} />;
-    case 'settlement':
-      return <GavelIcon size={14} />;
-    case 'nafith':
-      return <DocIcon size={14} />;
-    case 'execution':
-      return <SparkleIcon size={14} />;
-  }
 }
 
 export default function MerchantDamageDetails() {
@@ -101,90 +122,104 @@ export default function MerchantDamageDetails() {
   const { formatCurrency, formatDate, dir } = useI18n();
   const navigate = useNavigate();
   const { id } = useParams();
-  const { merchantDamages, merchantRentals } = useStore();
+  const { merchantDamages } = useStore();
   const { configured } = useSupabaseAuth();
 
-  const demoCase = useMemo(
-    () => merchantDamages.find((d) => d.id === id),
-    [id, merchantDamages],
-  );
+  const demoCase = merchantDamages.find((d) => d.id === id) ?? null;
 
-  // Live fetch — this page used to read ONLY the demo store, so in
-  // configured mode every real case id (including the one returned by
-  // a just-successful createDamageCase) rendered "الحالة غير موجودة".
-  // Now the row is fetched by its UUID; "not found" renders ONLY after
-  // the fetch completed and confirmed absence — never as a loading
-  // flash.
-  const [liveCase, setLiveCase] = useState<MerchantDamageCase | null>(null);
-  const [liveContractId, setLiveContractId] = useState<string | null>(null);
+  const [bundle, setBundle] = useState<Bundle | null>(null);
   const [resolving, setResolving] = useState<boolean>(() =>
-    Boolean(configured && id && !demoCase),
+    Boolean(configured && id),
   );
+  const [actionError, setActionError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  useSensitiveFlow(busy);
+
+  const load = useCallback(async (): Promise<Bundle | null> => {
+    if (!configured || !id) return null;
+    const kase = await fetchDisputeCase(id).catch(() => null);
+    if (!kase) return null;
+    const [contract, customer, proposals, events, evidence] = await Promise.all([
+      fetchContractById(kase.contract_id).catch(() => null),
+      fetchProfile(kase.customer_user_id).catch(() => null),
+      listDisputeProposals(kase.id).catch(() => []),
+      listDisputeEvents(kase.id).catch(() => []),
+      listDisputeEvidence(kase.id).catch(() => []),
+    ]);
+    let itemName: string | null = null;
+    let receiptUrls: string[] = [];
+    if (contract) {
+      const [items, photos] = await Promise.all([
+        listInvoiceItems(contract.invoice_id).catch(() => []),
+        // Merchant read on the customer's receipt photos is granted by
+        // the receipts storage/table policies (20260502122900).
+        listContractReceiptPhotos(contract.id).catch(() => []),
+      ]);
+      itemName = items[0]?.item_name ?? null;
+      receiptUrls = (
+        await Promise.all(photos.map((p) => getReceiptPhotoUrl(p.storage_path)))
+      ).filter((u): u is string => Boolean(u));
+    }
+    return {
+      kase,
+      contract,
+      customerName: customer?.full_name ?? '—',
+      itemName,
+      proposals,
+      events,
+      evidence,
+      receiptUrls,
+    };
+  }, [configured, id]);
+
+  const refetch = useCallback(async () => {
+    const next = await load();
+    setBundle(next);
+  }, [load]);
 
   useEffect(() => {
-    if (!configured || !id || demoCase) {
-      setLiveCase(null);
+    if (!configured || !id) {
+      setBundle(null);
+      setResolving(false);
       return;
     }
     let cancelled = false;
-    // Phase 9 entity-leak fix.
-    setLiveCase(null);
-    setLiveContractId(null);
+    setBundle(null);
     setResolving(true);
-    (async () => {
-      const row = await fetchDamageCase(id).catch(() => null);
-      if (cancelled || !row) return;
-      const [contract, customer, evidenceUrls] = await Promise.all([
-        cachedFetch(
-          cacheKeys.contract(row.contract_id),
-          CACHE_TTL.rentalBundle,
-          () => fetchContractById(row.contract_id),
-        ).catch(() => null),
-        fetchProfile(row.customer_user_id).catch(() => null),
-        // Signed photo URLs; best-effort — a signing failure just
-        // renders the "no evidence" placeholder, never blocks the case.
-        listCaseEvidenceUrls(row.id).catch(() => []),
-      ]);
-      if (cancelled) return;
-      const note = contract
-        ? await cachedFetch(
-            cacheKeys.noteByContract(contract.id),
-            CACHE_TTL.rentalBundle,
-            () => fetchNoteByContractId(contract.id),
-          ).catch(() => null)
-        : null;
-      if (cancelled) return;
-      const customerName = customer?.full_name ?? '—';
-      setLiveContractId(row.contract_id);
-      setLiveCase(
-        adaptDamageCaseToMerchant(row, {
-          customerName,
-          customerInitials: getInitials(customerName),
-          headlineItem: contract
-            ? `Rental ${contract.contract_number}`
-            : undefined,
-          contractRef: contract?.contract_number,
-          noteRef: note?.reference_number,
-          evidenceUrls,
-        }),
-      );
-    })()
+    load()
+      .then((b) => {
+        if (!cancelled) setBundle(b);
+      })
       .finally(() => {
         if (!cancelled) setResolving(false);
       });
     return () => {
       cancelled = true;
     };
-  }, [configured, id, demoCase]);
+  }, [configured, id, load]);
 
-  const kase = liveCase ?? demoCase;
+  const runAction = async (op: string, fn: () => Promise<void>) => {
+    if (busy) return;
+    setBusy(true);
+    setActionError(null);
+    try {
+      await fn();
+      await refetch();
+    } catch (err) {
+      const code = (err as { code?: unknown })?.code;
+      if (code === 'P0201' || code === 'P0203' || code === 'P0205' || code === 'P0208') {
+        await refetch().catch(() => {});
+      }
+      const eventId = logEvent('dispute_action_failed', 'warn', { op }, err);
+      setActionError(withSupportId(translateError(err, t), eventId));
+    } finally {
+      setBusy(false);
+    }
+  };
 
-  const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
-
-  if (!kase) {
+  // ----------------- loading / not found / demo -----------------------
+  if (!bundle) {
     if (resolving) {
-      // Fetch still in flight — quiet placeholder, NEVER the
-      // not-found state.
       return (
         <>
           <Header title={t('merchant.damageCase.eyebrow')} showBack />
@@ -196,9 +231,7 @@ export default function MerchantDamageDetails() {
         </>
       );
     }
-    if (configured) {
-      // Fetch finished and confirmed absence (deleted row / RLS
-      // denied / bad id) — the explicit empty state with a back action.
+    if (configured || !demoCase) {
       return (
         <>
           <Header title={t('merchant.damageCase.eyebrow')} showBack />
@@ -221,361 +254,103 @@ export default function MerchantDamageDetails() {
         </>
       );
     }
-    return <Navigate to="/merchant/damages" replace />;
+    // Demo build only: a minimal, action-free neutral summary.
+    return (
+      <>
+        <Header title={demoCase.id} subtitle={demoCase.customerName} showBack />
+        <Screen padded={false} className="bg-canvas">
+          <div className="px-5 pt-5 pb-10 space-y-4">
+            <Card padded className="space-y-2.5">
+              <FactRow label={t('disputes.claim.type')} value={t(`merchant.damages.severity.${demoCase.severity}`)} />
+              <FactRow label={t('disputes.claim.amount')} value={<span className="num">{formatCurrency(demoCase.claimAmount)}</span>} />
+              <FactRow label={t('disputes.claim.raisedAt')} value={<span className="num">{formatDate(demoCase.reportedAt)}</span>} />
+              {demoCase.notes && (
+                <p className="text-[12.5px] text-ink-600 leading-relaxed">{demoCase.notes}</p>
+              )}
+            </Card>
+          </div>
+        </Screen>
+      </>
+    );
   }
 
-  const rental = merchantRentals.find((r) => r.id === kase.rentalId);
-  // Route target for the linked rental: the demo row's id, or the live
-  // contract UUID resolved by the fetch above.
-  const rentalRouteId = rental?.id ?? liveContractId ?? undefined;
-  const steps = computeSteps(kase);
-  const currentStep =
-    STEP_ORDER.find((k) => steps[k] === 'current') ?? 'execution';
-  const statusTone = toneForStatus(kase.status);
-  const sevTone = toneForSeverity(kase.severity);
-  const contractRef = kase.contractRef ?? rental?.contractRef;
-  const noteRef = kase.noteRef ?? rental?.noteRef;
-  const invoiceRef =
-    kase.invoiceRef ??
-    (rental ? `INV-${rental.contractRef.replace(/^(?:CN|LND)-/, '')}-LATEST` : undefined);
+  const { kase, contract, customerName, itemName, proposals, events, evidence, receiptUrls } = bundle;
+  const merchantEvidence = evidence.filter((e) => e.row.uploaded_by_user_id !== kase.customer_user_id);
+  const customerEvidence = evidence.filter((e) => e.row.uploaded_by_user_id === kase.customer_user_id);
+  const directProposals = proposals.filter((p) => p.kind === 'direct');
+  const lendProposal = proposals.find((p) => p.kind === 'lend') ?? null;
+  const pendingDirect = directProposals.find((p) => p.status === 'pending') ?? null;
+  const usedRounds = directProposals.length;
+  const steps = timelineStates(kase, events);
+  const sevKey = kase.severity === 'non_return' ? 'non-return' : kase.severity;
 
   return (
     <>
-      <Header title={kase.id} subtitle={kase.customerName} showBack />
+      <Header title={kase.case_number} subtitle={customerName} showBack />
       <Screen padded={false} className="bg-canvas">
-        <div className="px-5 pt-5 pb-10 space-y-5">
-          {/* Hero */}
-          <div className="relative overflow-hidden rounded-xl3 bg-gradient-to-br from-ink-900 via-ink-800 to-ink-900 text-white p-6 shadow-plush">
-            <div
-              aria-hidden
-              className="pointer-events-none absolute -top-10 end-[-15%] h-48 w-48 rounded-full bg-danger-500/25 blur-3xl"
-            />
-            <div className="relative flex items-start gap-3">
-              <span
-                className={cn(
-                  'h-11 w-11 shrink-0 rounded-2xl ring-1 grid place-items-center',
-                  kase.severity === 'partial'
-                    ? 'bg-warn-500/20 ring-warn-400/30 text-warn-200'
-                    : 'bg-danger-500/20 ring-danger-400/30 text-danger-200',
-                )}
-              >
-                {kase.severity === 'non-return' ? (
-                  <PackageIcon size={20} />
-                ) : kase.severity === 'total' ? (
-                  <AlertIcon size={20} />
-                ) : (
-                  <GavelIcon size={20} />
-                )}
+        <div className="px-5 pt-5 pb-10 space-y-4">
+          {/* ---------- hero ---------- */}
+          <Card padded className="space-y-3">
+            <div className="flex items-start gap-3">
+              <span className="h-11 w-11 shrink-0 rounded-2xl bg-canvas-100 ring-1 ring-canvas-200 text-ink-700 grid place-items-center">
+                <ShieldIcon size={20} />
               </span>
               <div className="min-w-0 flex-1">
-                <div className="text-[10.5px] text-white/55 uppercase tracking-[0.08em]">
+                <div className="text-[10.5px] text-ink-400 uppercase tracking-[0.08em]">
                   {t('merchant.damageCase.eyebrow')}
                 </div>
-                <div className="mt-1.5 editorial-title text-[20px] truncate num text-white">
-                  {kase.id}
-                </div>
-                <div className="mt-2 flex flex-wrap items-center gap-1.5">
-                  <StatusChip
-                    tone={sevTone}
-                    dot={false}
-                    label={t(`merchant.damages.severity.${kase.severity}`)}
-                  />
-                  <StatusChip
-                    tone={statusTone}
-                    dot
-                    label={t(`merchant.damages.status.${kase.status}`)}
-                  />
+                <div className="mt-0.5 text-[16px] font-bold text-ink-900 num" dir="ltr">
+                  {kase.case_number}
                 </div>
               </div>
-            </div>
-            <div className="relative mt-4 grid grid-cols-2 gap-3 text-[11.5px]">
-              <HeroStat
-                label={t('merchant.damageCase.claim')}
-                value={formatCurrency(kase.claimAmount)}
-              />
-              <HeroStat
-                label={t('merchant.damageCase.reportedAt')}
-                value={formatDate(kase.reportedAt, { dateStyle: 'medium' })}
+              <StatusChip
+                tone={disputePhaseTone(kase)}
+                dot
+                label={t(disputePhaseLabelKey(kase))}
               />
             </div>
-          </div>
-
-          {/* Linked rental — demo rows carry the full rental snapshot;
-              live cases link via the contract id resolved by the fetch. */}
-          {rentalRouteId && (
-            <Card padded className="space-y-3">
-              <SectionHeader
-                title={t('merchant.damageCase.linkedRental')}
-                className="mb-0"
-              />
-              <Link
-                to={`/merchant/rentals/${rentalRouteId}`}
-                className="flex items-center gap-3 w-full group"
-              >
-                <span className="h-10 w-10 shrink-0 rounded-xl bg-canvas-100 text-ink-700 grid place-items-center">
-                  <CarIcon size={18} />
-                </span>
-                <div className="min-w-0 flex-1">
-                  <div className="text-[13.5px] font-semibold text-ink-900 truncate">
-                    {rental?.item ?? kase.item}
-                  </div>
-                  <div className="mt-0.5 flex items-center gap-1.5 text-[11.5px] text-ink-400 truncate">
-                    <UsersIcon size={11} />
-                    <span className="truncate">
-                      {rental?.customerName ?? kase.customerName}
-                    </span>
-                    <span className="text-ink-300">·</span>
-                    <span className="num">{contractRef ?? rentalRouteId}</span>
-                  </div>
-                </div>
-                <ChevronIcon
-                  size={14}
-                  className={cn(
-                    'text-ink-300 group-hover:text-ink-500 transition-colors',
-                    dir === 'rtl' ? '' : 'rotate-180',
-                  )}
-                />
-              </Link>
-            </Card>
-          )}
-
-          {/* Linked docs */}
-          <Card padded className="space-y-3">
-            <SectionHeader
-              title={t('merchant.damageCase.documents')}
-              className="mb-0"
-            />
-            {contractRef && (
-              <>
-                <DocLinkRow
-                  icon={<DocIcon size={16} />}
-                  tone="bg-canvas-100 text-ink-700"
-                  label={t('merchant.rental.docs.contract')}
-                  refValue={contractRef}
-                  to={
-                    rentalRouteId
-                      ? `/merchant/rentals/${rentalRouteId}/contract`
-                      : undefined
-                  }
-                  dir={dir}
-                />
-                <CardDivider />
-              </>
-            )}
-            {noteRef && (
-              <>
-                <DocLinkRow
-                  icon={<SignatureIcon size={16} />}
-                  tone="bg-gold-50 text-gold-700"
-                  label={t('merchant.rental.docs.note')}
-                  refValue={noteRef}
-                  to={
-                    rentalRouteId
-                      ? `/merchant/rentals/${rentalRouteId}/note`
-                      : undefined
-                  }
-                  dir={dir}
-                />
-                <CardDivider />
-              </>
-            )}
-            {invoiceRef && (
-              <DocLinkRow
-                icon={<ReceiptIcon size={16} />}
-                tone="bg-canvas-100 text-ink-700"
-                label={t('merchant.damageCase.invoice')}
-                refValue={invoiceRef}
-                dir={dir}
-              />
-            )}
           </Card>
 
-          {/* Case file: evidence + notes grouped */}
-          <Card padded className="space-y-4">
-              <SectionHeader
-                title={t('merchant.damageCase.caseFile')}
-                className="mb-0"
-              />
-
-              {/* Evidence */}
-              <div>
-                <div className="mb-2 flex items-center justify-between">
-                  <div className="inline-flex items-center gap-1.5 text-[12.5px] font-semibold text-ink-700">
-                    <CameraIcon size={14} />
-                    {t('merchant.damageCase.evidence')}
-                  </div>
-                  <span
-                    className={cn(
-                      'text-[11px] font-semibold num rounded-full px-2 py-0.5',
-                      kase.evidence && kase.evidence.length > 0
-                        ? 'bg-success-50 text-success-700'
-                        : 'bg-canvas-200 text-ink-500',
-                    )}
-                  >
-                    {kase.evidence?.length ?? 0}
-                  </span>
-                </div>
-
-                {kase.evidence && kase.evidence.length > 0 ? (
-                  <div className="grid grid-cols-3 gap-2">
-                    {kase.evidence.map((src, i) => (
-                      <button
-                        key={`${i}-${src.length}`}
-                        type="button"
-                        onClick={() => setLightboxIndex(i)}
-                        className="relative aspect-square overflow-hidden rounded-xl bg-canvas-200 hairline active:scale-[0.98] transition-transform"
-                      >
-                        <img
-                          src={src}
-                          alt=""
-                          className="h-full w-full object-cover"
-                        />
-                        <span className="absolute top-1 start-1 num text-[10px] font-bold bg-black/65 text-white rounded-md px-1.5 py-0.5">
-                          {i + 1}
-                        </span>
-                      </button>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="rounded-xl2 bg-canvas-100 hairline p-4 flex items-center gap-3 text-[12px] text-ink-500">
-                    <span className="h-9 w-9 shrink-0 rounded-xl bg-white text-ink-400 grid place-items-center hairline">
-                      <ImageIcon size={16} />
-                    </span>
-                    <div className="leading-relaxed">
-                      <div className="text-[12.5px] font-semibold text-ink-700">
-                        {t('merchant.damageCase.noEvidence.title')}
-                      </div>
-                      <div>{t('merchant.damageCase.noEvidence.hint')}</div>
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Notes */}
-              <div>
-                <div className="mb-2 inline-flex items-center gap-1.5 text-[12.5px] font-semibold text-ink-700">
-                  <DocIcon size={14} />
-                  {t('merchant.damageCase.notes')}
-                </div>
-                {kase.notes ? (
-                  <div className="rounded-xl2 bg-canvas-100 hairline px-4 py-3 text-[13px] text-ink-700 leading-relaxed whitespace-pre-line">
-                    {kase.notes}
-                  </div>
-                ) : (
-                  <div className="rounded-xl2 bg-canvas-100 hairline p-3 text-[12px] text-ink-500 leading-relaxed">
-                    {t('merchant.damageCase.noNotes')}
-                  </div>
-                )}
-              </div>
-            </Card>
-
-          {/* Escalation next step */}
-          <Card padded className="space-y-3">
-            <SectionHeader
-              title={t('merchant.damageCase.nextStep.title')}
-              className="mb-0"
-            />
-            <div
-              className={cn(
-                'rounded-xl2 p-3.5 flex items-start gap-3 ring-1',
-                kase.status === 'settled'
-                  ? 'bg-success-50 ring-success-500/20'
-                  : 'bg-gold-50 hairline',
-              )}
-            >
-              <span
-                className={cn(
-                  'h-10 w-10 shrink-0 rounded-xl grid place-items-center ring-1',
-                  kase.status === 'settled'
-                    ? 'bg-white text-success-600 ring-success-500/20'
-                    : 'bg-white text-gold-700 hairline',
-                )}
-              >
-                {kase.status === 'settled' ? (
-                  <BadgeCheckIcon size={18} />
-                ) : (
-                  stepIcon(currentStep)
-                )}
-              </span>
-              <div className="min-w-0 flex-1">
-                <div
-                  className={cn(
-                    'text-[13.5px] font-semibold',
-                    kase.status === 'settled' ? 'text-success-700' : 'text-brand-900',
-                  )}
-                >
-                  {t(
-                    kase.status === 'settled'
-                      ? 'merchant.damageCase.nextStep.settled'
-                      : `merchant.damageCase.nextStep.steps.${currentStep}`,
-                  )}
-                </div>
-                <div
-                  className={cn(
-                    'mt-0.5 text-[12px] leading-relaxed',
-                    kase.status === 'settled' ? 'text-success-700/80' : 'text-brand-800/90',
-                  )}
-                >
-                  {t(
-                    kase.status === 'settled'
-                      ? 'merchant.damageCase.nextStep.settledSub'
-                      : `merchant.damageCase.nextStep.stepsSub.${currentStep}`,
-                  )}
-                </div>
-              </div>
+          {actionError && (
+            <div className="rounded-xl2 bg-danger-50 ring-1 ring-danger-500/25 px-3.5 py-2.5 text-[12.5px] text-danger-700">
+              {actionError}
             </div>
+          )}
 
-            {/* Step track */}
-            <ol className="relative pt-1">
-              {STEP_ORDER.map((key, i) => {
-                const state = steps[key];
-                const isLast = i === STEP_ORDER.length - 1;
+          {/* ---------- neutral 5-step timeline ---------- */}
+          <Card padded className="space-y-3">
+            <SectionHeader title={t('merchant.disputes.timeline.title')} className="mb-0" />
+            <ol className="space-y-0">
+              {TIMELINE_STEPS.map((key, i) => {
+                const st = steps[key];
+                if (st === 'skipped') return null;
+                const last = i === TIMELINE_STEPS.length - 1;
                 return (
-                  <li key={key} className="flex items-start gap-3 relative">
+                  <li key={key} className="flex items-start gap-3">
                     <div className="flex flex-col items-center">
                       <span
                         className={cn(
                           'h-7 w-7 rounded-full grid place-items-center shrink-0 ring-2',
-                          state === 'done'
+                          st === 'done'
                             ? 'bg-success-500 text-white ring-success-500/25'
-                            : state === 'current'
+                            : st === 'current'
                               ? 'bg-gold-400 text-ink-950 ring-gold-100'
-                              : 'bg-canvas-200 text-ink-400 hairline',
+                              : 'bg-canvas-100 text-ink-400 ring-canvas-200',
                         )}
                       >
-                        {state === 'done' ? (
-                          <BadgeCheckIcon size={12} />
-                        ) : (
-                          stepIcon(key)
-                        )}
+                        {st === 'done' ? <BadgeCheckIcon size={13} /> : <ClockIcon size={13} />}
                       </span>
-                      {!isLast && (
-                        <span
-                          className={cn(
-                            'w-px flex-1 my-1 min-h-5',
-                            state === 'done' ? 'bg-success-500/30' : 'bg-ink-100',
-                          )}
-                        />
-                      )}
+                      {!last && <span className="w-[2px] h-5 bg-canvas-200" />}
                     </div>
-                    <div className={cn('flex-1 min-w-0', !isLast && 'pb-4')}>
-                      <div
-                        className={cn(
-                          'text-[12.5px] font-semibold',
-                          state === 'pending' ? 'text-ink-500' : 'text-ink-900',
-                        )}
-                      >
-                        {t(`merchant.damageCase.nextStep.steps.${key}`)}
-                      </div>
-                      <div className="mt-0.5 text-[11px] text-ink-400">
-                        {t(
-                          state === 'done'
-                            ? 'merchant.damageCase.nextStep.state.done'
-                            : state === 'current'
-                              ? 'merchant.damageCase.nextStep.state.current'
-                              : 'merchant.damageCase.nextStep.state.pending',
-                        )}
-                      </div>
+                    <div
+                      className={cn(
+                        'pt-1 text-[12.5px]',
+                        st === 'current' ? 'font-bold text-ink-900' : st === 'done' ? 'font-semibold text-ink-700' : 'text-ink-400',
+                      )}
+                    >
+                      {key === 'outcome' && kase.dispute_phase === 'resolved'
+                        ? t(disputePhaseLabelKey(kase))
+                        : t(`merchant.disputes.timeline.${key}`)}
                     </div>
                   </li>
                 );
@@ -583,212 +358,584 @@ export default function MerchantDamageDetails() {
             </ol>
           </Card>
 
-          {/* Outcome timeline */}
+          {/* ---------- claim facts ---------- */}
           <Card padded className="space-y-3">
-            <SectionHeader
-              title={t('merchant.damageCase.timeline.title')}
-              className="mb-0"
+            <SectionHeader title={t('disputes.claim.title')} className="mb-0" />
+            <FactRow label={t('disputes.claim.type')} value={t(`merchant.damages.severity.${sevKey}`)} />
+            <FactRow
+              label={t('merchant.damageCase.linkedRental')}
+              value={
+                contract ? (
+                  <Link to={`/merchant/rentals/${contract.id}`} className="text-lavender-700 num" dir="ltr">
+                    {contract.contract_number}
+                  </Link>
+                ) : (
+                  '—'
+                )
+              }
             />
-            <ol className="relative">
-              <TimelineRow
-                tone="bg-danger-50 text-danger-600"
-                icon={<AlertIcon size={14} />}
-                label={t('merchant.damageCase.timeline.reported')}
-                at={formatDate(kase.reportedAt, {
-                  dateStyle: 'medium',
-                  timeStyle: 'short',
-                })}
-                done
-              />
-              <TimelineRow
-                tone={
-                  kase.status !== 'reported'
-                    ? 'bg-warn-50 text-warn-600'
-                    : 'bg-canvas-100 text-ink-400'
-                }
-                icon={<ShieldIcon size={14} />}
-                label={t('merchant.damageCase.timeline.investigating')}
-                at={
-                  kase.status !== 'reported'
-                    ? t('merchant.damageCase.timeline.inProgress')
-                    : t('merchant.damageCase.timeline.pending')
-                }
-                done={kase.status !== 'reported'}
-              />
-              <TimelineRow
-                tone={
-                  kase.status === 'settled'
-                    ? 'bg-success-50 text-success-600'
-                    : 'bg-canvas-100 text-ink-400'
-                }
-                icon={<BadgeCheckIcon size={14} />}
-                label={t('merchant.damageCase.timeline.settled')}
-                at={
-                  kase.status === 'settled'
-                    ? t('merchant.damageCase.timeline.done')
-                    : t('merchant.damageCase.timeline.pending')
-                }
-                done={kase.status === 'settled'}
-                last
-              />
-            </ol>
+            <FactRow
+              label={t('merchant.disputes.customerLabel')}
+              value={
+                <span className="inline-flex items-center gap-1.5">
+                  <UsersIcon size={12} className="text-ink-400" />
+                  {customerName}
+                </span>
+              }
+            />
+            {itemName && <FactRow label={t('disputes.claim.item')} value={itemName} />}
+            <FactRow
+              label={t('disputes.claim.amount')}
+              value={<span className="num">{formatCurrency(Number(kase.claim_amount))}</span>}
+            />
+            <FactRow
+              label={t('disputes.claim.raisedAt')}
+              value={<span className="num">{formatDate(kase.raised_at)}</span>}
+            />
+            {kase.description && (
+              <>
+                <CardDivider />
+                <p className="text-[13px] text-ink-700 leading-relaxed whitespace-pre-line">
+                  {kase.description}
+                </p>
+              </>
+            )}
           </Card>
 
-          <div className="rounded-xl2 bg-canvas-100 hairline p-3.5 flex items-start gap-3">
-            <span className="h-9 w-9 shrink-0 rounded-xl bg-white text-ink-700 grid place-items-center hairline">
-              <InfoIcon size={16} />
-            </span>
-            <div className="min-w-0 flex-1 text-[12px] text-ink-600 leading-relaxed">
-              <div className="text-ink-900 font-semibold mb-0.5">
-                {t('merchant.damageCase.placeholder.title')}
-              </div>
-              <div>{t('merchant.damageCase.placeholder.hint')}</div>
-            </div>
-          </div>
+          {/* ---------- evidence ---------- */}
+          <EvidenceCard
+            title={t('merchant.damageCase.evidence')}
+            items={merchantEvidence}
+            emptyLabel={t('disputes.evidence.none')}
+            unavailableLabel={t('disputes.evidence.imageUnavailable')}
+          />
+          {customerEvidence.length > 0 && (
+            <EvidenceCard
+              title={t('merchant.disputes.customerEvidenceTitle')}
+              items={customerEvidence}
+              emptyLabel={t('disputes.evidence.none')}
+              unavailableLabel={t('disputes.evidence.imageUnavailable')}
+            />
+          )}
+          {receiptUrls.length > 0 && (
+            <Card padded className="space-y-2.5">
+              <SectionHeader title={t('merchant.disputes.receiptTitle')} className="mb-0" />
+              <p className="text-[11.5px] text-ink-500">{t('merchant.disputes.receiptHint')}</p>
+              <PhotoGrid urls={receiptUrls} />
+            </Card>
+          )}
 
-          <div className="space-y-2.5 pt-1">
-            {rental && (
-              <Button
-                variant="secondary"
-                block
-                leading={<CarIcon size={16} />}
-                onClick={() => navigate(`/merchant/rentals/${rental.id}`)}
-              >
-                {t('merchant.damageCase.actions.openRental')}
-              </Button>
-            )}
-            <Button
-              variant="ghost"
-              block
-              leading={<ClockIcon size={16} />}
-              onClick={() => navigate('/merchant/damages')}
-            >
-              {t('merchant.damageCase.actions.backToList')}
-            </Button>
-          </div>
+          {/* ---------- customer objection ---------- */}
+          {kase.customer_objection_reason && (
+            <Card padded className="space-y-2">
+              <SectionHeader
+                title={t('merchant.disputes.objection.title')}
+                className="mb-0"
+                action={
+                  kase.customer_response_at ? (
+                    <span className="text-[11px] text-ink-400 num">
+                      {formatDate(kase.customer_response_at)}
+                    </span>
+                  ) : undefined
+                }
+              />
+              <p className="text-[13px] text-ink-700 leading-relaxed whitespace-pre-line">
+                {kase.customer_objection_reason}
+              </p>
+            </Card>
+          )}
+
+          {/* ---------- phase panels ---------- */}
+          {kase.dispute_phase === 'awaiting_customer' && (
+            <Card padded className="space-y-2.5">
+              <div className="flex items-center gap-2.5">
+                <ClockIcon size={16} className="text-gold-600 shrink-0" />
+                <div className="text-[13.5px] font-semibold text-ink-900">
+                  {t('merchant.disputes.await.title')}
+                </div>
+              </div>
+              <p className="text-[12.5px] text-ink-600 leading-relaxed">
+                {t('merchant.disputes.await.body')}
+              </p>
+            </Card>
+          )}
+
+          {kase.dispute_phase === 'direct_settlement' && (
+            <DirectSettlementPanel
+              t={t}
+              busy={busy}
+              formatCurrency={formatCurrency}
+              formatDate={formatDate}
+              directProposals={directProposals}
+              pendingDirect={pendingDirect}
+              usedRounds={usedRounds}
+              onSubmit={(amount, note) =>
+                runAction('submit_settlement_proposal', async () => {
+                  await submitSettlementProposal(kase.id, amount, note || undefined);
+                })
+              }
+              onRespond={(proposalId, accept) =>
+                runAction('respond_to_settlement_proposal', () =>
+                  respondToSettlementProposal(proposalId, accept),
+                )
+              }
+            />
+          )}
+
+          {kase.dispute_phase === 'lend_mediation' && (
+            <LendPanel
+              t={t}
+              busy={busy}
+              formatCurrency={formatCurrency}
+              formatDate={formatDate}
+              lendProposal={lendProposal}
+              onRespond={(accept) =>
+                runAction('respond_to_lend_proposal', () =>
+                  respondToLendProposal(kase.id, accept),
+                )
+              }
+            />
+          )}
+
+          {kase.dispute_phase === 'resolved' && (
+            <ResolvedPanel
+              t={t}
+              kase={kase}
+              formatCurrency={formatCurrency}
+              formatDate={formatDate}
+            />
+          )}
+
+          {/* Past proposals stay visible after direct settlement. */}
+          {kase.dispute_phase !== 'direct_settlement' && directProposals.length > 0 && (
+            <Card padded className="space-y-2.5">
+              <SectionHeader title={t('disputes.settlement.title')} className="mb-0" />
+              {directProposals.map((p) => (
+                <ProposalCard key={p.id} t={t} p={p} formatCurrency={formatCurrency} formatDate={formatDate} />
+              ))}
+            </Card>
+          )}
+
+          {/* ---------- persisted event log ---------- */}
+          {events.length > 0 && (
+            <Card padded className="space-y-2.5">
+              <SectionHeader title={t('merchant.disputes.events.title')} className="mb-0" />
+              <div className="space-y-2.5">
+                {[...events].reverse().map((e) => (
+                  <div key={e.id} className="flex items-start gap-2.5">
+                    <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-canvas-300" />
+                    <div className="min-w-0 flex-1 flex items-baseline justify-between gap-2 text-[12px]">
+                      <span className="text-ink-700">
+                        {t(`merchant.disputes.events.${e.event_type}`)}
+                      </span>
+                      <span className="text-ink-400 num shrink-0">{formatDate(e.created_at)}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </Card>
+          )}
         </div>
       </Screen>
+    </>
+  );
+}
 
+// =====================================================================
+// Sub-components (merchant perspective)
+// =====================================================================
+
+function FactRow({ label, value }: { label: ReactNode; value: ReactNode }) {
+  return (
+    <div className="flex items-center justify-between gap-3 text-[12.5px]">
+      <span className="text-ink-400 shrink-0">{label}</span>
+      <span className="font-semibold text-ink-900 text-end min-w-0 truncate">{value}</span>
+    </div>
+  );
+}
+
+function PhotoGrid({ urls }: { urls: string[] }) {
+  const [lightbox, setLightbox] = useState<number | null>(null);
+  return (
+    <>
+      <div className="grid grid-cols-3 gap-2">
+        {urls.map((u, i) => (
+          <button
+            key={`${i}-${u.slice(-12)}`}
+            type="button"
+            onClick={() => setLightbox(i)}
+            className="relative aspect-square overflow-hidden rounded-xl bg-canvas-200 hairline active:scale-[0.98] transition-transform"
+          >
+            <img src={u} alt="" className="h-full w-full object-cover" loading="lazy" />
+          </button>
+        ))}
+      </div>
       <ImageLightbox
-        open={lightboxIndex !== null}
-        images={kase.evidence ?? []}
-        startIndex={lightboxIndex ?? 0}
-        onClose={() => setLightboxIndex(null)}
-        caption={(i, total) =>
-          `${t('merchant.damageCase.evidence')} · ${i + 1} / ${total}`
-        }
+        open={lightbox !== null}
+        images={urls}
+        startIndex={lightbox ?? 0}
+        onClose={() => setLightbox(null)}
       />
     </>
   );
 }
 
-function HeroStat({ label, value }: { label: ReactNode; value: ReactNode }) {
+function EvidenceCard({
+  title,
+  items,
+  emptyLabel,
+  unavailableLabel,
+}: {
+  title: ReactNode;
+  items: DisputeEvidenceItem[];
+  emptyLabel: ReactNode;
+  unavailableLabel: ReactNode;
+}) {
+  const urls = items.map((e) => e.url).filter((u): u is string => Boolean(u));
+  const missing = items.length - urls.length;
   return (
-    <div>
-      <div className="text-white/55 uppercase tracking-wide text-[10.5px]">
-        {label}
+    <Card padded className="space-y-2.5">
+      <SectionHeader
+        title={title}
+        className="mb-0"
+        action={
+          <span className="text-[11px] font-semibold num rounded-full px-2 py-0.5 bg-canvas-200 text-ink-500">
+            {items.length}
+          </span>
+        }
+      />
+      {items.length === 0 ? (
+        <div className="rounded-xl2 bg-canvas-100 hairline p-3 flex items-center gap-2.5 text-[12px] text-ink-500">
+          <ImageIcon size={15} className="shrink-0 text-ink-400" />
+          {emptyLabel}
+        </div>
+      ) : (
+        <>
+          <PhotoGrid urls={urls} />
+          {missing > 0 && <div className="text-[11px] text-ink-400">{unavailableLabel}</div>}
+        </>
+      )}
+    </Card>
+  );
+}
+
+/** Merchant-relative "from" labels: my offer vs the renter's offer. */
+function ProposalCard({
+  t,
+  p,
+  formatCurrency,
+  formatDate,
+}: {
+  t: (k: string, v?: Record<string, string | number>) => string;
+  p: DisputeProposalWithResponses;
+  formatCurrency: (n: number) => string;
+  formatDate: (d: string) => string;
+}) {
+  const statusTone: StatusTone =
+    p.status === 'accepted' ? 'success' : p.status === 'rejected' ? 'neutral' : 'warn';
+  return (
+    <div className="rounded-xl2 bg-canvas-100 hairline p-3.5 space-y-1.5">
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-[12.5px] font-semibold text-ink-900">
+          {t(`merchant.disputes.proposalFrom.${p.proposed_by_party}`)}
+          {p.kind === 'direct' && p.round != null && (
+            <span className="text-ink-400 font-normal">
+              {' · '}
+              {t('disputes.settlement.round', { current: p.round, total: 2 })}
+            </span>
+          )}
+        </span>
+        <StatusChip size="sm" tone={statusTone} dot={false} label={t(`disputes.settlement.status.${p.status}`)} />
       </div>
-      <div className="mt-0.5 font-semibold text-white num truncate">{value}</div>
+      <div className="text-[15px] font-bold text-ink-900 num">{formatCurrency(Number(p.amount))}</div>
+      {p.note && <p className="text-[12px] text-ink-600 leading-relaxed">{p.note}</p>}
+      <div className="text-[11px] text-ink-400 num">{formatDate(p.created_at)}</div>
     </div>
   );
 }
 
-function DocLinkRow({
-  icon,
-  tone,
-  label,
-  refValue,
-  to,
-  dir,
+function DirectSettlementPanel({
+  t,
+  busy,
+  formatCurrency,
+  formatDate,
+  directProposals,
+  pendingDirect,
+  usedRounds,
+  onSubmit,
+  onRespond,
 }: {
-  icon: ReactNode;
-  tone: string;
-  label: ReactNode;
-  refValue: string;
-  to?: string;
-  dir: 'rtl' | 'ltr';
+  t: (k: string, v?: Record<string, string | number>) => string;
+  busy: boolean;
+  formatCurrency: (n: number) => string;
+  formatDate: (d: string) => string;
+  directProposals: DisputeProposalWithResponses[];
+  pendingDirect: DisputeProposalWithResponses | null;
+  usedRounds: number;
+  onSubmit: (amount: number, note: string) => void;
+  onRespond: (proposalId: string, accept: boolean) => void;
 }) {
-  const body = (
-    <>
-      <span className={`h-9 w-9 rounded-xl grid place-items-center shrink-0 ${tone}`}>
-        {icon}
-      </span>
-      <div className="min-w-0 flex-1">
-        <div className="text-[13px] font-semibold text-ink-900 truncate">
-          {label}
-        </div>
-        <div className="mt-0.5 text-[11px] text-ink-400 num truncate">
-          {refValue}
-        </div>
+  const [amount, setAmount] = useState('');
+  const [note, setNote] = useState('');
+  const [rejectOpen, setRejectOpen] = useState(false);
+
+  const pendingFromCustomer = pendingDirect?.proposed_by_party === 'customer';
+  const pendingFromMe = pendingDirect?.proposed_by_party === 'merchant';
+  const canSubmit = !pendingDirect && usedRounds < 2;
+  const currentRound = Math.min(usedRounds + (pendingDirect ? 0 : 1), 2);
+  const amountValue = Number(amount);
+  const amountValid = Number.isFinite(amountValue) && amountValue >= 0 && amount.trim() !== '';
+
+  return (
+    <Card padded className="space-y-3.5">
+      <SectionHeader title={t('disputes.settlement.title')} className="mb-0" />
+      <div className="rounded-xl2 bg-lavender-50 ring-1 ring-lavender-200 px-3.5 py-2.5 text-[12px] text-lavender-800 leading-relaxed flex items-start gap-2">
+        <InfoIcon size={14} className="shrink-0 mt-0.5" />
+        {t('disputes.settlement.roundsNotice')}
       </div>
-      {to && (
-        <ChevronIcon
-          size={14}
-          className={cn(
-            'text-ink-300',
-            dir === 'rtl' ? '' : 'rotate-180',
+      <div className="text-[11.5px] font-semibold text-ink-500 num">
+        {t('disputes.settlement.round', { current: currentRound, total: 2 })}
+      </div>
+
+      {directProposals.map((p) => (
+        <ProposalCard key={p.id} t={t} p={p} formatCurrency={formatCurrency} formatDate={formatDate} />
+      ))}
+
+      {pendingFromCustomer && pendingDirect && (
+        <div className="space-y-2.5">
+          <Button size="lg" block loading={busy} disabled={busy} onClick={() => onRespond(pendingDirect.id, true)}>
+            {t('disputes.settlement.accept')}
+          </Button>
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() => setRejectOpen(true)}
+            className="flex items-center justify-center h-12 w-full rounded-xl2 bg-white text-ink-800 font-bold text-[13.5px] ring-[1.5px] ring-inset ring-canvas-300 hover:bg-canvas-50 transition-colors"
+          >
+            {t('disputes.settlement.reject')}
+          </button>
+          {pendingDirect.round === 1 && (
+            <p className="text-[11.5px] text-ink-400">{t('disputes.settlement.counterHint')}</p>
           )}
-        />
+          <ConfirmSheet
+            open={rejectOpen}
+            onClose={() => setRejectOpen(false)}
+            onConfirm={() => {
+              setRejectOpen(false);
+              onRespond(pendingDirect.id, false);
+            }}
+            title={t('disputes.settlement.rejectSheet.title')}
+            description={
+              pendingDirect.round === 2
+                ? t('disputes.settlement.rejectSheet.bodyFinalRound')
+                : t('disputes.settlement.rejectSheet.body')
+            }
+            confirmLabel={t('disputes.settlement.rejectSheet.confirm')}
+            cancelLabel={t('disputes.settlement.rejectSheet.cancel')}
+            icon={<GavelIcon size={18} />}
+            tone="warn"
+          />
+        </div>
       )}
-    </>
+
+      {pendingFromMe && (
+        <div className="rounded-xl2 bg-canvas-100 hairline px-3.5 py-2.5 text-[12px] text-ink-500 flex items-center gap-2">
+          <ClockIcon size={14} className="shrink-0 text-ink-400" />
+          {t('disputes.settlement.waitingOther')}
+        </div>
+      )}
+
+      {canSubmit && (
+        <div className="space-y-3 pt-1">
+          <div className="text-[13px] font-semibold text-ink-900">
+            {t('disputes.settlement.submitTitle')}
+          </div>
+          <FormField label={t('disputes.settlement.amountLabel')} required>
+            <Input
+              inputMode="decimal"
+              dir="ltr"
+              className="num text-left"
+              value={amount}
+              onChange={(e) => setAmount(e.target.value.replace(/[^0-9.]/g, ''))}
+              placeholder="0"
+            />
+          </FormField>
+          <FormField label={t('disputes.settlement.noteLabel')}>
+            <Textarea value={note} onChange={(e) => setNote(e.target.value)} rows={2} />
+          </FormField>
+          <Button
+            size="lg"
+            block
+            loading={busy}
+            disabled={busy || !amountValid}
+            onClick={() => onSubmit(amountValue, note.trim())}
+          >
+            {t('disputes.settlement.submit')}
+          </Button>
+        </div>
+      )}
+    </Card>
   );
-  if (to) {
-    return (
-      <Link to={to} className="flex items-center gap-3 w-full group">
-        {body}
-      </Link>
-    );
-  }
-  return <div className="flex items-center gap-3">{body}</div>;
 }
 
-function TimelineRow({
-  tone,
-  icon,
-  label,
-  at,
-  done,
-  last,
+function LendPanel({
+  t,
+  busy,
+  formatCurrency,
+  formatDate,
+  lendProposal,
+  onRespond,
 }: {
-  tone: string;
-  icon: ReactNode;
-  label: ReactNode;
-  at: ReactNode;
-  done?: boolean;
-  last?: boolean;
+  t: (k: string, v?: Record<string, string | number>) => string;
+  busy: boolean;
+  formatCurrency: (n: number) => string;
+  formatDate: (d: string) => string;
+  lendProposal: DisputeProposalWithResponses | null;
+  onRespond: (accept: boolean) => void;
 }) {
+  const [rejectOpen, setRejectOpen] = useState(false);
+  const myResponse =
+    lendProposal?.dispute_proposal_responses.find((r) => r.party === 'merchant') ?? null;
+  const customerResponse =
+    lendProposal?.dispute_proposal_responses.find((r) => r.party === 'customer') ?? null;
+
   return (
-    <li className="flex items-start gap-3 relative">
-      <div className="flex flex-col items-center">
+    <Card padded className="space-y-3.5">
+      <SectionHeader title={t('disputes.lend.title')} className="mb-0" />
+      <p className="text-[12.5px] text-ink-600 leading-relaxed">{t('disputes.lend.body')}</p>
+
+      {!lendProposal && (
+        <div className="rounded-xl2 bg-canvas-100 hairline px-3.5 py-3 text-[12.5px] text-ink-500 flex items-center gap-2.5">
+          <ClockIcon size={15} className="shrink-0 text-ink-400" />
+          {t('disputes.lend.waiting')}
+        </div>
+      )}
+
+      {lendProposal && (
+        <div className="space-y-3">
+          <div className="rounded-xl2 bg-lavender-50 ring-1 ring-lavender-200 p-3.5 space-y-1.5">
+            <div className="text-[12.5px] font-semibold text-lavender-800">
+              {t('disputes.lend.proposalTitle')}
+            </div>
+            <div className="text-[16px] font-bold text-ink-900 num">
+              {formatCurrency(Number(lendProposal.amount))}
+            </div>
+            {lendProposal.note && (
+              <p className="text-[12px] text-ink-600 leading-relaxed">{lendProposal.note}</p>
+            )}
+            <div className="text-[11px] text-ink-400 num">
+              {t('disputes.lend.proposedAt')} · {formatDate(lendProposal.created_at)}
+            </div>
+          </div>
+
+          {customerResponse && (
+            <div className="rounded-xl2 bg-canvas-100 hairline px-3.5 py-2 text-[12px] text-ink-600">
+              {t(
+                `merchant.disputes.customerResponse.${customerResponse.accepted ? 'accepted' : 'rejected'}`,
+              )}
+            </div>
+          )}
+
+          {myResponse ? (
+            <div className="rounded-xl2 bg-canvas-100 hairline px-3.5 py-2.5 text-[12.5px] text-ink-700 space-y-1">
+              <div className="font-semibold">
+                {t(`disputes.lend.yourResponse.${myResponse.accepted ? 'accepted' : 'rejected'}`)}
+              </div>
+              <div className="text-ink-500">{t('disputes.lend.waitingOther')}</div>
+            </div>
+          ) : (
+            <div className="space-y-2.5">
+              <Button size="lg" block loading={busy} disabled={busy} onClick={() => onRespond(true)}>
+                {t('disputes.lend.accept')}
+              </Button>
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => setRejectOpen(true)}
+                className="flex items-center justify-center h-12 w-full rounded-xl2 bg-white text-ink-800 font-bold text-[13.5px] ring-[1.5px] ring-inset ring-canvas-300 hover:bg-canvas-50 transition-colors"
+              >
+                {t('disputes.lend.reject')}
+              </button>
+              <ConfirmSheet
+                open={rejectOpen}
+                onClose={() => setRejectOpen(false)}
+                onConfirm={() => {
+                  setRejectOpen(false);
+                  onRespond(false);
+                }}
+                title={t('disputes.lend.rejectSheet.title')}
+                description={t('disputes.lend.rejectSheet.body')}
+                confirmLabel={t('disputes.lend.rejectSheet.confirm')}
+                cancelLabel={t('disputes.lend.rejectSheet.cancel')}
+                icon={<GavelIcon size={18} />}
+                tone="warn"
+              />
+            </div>
+          )}
+        </div>
+      )}
+    </Card>
+  );
+}
+
+function ResolvedPanel({
+  t,
+  kase,
+  formatCurrency,
+  formatDate,
+}: {
+  t: (k: string, v?: Record<string, string | number>) => string;
+  kase: DamageCaseRow;
+  formatCurrency: (n: number) => string;
+  formatDate: (d: string) => string;
+}) {
+  const outcome = kase.dispute_outcome ?? 'unresolved';
+  const isAgreement =
+    outcome === 'claim_accepted' || outcome === 'direct_settlement' || outcome === 'lend_settlement';
+  const amount = formatCurrency(Number(kase.agreed_amount ?? kase.claim_amount));
+  return (
+    <Card padded className="space-y-3">
+      <div className="flex items-start gap-3">
         <span
           className={cn(
-            'h-8 w-8 rounded-full grid place-items-center shrink-0 ring-2 ring-inset',
-            tone,
-            done ? '' : 'opacity-70',
+            'h-11 w-11 shrink-0 rounded-2xl grid place-items-center ring-1',
+            isAgreement
+              ? 'bg-success-50 text-success-600 ring-success-500/20'
+              : 'bg-canvas-100 text-ink-500 ring-canvas-200',
           )}
         >
-          {icon}
+          {isAgreement ? <BadgeCheckIcon size={20} /> : <InfoIcon size={20} />}
         </span>
-        {!last && (
-          <span
-            className={cn(
-              'w-px flex-1 my-1 min-h-5',
-              done ? 'bg-success-500/30' : 'bg-ink-100',
-            )}
+        <div className="min-w-0 flex-1">
+          <div className="text-[15px] font-bold text-ink-900">
+            {t(`merchant.disputes.outcome.${outcome}`)}
+          </div>
+          <p className="mt-1 text-[12.5px] text-ink-600 leading-relaxed">
+            {t(`merchant.disputes.terminal.${outcome}`, { amount })}
+          </p>
+        </div>
+      </div>
+      <CardDivider />
+      <div className="space-y-2">
+        {isAgreement && kase.agreed_amount != null && (
+          <FactRow
+            label={t('disputes.resolved.agreedAmount')}
+            value={<span className="num">{formatCurrency(Number(kase.agreed_amount))}</span>}
+          />
+        )}
+        {kase.customer_response_at && outcome === 'claim_accepted' && (
+          <FactRow
+            label={t('merchant.disputes.acceptedAt')}
+            value={<span className="num">{formatDate(kase.customer_response_at)}</span>}
+          />
+        )}
+        {kase.resolved_at && (
+          <FactRow
+            label={t('disputes.resolved.resolvedAt')}
+            value={<span className="num">{formatDate(kase.resolved_at)}</span>}
           />
         )}
       </div>
-      <div className={cn('flex-1 min-w-0', !last && 'pb-4')}>
-        <div
-          className={cn(
-            'text-[13px] font-semibold',
-            done ? 'text-ink-900' : 'text-ink-500',
-          )}
-        >
-          {label}
-        </div>
-        <div className="mt-0.5 text-[11.5px] text-ink-400 num">{at}</div>
-      </div>
-    </li>
+    </Card>
   );
 }

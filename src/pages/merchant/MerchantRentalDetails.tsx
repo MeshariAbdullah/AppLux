@@ -37,6 +37,7 @@ import {
   fetchProfile,
   useSupabaseAuth,
 } from '@/lib/supabase';
+import type { DamageCaseRow } from '@/lib/supabase';
 import type {
   MerchantNafithState,
   MerchantRental,
@@ -145,6 +146,9 @@ export default function MerchantRentalDetails() {
   );
 
   const [liveRental, setLiveRental] = useState<MerchantRental | null>(null);
+  // Raw dispute case row (Phase-1 lifecycle) — drives the dispute
+  // banner + ended-via-dispute rendering. Canonical fields only.
+  const [disputeCase, setDisputeCase] = useState<DamageCaseRow | null>(null);
   // Initialise `resolving` lazily based on whether the effect below
   // is actually going to run a fetch. Critical fix: the previous
   // `useState(false)` caused the first render to satisfy the
@@ -167,6 +171,7 @@ export default function MerchantRentalDetails() {
     // the page never renders rental A while the user is navigating to
     // rental B (Phase 9 follow-up — entity leak fix).
     setLiveRental(null);
+    setDisputeCase(null);
     setResolving(true);
     (async () => {
       // Phase 4A: contract / merchant / note read through the memory
@@ -207,6 +212,7 @@ export default function MerchantRentalDetails() {
         fetchContractDamageCase(contract.id).catch(() => null),
       ]);
       if (cancelled) return;
+      setDisputeCase(damageCase);
       const customerName = customer?.full_name ?? '—';
       // Data-consistency fix: the headline is the REAL invoice item
       // name (same source the customer sees), not a fabricated label.
@@ -291,6 +297,11 @@ export default function MerchantRentalDetails() {
       : rental.closureStatus === 'closed' || isRentalFinalized(rental)
         ? 'closed'
         : 'active';
+  // A non-dismissed case on an ended contract means it ended through
+  // the dispute path — the success-closure wording must never render.
+  const endedViaDispute = Boolean(
+    disputeCase && disputeCase.status !== 'dismissed',
+  );
   const rentalDays = (() => {
     const s = new Date(rental.startDate).getTime();
     const e = new Date(rental.endDate).getTime();
@@ -426,11 +437,15 @@ export default function MerchantRentalDetails() {
                       : 'text-danger-700',
                   )}
                 >
-                  {t(
-                    closureState === 'closed'
-                      ? 'merchant.rental.outcome.closedTitle'
-                      : 'merchant.rental.outcome.damagedTitle',
-                  )}
+                  {closureState === 'closed' && endedViaDispute && disputeCase
+                    ? t(
+                        `merchant.disputes.outcome.${disputeCase.dispute_outcome ?? 'unresolved'}`,
+                      )
+                    : t(
+                        closureState === 'closed'
+                          ? 'merchant.rental.outcome.closedTitle'
+                          : 'merchant.rental.outcome.damagedTitle',
+                      )}
                 </div>
                 <div
                   className={cn(
@@ -440,18 +455,22 @@ export default function MerchantRentalDetails() {
                       : 'text-danger-700/80',
                   )}
                 >
-                  {closureState === 'closed'
-                    ? rental.closedAt
-                      ? t('merchant.rental.outcome.closedOn', {
-                          at: formatDate(rental.closedAt, {
-                            dateStyle: 'medium',
-                            timeStyle: 'short',
-                          }),
-                        })
-                      : t('merchant.rental.outcome.closedHint')
-                    : t('merchant.rental.outcome.damagedHint')}
+                  {closureState === 'closed' && endedViaDispute
+                    ? t('merchant.disputes.rental.endedViaDispute')
+                    : closureState === 'closed'
+                      ? rental.closedAt
+                        ? t('merchant.rental.outcome.closedOn', {
+                            at: formatDate(rental.closedAt, {
+                              dateStyle: 'medium',
+                              timeStyle: 'short',
+                            }),
+                          })
+                        : t('merchant.rental.outcome.closedHint')
+                      : t('merchant.rental.outcome.damagedHint')}
                 </div>
-                {closureState === 'damaged' && rental.damageCaseId && (
+                {(closureState === 'damaged' ||
+                  (closureState === 'closed' && endedViaDispute)) &&
+                  rental.damageCaseId && (
                   <Link
                     to={`/merchant/damages/${rental.damageCaseId}`}
                     className="mt-1.5 inline-flex items-center gap-1.5 text-[12.5px] font-semibold text-danger-700 hover:underline"
@@ -651,7 +670,19 @@ export default function MerchantRentalDetails() {
                 </button>
               </>
             )}
-            {closureState === 'closed' && (
+            {closureState === 'closed' && endedViaDispute && rental.damageCaseId && (
+              <Button
+                size="lg"
+                block
+                leading={<PackageIcon size={16} />}
+                onClick={() =>
+                  navigate(`/merchant/damages/${rental.damageCaseId}`)
+                }
+              >
+                {t('merchant.disputes.rental.openCase')}
+              </Button>
+            )}
+            {closureState === 'closed' && !endedViaDispute && (
               <div className="rounded-xl3 bg-canvas-100 ring-1 ring-canvas-200 p-4 flex items-start gap-3">
                 <span className="h-10 w-10 shrink-0 rounded-2xl bg-white text-ink-700 grid place-items-center hairline">
                   <CheckIcon size={18} />
