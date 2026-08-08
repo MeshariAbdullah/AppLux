@@ -7,6 +7,7 @@ import { LangToggle } from '@/components/auth/LangToggle';
 import { MerchantTabBar } from '@/components/merchant/MerchantTabBar';
 import {
   BadgeCheckIcon,
+  BellIcon,
   GavelIcon,
   HistoryIcon,
   PlusIcon,
@@ -20,8 +21,10 @@ import {
   adaptContractToMerchantRental,
   fetchMyMerchant,
   fetchProfilesByIds,
+  getSupabase,
   listMerchantContracts,
   listMerchantInvoices,
+  listMyNotifications,
   useSupabaseAuth,
   type MerchantRow,
 } from '@/lib/supabase';
@@ -374,6 +377,7 @@ export default function MerchantHome() {
                 {t('merchant.home.heading')}
               </h1>
             </div>
+            <MerchantBell />
             <LangToggle compact />
             {verified && (
               <span className="inline-flex items-center gap-1 rounded-full bg-green-50 text-green-700 px-3 py-1.5 text-[11px] font-bold shrink-0">
@@ -480,5 +484,84 @@ function StatTile({
       </div>
       <div className="mt-1.5 text-[12px] text-ink-500 leading-snug">{label}</div>
     </div>
+  );
+}
+
+
+// ---------------------------------------------------------------------
+// Notification bell — the merchant's entry point to the notification
+// center, with a REAL unread count (no demo/hardcoded numbers). Uses
+// the same table/RLS; realtime INSERTs refresh the badge when the
+// channel is available, focus refetch covers the rest. Reading a row
+// on the center page clears it on the next focus refetch.
+// ---------------------------------------------------------------------
+
+function MerchantBell() {
+  const t = useT();
+  const navigate = useNavigate();
+  const { configured, session } = useSupabaseAuth();
+  const uid = session?.user?.id ?? null;
+  const [unread, setUnread] = useState(0);
+
+  useEffect(() => {
+    if (!configured || !uid) {
+      setUnread(0);
+      return;
+    }
+    let cancelled = false;
+    const refresh = () =>
+      listMyNotifications()
+        .then((rows) => {
+          if (!cancelled) setUnread(rows.filter((r) => !r.read_at).length);
+        })
+        .catch(() => {});
+    void refresh();
+    const onFocus = () => void refresh();
+    window.addEventListener('focus', onFocus);
+    let channel: ReturnType<NonNullable<ReturnType<typeof getSupabase>>['channel']> | null =
+      null;
+    try {
+      const sb = getSupabase();
+      if (sb) {
+        channel = sb
+          .channel('merchant-notifications-badge')
+          .on(
+            'postgres_changes',
+            { event: 'INSERT', schema: 'public', table: 'notifications', filter: `user_id=eq.${uid}` },
+            () => void refresh(),
+          )
+          .subscribe();
+      }
+    } catch {
+      channel = null;
+    }
+    return () => {
+      cancelled = true;
+      window.removeEventListener('focus', onFocus);
+      try {
+        channel?.unsubscribe();
+      } catch {
+        /* noop */
+      }
+    };
+  }, [configured, uid]);
+
+  return (
+    <button
+      type="button"
+      onClick={() => navigate('/merchant/notifications')}
+      aria-label={t('notifications.title')}
+      className="relative h-10 w-10 grid place-items-center rounded-xl bg-white text-navy-700 ring-[1.5px] ring-beige-300 hover:ring-navy-200 transition-colors shrink-0"
+    >
+      <BellIcon size={15} />
+      {unread > 0 && (
+        <span
+          className="absolute -top-1 -end-1 min-w-[18px] h-[18px] px-1 rounded-full bg-green-600 text-white text-[10px] font-bold grid place-items-center num"
+          dir="ltr"
+        >
+          {unread > 9 ? '9+' : unread}
+        </span>
+      )}
+    </button>
   );
 }

@@ -697,12 +697,12 @@
       "body": "Settlement attempts ended without agreement between the parties."
     },
     "dispute_customer_accepted": {
-      "title": "Your acceptance is documented",
-      "body": "Your acceptance of the claim was documented and the case is closed."
+      "title": "The renter accepted the claim",
+      "body": "The renter accepted your claim; the acceptance is documented and the case is closed."
     },
     "dispute_customer_objected": {
-      "title": "Your objection is recorded",
-      "body": "Your objection was recorded and direct settlement has started."
+      "title": "The renter objected to the claim",
+      "body": "The renter objected to your claim; direct settlement between the parties has started."
     }
   },
   "profile": {
