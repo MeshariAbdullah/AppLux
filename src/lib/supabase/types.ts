@@ -632,6 +632,10 @@ export type Database = {
         Args: { p_case_id: string; p_amount: number; p_note: string | null };
         Returns: string;
       };
+      admin_dismiss_dispute_case: {
+        Args: { p_case_id: string; p_reason: string };
+        Returns: undefined;
+      };
       register_push_token: {
         Args: { p_token: string; p_platform: string };
         Returns: undefined;

@@ -127,6 +127,7 @@ export function translateError(
     if (code === 'P0208') return t('errors.disputeAlreadyResponded');
     if (code === 'P0209') return t('errors.disputeNotFound');
     if (code === 'P0210') return t('errors.validation');
+    if (code === 'P0221') return t('errors.validation');
     if (code === 'P0211') return t('errors.unauthorized');
     // Case raised against a contract that never started (pending /
     // cancelled) — a state conflict.

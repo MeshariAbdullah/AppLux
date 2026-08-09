@@ -156,6 +156,19 @@ export async function lendSubmitMediationProposal(
   return data as string;
 }
 
+/** Admin-only administrative closure — neutral, non-judgmental. */
+export async function adminDismissDisputeCase(
+  caseId: string,
+  reason: string,
+): Promise<void> {
+  const sb = requireSupabase();
+  const { error } = await sb.rpc('admin_dismiss_dispute_case', {
+    p_case_id: caseId,
+    p_reason: reason,
+  });
+  if (error) throw error;
+}
+
 export async function respondToLendProposal(
   caseId: string,
   accept: boolean,

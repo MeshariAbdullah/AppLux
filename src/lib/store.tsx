@@ -25,7 +25,6 @@ import {
   SEED_STORES,
   type AdminCaseAuditAction,
   type AdminCaseAuditEntry,
-  type AdminCaseDetail,
   type AdminCaseNote,
   type AdminCaseStage,
   type AdminMerchantDecision,
@@ -171,12 +170,6 @@ type StoreContextValue = {
   resetAdminUser: (id: string) => void;
 };
 
-type AdminCaseOverride = {
-  notes?: AdminCaseNote[];
-  audit?: AdminCaseAuditEntry[];
-  stage?: AdminCaseStage;
-};
-
 export type AdminMerchantRequest = AdminPendingMerchant & {
   decision: AdminMerchantDecision;
 };
@@ -218,7 +211,6 @@ const EMPTY_MERCHANT_HISTORY: MerchantHistoryRecord[] = [];
 const EMPTY_MERCHANT_CUSTOMERS: MerchantCustomer[] = [];
 const EMPTY_ADMIN_MERCHANT_REQUESTS: AdminMerchantRequest[] = [];
 const EMPTY_ADMIN_USERS: AdminUserRecord[] = [];
-const EMPTY_ADMIN_CASES: AdminCaseDetail[] = [];
 const EMPTY_ELIGIBILITY: RentalEligibility = {
   limit: 0,
   used: 0,

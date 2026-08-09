@@ -216,6 +216,7 @@ export {
   respondToSettlementProposal,
   respondToLendProposal,
   lendSubmitMediationProposal,
+  adminDismissDisputeCase,
 } from './queries/disputes';
 export type {
   DisputeEvidenceItem,
@@ -231,8 +232,6 @@ export {
   adaptContract,
   adaptContractToHistory,
   adaptContractToMerchantRental,
-  adaptDamageCase,
-  adaptDamageCaseToMerchant,
   adaptEligibility,
   adaptInvoice,
   adaptMerchantApplication,

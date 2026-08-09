@@ -328,15 +328,6 @@ export default function InvoiceTracking() {
           </div>
 
           {/* ====== EXECUTION ESCALATION (only when overdue) ====== */}
-          {invoice.status === 'overdue' && (
-            <PlatformBadge
-              platform="execution"
-              state="escalated"
-              title={t('track.placeholders.execution')}
-              description={t('track.placeholders.executionDesc')}
-              stateLabel={t('track.placeholders.escalated')}
-            />
-          )}
 
         </div>
       </Screen>

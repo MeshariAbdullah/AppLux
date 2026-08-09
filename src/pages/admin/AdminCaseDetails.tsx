@@ -29,6 +29,7 @@ import { logEvent } from '@/lib/observability/log';
 import { translateError, withSupportId } from '@/lib/errors';
 import { useI18n, useT } from '@/lib/i18n';
 import {
+  adminDismissDisputeCase,
   fetchContractById,
   fetchDisputeCase,
   fetchMerchant,
@@ -486,6 +487,19 @@ function AdminCaseDetailsInner({
             </Card>
           )}
 
+          {/* administrative closure — neutral, non-judgmental */}
+          {kase.dispute_phase !== 'resolved' && (
+            <DismissCard
+              t={t}
+              busy={busy}
+              onDismiss={(reason) =>
+                runAction('admin_dismiss_dispute_case', () =>
+                  adminDismissDisputeCase(kase.id, reason),
+                )
+              }
+            />
+          )}
+
           {/* persisted event history */}
           {events.length > 0 && (
             <Card padded className="space-y-2.5">
@@ -715,6 +729,59 @@ function LendMediationCard({
           </div>
         </div>
       )}
+    </Card>
+  );
+}
+
+
+/** "إغلاق الحالة إداريًا" — admin-only neutral closure with a
+ *  MANDATORY reason that is visible to both parties (it is stored in
+ *  resolution_notes, which case-party RLS can read — the copy says
+ *  so explicitly). Never implies fault, never touches the contract or
+ *  eligibility; the rental continues its normal lifecycle. */
+function DismissCard({
+  t,
+  busy,
+  onDismiss,
+}: {
+  t: (k: string, v?: Record<string, string | number>) => string;
+  busy: boolean;
+  onDismiss: (reason: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [reason, setReason] = useState('');
+  const valid = reason.trim().length > 0;
+  return (
+    <Card padded className="space-y-3">
+      <SectionHeader title={t('admin.disputes.dismiss.cta')} className="mb-0" />
+      <p className="text-[12px] text-ink-500 leading-relaxed">
+        {t('admin.disputes.dismiss.confirmBody')}
+      </p>
+      <FormField label={t('admin.disputes.dismiss.reasonLabel')} required>
+        <Textarea value={reason} onChange={(e) => setReason(e.target.value)} rows={2} />
+      </FormField>
+      <button
+        type="button"
+        disabled={busy || !valid}
+        onClick={() => setOpen(true)}
+        className="flex items-center justify-center h-12 w-full rounded-xl2 bg-white text-ink-800 font-bold text-[13.5px] ring-[1.5px] ring-inset ring-canvas-300 hover:bg-canvas-50 transition-colors disabled:opacity-60"
+      >
+        {t('admin.disputes.dismiss.cta')}
+      </button>
+      <ConfirmSheet
+        open={open}
+        onClose={() => setOpen(false)}
+        onConfirm={() => {
+          setOpen(false);
+          onDismiss(reason.trim());
+        }}
+        title={t('admin.disputes.dismiss.confirmTitle')}
+        description={t('admin.disputes.dismiss.confirmBody')}
+        confirmLabel={t('admin.disputes.dismiss.confirm')}
+        cancelLabel={t('admin.disputes.dismiss.cancel')}
+        icon={<InfoIcon size={18} />}
+        tone="warn"
+      />
     </Card>
   );
 }

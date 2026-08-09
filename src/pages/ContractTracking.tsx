@@ -804,51 +804,6 @@ export default function ContractTracking() {
   );
 }
 
-function buildContractEvents(
-  contract: {
-    status: 'active' | 'pending' | 'ended';
-    startDate: string;
-    endDate: string;
-  },
-  t: (key: string, vars?: Record<string, string | number>) => string,
-): TimelineEvent[] {
-  const created = contract.startDate;
-  const nafath = contract.startDate;
-  const signed = contract.startDate;
-  const nafith = contract.startDate;
-  const active = contract.startDate;
-
-  const base: TimelineEvent[] = [
-    evt('created', t('track.contract.events.created'), created, 'done', 'brand', <DocIcon size={14} />),
-    evt('nafath', t('track.contract.events.nafathVerified'), nafath, 'done', 'success', <ShieldIcon size={14} />),
-    evt('signed', t('track.contract.events.signed'), signed, 'done', 'success', <CheckIcon size={14} strokeWidth={2.6} />),
-    evt('nafith', t('track.contract.events.nafithAttested'), nafith, 'done', 'gold', <BadgeCheckIcon size={14} />),
-  ];
-
-  if (contract.status === 'pending') {
-    return [
-      evt('created', t('track.contract.events.created'), created, 'done', 'brand', <DocIcon size={14} />),
-      evt('nafath', t('track.contract.events.nafathVerified'), nafath, 'current', 'warn', <ShieldIcon size={14} />),
-      evt('signed', t('track.contract.events.signed'), null, 'pending', 'neutral', <CheckIcon size={14} />),
-      evt('nafith', t('track.contract.events.nafithAttested'), null, 'pending', 'neutral', <BadgeCheckIcon size={14} />),
-      evt('active', t('track.contract.events.active'), null, 'pending', 'neutral', <SparkleIcon size={14} />),
-    ];
-  }
-
-  if (contract.status === 'ended') {
-    return [
-      ...base,
-      evt('active', t('track.contract.events.active'), active, 'done', 'success', <SparkleIcon size={14} />),
-      evt('ended', t('track.contract.events.ended'), contract.endDate, 'current', 'neutral', <ClockIcon size={14} />),
-    ];
-  }
-
-  return [
-    ...base,
-    evt('active', t('track.contract.events.active'), active, 'done', 'success', <SparkleIcon size={14} />),
-    evt('ended', t('track.contract.events.ended'), contract.endDate, 'pending', 'neutral', <ArrowIcon size={14} />),
-  ];
-}
 
 function evt(
   id: string,
