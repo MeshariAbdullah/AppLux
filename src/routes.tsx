@@ -45,6 +45,7 @@ const Tracking = lazyWithReload(() => import('@/pages/Tracking'));
 const InvoiceTracking = lazyWithReload(() => import('@/pages/InvoiceTracking'));
 const ContractTracking = lazyWithReload(() => import('@/pages/ContractTracking'));
 const DisputeDetails = lazyWithReload(() => import('@/pages/DisputeDetails'));
+const MyDisputes = lazyWithReload(() => import('@/pages/MyDisputes'));
 const NoteTracking = lazyWithReload(() => import('@/pages/NoteTracking'));
 const Diagnostics = lazyWithReload(() => import('@/pages/Diagnostics'));
 const Nafath = lazyWithReload(() => import('@/pages/auth/Nafath'));
@@ -534,6 +535,7 @@ export function AppRoutes() {
         <Route path="/track/invoice/:id" element={<InvoiceTracking />} />
         <Route path="/track/contract/:id" element={<ContractTracking />} />
         <Route path="/track/note/:id" element={<NoteTracking />} />
+        <Route path="/disputes" element={<MyDisputes />} />
         <Route path="/disputes/:id" element={<DisputeDetails />} />
       </Route>
 

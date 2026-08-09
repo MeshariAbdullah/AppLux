@@ -121,7 +121,6 @@
       "line2": "Document every right."
     },
     "title": "Rent it. Contract it. Return it.",
-    "subtitle": "Lend runs the entire rental journey as a documented digital workflow — verified customer, signed contract, attested promissory note, and tracked return. Mutual protection at every step.",
     "subtitleMerchant": "Lend gives you a digital contract, an attested promissory note, and live handover tracking — every rental documented end to end, with mutual protection at every step.",
     "audience": {
       "customer": "For customers",
@@ -176,8 +175,6 @@
     },
     "sectorIndex": "Sectors index",
     "feature1": "Verified partner businesses",
-    "feature2": "Contract & promissory note per rental",
-    "feature3": "Underlying-value protection via Nafith",
     "signIn": "Sign in",
     "createAccount": "Create account",
     "merchantCta": "Open the merchant portal",
@@ -703,6 +700,10 @@
     "dispute_customer_objected": {
       "title": "The renter objected to the claim",
       "body": "The renter objected to your claim; direct settlement between the parties has started."
+    },
+    "dispute_dismissed": {
+      "title": "Case closed administratively",
+      "body": "Processing of the case inside Lend ended without this being a ruling for either party."
     }
   },
   "profile": {
@@ -2039,28 +2040,6 @@
         "hint": "Add photos from the open-case screen to strengthen the claim."
       },
       "noNotes": "No notes were recorded for this case.",
-      "nextStep": {
-        "title": "Next step toward escalation",
-        "settled": "Case settled",
-        "settledSub": "No further action required. Case is fully resolved.",
-        "steps": {
-          "review": "Internal review",
-          "settlement": "Amicable settlement",
-          "nafith": "Nafith enforcement",
-          "execution": "Execution court"
-        },
-        "stepsSub": {
-          "review": "Assess the case, verify evidence and confirm the claim amount.",
-          "settlement": "Contact the customer to agree on a payment or repair plan.",
-          "nafith": "Activate the promissory note through Nafith for binding enforcement.",
-          "execution": "File the case with the execution court if no payment is made."
-        },
-        "state": {
-          "done": "Done",
-          "current": "In progress",
-          "pending": "Pending"
-        }
-      },
       "timeline": {
         "title": "Case timeline",
         "reported": "Case reported",
@@ -2069,10 +2048,6 @@
         "inProgress": "In progress",
         "pending": "Pending",
         "done": "Completed"
-      },
-      "placeholder": {
-        "title": "Escalation to Nafith",
-        "hint": "Enforcement through Nafith and the execution court are placeholders for this demo."
       },
       "actions": {
         "openRental": "Open rental",
@@ -2238,7 +2213,7 @@
         "direct_settlement": "The parties reached an agreement",
         "lend_settlement": "Agreement reached with Lend's help",
         "unresolved": "No agreement was reached",
-        "dismissed": "Case closed"
+        "dismissed": "Case closed administratively"
       },
       "await": {
         "title": "Awaiting the renter's response",
@@ -2262,7 +2237,7 @@
         "direct_settlement": "The parties agreed on {amount} in direct settlement. It is documented and the case is closed.",
         "lend_settlement": "Both parties accepted the settlement proposal of {amount}. The agreement is documented and the case is closed.",
         "unresolved": "Settlement attempts through Lend ended without agreement. Neither party has been declared correct; a neutral, documented case file will be available to both parties later.",
-        "dismissed": "This report was closed and the contract's normal path is available again."
+        "dismissed": "Processing of this case inside Lend was ended administratively without this being a ruling for either party; the contract continues in its current state."
       },
       "timeline": {
         "title": "Case journey",
@@ -2932,7 +2907,15 @@
         "body": "The link may be incorrect, or the case was removed.",
         "back": "Back to cases"
       },
-      "emptyFiltered": "No cases in this filter."
+      "emptyFiltered": "No cases in this filter.",
+      "dismiss": {
+        "cta": "Close case administratively",
+        "confirmTitle": "Confirm administrative closure",
+        "confirmBody": "Processing of this case inside Lend will end without this being a ruling for either party; the contract continues in its current state. The reason is visible to both parties.",
+        "reasonLabel": "Closure reason (visible to both parties)",
+        "confirm": "Close case",
+        "cancel": "Back"
+      }
     }
   },
   "offer": {
@@ -3073,8 +3056,8 @@
         "neutral": "Closing the case is not a ruling in favor of either party."
       },
       "dismissed": {
-        "title": "Report dismissed",
-        "body": "This report was closed with no obligation on you."
+        "title": "Case closed administratively",
+        "body": "Processing of this case inside Lend was ended without this being a ruling for either party; the contract continues in its current state."
       },
       "agreedAmount": "Agreed amount",
       "resolvedAt": "Closed on"
@@ -3087,6 +3070,20 @@
     "contractBanner": {
       "title": "A report is linked to this contract",
       "cta": "View case details"
+    },
+    "list": {
+      "title": "Dispute cases",
+      "empty": "No dispute cases",
+      "emptyHint": "Reports linked to your rentals appear here.",
+      "actionNeeded": "Your action needed",
+      "filters": {
+        "all": "All",
+        "action": "Needs my action",
+        "settling": "Settling",
+        "lend": "With Lend",
+        "finished": "Finished"
+      },
+      "entry": "Dispute cases"
     }
   },
   "disputeFile": {

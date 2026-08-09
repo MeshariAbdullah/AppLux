@@ -8,6 +8,7 @@ import {
   CheckIcon,
   DocIcon,
   ReceiptIcon,
+  ShieldIcon,
 } from '@/components/icons';
 import { ENABLE_PAYMENTS_AND_NOTES } from '@/lib/featureFlags';
 import { useI18n, useT } from '@/lib/i18n';
@@ -147,7 +148,18 @@ export default function Contracts() {
 
   return (
     <>
-      <Header title={t('contracts.title')} />
+      <Header
+        title={t('contracts.title')}
+        trailing={
+          <Link
+            to="/disputes"
+            className="inline-flex items-center gap-1.5 h-9 px-3 rounded-xl bg-white text-navy-700 ring-1 ring-beige-200 text-[12px] font-semibold"
+          >
+            <ShieldIcon size={13} />
+            {t('disputes.list.entry')}
+          </Link>
+        }
+      />
       <Screen className="bg-canvas">
         {hasNothing ? (
           <EmptyRentals />
