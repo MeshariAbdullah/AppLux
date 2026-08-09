@@ -632,6 +632,14 @@ export type Database = {
         Args: { p_case_id: string; p_amount: number; p_note: string | null };
         Returns: string;
       };
+      register_push_token: {
+        Args: { p_token: string; p_platform: string };
+        Returns: undefined;
+      };
+      revoke_push_token: {
+        Args: { p_token: string };
+        Returns: undefined;
+      };
       /** Neutral availability check for the establishment Unified Number
        *  (700) — onboarding Step 2 (20260502124100). */
       check_unified_number_available: {

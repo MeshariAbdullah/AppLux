@@ -1,11 +1,12 @@
 import { Suspense, useEffect, type ReactElement } from 'react';
-import { Navigate, Route, Routes } from 'react-router-dom';
+import { Navigate, Route, Routes, useNavigate } from 'react-router-dom';
 import { AppLayout, AuthLayout } from '@/components/layout';
 import { useT } from '@/lib/i18n';
 import { lazyWithReload } from '@/lib/lazyWithReload';
 import { useStore } from '@/lib/store';
 import { useSupabaseAuth } from '@/lib/supabase';
 import { RequireRole } from '@/components/auth/RequireRole';
+import { startPushRegistration } from '@/lib/push/registerPush';
 
 // =====================================================================
 // Phase 5B route loading strategy.
@@ -218,6 +219,15 @@ function ProfileLoadError({
 }
 
 export function AppRoutes() {
+  const navigate = useNavigate();
+  const { configured, status } = useSupabaseAuth();
+  // APNs registration — native iOS only (web no-op), once the user is
+  // authenticated. Token ownership is server-authoritative.
+  useEffect(() => {
+    if (configured && status === 'authenticated') {
+      void startPushRegistration((to) => navigate(to));
+    }
+  }, [configured, status, navigate]);
   return (
     // One Suspense boundary for every lazy route: a loading chunk shows
     // the same RouteSpinner used for auth/profile waits — never a blank

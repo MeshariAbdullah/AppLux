@@ -306,6 +306,14 @@ function ConfiguredProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const signOut = useCallback(async () => {
+    // Best-effort: stop pushes to this device for the outgoing user
+    // BEFORE the session is destroyed (the RPC needs auth).
+    try {
+      const { revokePushToken } = await import('@/lib/push/registerPush');
+      await revokePushToken();
+    } catch {
+      /* best-effort */
+    }
     await authSignOut();
   }, []);
 
