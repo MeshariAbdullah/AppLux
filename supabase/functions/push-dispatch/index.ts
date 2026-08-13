@@ -2,8 +2,9 @@
 // Single-file, Supabase-Dashboard-compatible (no shared imports).
 //
 // Invoke on a schedule (Dashboard cron / pg_cron+pg_net) or manually.
-// Auth: requires the service-role key as the Bearer token (the
-// function itself also uses it for DB access) — clients cannot call it.
+// Auth: called service-to-service with the Supabase secret key in the
+// `apikey` header (verify_jwt = false); the service-role key is used
+// internally for DB access. Clients can never call it.
 //
 // Secrets (Edge Function secrets — NEVER in the client bundle):
 //   APNS_TEAM_ID      — Apple Developer Team ID
@@ -53,9 +54,20 @@ async function apnsJwt(): Promise<string> {
 }
 
 Deno.serve(async (req) => {
-  const auth = req.headers.get("authorization") ?? "";
-  if (auth !== `Bearer ${SERVICE_KEY}`) {
-    return new Response(JSON.stringify({ error: "unauthorized" }), { status: 401 });
+  // Service-to-service auth (matches the deployed Dashboard version):
+  // the Cron scheduler sends the Supabase secret key in the `apikey`
+  // header; the function compares it against the platform-provided
+  // SUPABASE_SECRET_KEYS. Requires verify_jwt = false for this
+  // function. SUPABASE_SERVICE_ROLE_KEY remains the privileged DB
+  // credential below.
+  const SECRET_KEYS = JSON.parse(Deno.env.get("SUPABASE_SECRET_KEYS") ?? "{}");
+  const EXPECTED_API_KEY = SECRET_KEYS["default"] ?? "";
+  const apiKey = req.headers.get("apikey") ?? "";
+  if (!EXPECTED_API_KEY || !apiKey || apiKey !== EXPECTED_API_KEY) {
+    return new Response(JSON.stringify({ error: "unauthorized" }), {
+      status: 401,
+      headers: { "content-type": "application/json" },
+    });
   }
   if (!TEAM_ID || !KEY_ID || !PRIVATE_KEY) {
     return new Response(JSON.stringify({ error: "apns secrets not configured" }), { status: 500 });

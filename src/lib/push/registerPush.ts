@@ -34,6 +34,9 @@ export async function startPushRegistration(
       );
     });
     await PushNotifications.addListener('registrationError', (e) => {
+      // Transient APNs failure: unlatch so the next auth/focus pass
+      // retries registration instead of being suppressed forever.
+      started = false;
       logEvent('rpc_failure', 'warn', { op: 'push_registration_error' }, e);
     });
     await PushNotifications.addListener('pushNotificationActionPerformed', (action) => {
@@ -46,6 +49,10 @@ export async function startPushRegistration(
     if (perm.receive === 'prompt') perm = await PushNotifications.requestPermissions();
     if (perm.receive === 'granted') await PushNotifications.register();
   } catch (err) {
+    // Recoverable startup failure (plugin import, permission API):
+    // unlatch so a later invocation retries — `started` must never
+    // permanently suppress registration after a failure.
+    started = false;
     logEvent('rpc_failure', 'warn', { op: 'push_bootstrap' }, err);
   }
 }

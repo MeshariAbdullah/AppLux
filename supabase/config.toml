@@ -12,3 +12,7 @@ verify_jwt = false
 # Scheduled cleanup is invoked by the platform scheduler, not end users.
 [functions.merchant-doc-cleanup]
 verify_jwt = false
+
+[functions.push-dispatch]
+# Cron calls this service-to-service with the secret key in `apikey`.
+verify_jwt = false

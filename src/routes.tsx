@@ -225,9 +225,13 @@ export function AppRoutes() {
   // APNs registration — native iOS only (web no-op), once the user is
   // authenticated. Token ownership is server-authoritative.
   useEffect(() => {
-    if (configured && status === 'authenticated') {
-      void startPushRegistration((to) => navigate(to));
-    }
+    if (!configured || status !== 'authenticated') return;
+    void startPushRegistration((to) => navigate(to));
+    // Retry on app focus: a no-op when already registered, a recovery
+    // path after a transient APNs/startup failure.
+    const onFocus = () => void startPushRegistration((to) => navigate(to));
+    window.addEventListener('focus', onFocus);
+    return () => window.removeEventListener('focus', onFocus);
   }, [configured, status, navigate]);
   return (
     // One Suspense boundary for every lazy route: a loading chunk shows
