@@ -21,6 +21,13 @@ const config: CapacitorConfig = {
   appId: 'sa.lend.app',
   appName: 'Lend',
   webDir: 'dist',
+  plugins: {
+    PushNotifications: {
+      // Show remote alerts even while the app is foregrounded — iOS
+      // renders nothing for alert pushes in the foreground otherwise.
+      presentationOptions: ['badge', 'sound', 'alert'],
+    },
+  },
   ios: {
     // App-shell fix: `contentInset: 'never'` lets the WKWebView cover
     // the ENTIRE screen (under the status bar and home indicator);

@@ -93,6 +93,7 @@ Deno.serve(async (req) => {
             authorization: `bearer ${await apnsJwt()}`,
             "apns-topic": TOPIC,
             "apns-push-type": "alert",
+            "apns-priority": "10",
             "apns-collapse-id": job.notification_id,
           },
           body: JSON.stringify({
@@ -123,6 +124,14 @@ Deno.serve(async (req) => {
           : { attempts: job.attempts + 1, last_error: lastError },
     ).eq("id", job.id);
     if (delivered) sent++; else failed++;
+    // Diagnosable without secrets: no tokens, no keys, truncated reason.
+    console.log(JSON.stringify({
+      job: job.id,
+      user: String(job.user_id).slice(0, 8),
+      tokens: (tokens ?? []).length,
+      outcome: delivered ? "sent" : (job.attempts + 1 >= 5 ? "failed" : "retry"),
+      reason: delivered ? undefined : lastError.slice(0, 160),
+    }));
   }
   return new Response(JSON.stringify({ processed: (jobs ?? []).length, sent, failed, tokensRevoked }), {
     headers: { "content-type": "application/json" },

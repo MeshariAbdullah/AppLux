@@ -15,7 +15,14 @@ import { requireSupabase } from '@/lib/supabase/client';
 let started = false;
 let lastToken: string | null = null;
 
-const ROUTE_WHITELIST = [/^\/disputes\/[a-f0-9-]+$/i, /^\/merchant\/damages\/[a-f0-9-]+$/i];
+// Exact real routes only (see routes.tsx) — anything else is ignored.
+const ROUTE_WHITELIST = [
+  /^\/disputes\/[a-f0-9-]+$/i,
+  /^\/merchant\/damages\/[a-f0-9-]+$/i,
+  /^\/review\/[A-Za-z0-9_-]+$/,
+  /^\/notifications$/,
+  /^\/merchant\/notifications$/,
+];
 
 export async function startPushRegistration(
   navigate: (to: string) => void,
@@ -24,6 +31,9 @@ export async function startPushRegistration(
   started = true;
   try {
     const { PushNotifications } = await import('@capacitor/push-notifications');
+    // Retry-safe: drop any listeners from a previous (failed) attempt
+    // so re-invocation never stacks duplicate handlers.
+    await PushNotifications.removeAllListeners();
     await PushNotifications.addListener('registration', (t) => {
       lastToken = t.value;
       const sb = requireSupabase();
