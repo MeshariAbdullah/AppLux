@@ -9,6 +9,7 @@ import {
 } from 'react';
 import ar from '@/locales/ar.json';
 import en from '@/locales/en.json';
+import { gregorianLocale } from '@/lib/format/date';
 
 export type Locale = 'ar' | 'en';
 export type Direction = 'rtl' | 'ltr';
@@ -105,10 +106,15 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
     [intlLocale],
   );
 
+  // Dates NEVER use `intlLocale`: bare 'ar-SA' resolves to the Islamic
+  // (Hijri) calendar on iOS/older ICU. Product rule is Gregorian-only
+  // in both languages — see src/lib/format/date.ts.
   const formatDate = useCallback(
     (d: Date | string | number, opts?: Intl.DateTimeFormatOptions) =>
-      new Intl.DateTimeFormat(intlLocale, opts ?? { dateStyle: 'medium' }).format(new Date(d)),
-    [intlLocale],
+      new Intl.DateTimeFormat(gregorianLocale(locale), opts ?? { dateStyle: 'medium' }).format(
+        new Date(d),
+      ),
+    [locale],
   );
 
   const value = useMemo<I18nContextValue>(

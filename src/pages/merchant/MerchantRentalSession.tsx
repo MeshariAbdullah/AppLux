@@ -17,6 +17,7 @@ import {
 import { logEvent } from '@/lib/observability/log';
 import { useI18n, useT } from '@/lib/i18n';
 import { formatValidUntil } from '@/lib/offerExpiry';
+import { formatGregorian } from '@/lib/format/date';
 import {
   createInvoiceWithItems,
   fetchRenterEligibility,
@@ -1691,7 +1692,7 @@ function OperationCard({
                 {t('merchant.session.operation.endsAtLabel')}
               </div>
               <div className="mt-0.5 text-[14px] font-semibold num text-ink-900 leading-tight">
-                {rentalEnd.toLocaleString(locale === 'ar' ? 'ar-SA' : 'en-GB', {
+                {formatGregorian(locale, rentalEnd, {
                   dateStyle: 'medium',
                   timeStyle: 'short',
                 })}

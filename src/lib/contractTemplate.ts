@@ -26,6 +26,7 @@
 // =====================================================================
 
 import { ENABLE_PAYMENTS_AND_NOTES } from '@/lib/featureFlags';
+import { GREGORIAN_LOCALE_AR, GREGORIAN_LOCALE_EN } from '@/lib/format/date';
 import type {
   ContractClause,
   Localized,
@@ -53,15 +54,15 @@ const SARAr = (n: number) =>
   `${n.toLocaleString('en-US', { maximumFractionDigits: 0 })} ر.س`;
 
 function fmtDateAr(iso: string): string {
-  // -u-nu-latn: Arabic (Gregorian) month names with Latin digits.
-  return new Date(iso).toLocaleDateString('ar-EG-u-nu-latn', {
+  // Pinned Gregorian calendar, Arabic month names, Latin digits.
+  return new Date(iso).toLocaleDateString(GREGORIAN_LOCALE_AR, {
     year: 'numeric',
     month: 'long',
     day: 'numeric',
   });
 }
 function fmtDateEn(iso: string): string {
-  return new Date(iso).toLocaleDateString('en-GB', {
+  return new Date(iso).toLocaleDateString(GREGORIAN_LOCALE_EN, {
     year: 'numeric',
     month: 'short',
     day: 'numeric',

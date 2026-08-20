@@ -397,7 +397,7 @@ export default function MerchantRentalClose() {
                 </div>
               </div>
               {/* Design M14: full-width label/value rows (the old 3-col
-                  tiles clipped Hijri dates). */}
+                  tiles clipped long localized dates). */}
               <div>
                 <SummaryRow
                   label={t('merchant.close.fields.start')}

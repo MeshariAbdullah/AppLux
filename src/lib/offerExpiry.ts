@@ -15,6 +15,8 @@
 //   "27 يوليو 2026م، 11:45 م"  /  "27 July 2026, 11:45 PM"
 // =====================================================================
 
+import { GREGORIAN_LOCALE_AR, GREGORIAN_LOCALE_EN } from '@/lib/format/date';
+
 export function isOfferExpired(
   expiresAt: string | null | undefined,
   nowMs: number = Date.now(),
@@ -34,12 +36,12 @@ export function formatValidUntil(
   if (Number.isNaN(d.getTime())) return null;
 
   if (locale === 'ar') {
-    const date = d.toLocaleDateString('ar-EG-u-nu-latn', {
+    const date = d.toLocaleDateString(GREGORIAN_LOCALE_AR, {
       year: 'numeric',
       month: 'long',
       day: 'numeric',
     });
-    const time = d.toLocaleTimeString('ar-EG-u-nu-latn', {
+    const time = d.toLocaleTimeString(GREGORIAN_LOCALE_AR, {
       hour: 'numeric',
       minute: '2-digit',
       hour12: true,
@@ -47,12 +49,12 @@ export function formatValidUntil(
     // ar-EG renders the daypart as ص/م already; normalise spacing.
     return `${date}م، ${time}`;
   }
-  const date = d.toLocaleDateString('en-GB', {
+  const date = d.toLocaleDateString(GREGORIAN_LOCALE_EN, {
     year: 'numeric',
     month: 'long',
     day: 'numeric',
   });
-  const time = d.toLocaleTimeString('en-GB', {
+  const time = d.toLocaleTimeString(GREGORIAN_LOCALE_EN, {
     hour: 'numeric',
     minute: '2-digit',
     hour12: true,

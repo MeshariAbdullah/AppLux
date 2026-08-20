@@ -34,17 +34,6 @@ export async function createDamageCase(
   return data;
 }
 
-export async function fetchDamageCase(id: string): Promise<DamageCaseRow | null> {
-  const sb = requireSupabase();
-  const { data, error } = await sb
-    .from('damage_cases')
-    .select('*')
-    .eq('id', id)
-    .maybeSingle();
-  if (error) throw error;
-  return data;
-}
-
 /**
  * The contract's damage/non-return case, newest first, ignoring
  * dismissed ones. Drives the dispute state on the rental pages
@@ -112,34 +101,8 @@ export async function listCaseEvidence(
   return data ?? [];
 }
 
-/**
- * Signed preview URLs for a case's photo evidence, in upload order.
- * Best-effort per item: an entry that fails to sign is skipped rather
- * than failing the page (the case row is still fully renderable).
- */
-export async function listCaseEvidenceUrls(
-  caseId: string,
-  expiresInSeconds = 60 * 60,
-): Promise<string[]> {
-  const sb = requireSupabase();
-  const rows = await listCaseEvidence(caseId);
-  const urls = await Promise.all(
-    rows.map(async (row) => {
-      const { data } = await sb.storage
-        .from(DAMAGE_EVIDENCE_BUCKET)
-        .createSignedUrl(row.storage_path, expiresInSeconds);
-      return data?.signedUrl ?? null;
-    }),
-  );
-  return urls.filter((u): u is string => Boolean(u));
-}
-
-// ---------------------------------------------------------------------
-// Storage hooks — wired but not yet mounted in the UI. The bucket
-// `damage-evidence` should be created in the Supabase dashboard with
-// merchant-write / admin-read policies (Phase 5 will add the UI).
-// ---------------------------------------------------------------------
-
+/** Storage bucket for damage/dispute evidence photos (merchant-write,
+ *  parties-read via RLS; signed URLs generated per view). */
 export const DAMAGE_EVIDENCE_BUCKET = 'damage-evidence';
 
 export type UploadEvidenceInput = {

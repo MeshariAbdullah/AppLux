@@ -23,6 +23,7 @@ import {
   WalletIcon,
 } from '@/components/icons';
 import { useI18n, useT } from '@/lib/i18n';
+import { gregorianLocale } from '@/lib/format/date';
 import { resolveMerchantName } from '@/lib/merchantName';
 import { useStore } from '@/lib/store';
 import {
@@ -312,9 +313,10 @@ export default function ContractTracking() {
     setExportError(null);
     try {
       const { row, invoiceRow, itemName, durationDays, branchHours } = pdfBits;
-      // Latin digits in both languages (app-wide contract rule). One
-      // consistent Arabic form throughout: "26 يوليو 2026م".
-      const dateTag = locale === 'ar' ? 'ar-EG-u-nu-latn' : 'en-GB';
+      // Latin digits in both languages (app-wide contract rule) on the
+      // pinned Gregorian calendar. One consistent Arabic form
+      // throughout: "26 يوليو 2026م".
+      const dateTag = gregorianLocale(locale);
       const fmtPdfDate = (iso: string) => {
         const s = new Date(iso).toLocaleDateString(dateTag, {
           year: 'numeric',
