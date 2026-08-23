@@ -38,7 +38,16 @@
     "viewAll": "View all",
     "optional": "Optional",
     "skip": "Skip",
-    "clear": "Clear"
+    "clear": "Clear",
+    "datePicker": {
+      "openLabel": "Pick date and time",
+      "prevMonth": "Previous month",
+      "nextMonth": "Next month",
+      "time": "Time",
+      "hour": "Hour",
+      "minute": "Minute",
+      "done": "Done"
+    }
   },
   "session": {
     "timeout": {

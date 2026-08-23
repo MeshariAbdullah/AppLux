@@ -1,7 +1,14 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Header, Screen } from '@/components/layout';
-import { Button, FormField, Input, NumericField, Select } from '@/components/ui';
+import {
+  Button,
+  FormField,
+  GregorianDateTimeField,
+  Input,
+  NumericField,
+  Select,
+} from '@/components/ui';
 import {
   AlertIcon,
   ArrowIcon,
@@ -150,10 +157,11 @@ type VerifyState = {
 type OperationDraft = {
   itemName: string;
   category: RentalCategoryDB;
-  /** `<input type="datetime-local">` value — local-timezone
-   *  "YYYY-MM-DDTHH:MM" (no timezone suffix). Converted to ISO
-   *  UTC when the invoice is created. Default seeded at wizard
-   *  entry to "now". Required per Phase 8f validation. */
+  /** Rental start — local-timezone "YYYY-MM-DDTHH:MM" (no timezone
+   *  suffix; same contract as datetime-local, now edited through the
+   *  in-app Gregorian picker). Converted to ISO UTC when the invoice
+   *  is created. Default seeded at wizard entry to "now". Required
+   *  per Phase 8f validation. */
   startsAt: string;
   rentalDays: string;     // strings for input ergonomics; coerced on use
   dailyRate: string;
@@ -275,14 +283,14 @@ function dateTimeInputFrom(ms: number): string {
   )}:${pad(d.getMinutes())}`;
 }
 
-/** Local-timezone "YYYY-MM-DDTHH:MM" for <input type="datetime-local">. */
+/** Local-timezone "YYYY-MM-DDTHH:MM" seed for the start-date picker. */
 function nowForDateTimeInput(): string {
   return dateTimeInputFrom(Date.now());
 }
 
 /**
- * Parse a datetime-local string ("YYYY-MM-DDTHH:MM") into a Date in
- * the merchant's local timezone. Returns null if the value is empty
+ * Parse a "YYYY-MM-DDTHH:MM" value (the picker's contract) into a Date
+ * in the merchant's local timezone. Returns null if the value is empty
  * or unparseable.
  */
 function parseDateTimeLocal(value: string): Date | null {
@@ -831,10 +839,10 @@ export default function MerchantRentalSession() {
         lightDamageFraction,
         lateReturnMultiplier,
         // Merchant-set rental start moment. `parseDateTimeLocal`
-        // interprets the datetime-local input in the browser's
-        // (i.e. the merchant's) timezone; `.toISOString()` normalises
-        // to UTC for storage. The DB column is timestamptz, so the
-        // instant is preserved regardless of viewer timezone.
+        // interprets the picker value in the browser's (i.e. the
+        // merchant's) timezone; `.toISOString()` normalises to UTC
+        // for storage. The DB column is timestamptz, so the instant
+        // is preserved regardless of viewer timezone.
         startsAt:
           parseDateTimeLocal(session.operation.startsAt)?.toISOString() ?? null,
         items: [
@@ -1612,11 +1620,10 @@ function OperationCard({
   const rentalEnd = computeRentalEnd(operation.startsAt, operation.rentalDays);
   const parsedStart = parseDateTimeLocal(operation.startsAt);
   const startInvalid = !parsedStart;
-  // Business rule: starts_at > now(). datetime-local has minute
+  // Business rule: starts_at > now(). The picker has minute
   // granularity, so the current minute (:00) is <= now (has seconds) and
   // is correctly treated as past. `nowMs` ticks so this advances live.
   const startPast = parsedStart !== null && parsedStart.getTime() <= nowMs;
-  const minDateTime = dateTimeInputFrom(nowMs);
   const startError = startInvalid
     ? t('merchant.session.operation.startsAtRequired')
     : startPast
@@ -1675,14 +1682,16 @@ function OperationCard({
             hint={!startError ? t('merchant.session.operation.startsAtHint') : undefined}
             error={startError}
           >
-            <Input
-              type="datetime-local"
-              dir="ltr"
+            {/* In-app Gregorian picker — a native datetime-local input
+                renders the OS calendar, which is Hijri on devices set
+                to Umm al-Qura. Same value contract, same validation. */}
+            <GregorianDateTimeField
               value={operation.startsAt}
-              min={minDateTime}
-              onChange={(e) => setOperation({ startsAt: e.target.value })}
+              onValueChange={(v) => setOperation({ startsAt: v })}
+              locale={locale}
+              t={t}
               invalid={Boolean(startError)}
-              className="num text-left"
+              minMs={nowMs}
             />
           </FormField>
 

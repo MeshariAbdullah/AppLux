@@ -38,7 +38,16 @@
     "viewAll": "عرض الكل",
     "optional": "اختياري",
     "skip": "تخطي",
-    "clear": "مسح"
+    "clear": "مسح",
+    "datePicker": {
+      "openLabel": "اختيار التاريخ والوقت",
+      "prevMonth": "الشهر السابق",
+      "nextMonth": "الشهر التالي",
+      "time": "الوقت",
+      "hour": "الساعة",
+      "minute": "الدقيقة",
+      "done": "تم"
+    }
   },
   "session": {
     "timeout": {
