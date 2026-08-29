@@ -48,9 +48,6 @@ const RPC_UNAUTHORIZED_CODES = new Set([
   'P0042', // record_contract_handover — not contract customer
   'P0051', // verify_and_activate_rental — not your note
   'P0072', // request_account_deletion — customers only
-  'P0080', // merchant_set_customer_national_id — not authenticated
-  'P0081', // merchant_set_customer_national_id — not authorised
-  'P0085', // merchant_set_customer_national_id — target not customer
   'P0100', // profiles guard — role/account_status self-change blocked
   'P0112', // receipt photos — not the contract customer
 ]);
@@ -76,9 +73,8 @@ const DELETION_BLOCKED_CODES: Record<string, string> = {
 
 /** RPC guard codes that mean "the submitted details are invalid". */
 const RPC_VALIDATION_CODES = new Set([
-  'P0082', // invalid National ID format
-  'P0083', // invalid mobile format
-  'P0084', // customer not found / mobile mismatch
+  'P0190', // merchant OTP — invalid mobile format
+  'P0191', // merchant OTP — no customer account for this mobile
 ]);
 
 export function translateError(
@@ -135,6 +131,12 @@ export function translateError(
     // Offer expiry rule (20260502123800): rental start already passed
     // at issuance — shown to the MERCHANT.
     if (code === 'P0180') return t('errors.offerStartPassed');
+    // Contract identity snapshots are immutable (20260502125100).
+    if (code === 'P0151' || code === 'P0152') return t('errors.conflict');
+    // Customer-presence OTP (20260502125100) — the merchant session
+    // maps these to specific copy via OtpError; this is the fallback.
+    if (code === 'P0192' || code === 'P0193' || code === 'P0194')
+      return t('errors.conflict');
     if (code === 'P0110') return t('errors.validation'); // empty path guard
     if (code === 'P0114') return t('errors.conflict'); // wrong contract state
     // P0001 = default RAISE — all current uses are state guards
@@ -209,10 +211,8 @@ export function translateAuthError(err: unknown, t: TranslateFn): string {
     return t('auth.errors.emailNotConfirmed');
   }
   // GoTrue surfaces ANY failure inside the signup trigger as this one
-  // opaque message. The trigger now has TWO constraints real input can
-  // violate — the customer-mobile unique index
-  // (profiles_mobile_customer_unique) and the customer-National-ID
-  // unique index (profiles_national_id_customer_unique, Bug 2) — so
+  // opaque message. The one constraint real input can violate is the
+  // customer-mobile unique index (profiles_mobile_customer_unique) —
   // the safe translation is the generic privacy-preserving conflict
   // message that never reveals which datum is taken or to whom.
   if (message.includes('database error saving new user')) {

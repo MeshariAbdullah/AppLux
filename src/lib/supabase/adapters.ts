@@ -657,7 +657,6 @@ export function adaptUserRecord(
     id: profile.id,
     fullName,
     initials: deriveTextInitials(fullName),
-    nationalId: profile.national_id ?? '',
     mobile: profile.mobile ?? '',
     email: profile.email ?? '',
     city: profile.city ?? '',

@@ -202,7 +202,8 @@ Before adding testers, confirm in App Store Connect → TestFlight:
       HTTPS). Apple changes the wording every year — read the
       prompts carefully.
 - [ ] **What to Test** filled in with:
-      - National ID format (10 digits, starts with 1 or 2)
+      - Contract National ID entry in the merchant flow (10 digits,
+        starts with 1 or 2) — signup has NO National ID field
       - Mobile format (5XXXXXXXX, +966 country code)
       - A note that payment + Nafath are **simulated** in this
         build, with labels "SIMULATION — TESTING ONLY" inside the

@@ -28,10 +28,10 @@ ID (LND-XXXXXXXX) plus a screenshot for any technical error.
 | # | Actor | Starting condition | Action | Expected result | Pass/Fail | Notes |
 |---|---|---|---|---|---|---|
 | 1.1 | Customer | Signed out, `/welcome` | Open the app root | Customer welcome renders (Arabic RTL), no demo data visible anywhere | | |
-| 1.2 | Customer | `/auth/register` | Register with full name, National ID (10 digits, starts 1/2), mobile (5xxxxxxxx), email + password | Account created; email-confirmation panel or direct sign-in per project email settings | | |
-| 1.3 | Customer | Registration form | Enter an invalid National ID (9 digits) | Inline validation error; submit blocked | | |
+| 1.2 | Customer | `/auth/register` | Register with full name, mobile (5xxxxxxxx), email + password | Account created; email-confirmation panel or direct sign-in per project email settings. **NO National ID field anywhere in signup** | | |
+| 1.3 | Customer | Registration form | Inspect every signup step | No National ID (or last-4) input exists; account is created without it | | |
 | 1.4 | Customer | Registered account | Sign in at `/auth/login` | Lands on customer home; role is customer | | |
-| 1.5 | Customer | Signed in | Open the profile page | Name/mobile shown; National ID **not** displayed in full anywhere | | |
+| 1.5 | Customer | Signed in | Open the profile page | Name/mobile shown; **no National ID row** (it is contract data, not profile data) | | |
 | 1.6 | Admin | Admin console → users | Locate the new customer, assign an eligibility limit (e.g. 5,000) | Eligibility saved; customer sees no admin internals | | |
 
 ## 2. New merchant application
@@ -73,12 +73,13 @@ ID (LND-XXXXXXXX) plus a screenshot for any technical error.
 | # | Actor | Starting condition | Action | Expected result | Pass/Fail | Notes |
 |---|---|---|---|---|---|---|
 | 5.1 | Merchant | Dashboard | Tap «إصدار عقد إيجار جديد» | Focused 5-step session opens; bottom nav hidden; «1 / 5» | | |
-| 5.2 | Merchant | Verify step | Look up the §1 customer's mobile | Existence only — customer NAME NOT shown | | |
-| 5.3 | Merchant | Lookup done | Enter WRONG last-4 of the customer's National ID | Mismatch error; still no name revealed | | |
-| 5.4 | Merchant | Lookup done | Enter the correct last-4 | Customer name revealed only now | | |
+| 5.2 | Merchant | Verify step | Look up the §1 customer's mobile | Existence only — customer NAME NOT shown; NO last-4-of-ID prompt anywhere | | |
+| 5.3 | Merchant | Lookup done | Send the verification code, then enter a WRONG code | «الرمز غير صحيح»; still no name revealed | | |
+| 5.4 | Merchant | Lookup done | Enter the correct code the customer provides (temporary dev code `000000` until the real OTP provider ships) | Customer name revealed only now | | |
 | 5.5 | Merchant | Operation step | Item description, days, daily rate, ORIGINAL item value above the eligibility limit | Eligibility check returns insufficient; reduce-value path offered | | |
 | 5.6 | Merchant | Operation step | Set a value within the limit and continue | «العميل مؤهَّل» (live read each time) | | |
-| 5.7 | Merchant | Contract step | Review adjustable clauses, issue the package | ONE issuance; M11 success: green check, REAL invoice reference, «المرحلة 2 من 4 · مراجعة العميل» | | |
+| 5.7 | Merchant | Contract step | Try to issue WITHOUT the customer National ID | Issue CTA disabled until a valid 10-digit ID (1/2 prefix) is entered | | |
+| 5.7b | Merchant | Contract step | Enter the customer's full National ID, review adjustable clauses, issue the package | ONE issuance; M11 success: green check, REAL invoice reference, «المرحلة 2 من 4 · مراجعة العميل» | | |
 | 5.8 | Merchant | Success screen | Verify absence of payment/note/Nafath/Nafith wording | None anywhere | | |
 | 5.9 | Merchant | Success screen | Tap «متابعة الإيجارات» | Rentals list opens pre-filtered to «مراجعة العميل» with the new offer | | |
 
@@ -86,7 +87,7 @@ ID (LND-XXXXXXXX) plus a screenshot for any technical error.
 
 | # | Actor | Starting condition | Action | Expected result | Pass/Fail | Notes |
 |---|---|---|---|---|---|---|
-| 6.1 | Customer | Signed in | Open the offer (notification / review link) | Offer + contract terms visible; 4-stage journey shows stage 2 current | | |
+| 6.1 | Customer | Signed in | Open the offer (notification / review link) | Offer + contract terms visible; the contract step shows the National ID exactly as the merchant recorded it for THIS contract | | |
 | 6.2 | Customer | Review screen | Verify absence of payment/note/Nafath UI | No payment button, no note signing, no Nafath step | | |
 | 6.3 | Customer | Review screen | Accept the offer | Rental activates immediately (no-payment path); journey moves to «بدء الإيجار» | | |
 | 6.4 | Customer | After accept | Check customer rentals/tracking | Active rental with correct dates and amounts | | |
@@ -178,23 +179,24 @@ constant `ENABLE_PAYMENTS_AND_NOTES = false` — no env variable involved.
 Paste in the Supabase SQL editor (SELECTs only — changes nothing):
 
 ```sql
-select 'lookup_renter_by_mobile 3-col' as check,
+select 'lookup_renter_by_mobile 2-col' as check,
        (select count(*) from information_schema.parameters
          where specific_schema='public'
            and specific_name like 'lookup_renter_by_mobile%'
-           and parameter_mode='OUT') = 3 as ok
+           and parameter_mode='OUT') = 2 as ok
 union all
-select 'confirm_renter_presence', exists
+select 'merchant_start_renter_otp', exists
   (select 1 from pg_proc p join pg_namespace n on n.oid=p.pronamespace
-    where n.nspname='public' and p.proname='confirm_renter_presence')
+    where n.nspname='public' and p.proname='merchant_start_renter_otp')
+union all
+select 'merchant_verify_renter_otp', exists
+  (select 1 from pg_proc p join pg_namespace n on n.oid=p.pronamespace
+    where n.nspname='public' and p.proname='merchant_verify_renter_otp')
 union all
 select 'get_renter_eligibility', exists
   (select 1 from pg_proc p join pg_namespace n on n.oid=p.pronamespace
     where n.nspname='public' and p.proname='get_renter_eligibility')
-union all
-select 'merchant_set_customer_national_id', exists
-  (select 1 from pg_proc p join pg_namespace n on n.oid=p.pronamespace
-    where n.nspname='public' and p.proname='merchant_set_customer_national_id')
+
 union all
 select 'activate_rental_without_payment_and_note', exists
   (select 1 from pg_proc p join pg_namespace n on n.oid=p.pronamespace

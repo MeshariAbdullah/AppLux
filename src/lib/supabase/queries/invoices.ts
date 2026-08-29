@@ -32,6 +32,12 @@ export type CreateInvoiceInput = {
    *  the contract's start_date defaults to the customer's
    *  acceptance day (legacy behaviour). */
   startsAt?: string | null;
+  /** Customer National ID for THIS contract — entered by the merchant
+   *  in the contract-preparation step (canonical 10 digits). Recorded
+   *  on the offer, reviewed by the customer, and frozen onto the
+   *  contract at acceptance (20260502125100). Contract data — never
+   *  written to the customer's profile. */
+  lesseeNationalId: string;
   items: Array<Omit<RentalInvoiceItemInsert, 'invoice_id'>>;
 };
 
@@ -74,6 +80,7 @@ export async function createInvoiceWithItems(
       issued_at: new Date().toISOString(),
       expires_at: input.expiresAt ?? null,
       starts_at: input.startsAt ?? null,
+      lessee_national_id: input.lesseeNationalId,
       scan_token: scanToken,
       notes: input.notes ?? null,
     })

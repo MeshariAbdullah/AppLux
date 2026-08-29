@@ -29,7 +29,6 @@ import {
   createInvoiceWithItems,
   fetchRenterEligibility,
   fetchMyMerchant,
-  merchantSetCustomerNationalId,
   useSupabaseAuth,
   type MerchantRow,
   type ProfileRow,
@@ -37,11 +36,11 @@ import {
   type RentalEligibilityRow,
   type RentalInvoiceRow,
 } from '@/lib/supabase';
-import { lookupRenterByMobile } from '@/lib/otp';
+import { lookupRenterByMobile, sendOtp, verifyOtp, OtpError } from '@/lib/otp';
 import {
-  confirmRenterPresence,
-  RenterPresenceError,
-} from '@/lib/renterVerification';
+  classifyNationalId,
+  normalizeDigits,
+} from '@/lib/validation/customer';
 import {
   classifyMobile,
   maskMobile,
@@ -92,8 +91,9 @@ function verifyMobileIssueMessage(
 
 // =====================================================================
 // Typed session state — keeps the in-store rental session legible in
-// one place. When a real SMS provider arrives, only `sendRenterCode` /
-// `verifyRenterCode` below change; the SessionState shape stays.
+// one place. The verify step runs on the OTP service (src/lib/otp):
+// when the real SMS provider arrives, only that module's provider
+// changes; the SessionState shape and this screen stay.
 // =====================================================================
 
 type SessionStep =
@@ -105,17 +105,19 @@ type SessionStep =
   | 'issued';
 
 /**
- * Granular verification status. The interim renter-presence flow uses
- * a 4-state machine (no separate "code sent" step — the challenge input
- * is rendered immediately once existence is confirmed). When Twilio OTP
- * edge functions are deployed, an `otp_sent` state can be reintroduced.
+ * Granular verification status for the customer-presence OTP flow:
+ * lookup by mobile (existence only), then a one-time code is issued
+ * for the customer and the merchant enters the code the customer
+ * provides. Success confirms control of the registered Lend mobile —
+ * it is NOT a National ID / government identity verification.
  */
 type VerificationStatus =
   | 'unverified'   // mobile field empty / has not been searched yet
   | 'looking_up'   // querying profiles by mobile
   | 'not_found'    // no profile matches; renter must complete account first
-  | 'found'        // existence confirmed — UI prompts for the ID last-4
-  | 'verified';    // identity confirmed for this session
+  | 'found'        // existence confirmed — merchant can send the OTP
+  | 'otp_sent'     // code issued — waiting for the customer's code
+  | 'verified';    // presence confirmed for this session
 
 /** Three macro states the merchant + renter actually need to see. */
 type MacroVerification =
@@ -126,37 +128,28 @@ type MacroVerification =
 
 type VerifyState = {
   mobile: string;
-  /** Renter challenge — currently the last 4 of their National ID;
-   *  becomes the SMS OTP when the Twilio edge functions are deployed. */
+  /** The one-time verification code the customer provides. */
   challenge: string;
   status: VerificationStatus;
   renter: ProfileRow | null;
   /** Customer profile id captured from `lookup_renter_by_mobile`. Kept
-   *  separately from `renter` (which stays null until confirmation) so
-   *  the merchant-side national-id write RPC can address the profile
-   *  without exposing name/city to the merchant pre-confirmation. */
+   *  separately from `renter`, which stays null until the OTP
+   *  succeeds — nothing identifying is shown pre-verification. */
   renterId: string | null;
-  /** true when the matched profile already has profiles.national_id,
-   *  false when the merchant must fill it in before continuing to
-   *  confirm_renter_presence. null while the lookup hasn't fired
-   *  (or for legacy demo fallbacks). */
-  hasNationalId: boolean | null;
-  /** Draft input for the missing-national-id capture. Cleared once
-   *  the RPC succeeds. */
-  nationalIdInput: string;
-  /** Independent submit flag for the national-id save; the main
-   *  `status` machine keeps its meaning ('found' is a stable state
-   *  the merchant can dwell on while filling the missing id). */
-  nationalIdSaving: boolean;
-  /** Optional inline error line for the national-id capture (invalid
-   *  format, RPC error, etc.). */
-  nationalIdError: string | null;
+  /** Submit flag for the send/verify OTP calls. */
+  otpBusy: boolean;
   error: string | null;
 };
 
 type OperationDraft = {
   itemName: string;
   category: RentalCategoryDB;
+  /** Customer National ID for THIS contract — entered by the merchant
+   *  in the contract-preparation step, recorded on the offer
+   *  (rental_invoices.lessee_national_id) and reviewed by the customer
+   *  before acceptance. Contract data, never written to the customer's
+   *  account/profile. */
+  lesseeNationalId: string;
   /** Rental start — local-timezone "YYYY-MM-DDTHH:MM" (no timezone
    *  suffix; same contract as datetime-local, now edited through the
    *  in-app Gregorian picker). Converted to ISO UTC when the invoice
@@ -205,15 +198,13 @@ const INITIAL_SESSION: SessionState = {
     status: 'unverified',
     renter: null,
     renterId: null,
-    hasNationalId: null,
-    nationalIdInput: '',
-    nationalIdSaving: false,
-    nationalIdError: null,
+    otpBusy: false,
     error: null,
   },
   operation: {
     itemName: '',
     category: 'dress',
+    lesseeNationalId: '',
     // startsAt is set at wizard entry via useEffect below so the
     // default reflects the merchant's local timezone at the exact
     // moment they open the flow — INITIAL_SESSION is captured at
@@ -257,7 +248,7 @@ const STEPS: SessionStep[] = [
 function macroVerificationState(s: VerificationStatus): MacroVerification {
   if (s === 'verified') return 'verified';
   if (s === 'not_found') return 'not_found';
-  if (s === 'found' || s === 'looking_up') return 'pending';
+  if (s === 'found' || s === 'otp_sent' || s === 'looking_up') return 'pending';
   return 'idle';
 }
 
@@ -472,16 +463,10 @@ export default function MerchantRentalSession() {
       // Production path requires the live backend. The dev fallback below
       // is intentionally minimal and is tree-shaken out of production builds.
       if (DEV_DEMO_FALLBACK) {
-        // Simulate the missing-national-id path so the merchant flow can
-        // be exercised without a live backend. Real IDs are never written
-        // in this branch — the "Save" button no-ops when Supabase is off.
         updateVerify({
           status: 'found',
           renter: null,
           renterId: 'dev-renter',
-          hasNationalId: false,
-          nationalIdInput: '',
-          nationalIdError: null,
         });
         return;
       }
@@ -500,7 +485,6 @@ export default function MerchantRentalSession() {
           status: 'not_found',
           renter: null,
           renterId: null,
-          hasNationalId: null,
         });
         return;
       }
@@ -508,19 +492,10 @@ export default function MerchantRentalSession() {
       // renter's name, city, or other details to the merchant until the
       // OTP succeeds. The renter object stays null; the verify card
       // shows a generic "Renter is registered" panel.
-      //
-      // `renterId` IS retained so we can address the profile for the
-      // merchant-side national-id write when has_national_id is false.
-      // The RPC still guards mobile match + role server-side, so exposing
-      // just the id here doesn't leak anything the merchant couldn't
-      // already infer from the successful lookup.
       updateVerify({
         status: 'found',
         renter: null,
         renterId: existence.id,
-        hasNationalId: existence.has_national_id,
-        nationalIdInput: '',
-        nationalIdError: null,
       });
     } catch (err) {
       // Backend or network error — don't surface the raw provider message;
@@ -533,101 +508,99 @@ export default function MerchantRentalSession() {
     }
   };
 
-  // Merchant fills a missing customer National ID during the verify
-  // step. Only reachable when `hasNationalId === false` — the UI hides
-  // the input as soon as the RPC succeeds.
-  //
-  // Client-side format check is defence-in-depth; the RPC is the
-  // authoritative validator (Saudi ID format, role check, mobile match,
-  // "must-be-empty" guard, active merchant/admin check).
-  const handleSaveCustomerNationalId = async () => {
-    const raw = session.verify.nationalIdInput.trim();
-    if (!/^[12]\d{9}$/.test(raw)) {
-      updateVerify({
-        nationalIdError: t('merchant.session.verify.nationalId.invalid'),
-      });
-      return;
+  /** Maps an OTP service failure to the merchant-facing message. */
+  const otpErrorMessage = (err: unknown): string => {
+    if (err instanceof OtpError) {
+      switch (err.code) {
+        case 'forbidden':
+          return t('merchant.session.verify.errors.forbidden');
+        case 'invalid_mobile':
+          return verifyMobileIssueMessage('invalid_format', t);
+        case 'no_customer':
+          return t('merchant.session.verify.notFound.body');
+        case 'throttled':
+          return t('merchant.session.verify.errors.otpThrottled');
+        case 'no_active_challenge':
+          return t('merchant.session.verify.errors.otpNoActiveChallenge');
+        case 'too_many_attempts':
+          return t('merchant.session.verify.errors.otpTooManyAttempts');
+        case 'invalid_code':
+          return t('merchant.session.verify.errors.otpWrongCode');
+        default:
+          return t('merchant.session.verify.errors.otpSendFailed');
+      }
     }
+    return t('merchant.session.verify.errors.otpSendFailed');
+  };
+
+  // Issues a one-time code for the customer registered under the typed
+  // mobile. The OTP service (src/lib/otp) hides the provider — the
+  // temporary dev-rpc implementation today, the real SMS provider
+  // later, with no change here.
+  const handleSendOtp = async () => {
+    if (session.verify.status !== 'found' && session.verify.status !== 'otp_sent') return;
+    if (session.verify.otpBusy) return;
     const classification = classifyMobile(session.verify.mobile);
     if (classification.kind !== 'valid') {
       updateVerify({ error: verifyMobileIssueMessage(classification.issue, t) });
       return;
     }
-    if (!session.verify.renterId) {
-      updateVerify({
-        nationalIdError: t('merchant.session.verify.errors.mobileVerifyFailed'),
-      });
+
+    if (!supabaseAuth.configured) {
+      if (DEV_DEMO_FALLBACK) {
+        updateVerify({ status: 'otp_sent', challenge: '', error: null });
+        return;
+      }
+      updateVerify({ error: t('merchant.session.verify.errors.backendRequired') });
       return;
     }
 
-    if (!supabaseAuth.configured) {
-      // Dev-only path — no live backend, so we simulate a successful
-      // save. The tree-shake guard means production never enters here.
-      if (DEV_DEMO_FALLBACK) {
+    updateVerify({ otpBusy: true, error: null });
+    try {
+      await sendOtp(classification.canonical);
+      updateVerify({ status: 'otp_sent', challenge: '', otpBusy: false, error: null });
+    } catch (err) {
+      logEvent('rpc_failure', 'warn', { op: 'merchant_start_renter_otp' }, err);
+      // A throttle just means a code is already live — move to the code
+      // input instead of stranding the merchant on the send button.
+      if (err instanceof OtpError && err.code === 'throttled') {
         updateVerify({
-          hasNationalId: true,
-          nationalIdInput: '',
-          nationalIdSaving: false,
-          nationalIdError: null,
+          status: 'otp_sent',
+          otpBusy: false,
+          error: t('merchant.session.verify.errors.otpThrottled'),
         });
         return;
       }
-      updateVerify({
-        nationalIdError: t('merchant.session.verify.errors.backendRequired'),
-      });
-      return;
-    }
-
-    updateVerify({ nationalIdSaving: true, nationalIdError: null });
-    try {
-      await merchantSetCustomerNationalId({
-        customerId: session.verify.renterId,
-        mobile: classification.canonical,
-        nationalId: raw,
-      });
-      updateVerify({
-        hasNationalId: true,
-        nationalIdInput: '',
-        nationalIdSaving: false,
-        nationalIdError: null,
-      });
-    } catch (err) {
-      logEvent('rpc_failure', 'warn', { op: 'merchant_set_customer_national_id' }, err);
-      updateVerify({
-        nationalIdSaving: false,
-        nationalIdError: t('merchant.session.verify.errors.mobileVerifyFailed'),
-      });
+      updateVerify({ otpBusy: false, error: otpErrorMessage(err) });
     }
   };
 
-  // Interim renter-presence confirmation. Replaces the OTP send/verify
-  // pair until Twilio Verify edge functions are deployed. Returns the
-  // renter's safe profile fields only when the canonical mobile AND the
-  // last 4 of their National ID both match server-side.
-  const handleConfirmPresence = async () => {
-    if (session.verify.status !== 'found') return;
-    // Block confirmation until the merchant has captured the customer's
-    // National ID. UI already hides the challenge input in that state,
-    // but this defence-in-depth guard keeps handler + view in sync.
-    if (session.verify.hasNationalId === false) return;
-    // Re-classify the mobile (defense-in-depth — lookup normally catches
-    // this first, but the field could be edited after lookup succeeded).
+  // Verifies the code the customer provided. On success the service
+  // returns the customer's safe profile fields — the ONLY point where
+  // identifying details reach the merchant device.
+  const handleVerifyOtp = async () => {
+    if (session.verify.status !== 'otp_sent') return;
+    if (session.verify.otpBusy) return;
     const classification = classifyMobile(session.verify.mobile);
     if (classification.kind !== 'valid') {
       updateVerify({ error: verifyMobileIssueMessage(classification.issue, t) });
       return;
     }
-    const trimmed = session.verify.challenge.replace(/\D/g, '');
-    if (trimmed.length !== 4) {
-      updateVerify({ error: t('merchant.session.verify.errors.idLast4Length') });
+    const code = session.verify.challenge.replace(/\D/g, '');
+    if (code.length < 4) {
+      updateVerify({ error: t('merchant.session.verify.errors.otpWrongCode') });
       return;
     }
 
     if (!supabaseAuth.configured) {
       if (DEV_DEMO_FALLBACK) {
-        // Synthesize a renter only at verification time, mirroring the
-        // live flow where renter details are exclusively revealed after
-        // a successful match.
+        // Mirror the live dev-rpc provider: only the fixed development
+        // code passes. Renter details are synthesized at verification
+        // time, matching the live disclosure boundary.
+        if (code !== '000000') {
+          updateVerify({ error: t('merchant.session.verify.errors.otpWrongCode') });
+          return;
+        }
         updateVerify({
           status: 'verified',
           error: null,
@@ -652,19 +625,21 @@ export default function MerchantRentalSession() {
       return;
     }
 
+    updateVerify({ otpBusy: true, error: null });
     try {
-      const result = await confirmRenterPresence(
-        session.verify.mobile,
-        trimmed,
-      );
-      if (!result.verified) {
-        updateVerify({ error: t('merchant.session.verify.errors.idLast4Failed') });
+      const result = await verifyOtp(classification.canonical, code);
+      if (!result.verified || !result.renter) {
+        updateVerify({
+          otpBusy: false,
+          error: t('merchant.session.verify.errors.otpWrongCode'),
+        });
         return;
       }
-      // The RPC is authoritative for the renter identity — populate the
-      // verify state from its payload, not the lookup snapshot.
+      // The service is authoritative for the renter identity — populate
+      // the verify state from its payload, not the lookup snapshot.
       updateVerify({
         status: 'verified',
+        otpBusy: false,
         error: null,
         renter: {
           id: result.renter.id,
@@ -682,16 +657,16 @@ export default function MerchantRentalSession() {
       });
       setStep('operation');
     } catch (err) {
-      const message =
-        err instanceof RenterPresenceError && err.code === 'forbidden'
-          ? t('merchant.session.verify.errors.forbidden')
-          : err instanceof RenterPresenceError && err.code === 'invalid_mobile'
-            ? verifyMobileIssueMessage('invalid_format', t)
-            : err instanceof RenterPresenceError && err.code === 'invalid_id_last4'
-              ? t('merchant.session.verify.errors.idLast4Length')
-              : t('merchant.session.verify.errors.idLast4Failed');
-      logEvent('rpc_failure', 'warn', { op: 'confirm_renter_presence' }, err);
-      updateVerify({ error: message });
+      logEvent('rpc_failure', 'warn', { op: 'merchant_verify_renter_otp' }, err);
+      const backToSend = err instanceof OtpError &&
+        (err.code === 'no_active_challenge' || err.code === 'too_many_attempts');
+      updateVerify({
+        otpBusy: false,
+        // An exhausted/expired challenge returns the merchant to the
+        // send step so the retry path is obvious.
+        ...(backToSend ? { status: 'found' as const, challenge: '' } : {}),
+        error: otpErrorMessage(err),
+      });
     }
   };
 
@@ -765,6 +740,13 @@ export default function MerchantRentalSession() {
   const handleIssue = async () => {
     if (verdict.status !== 'approved' || !session.verify.renter) return;
 
+    // The contract requires the customer's National ID — entered by the
+    // merchant in this step, recorded on THIS offer only, and reviewed
+    // by the customer before acceptance. The ContractCard disables the
+    // CTA until valid; this guard keeps handler + view in sync.
+    const idCheck = classifyNationalId(session.operation.lesseeNationalId);
+    if (idCheck.kind !== 'valid') return;
+
     const rate = Number(session.operation.dailyRate) || 0;
     const days = Math.max(Number(session.operation.rentalDays) || 1, 1);
     const rentalFee = rate * days;
@@ -799,6 +781,7 @@ export default function MerchantRentalSession() {
           expires_at: null,
           starts_at:
             parseDateTimeLocal(session.operation.startsAt)?.toISOString() ?? null,
+          lessee_national_id: idCheck.canonical,
           scan_token: token,
           notes: null,
           created_at: now,
@@ -845,6 +828,9 @@ export default function MerchantRentalSession() {
         // is preserved regardless of viewer timezone.
         startsAt:
           parseDateTimeLocal(session.operation.startsAt)?.toISOString() ?? null,
+        // Contract-scoped identity: recorded on this offer, snapshotted
+        // onto the contract at acceptance (20260502125100).
+        lesseeNationalId: idCheck.canonical,
         items: [
           {
             position: 0,
@@ -933,7 +919,7 @@ export default function MerchantRentalSession() {
               setMobile={(v) => {
                 // Editing the mobile invalidates a prior lookup, but keep
                 // the field stable when the user is just typing characters.
-                // Any renterId / national-id draft is dropped so the next
+                // Any renterId / issued-code state is dropped so the next
                 // lookup starts from a clean slate.
                 updateVerify({
                   mobile: v,
@@ -950,32 +936,18 @@ export default function MerchantRentalSession() {
                     session.verify.status === 'looking_up'
                       ? session.verify.renterId
                       : null,
-                  hasNationalId:
-                    session.verify.status === 'looking_up'
-                      ? session.verify.hasNationalId
-                      : null,
-                  nationalIdInput: '',
-                  nationalIdError: null,
+                  challenge: '',
                   error: null,
                 });
               }}
               renter={session.verify.renter}
               challenge={session.verify.challenge}
               setChallenge={(v) => updateVerify({ challenge: v })}
-              hasNationalId={session.verify.hasNationalId}
-              nationalIdInput={session.verify.nationalIdInput}
-              setNationalIdInput={(v) =>
-                updateVerify({
-                  nationalIdInput: v.replace(/\D/g, '').slice(0, 10),
-                  nationalIdError: null,
-                })
-              }
-              nationalIdSaving={session.verify.nationalIdSaving}
-              nationalIdError={session.verify.nationalIdError}
-              onSaveNationalId={handleSaveCustomerNationalId}
+              otpBusy={session.verify.otpBusy}
               verifyError={session.verify.error}
               onLookup={handleLookupRenter}
-              onConfirmPresence={handleConfirmPresence}
+              onSendOtp={handleSendOtp}
+              onVerifyOtp={handleVerifyOtp}
               active={session.step === 'verify'}
               locked={session.step !== 'verify' && session.verify.status === 'verified'}
             />
@@ -1214,15 +1186,11 @@ function VerifyCard({
   renter,
   challenge,
   setChallenge,
-  hasNationalId,
-  nationalIdInput,
-  setNationalIdInput,
-  nationalIdSaving,
-  nationalIdError,
-  onSaveNationalId,
+  otpBusy,
   verifyError,
   onLookup,
-  onConfirmPresence,
+  onSendOtp,
+  onVerifyOtp,
   active,
   locked,
 }: {
@@ -1235,15 +1203,11 @@ function VerifyCard({
   renter: ProfileRow | null;
   challenge: string;
   setChallenge: (v: string) => void;
-  hasNationalId: boolean | null;
-  nationalIdInput: string;
-  setNationalIdInput: (v: string) => void;
-  nationalIdSaving: boolean;
-  nationalIdError: string | null;
-  onSaveNationalId: () => void;
+  otpBusy: boolean;
   verifyError: string | null;
   onLookup: () => void;
-  onConfirmPresence: () => void;
+  onSendOtp: () => void;
+  onVerifyOtp: () => void;
   active: boolean;
   locked: boolean;
 }) {
@@ -1337,17 +1301,12 @@ function VerifyCard({
             </>
           )}
 
-          {/* Pending — renter exists, verification in progress.
-              By policy, renter identity is NOT shown to the merchant
-              at this stage. The challenge (last 4 of National ID) is
-              what reveals the renter's profile.
-
-              When `hasNationalId === false`, the customer's profile
-              was created without a National ID (e.g. legacy sign-ups
-              from before Register captured the field). The merchant
-              must fill it in first — the challenge input is hidden
-              until the RPC succeeds. */}
-          {status === 'found' && (
+          {/* Pending — renter exists. By policy, renter identity is NOT
+              shown to the merchant at this stage: the one-time code the
+              CUSTOMER provides is what reveals the renter's profile.
+              'found'    → offer the send-code CTA.
+              'otp_sent' → code input + verify CTA + resend. */}
+          {(status === 'found' || status === 'otp_sent') && (
             <>
               <VerificationBanner macro="pending" t={t}>
                 <div className="rounded-xl2 bg-white ring-1 ring-canvas-200 p-3 flex items-start gap-3">
@@ -1369,76 +1328,46 @@ function VerifyCard({
                 </div>
               </VerificationBanner>
 
-              {hasNationalId === false ? (
+              {status === 'found' ? (
                 <>
-                  <div className="rounded-xl2 bg-warn-50 ring-1 ring-warn-500/25 px-3.5 py-3">
-                    <div className="text-[12.5px] font-semibold text-warn-700 leading-tight">
-                      {t('merchant.session.verify.nationalId.missingTitle')}
+                  {verifyError && (
+                    <div className="rounded-xl2 bg-danger-50 ring-1 ring-danger-500/25 px-3.5 py-2.5 text-[12.5px] text-danger-700">
+                      {verifyError}
                     </div>
-                    <p className="mt-1 text-[11.5px] text-ink-600 leading-relaxed">
-                      {t('merchant.session.verify.nationalId.missingHint')}
-                    </p>
-                  </div>
-                  <FormField
-                    label={t('merchant.session.verify.nationalId.label')}
-                    error={nationalIdError ?? undefined}
-                  >
-                    <Input
-                      inputMode="numeric"
-                      dir="ltr"
-                      placeholder={t(
-                        'merchant.session.verify.nationalId.placeholder',
-                      )}
-                      value={nationalIdInput}
-                      onChange={(e) => setNationalIdInput(e.target.value)}
-                      maxLength={10}
-                      invalid={Boolean(nationalIdError)}
-                      leading={<UserIcon size={14} className="text-lavender-600" />}
-                      className="num tracking-[0.2em] text-left"
-                    />
-                  </FormField>
+                  )}
                   <Button
                     variant="primary"
                     size="lg"
                     block
-                    onClick={onSaveNationalId}
-                    loading={nationalIdSaving}
-                    disabled={
-                      nationalIdSaving ||
-                      !/^[12]\d{9}$/.test(nationalIdInput)
-                    }
+                    onClick={onSendOtp}
+                    loading={otpBusy}
+                    disabled={otpBusy}
                   >
-                    {nationalIdSaving
-                      ? t('merchant.session.verify.nationalId.saving')
-                      : t('merchant.session.verify.nationalId.saveCta')}
+                    {t('merchant.session.verify.otp.sendCta')}
                   </Button>
                 </>
               ) : (
                 <>
-                  {hasNationalId === true && (
-                    <div
-                      className="rounded-xl2 bg-success-50 ring-1 ring-success-500/25 px-3.5 py-2 text-[11.5px] text-success-700 flex items-center gap-1.5"
-                      aria-live="polite"
-                    >
-                      <BadgeCheckIcon size={12} className="shrink-0" />
-                      <span>
-                        {t('merchant.session.verify.nationalId.capturedChip')}
-                      </span>
-                    </div>
-                  )}
+                  <div
+                    className="rounded-xl2 bg-success-50 ring-1 ring-success-500/25 px-3.5 py-2 text-[11.5px] text-success-700 flex items-center gap-1.5"
+                    aria-live="polite"
+                  >
+                    <BadgeCheckIcon size={12} className="shrink-0" />
+                    <span>{t('merchant.session.verify.otp.sentChip')}</span>
+                  </div>
                   <FormField
-                    label={t('merchant.session.verify.idLast4Label')}
-                    hint={t('merchant.session.verify.idLast4Hint')}
+                    label={t('merchant.session.verify.otp.codeLabel')}
+                    hint={t('merchant.session.verify.otp.codeHint')}
                   >
                     <Input
                       inputMode="numeric"
                       dir="ltr"
-                      placeholder="1234"
+                      placeholder="••••••"
                       value={challenge}
                       onChange={(e) =>
-                        setChallenge(e.target.value.replace(/\D/g, '').slice(0, 4))
+                        setChallenge(e.target.value.replace(/\D/g, '').slice(0, 8))
                       }
-                      maxLength={4}
+                      maxLength={8}
                       leading={<ShieldIcon size={14} className="text-lavender-600" />}
                       className="num tracking-[0.4em] text-center"
                     />
@@ -1452,8 +1381,9 @@ function VerifyCard({
                     variant="primary"
                     size="lg"
                     block
-                    onClick={onConfirmPresence}
-                    disabled={challenge.replace(/\D/g, '').length !== 4}
+                    onClick={onVerifyOtp}
+                    loading={otpBusy}
+                    disabled={otpBusy || challenge.replace(/\D/g, '').length < 4}
                   >
                     {t('merchant.session.verify.confirmCta')}
                     <ArrowIcon
@@ -1461,6 +1391,14 @@ function VerifyCard({
                       className={cn('ms-1', dir === 'rtl' ? 'rotate-180' : '')}
                     />
                   </Button>
+                  <button
+                    type="button"
+                    onClick={onSendOtp}
+                    disabled={otpBusy}
+                    className="w-full text-center text-[12px] font-semibold text-lavender-700 underline underline-offset-4 decoration-canvas-300 disabled:opacity-50"
+                  >
+                    {t('merchant.session.verify.otp.resendCta')}
+                  </button>
                 </>
               )}
             </>
@@ -2022,6 +1960,11 @@ function ContractCard({
   const dailyRate = Number(operation.dailyRate) || 0;
   const lightFrac = clampLightFraction(operation.lightDamagePercent);
   const lateMult = clampLateMultiplier(operation.lateReturnMultiplier);
+  // Contract-scoped identity: required to issue. Inline error appears
+  // once the merchant has typed something that can't be a valid ID.
+  const idCheck = classifyNationalId(operation.lesseeNationalId);
+  const idInvalid =
+    operation.lesseeNationalId.length > 0 && idCheck.kind !== 'valid';
 
   // Synthesize the minimum invoice/items shape the template needs so
   // we can preview the EXACT clauses the customer will receive.
@@ -2045,6 +1988,7 @@ function ContractCard({
       issued_at: new Date().toISOString(),
       expires_at: null,
       starts_at: null,
+      lessee_national_id: null,
       scan_token: null,
       notes: null,
       created_at: new Date().toISOString(),
@@ -2088,6 +2032,37 @@ function ContractCard({
     >
       {(active || locked) && (
         <div className="space-y-4">
+          {/* Contract-scoped customer National ID — recorded on THIS
+              offer only (never on the customer's account). The customer
+              reviews the value before approving the contract. */}
+          {active && (
+            <FormField
+              label={t('merchant.session.contract.nationalIdLabel')}
+              required
+              hint={!idInvalid ? t('merchant.session.contract.nationalIdHint') : undefined}
+              error={idInvalid ? t('merchant.session.contract.nationalIdInvalid') : undefined}
+            >
+              <Input
+                inputMode="numeric"
+                dir="ltr"
+                placeholder="10 ×"
+                value={operation.lesseeNationalId}
+                onChange={(e) =>
+                  setOperation({
+                    lesseeNationalId: normalizeDigits(e.target.value)
+                      .replace(/\D/g, '')
+                      .slice(0, 10),
+                  })
+                }
+                maxLength={10}
+                invalid={idInvalid}
+                leading={<UserIcon size={14} className="text-lavender-600" />}
+                className="num tracking-[0.2em] text-left"
+                autoComplete="off"
+              />
+            </FormField>
+          )}
+
           {/* Adjustable terms */}
           {active && (
             <section className="rounded-xl2 bg-canvas-100/60 ring-1 ring-canvas-200 p-4 space-y-3">
@@ -2214,7 +2189,7 @@ function ContractCard({
                 block
                 onClick={onIssue}
                 loading={issuing}
-                disabled={issuing || issueDisabled}
+                disabled={issuing || issueDisabled || idCheck.kind !== 'valid'}
                 leading={<DocIcon size={16} />}
               >
                 {t('merchant.session.contract.issuePackageCta', {

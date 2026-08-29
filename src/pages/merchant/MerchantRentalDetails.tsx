@@ -178,7 +178,7 @@ export default function MerchantRentalDetails() {
       // cache (1-min bundle TTL; merchant reuses the 15-min entity
       // key), so hopping Details ↔ Close ↔ Damage within the TTL is
       // instant. Close/damage mutations invalidate these keys. The
-      // customer profile stays LIVE — full row includes national_id.
+      // customer profile stays LIVE — the full row is sensitive PII.
       const contract = await cachedFetch(
         cacheKeys.contract(id),
         CACHE_TTL.rentalBundle,

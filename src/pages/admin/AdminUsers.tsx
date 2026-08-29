@@ -90,7 +90,6 @@ export default function AdminUsers() {
       ? base.filter(
           (u) =>
             u.fullName.toLowerCase().includes(q) ||
-            u.nationalId.includes(q) ||
             u.mobile.includes(q) ||
             u.email.toLowerCase().includes(q) ||
             u.id.toLowerCase().includes(q),

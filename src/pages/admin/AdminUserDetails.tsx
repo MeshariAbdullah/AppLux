@@ -384,7 +384,7 @@ export default function AdminUserDetails() {
                   )}
                 </div>
                 <div className="mt-1 text-[12px] text-white/65 truncate num">
-                  {user.id} · {user.nationalId}
+                  {user.id}
                 </div>
               </div>
             </div>
@@ -444,12 +444,6 @@ export default function AdminUserDetails() {
                     {user.city}
                   </span>
                 }
-              />
-              <CardDivider className="my-2" />
-              <Field
-                label={t('admin.user.fields.nationalId')}
-                value={user.nationalId}
-                numeric
               />
               <CardDivider className="my-2" />
               <Field

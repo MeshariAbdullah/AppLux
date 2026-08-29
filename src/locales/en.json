@@ -328,7 +328,6 @@
       "confirmPasswordRequired": "Confirm your password to continue.",
       "passwordMismatch": "Passwords do not match.",
       "fullNameRequired": "Enter your full name to continue.",
-      "nationalIdRequired": "Enter your National ID to continue.",
       "signInFailed": "Sign-in failed. Check your credentials and try again.",
       "signUpFailed": "Could not create the account. Please try again.",
       "invalidCredentials": "Incorrect sign-in details. Check your email and password.",
@@ -370,8 +369,6 @@
     "step3Sub": "Helps us evaluate rental requests.",
     "fullName": "Full name",
     "fullNamePh": "As shown on National ID",
-    "nationalId": "National ID",
-    "nationalIdPh": "10 digits",
     "mobile": "Mobile number",
     "mobilePh": "5XXXXXXXX",
     "email": "Email address",
@@ -415,7 +412,6 @@
     },
     "errors": {
       "required": "This field is required",
-      "nationalId": "Invalid National ID",
       "mobile": "Must start with 5 and be 9 digits",
       "email": "Invalid email address",
       "income": "Must be a number greater than zero"
@@ -724,7 +720,6 @@
       "fullName": "Full name",
       "mobile": "Mobile number",
       "email": "Email",
-      "nationalId": "National ID",
       "missing": "Not available"
     },
     "historyEntry": "Rental history",
@@ -899,6 +894,7 @@
       "crNumber": "Commercial Registration number",
       "partyFullName": "Full name",
       "partyNationalId": "National ID",
+      "partyNationalIdHint": "As recorded by the merchant for this contract — check it before approving.",
       "clauses": "Clauses",
       "damagesTitle": "Financial obligations",
       "damagesHint": "Binding amounts in case of non-return or damage:",
@@ -1286,20 +1282,13 @@
         "mobileHint": "9 digits, starts with 5. We'll send a one-time code.",
         "mobileAccepted": "Number accepted · {e164}",
         "lookupCta": "Look up renter",
-        "nationalId": {
-          "missingTitle": "Missing National ID",
-          "missingHint": "This renter's profile is missing a National ID. Read it from the customer's card and enter it below — it will be saved to their profile so they don't need to give it again.",
-          "label": "Customer National ID",
-          "placeholder": "10 digits",
-          "invalid": "National ID must be 10 digits and start with 1 or 2.",
-          "required": "Enter the customer's National ID to continue.",
-          "saveCta": "Save National ID",
-          "saving": "Saving…",
-          "saved": "National ID saved",
-          "capturedChip": "National ID on file"
+        "otp": {
+          "sendCta": "Send verification code to the customer",
+          "resendCta": "Resend code",
+          "sentChip": "A verification code was issued for this customer",
+          "codeLabel": "Verification code",
+          "codeHint": "Ask the customer for the code they received and enter it here. The code only confirms the presence of the registered Lend mobile's owner — it is not a National ID verification."
         },
-        "idLast4Label": "Last 4 digits of renter's National ID",
-        "idLast4Hint": "Ask the renter to read out the last 4 digits of their National ID. The merchant should confirm against the physical card.",
         "confirmCta": "Confirm and continue",
         "nafathBadge": "Nafath verified",
         "macro": {
@@ -1327,10 +1316,13 @@
           "mobileIncomplete": "That number isn't finished yet — Saudi mobiles are 9 digits starting with 5.",
           "mobileUnsupportedCountry": "Only Saudi mobile numbers (+966) are supported here.",
           "mobileVerifyFailed": "We couldn't verify this number right now. Please try again.",
-          "idLast4Length": "Enter exactly the last 4 digits of the renter's National ID.",
-          "idLast4Failed": "Those digits did not match the renter's National ID. Re-check the physical card and try again.",
           "forbidden": "Your account isn't authorised to verify renters. Contact Lend support.",
-          "backendRequired": "Live backend is required to verify renters. Connect Supabase and try again."
+          "backendRequired": "Live backend is required to verify renters. Connect Supabase and try again.",
+          "otpSendFailed": "We couldn't issue a verification code right now. Please try again.",
+          "otpWrongCode": "That code is not correct. Check with the customer and try again.",
+          "otpNoActiveChallenge": "No active code for this customer — send a new one.",
+          "otpTooManyAttempts": "Too many attempts — send a new code.",
+          "otpThrottled": "A code was just issued — wait a moment before retrying."
         }
       },
       "operation": {
@@ -1380,6 +1372,9 @@
         "title": "Confirm the rental contract",
         "hint": "Lend generates the contract from a template using your operation inputs. Adjust the two policy values, review the preview, then issue the package.",
         "adjustableTitle": "Adjustable terms",
+        "nationalIdLabel": "Customer National ID for this contract",
+        "nationalIdHint": "Enter the customer's National ID to record it on this specific contract. The customer reviews it before approving the contract; it is not saved to their account.",
+        "nationalIdInvalid": "National ID must be 10 digits and start with 1 or 2.",
         "lightDamageLabel": "Light damage fraction",
         "lightDamageHint": "Percentage of the item value used for partial-damage liability.",
         "lightDamageUnit": "%",
@@ -2774,7 +2769,6 @@
         "mobile": "Mobile",
         "email": "Email",
         "city": "City",
-        "nationalId": "National ID",
         "createdAt": "Member since"
       },
       "eligibility": {

@@ -11,7 +11,8 @@ import { useSupabaseAuth } from '@/lib/supabase';
 //   * display only — no editing, no save/update actions, no writes;
 //   * real authenticated profile data (demo store session in demo
 //     mode) — never internal UUIDs;
-//   * National ID always MASKED to its last 4 digits (••••••1234);
+//   * NO National ID — it is contract data (per rental agreement),
+//     not account identity, and is never part of the profile;
 //   * mobile shown as the canonical +966 5XXXXXXXX in an LTR span;
 //   * any missing field renders the neutral "غير متوفر" state.
 // =====================================================================
@@ -25,16 +26,13 @@ export default function ProfileInfo() {
   const fullName = configured ? profile?.full_name : demoSession?.fullName;
   const mobile = configured ? profile?.mobile : demoSession?.mobile;
   const email = configured ? profile?.email : demoSession?.email;
-  const nationalId = configured ? profile?.national_id : demoSession?.nationalId;
 
   const missing = t('profile.info.missing');
 
-  // Mask everything except the LAST 4 digits — the full National ID
-  // never reaches the screen.
-  const maskedId =
-    nationalId && nationalId.trim().length >= 4
-      ? `••••••${nationalId.trim().slice(-4)}`
-      : null;
+  // National ID is deliberately NOT shown here: it is contract data
+  // (recorded per rental agreement), not account/profile identity.
+  // Each contract's record shows the ID that contract was accepted
+  // with.
 
   // Canonical storage is 5XXXXXXXX — display the full international
   // form. Anything non-canonical (legacy data) is shown as stored.
@@ -48,7 +46,6 @@ export default function ProfileInfo() {
     { label: t('profile.info.fullName'), value: fullName?.trim() || null },
     { label: t('profile.info.mobile'), value: displayMobile, ltr: true },
     { label: t('profile.info.email'), value: email?.trim() || null, ltr: true },
-    { label: t('profile.info.nationalId'), value: maskedId, ltr: true },
   ];
 
   return (

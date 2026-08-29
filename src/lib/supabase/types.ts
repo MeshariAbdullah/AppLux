@@ -234,6 +234,12 @@ export type RentalInvoiceRow = {
    *  starts on the customer's acceptance day). See
    *  20260502122200_add_rental_invoice_starts_at.sql. */
   starts_at: string | null;
+  /** National ID the MERCHANT recorded for this specific rental offer
+   *  (20260502125100). Contract data — reviewed by the customer during
+   *  contract review and frozen onto the contract at acceptance. NOT a
+   *  government-verified identity. NULL on offers issued before the
+   *  redesign. */
+  lessee_national_id: string | null;
   scan_token: string | null;
   notes: string | null;
   created_at: string;
@@ -687,24 +693,19 @@ export type Database = {
         Returns: Array<{
           id: string;
           has_nafath: boolean;
-          /** True when profiles.national_id is populated for the
-           *  matched customer. Added by
-           *  20260502122300_merchant_national_id_write.sql so the
-           *  merchant session UI knows whether to prompt for the
-           *  missing id before the confirm step. */
-          has_national_id: boolean;
         }>;
       };
-      merchant_set_customer_national_id: {
-        Args: {
-          p_customer_id: string;
-          p_mobile: string;
-          p_national_id: string;
-        };
+      /** Customer-presence OTP for the merchant rental session
+       *  (20260502125100). Confirms control of the registered Lend
+       *  mobile only — NOT a National ID / government identity
+       *  verification. Temporary implementation issues a fixed dev
+       *  code until the real SMS provider integration lands. */
+      merchant_start_renter_otp: {
+        Args: { p_mobile: string };
         Returns: void;
       };
-      confirm_renter_presence: {
-        Args: { p_mobile: string; p_id_last4: string };
+      merchant_verify_renter_otp: {
+        Args: { p_mobile: string; p_code: string };
         Returns: Array<{
           id: string;
           full_name: string;

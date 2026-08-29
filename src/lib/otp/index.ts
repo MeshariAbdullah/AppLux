@@ -1,16 +1,45 @@
 // =====================================================================
-// OTP service — client-side wrapper around the two Supabase Edge
-// Functions (otp-send / otp-verify). Hides the provider entirely so the
-// rest of the app calls a single, stable interface.
+// OTP service — the SINGLE client abstraction for customer-presence
+// verification in the merchant rental session. Everything outside this
+// module calls `sendOtp` / `verifyOtp` and never knows which provider
+// is behind them.
 //
-// When env is not configured (local dev without a live backend), the
-// helpers throw with a clear "Live backend required" message rather
-// than silently no-op.
+// Providers:
+//
+//   'dev-rpc' (CURRENT DEFAULT — temporary):
+//     Backed by the merchant_start_renter_otp /
+//     merchant_verify_renter_otp SECURITY DEFINER RPCs
+//     (20260502125100). The challenge lifecycle (expiry, attempt cap,
+//     consumption, server-side code check) is real, but NO SMS is sent
+//     yet — the server issues a fixed development code, so this
+//     provides NO real security. It exists only so the end-to-end flow
+//     works before the real OTP provider integration lands.
+//
+//   'twilio-edge' (the production seam):
+//     The pre-existing otp-send / otp-verify Supabase Edge Functions
+//     (Twilio Verify). Activate by setting VITE_OTP_PROVIDER=twilio-edge
+//     at build time AND deploying the edge functions with the Twilio
+//     secrets. Same request/response shape — no UI change needed.
+//
+// What a successful verification MEANS (be precise — see the product
+// terminology decision): "control/presence of the customer's registered
+// Lend mobile was confirmed for this in-store session." It is NOT a
+// National ID verification and NOT a government identity verification.
 // =====================================================================
 
 import { requireSupabase } from '@/lib/supabase';
 import type { AppRole } from '@/lib/supabase';
 import { normalizeMobile } from '@/lib/mobile';
+
+type OtpProvider = 'dev-rpc' | 'twilio-edge';
+
+/** Build-time provider selection. Defaults to the temporary dev-rpc
+ *  provider; flip to 'twilio-edge' when the real integration ships. */
+function resolveProvider(): OtpProvider {
+  return import.meta.env.VITE_OTP_PROVIDER === 'twilio-edge'
+    ? 'twilio-edge'
+    : 'dev-rpc';
+}
 
 export type OtpSendResult = {
   ok: true;
@@ -35,6 +64,10 @@ export class OtpError extends Error {
     public code:
       | 'invalid_mobile'
       | 'invalid_code'
+      | 'no_customer'
+      | 'no_active_challenge'
+      | 'too_many_attempts'
+      | 'throttled'
       | 'twilio_not_configured'
       | 'send_failed'
       | 'verify_failed'
@@ -48,11 +81,63 @@ export class OtpError extends Error {
   }
 }
 
+// ---------------------------------------------------------------------
+// dev-rpc provider (temporary)
+// ---------------------------------------------------------------------
+
+function mapRpcError(err: unknown): OtpError {
+  const code = (err as { code?: unknown })?.code;
+  const message = (err as { message?: string })?.message;
+  if (code === 'P0030') return new OtpError('forbidden', message);
+  if (code === '42501') return new OtpError('unauthorized', message);
+  if (code === 'P0190') return new OtpError('invalid_mobile', message);
+  if (code === 'P0191') return new OtpError('no_customer', message);
+  if (code === 'P0192') return new OtpError('throttled', message);
+  if (code === 'P0193') return new OtpError('no_active_challenge', message);
+  if (code === 'P0194') return new OtpError('too_many_attempts', message);
+  return new OtpError('unknown', message ?? 'OTP request failed');
+}
+
+async function sendOtpViaRpc(canonicalMobile: string): Promise<OtpSendResult> {
+  const sb = requireSupabase();
+  const { error } = await sb.rpc('merchant_start_renter_otp', {
+    p_mobile: canonicalMobile,
+  });
+  if (error) throw mapRpcError(error);
+  return { ok: true };
+}
+
+async function verifyOtpViaRpc(
+  canonicalMobile: string,
+  code: string,
+): Promise<OtpVerifyResult> {
+  const sb = requireSupabase();
+  const { data, error } = await sb.rpc('merchant_verify_renter_otp', {
+    p_mobile: canonicalMobile,
+    p_code: code,
+  });
+  if (error) throw mapRpcError(error);
+  const row = Array.isArray(data) ? data[0] : null;
+  if (!row) return { verified: false }; // wrong code (attempt counted server-side)
+  return {
+    verified: true,
+    renter: {
+      id: row.id,
+      full_name: row.full_name,
+      mobile: row.mobile,
+      city: row.city,
+      has_nafath: row.has_nafath,
+    },
+  };
+}
+
+// ---------------------------------------------------------------------
+// twilio-edge provider (production seam — pre-existing edge functions)
+// ---------------------------------------------------------------------
+
 function mapInvokeError(err: unknown): OtpError {
   // supabase-js wraps function errors as `FunctionsHttpError` with a
-  // `context.status` and a parsed `context.body`. We pull the
-  // `error` string from the response body when present.
-  // Avoiding `any` while still being defensive about the shape.
+  // `context.status` and a parsed `context.body`.
   const anyErr = err as { message?: string; context?: { status?: number; body?: unknown } } | undefined;
   const status = anyErr?.context?.status;
   const body = anyErr?.context?.body as { error?: string } | undefined;
@@ -62,48 +147,68 @@ function mapInvokeError(err: unknown): OtpError {
   return new OtpError('unknown', anyErr?.message ?? 'OTP request failed');
 }
 
-export async function sendOtp(mobileInput: string): Promise<OtpSendResult> {
-  const n = normalizeMobile(mobileInput);
-  if (!n) throw new OtpError('invalid_mobile');
+async function sendOtpViaEdge(canonicalMobile: string): Promise<OtpSendResult> {
   const sb = requireSupabase();
   const { data, error } = await sb.functions.invoke<OtpSendResult>('otp-send', {
-    body: { mobile: n.canonical },
+    body: { mobile: canonicalMobile },
   });
   if (error) throw mapInvokeError(error);
   if (!data?.ok) throw new OtpError('send_failed');
   return data;
 }
 
-export async function verifyOtp(mobileInput: string, code: string): Promise<OtpVerifyResult> {
-  const n = normalizeMobile(mobileInput);
-  if (!n) throw new OtpError('invalid_mobile');
-  const clean = code.replace(/\D/g, '');
-  if (clean.length < 4) throw new OtpError('invalid_code');
+async function verifyOtpViaEdge(
+  canonicalMobile: string,
+  code: string,
+): Promise<OtpVerifyResult> {
   const sb = requireSupabase();
   const { data, error } = await sb.functions.invoke<OtpVerifyResult>('otp-verify', {
-    body: { mobile: n.canonical, code: clean },
+    body: { mobile: canonicalMobile, code },
   });
   if (error) throw mapInvokeError(error);
   if (!data) throw new OtpError('verify_failed');
   return data;
 }
 
+// ---------------------------------------------------------------------
+// Public API
+// ---------------------------------------------------------------------
+
+/** Issues a one-time code for the customer registered under this
+ *  mobile. Merchant/admin-only server-side. */
+export async function sendOtp(mobileInput: string): Promise<OtpSendResult> {
+  const n = normalizeMobile(mobileInput);
+  if (!n) throw new OtpError('invalid_mobile');
+  return resolveProvider() === 'twilio-edge'
+    ? sendOtpViaEdge(n.canonical)
+    : sendOtpViaRpc(n.canonical);
+}
+
+/** Checks the code the customer provided. On success returns the
+ *  customer's safe profile fields (name / mobile / city) — the same
+ *  disclosure boundary as before: nothing identifying is revealed to
+ *  the merchant until verification succeeds. */
+export async function verifyOtp(mobileInput: string, code: string): Promise<OtpVerifyResult> {
+  const n = normalizeMobile(mobileInput);
+  if (!n) throw new OtpError('invalid_mobile');
+  const clean = code.replace(/\D/g, '');
+  if (clean.length < 4) throw new OtpError('invalid_code');
+  return resolveProvider() === 'twilio-edge'
+    ? verifyOtpViaEdge(n.canonical, clean)
+    : verifyOtpViaRpc(n.canonical, clean);
+}
+
 /**
- * Pre-OTP existence check. Returns ONLY whether a renter with this
+ * Pre-OTP existence check. Returns ONLY whether a customer with this
  * mobile exists (and a Nafath hint) — no name, no city, nothing
- * identifying. Renter details are exclusively returned by verifyOtp()
- * once Twilio confirms the code.
+ * identifying. Customer details are exclusively returned by verifyOtp()
+ * once the code checks out.
  *
  * Backed by the lookup_renter_by_mobile RPC.
  */
 export type RenterExistenceCheck = {
   id: string;
   has_nafath: boolean;
-  /** True when profiles.national_id is populated. When false the
-   *  merchant session UI prompts for it before advancing to the
-   *  confirm_renter_presence step. Added by
-   *  20260502122300_merchant_national_id_write.sql. */
-  has_national_id: boolean;
 };
 
 export async function lookupRenterByMobile(
@@ -121,10 +226,6 @@ export async function lookupRenterByMobile(
     ? {
         id: row.id,
         has_nafath: row.has_nafath,
-        // Legacy DB versions of the RPC won't return this column; when
-        // absent, assume the id IS present so we don't force a prompt
-        // on projects that haven't run the new migration yet.
-        has_national_id: row.has_national_id ?? true,
       }
     : null;
 }

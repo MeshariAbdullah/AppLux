@@ -89,12 +89,16 @@ export default function Review() {
   // card can show the real lessor name (the demo `stores` lookup is
   // empty in live mode, which used to render "—").
   const [liveMerchantRow, setLiveMerchantRow] = useState<MerchantRow | null>(null);
+  // The merchant-entered National ID on the live offer — contract data
+  // the customer must see before approving (20260502125100).
+  const [liveInvoiceNationalId, setLiveInvoiceNationalId] = useState<string | null>(null);
   const [resolving, setResolving] = useState(false);
 
   useEffect(() => {
     if (!configured || !token) {
       setLivePkg(null);
       setLiveInvoiceId(null);
+      setLiveInvoiceNationalId(null);
       return;
     }
     let cancelled = false;
@@ -116,6 +120,7 @@ export default function Review() {
         setLiveMerchantRow(merchant);
         setLivePkg(synthesizePackageFromInvoice(res.invoice, res.items, merchant, branch));
         setLiveInvoiceId(res.invoice.id);
+        setLiveInvoiceNationalId(res.invoice.lessee_national_id ?? null);
         // Offer-decision lifecycle: expiry + terminal states gate the
         // whole wizard (server enforces the same rules — P0170/P0171).
         setOfferExpiresAt(res.invoice.expires_at ?? null);
@@ -179,9 +184,15 @@ export default function Review() {
   const lesseeLegalName = configured
     ? supabaseProfile?.full_name?.trim() || null
     : session?.fullName?.trim() || null;
-  const lesseeNationalId = configured
-    ? supabaseProfile?.national_id?.trim() || null
-    : session?.nationalId?.trim() || null;
+  // Contract-scoped National ID (20260502125100): the value the
+  // MERCHANT recorded on this specific offer. The customer reviews
+  // exactly what will be frozen onto the contract at acceptance. The
+  // profile fallback mirrors the accept RPC's transition path for
+  // offers issued before the migration (they expire within an hour);
+  // demo mode has no live offer, so it renders '—'.
+  const lesseeNationalId =
+    liveInvoiceNationalId ??
+    (configured ? supabaseProfile?.national_id?.trim() || null : null);
   // Server backstop: accept_rental_invoice raises P0150 for the same
   // condition (20260502123500) — this client gate just fails earlier
   // with the business message instead of a failed RPC.
@@ -885,6 +896,14 @@ function ContractStep({
               )
             }
           />
+          {/* Honest framing: the ID was recorded by the merchant for
+              this contract — approval means the customer confirms the
+              contractual information, not a government verification. */}
+          {partyIds.lesseeNationalId && (
+            <div className="text-[11px] text-ink-400 leading-relaxed">
+              {t('review.contract.partyNationalIdHint')}
+            </div>
+          )}
         </Card>
         {partyIncomplete && (
           <div className="mt-2.5 rounded-xl2 bg-danger-50 ring-1 ring-danger-500/25 px-4 py-3 text-[12.5px] text-danger-700 leading-relaxed">

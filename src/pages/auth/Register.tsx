@@ -11,7 +11,6 @@ import { classifyMobile, sanitizeMobileInput, type MobileIssue } from '@/lib/mob
 import {
   classifyEmail,
   classifyFullName,
-  classifyNationalId,
   normalizeDigits,
   type FullNameIssue,
 } from '@/lib/validation/customer';
@@ -35,7 +34,7 @@ type FieldKey = keyof RegistrationDraft;
 type Errors = Partial<Record<FieldKey, string>>;
 
 const STEPS: { key: FieldKey[]; titleKey: string; subKey: string }[] = [
-  { key: ['fullName', 'nationalId'], titleKey: 'register.step1', subKey: 'register.step1Sub' },
+  { key: ['fullName'], titleKey: 'register.step1', subKey: 'register.step1Sub' },
   { key: ['mobile', 'email', 'city', 'address'], titleKey: 'register.step2', subKey: 'register.step2Sub' },
   { key: ['profession', 'employer', 'income'], titleKey: 'register.step3', subKey: 'register.step3Sub' },
 ];
@@ -91,8 +90,6 @@ export default function Register() {
         const name = classifyFullName(v);
         if (name.kind === 'invalid') next[k] = fullNameIssueToMessage(name.issue, t);
       }
-      if (k === 'nationalId' && classifyNationalId(v).kind === 'invalid')
-        next[k] = t('register.errors.nationalId');
       if (k === 'mobile' && !/^5\d{8}$/.test(normalizeDigits(v))) next[k] = t('register.errors.mobile');
       if (k === 'email' && classifyEmail(v).kind === 'invalid') next[k] = t('register.errors.email');
       if (k === 'income' && !(Number(v) > 0)) next[k] = t('register.errors.income');
@@ -184,29 +181,15 @@ export default function Register() {
           noValidate
         >
           {step === 0 && (
-            <>
-              <FormField label={t('register.fullName')} required error={errors.fullName}>
-                <Input
-                  placeholder={t('register.fullNamePh')}
-                  value={values.fullName}
-                  onChange={onChange('fullName')}
-                  invalid={Boolean(errors.fullName)}
-                  autoComplete="name"
-                />
-              </FormField>
-              <FormField label={t('register.nationalId')} required error={errors.nationalId}>
-                <Input
-                  inputMode="numeric"
-                  maxLength={10}
-                  placeholder={t('register.nationalIdPh')}
-                  value={values.nationalId}
-                  onChange={onChange('nationalId')}
-                  invalid={Boolean(errors.nationalId)}
-                  className="num"
-                  autoComplete="off"
-                />
-              </FormField>
-            </>
+            <FormField label={t('register.fullName')} required error={errors.fullName}>
+              <Input
+                placeholder={t('register.fullNamePh')}
+                value={values.fullName}
+                onChange={onChange('fullName')}
+                invalid={Boolean(errors.fullName)}
+                autoComplete="name"
+              />
+            </FormField>
           )}
 
           {step === 1 && (
@@ -367,20 +350,17 @@ function fullNameIssueToMessage(
 }
 
 /**
- * Best-effort detector for a unique-violation on the customer identity
- * columns — profiles.mobile (profiles_mobile_customer_unique,
- * 20260502121200) or profiles.national_id
- * (profiles_national_id_customer_unique, 20260502123000). Supabase
- * Auth doesn't expose the underlying Postgres code reliably through
+ * Best-effort detector for a unique-violation on the customer mobile
+ * (profiles_mobile_customer_unique, 20260502121200). Supabase Auth
+ * doesn't expose the underlying Postgres code reliably through
  * signUp's error, so we sniff a few plausible signals: 23505 code,
- * the constraint names, and the column/table name in the message.
+ * the constraint name, and the column/table name in the message.
  * Conservative on purpose — if we're not sure, we DON'T claim it's a
  * duplicate (the caller falls back to the generic error path).
  *
- * Privacy (Bug 2): the caller maps EVERY duplicate — mobile or
- * National ID — to the same generic "could not create an account with
- * these details" message, so responses never reveal which datum is
- * already registered or to whom.
+ * Privacy (Bug 2): the caller maps every duplicate to the same generic
+ * "could not create an account with these details" message, so
+ * responses never reveal which datum is already registered or to whom.
  */
 function isProfileIdentityConflict(err: unknown): boolean {
   if (!err) return false;
@@ -389,9 +369,8 @@ function isProfileIdentityConflict(err: unknown): boolean {
   const msg = (anyErr.message ?? '').toLowerCase();
   return (
     msg.includes('profiles_mobile_customer_unique') ||
-    msg.includes('profiles_national_id_customer_unique') ||
-    (msg.includes('duplicate') && (msg.includes('mobile') || msg.includes('national_id'))) ||
-    (msg.includes('already exists') && (msg.includes('mobile') || msg.includes('national_id')))
+    (msg.includes('duplicate') && msg.includes('mobile')) ||
+    (msg.includes('already exists') && msg.includes('mobile'))
   );
 }
 
@@ -401,7 +380,6 @@ function SupabaseRegister() {
   const { signUp, configured, status } = useSupabaseAuth();
 
   const [fullName, setFullName] = useState('');
-  const [nationalId, setNationalId] = useState('');
   const [mobile, setMobile] = useState('');
   const [mobileTouched, setMobileTouched] = useState(false);
   const [email, setEmail] = useState('');
@@ -410,7 +388,6 @@ function SupabaseRegister() {
   const [submitting, setSubmitting] = useState(false);
   const [errors, setErrors] = useState<{
     fullName?: string;
-    nationalId?: string;
     mobile?: string;
     email?: string;
     password?: string;
@@ -452,12 +429,6 @@ function SupabaseRegister() {
     const nameCheck = classifyFullName(fullName);
     if (nameCheck.kind === 'invalid')
       next.fullName = fullNameIssueToMessage(nameCheck.issue, t);
-    const idCheck = classifyNationalId(nationalId);
-    if (idCheck.kind === 'invalid')
-      next.nationalId =
-        idCheck.issue === 'empty'
-          ? t('auth.errors.nationalIdRequired')
-          : t('register.errors.nationalId');
     if (!mobile.trim()) next.mobile = t('auth.errors.mobileRequired');
     else if (mobileClassification.kind === 'invalid')
       next.mobile = mobileIssueToMessage(mobileClassification.issue, t);
@@ -483,7 +454,6 @@ function SupabaseRegister() {
         password,
         fullName: nameCheck.kind === 'valid' ? nameCheck.normalized : fullName.trim(),
         mobile: normalizedMobile!.canonical,
-        nationalId: idCheck.kind === 'valid' ? idCheck.canonical : nationalId.trim(),
       });
       // Two outcomes from Supabase signUp:
       //  (a) project has email-confirmation enabled → result.session is
@@ -504,19 +474,19 @@ function SupabaseRegister() {
       // and is now defensive on the DB side too.
       if (result.session?.user) {
         try {
-          // Belt-and-suspenders: persist mobile + National ID even
-          // if the handle_new_auth_user trigger isn't up to date on
-          // this project. The trigger (20260502121900) IS the primary
-          // path; this UPDATE is the safety net.
+          // Belt-and-suspenders: persist the mobile even if the
+          // handle_new_auth_user trigger isn't up to date on this
+          // project. The trigger IS the primary path; this UPDATE is
+          // the safety net. (National ID is contract data now — it is
+          // never written to the profile.)
           await updateProfile(result.session.user.id, {
             mobile: normalizedMobile!.canonical,
-            national_id: idCheck.kind === 'valid' ? idCheck.canonical : nationalId.trim(),
           });
         } catch (err) {
-          // A unique-violation on profiles.mobile / profiles.national_id
-          // means another customer already registered with this datum.
-          // Bug 2 privacy rule: one generic message, never revealing
-          // WHICH field is taken or whose account holds it.
+          // A unique-violation on profiles.mobile means another
+          // customer already registered with this number. Bug 2
+          // privacy rule: one generic message, never revealing WHICH
+          // field is taken or whose account holds it.
           if (isProfileIdentityConflict(err)) {
             setErrors({ form: t('auth.errors.accountDetailsConflict') });
             setSubmitting(false);
@@ -549,13 +519,13 @@ function SupabaseRegister() {
         return;
       }
     } catch (err) {
-      // The handle_new_auth_user trigger writes profiles.mobile AND
-      // profiles.national_id. If the live data already contains another
-      // customer with either datum, the trigger's INSERT fails with a
-      // 23505 unique violation (race-safe — the partial unique indexes
-      // are the server-side enforcement, no pre-check involved), which
-      // Supabase Auth surfaces as a sign-up error. Map it to the same
-      // generic privacy-safe message.
+      // The handle_new_auth_user trigger writes profiles.mobile. If the
+      // live data already contains another customer with this number,
+      // the trigger's INSERT fails with a 23505 unique violation
+      // (race-safe — the partial unique index is the server-side
+      // enforcement, no pre-check involved), which Supabase Auth
+      // surfaces as a sign-up error. Map it to the same generic
+      // privacy-safe message.
       if (isProfileIdentityConflict(err)) {
         setErrors({ form: t('auth.errors.accountDetailsConflict') });
         setSubmitting(false);
@@ -593,30 +563,6 @@ function SupabaseRegister() {
               onChange={(e) => setFullName(e.target.value)}
               invalid={Boolean(errors.fullName)}
               autoComplete="name"
-            />
-          </FormField>
-          <FormField
-            label={t('register.nationalId')}
-            required
-            error={errors.nationalId}
-          >
-            <Input
-              inputMode="numeric"
-              maxLength={10}
-              placeholder={t('register.nationalIdPh')}
-              value={nationalId}
-              onChange={(e) => {
-                // Bug 2: Arabic-Indic digits normalize as they are
-                // typed, so maxLength and validation see one canonical
-                // representation.
-                setNationalId(normalizeDigits(e.target.value));
-                if (errors.nationalId)
-                  setErrors((p) => ({ ...p, nationalId: undefined }));
-              }}
-              invalid={Boolean(errors.nationalId)}
-              className="num"
-              dir="ltr"
-              autoComplete="off"
             />
           </FormField>
           <FormField

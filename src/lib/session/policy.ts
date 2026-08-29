@@ -11,7 +11,8 @@ import type { AppRole } from '@/lib/supabase/types';
 // before any token concern matters, scaled by how sensitive the role's
 // screens are:
 //
-//   * admin sees full customer PII (including National ID) — shortest.
+//   * admin sees full customer PII (including contract identity
+//     data such as the contractual National ID) — shortest.
 //   * merchant operates a shared counter device — mid.
 //   * customer is on their own phone — most lenient.
 //

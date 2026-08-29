@@ -44,7 +44,7 @@ export async function fetchEligibilityByUserIds(
  * the given renter.
  *
  * Used by `MerchantRentalSession.handleOperationContinue` after the
- * renter has been verified through `confirm_renter_presence`. For
+ * renter's presence has been confirmed via the mobile OTP flow. For
  * self-loads (customer reading their own row) and admin loads use
  * `fetchEligibility` instead — both have direct table policies that
  * cover them.

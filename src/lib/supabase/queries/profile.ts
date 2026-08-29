@@ -95,36 +95,6 @@ export async function cancelAccountDeletion(): Promise<void> {
   if (error) throw error;
 }
 
-/**
- * Merchant fills a missing customer National ID during the rental
- * session verify step. Wraps the SECURITY DEFINER RPC
- * merchant_set_customer_national_id (see
- * 20260502122300_merchant_national_id_write.sql).
- *
- * The RPC enforces every guard server-side:
- *   * caller is an active merchant owner or admin
- *   * target profile matches customer_id + canonical mobile + role
- *     'customer'
- *   * current national_id is null / empty (never overwrites)
- *   * new value matches Saudi format ^[12][0-9]{9}$
- *
- * Idempotent — calling with an already-set national_id is a silent
- * no-op on the server.
- */
-export async function merchantSetCustomerNationalId(input: {
-  customerId: string;
-  mobile: string;
-  nationalId: string;
-}): Promise<void> {
-  const sb = requireSupabase();
-  const { error } = await sb.rpc('merchant_set_customer_national_id', {
-    p_customer_id: input.customerId,
-    p_mobile: input.mobile,
-    p_national_id: input.nationalId,
-  });
-  if (error) throw error;
-}
-
 export async function listProfiles(filter?: {
   role?: AppRole;
   limit?: number;

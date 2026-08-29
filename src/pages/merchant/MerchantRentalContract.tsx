@@ -94,7 +94,7 @@ export default function MerchantRentalContract() {
       // Phase 4A: cached bundle reads (see MerchantRentalDetails note).
       // Invoice + items are immutable post-issuance, so the 1-min TTL
       // is over-conservative there by design. Customer profile stays
-      // live (full row includes national_id).
+      // live (the full row is sensitive PII).
       const contract = await cachedFetch(
         cacheKeys.contract(id),
         CACHE_TTL.rentalBundle,

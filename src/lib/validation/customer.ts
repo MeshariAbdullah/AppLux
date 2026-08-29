@@ -74,8 +74,9 @@ export type NationalIdClassification =
   | { kind: 'invalid'; issue: 'empty' | 'invalid' };
 
 /**
- * Saudi National ID / Iqama — the app's approved convention (used at
- * signup since 20260502121900 and by the merchant issuance flow):
+ * Saudi National ID / Iqama — the app's approved convention (used by
+ * the merchant contract-creation step and merchant onboarding — NOT by
+ * customer signup; National ID is contract data since 20260502125100):
  * exactly 10 ASCII digits starting with 1 (citizen) or 2 (resident).
  * Arabic-Indic input is normalized first; anything else — letters,
  * symbols, spaces inside the number, wrong length — is invalid.

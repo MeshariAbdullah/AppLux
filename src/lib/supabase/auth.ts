@@ -12,11 +12,9 @@ export type SignUpInput = {
    *  from the merchant session flow; the DB CHECK constraint enforces
    *  the canonical shape. */
   mobile: string;
-  /** Saudi National ID (10 digits, starts with 1 or 2). Required at
-   *  signup; persisted onto profiles.national_id by the
-   *  handle_new_auth_user trigger (see
-   *  20260502121900_persist_national_id_on_signup.sql). */
-  nationalId: string;
+  // National ID is deliberately ABSENT: it is contract data, entered by
+  // the merchant per rental offer (20260502125100) — never part of the
+  // account identity collected at signup.
 };
 
 export type SignInInput = {
@@ -145,14 +143,13 @@ export async function signUpWithPassword({
   password,
   fullName,
   mobile,
-  nationalId,
 }: SignUpInput): Promise<{ user: User | null; session: Session | null }> {
   const sb = requireSupabase();
   const { data, error } = await sb.auth.signUp({
     email,
     password,
     options: {
-      data: { full_name: fullName, mobile, national_id: nationalId },
+      data: { full_name: fullName, mobile },
     },
   });
   if (error) throw error;

@@ -701,7 +701,6 @@ export type MerchantCustomer = {
   id: string;
   fullName: string;
   initials: string;
-  nationalId: string;
   mobile: string;
   email: string;
   city: string;
@@ -712,7 +711,6 @@ export const SEED_MERCHANT_CUSTOMERS: MerchantCustomer[] = [
     id: 'cust-1',
     fullName: 'فهد بن عبدالله العتيبي',
     initials: 'FA',
-    nationalId: '1098234567',
     mobile: '555012345',
     email: 'fahad.otaibi@example.com',
     city: 'riyadh',
@@ -721,7 +719,6 @@ export const SEED_MERCHANT_CUSTOMERS: MerchantCustomer[] = [
     id: 'cust-2',
     fullName: 'سارة بنت محمد المطيري',
     initials: 'SM',
-    nationalId: '1076543218',
     mobile: '556789012',
     email: 'sara.mutairi@example.com',
     city: 'riyadh',
@@ -730,7 +727,6 @@ export const SEED_MERCHANT_CUSTOMERS: MerchantCustomer[] = [
     id: 'cust-3',
     fullName: 'عبدالرحمن بن سعد الشهري',
     initials: 'AS',
-    nationalId: '1065432198',
     mobile: '554321098',
     email: 'a.shahri@example.com',
     city: 'jeddah',
@@ -739,7 +735,6 @@ export const SEED_MERCHANT_CUSTOMERS: MerchantCustomer[] = [
     id: 'cust-4',
     fullName: 'نوف بنت فيصل القحطاني',
     initials: 'NQ',
-    nationalId: '1054328761',
     mobile: '553210987',
     email: 'nouf.q@example.com',
     city: 'riyadh',
@@ -748,7 +743,6 @@ export const SEED_MERCHANT_CUSTOMERS: MerchantCustomer[] = [
     id: 'cust-5',
     fullName: 'خالد بن سلمان الدوسري',
     initials: 'KD',
-    nationalId: '1043876529',
     mobile: '559870123',
     email: 'khalid.dosari@example.com',
     city: 'dammam',
@@ -757,7 +751,6 @@ export const SEED_MERCHANT_CUSTOMERS: MerchantCustomer[] = [
     id: 'cust-6',
     fullName: 'منى بنت عبدالعزيز الزهراني',
     initials: 'MZ',
-    nationalId: '1032198745',
     mobile: '558765432',
     email: 'muna.z@example.com',
     city: 'jeddah',
@@ -1441,7 +1434,6 @@ export type AdminUserRecord = {
   id: string;
   fullName: string;
   initials: string;
-  nationalId: string;
   mobile: string;
   email: string;
   city: string;
@@ -1462,7 +1454,6 @@ export const SEED_ADMIN_USERS_LIST: AdminUserRecord[] = [
     id: 'USR-204118',
     fullName: 'سارة الحمود',
     initials: 'س ح',
-    nationalId: '1098234567',
     mobile: '0551122334',
     email: 'sara.hamoud@gmail.com',
     city: 'الرياض',
@@ -1511,7 +1502,6 @@ export const SEED_ADMIN_USERS_LIST: AdminUserRecord[] = [
     id: 'USR-204077',
     fullName: 'خالد السبيعي',
     initials: 'خ س',
-    nationalId: '1076554321',
     mobile: '0538877665',
     email: 'k.subaie@outlook.com',
     city: 'جدة',
@@ -1552,7 +1542,6 @@ export const SEED_ADMIN_USERS_LIST: AdminUserRecord[] = [
     id: 'USR-204022',
     fullName: 'نورة العنزي',
     initials: 'ن ع',
-    nationalId: '1088776655',
     mobile: '0544455667',
     email: 'noura.anizi@proton.me',
     city: 'الدمام',
@@ -1602,7 +1591,6 @@ export const SEED_ADMIN_USERS_LIST: AdminUserRecord[] = [
     id: 'USR-203988',
     fullName: 'فهد الدوسري',
     initials: 'ف د',
-    nationalId: '1066998877',
     mobile: '0501234987',
     email: 'fahad.d@gmail.com',
     city: 'الرياض',
@@ -1643,7 +1631,6 @@ export const SEED_ADMIN_USERS_LIST: AdminUserRecord[] = [
     id: 'USR-203901',
     fullName: 'ريما الغامدي',
     initials: 'ر غ',
-    nationalId: '1077887799',
     mobile: '0569988771',
     email: 'reema.g@applux.sa',
     city: 'مكة',
@@ -1676,7 +1663,6 @@ export const SEED_ADMIN_USERS_LIST: AdminUserRecord[] = [
     id: 'USR-203820',
     fullName: 'سلطان القرني',
     initials: 'س ق',
-    nationalId: '1099112233',
     mobile: '0511224455',
     email: 'sultan.qarni@outlook.com',
     city: 'تبوك',
@@ -1702,7 +1688,6 @@ export const SEED_ADMIN_USERS_LIST: AdminUserRecord[] = [
     id: 'USR-203714',
     fullName: 'هند الزهراني',
     initials: 'ه ز',
-    nationalId: '1055223344',
     mobile: '0578899112',
     email: 'hind.z@gmail.com',
     city: 'الطائف',
@@ -1737,7 +1722,6 @@ export const SEED_ADMIN_USERS_LIST: AdminUserRecord[] = [
     id: 'USR-203566',
     fullName: 'ماجد العتيبي',
     initials: 'م ع',
-    nationalId: '1044556677',
     mobile: '0599884422',
     email: 'majed.o@icloud.com',
     city: 'الرياض',

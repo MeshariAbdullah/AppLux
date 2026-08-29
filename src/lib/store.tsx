@@ -44,7 +44,6 @@ import {
 
 export type RegistrationDraft = {
   fullName: string;
-  nationalId: string;
   dob: string;
   mobile: string;
   email: string;
@@ -107,7 +106,6 @@ export type UserProfile = RegistrationDraft & {
 
 export const emptyRegistration: RegistrationDraft = {
   fullName: '',
-  nationalId: '',
   dob: '',
   mobile: '',
   email: '',
