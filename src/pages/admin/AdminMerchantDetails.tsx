@@ -49,9 +49,11 @@ import {
 import type {
   AdminMerchantDecisionStatus,
   AdminMerchantDocStatus,
+  AdminMerchantDocument,
   StoreCategory,
 } from '@/lib/data';
 import { openExternalUrl } from '@/lib/openExternal';
+import { DocumentPreview } from '@/components/ui/DocumentPreview';
 
 /** DB rental_category → customer StoreCategory (plural keys). */
 const DB_TO_STORE_CATEGORY: Record<RentalCategoryDB, StoreCategory> = {
@@ -143,6 +145,7 @@ export default function AdminMerchantDetails() {
                   type: d.doc_type,
                   fileName: d.original_name,
                   path: d.storage_path,
+                  mimeType: d.mime_type ?? null,
                   reviewStatus: d.review_status,
                   uploadedAt: d.uploaded_at,
                 })),
@@ -166,6 +169,10 @@ export default function AdminMerchantDetails() {
   const [notes, setNotes] = useState('');
   const [busy, setBusy] = useState<'approve' | 'reject' | null>(null);
   const [rejectConfirmOpen, setRejectConfirmOpen] = useState(false);
+  // Document under preview. The overlay mints a FRESH short-lived
+  // signed URL when it opens (and on refresh/retry) — nothing is
+  // persisted, and storage RLS stays the authority.
+  const [previewDoc, setPreviewDoc] = useState<AdminMerchantDocument | null>(null);
 
   useEffect(() => {
     setNotes(request?.decision.notes ?? '');
@@ -500,14 +507,16 @@ export default function AdminMerchantDetails() {
                   {request.documents.map((d) => (
                     <UploadedDocRow
                       key={d.id}
-                      label={t(`admin.merchantRequest.docFields.${d.type === 'commercial_registration' ? 'commercialReg' : 'authorizedId'}`)}
+                      label={t(`admin.merchantRequest.docFields.${docLabelKey(d.type)}`)}
                       fileName={d.fileName}
                       reviewStatus={d.reviewStatus}
                       statusLabel={t(`admin.merchantRequest.docStatus.${d.reviewStatus === 'approved' ? 'verified' : d.reviewStatus}`)}
-                      onView={async () => {
-                        const url = await getMerchantDocumentSignedUrl(d.path);
-                        if (url) openExternalUrl(url);
-                      }}
+                      // Opens the in-app preview overlay — NOT window.open.
+                      // The old flow awaited the signed URL and then called
+                      // window.open, which browsers block (the await drops
+                      // the user gesture); the overlay needs no popup and
+                      // mints its URL after opening.
+                      onView={() => setPreviewDoc(d)}
                       viewLabel={t('admin.merchantRequest.viewDoc')}
                     />
                   ))}
@@ -618,8 +627,40 @@ export default function AdminMerchantDetails() {
         tone="danger"
         loading={busy === 'reject'}
       />
+
+      {/* Secure attachment preview: image inline, PDF inline with an
+          external-open fallback, everything else external-only. The
+          signed URL (10 min) is minted per open/refresh and never
+          persisted; refresh re-mints after expiry. */}
+      <DocumentPreview
+        open={previewDoc !== null}
+        target={
+          previewDoc
+            ? {
+                title: t(`admin.merchantRequest.docFields.${docLabelKey(previewDoc.type)}`),
+                fileName: previewDoc.fileName,
+                mimeType: previewDoc.mimeType,
+              }
+            : null
+        }
+        mint={() =>
+          previewDoc
+            ? getMerchantDocumentSignedUrl(previewDoc.path, 600)
+            : Promise.resolve(null)
+        }
+        onClose={() => setPreviewDoc(null)}
+      />
     </>
   );
+}
+
+/** Localized label key per merchant document type. Unknown/future types
+ *  fall back to the generic attachment label (the original file name is
+ *  always shown alongside). */
+function docLabelKey(docType: string): string {
+  if (docType === 'commercial_registration') return 'commercialReg';
+  if (docType === 'authorized_id') return 'authorizedId';
+  return 'attachment';
 }
 
 function Section({

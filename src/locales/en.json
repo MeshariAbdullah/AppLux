@@ -47,7 +47,8 @@
       "hour": "Hour",
       "minute": "Minute",
       "done": "Done"
-    }
+    },
+    "close": "Close"
   },
   "session": {
     "timeout": {
@@ -2491,7 +2492,8 @@
         "commercialReg": "Commercial registration",
         "vat": "VAT certificate",
         "bankLetter": "Bank letter (IBAN)",
-        "authorizedId": "Authorized signatory ID"
+        "authorizedId": "Authorized signatory ID",
+        "attachment": "Attached document"
       },
       "docStatus": {
         "verified": "Verified",
@@ -3148,5 +3150,13 @@
     "mediaUnavailable": "Media unavailable",
     "noMedia": "No photos on record.",
     "pageOf": "Page {n} of {m}"
+  },
+  "docPreview": {
+    "loading": "Preparing the document…",
+    "error": "Couldn't open the document. The file may be unavailable or the link expired.",
+    "retry": "Try again",
+    "openExternal": "Open externally",
+    "refresh": "Refresh link",
+    "noInline": "This file type can't be previewed in-app — open it externally."
   }
 }

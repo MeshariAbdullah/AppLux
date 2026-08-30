@@ -53,6 +53,9 @@ ID (LND-XXXXXXXX) plus a screenshot for any technical error.
 | # | Actor | Starting condition | Action | Expected result | Pass/Fail | Notes |
 |---|---|---|---|---|---|---|
 | 3.1 | Admin | Admin console → merchant applications | Open the §2 application | All submitted fields + branches visible | | |
+| 3.1b | Admin | Application open, Documents section | Tap «عرض» on the uploaded CR document | In-app preview overlay opens and shows the ACTUAL file (image inline; PDF inline with an «فتح خارجياً» fallback) — no blocked popup, no blank screen | | |
+| 3.1c | Admin | Preview open | Tap «فتح خارجياً» | The file opens in a new tab / external browser via a short-lived signed URL | | |
+| 3.1d | Admin | Preview left open >10 min, or file deleted from storage | Tap «تحديث الرابط» / retry | A fresh signed URL is minted; a missing file shows the clean error state with retry, never a blank screen | | |
 | 3.2 | Admin | Application open | Reject it with an internal decision note | Status rejected; note saved | | |
 | 3.3 | Merchant | Rejected applicant signs in | View `/merchant/pending` | Red state, **neutral** copy only — the admin's internal note is NEVER shown | | |
 | 3.4 | Admin | Second test application (repeat §2 quickly) | Approve it | Merchant + branches provisioned; application approved | | |

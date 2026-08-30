@@ -1145,6 +1145,9 @@ export type AdminMerchantDocument = {
   type: string;
   fileName: string;
   path: string;
+  /** MIME type from the upload record — picks the preview mode
+   *  (inline image / inline PDF / external-open fallback). */
+  mimeType: string | null;
   reviewStatus: 'pending' | 'approved' | 'rejected';
   uploadedAt: string;
 };
