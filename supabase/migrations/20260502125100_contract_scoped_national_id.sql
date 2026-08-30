@@ -369,6 +369,10 @@ comment on function public.accept_rental_invoice(uuid) is
 -- SECURITY MODEL (no fixed code, no bypass):
 --   * The code is generated with pgcrypto randomness per challenge and
 --     never returned to the merchant-side caller by any RPC.
+--   * VERIFICATION IS HASH-BASED: only sha256(code) is compared; the
+--     plaintext exists solely in the TEMPORARY code_inapp column that
+--     powers in-app delivery, and is dropped with SMS integration
+--     (see the column comment on renter_otp_challenges.code_inapp).
 --   * The ONLY read path is get_my_renter_otp, which returns a code
 --     exclusively for auth.uid() = the challenge's customer — i.e.
 --     the person logged into the customer's own Lend account. A
@@ -389,9 +393,21 @@ create table if not exists public.renter_otp_challenges (
   id                uuid primary key default gen_random_uuid(),
   customer_user_id  uuid not null references public.profiles(id) on delete cascade,
   mobile            text not null,
-  -- Plaintext by design: the code must be retrievable by the CUSTOMER
-  -- (in-app delivery) for its 10-minute life. Access is definer-only.
-  code              text not null,
+  -- VERIFICATION BASELINE: sha256 of the code. This is what
+  -- merchant_verify_renter_otp compares against — the plaintext is
+  -- never needed for verification.
+  code_hash         text not null,
+  -- >>> TEMPORARY — IN-APP DELIVERY ONLY <<<
+  -- Plaintext copy of the code, read exclusively by get_my_renter_otp
+  -- so the CUSTOMER can see their own code inside the app while no SMS
+  -- provider is integrated (a hash cannot be displayed, and the code
+  -- must be stable between issuance and verification, so a plaintext
+  -- copy is unavoidable for this delivery mode). When SMS/Twilio
+  -- delivery ships (the code is handed to the SMS sender at issuance
+  -- instead), DROP this column and the get_my_renter_otp function —
+  -- verification via code_hash is unaffected. Access is definer-only
+  -- and rows live at most 10 minutes as usable codes.
+  code_inapp        text not null,
   attempts          int  not null default 0,
   expires_at        timestamptz not null,
   -- Set by merchant_verify_renter_otp on a correct code.
@@ -475,11 +491,14 @@ begin
      and verified_at is null
      and superseded_at is null;
 
+  -- code_hash is the verification baseline; code_inapp is the
+  -- TEMPORARY plaintext copy for in-app delivery (see table comment).
   insert into public.renter_otp_challenges
-    (customer_user_id, mobile, code, expires_at, created_by)
+    (customer_user_id, mobile, code_hash, code_inapp, expires_at, created_by)
   values (
     v_customer,
     v_canonical,
+    encode(extensions.digest(convert_to(v_code, 'UTF8'), 'sha256'), 'hex'),
     v_code,
     now() + interval '10 minutes',
     auth.uid()
@@ -557,9 +576,12 @@ begin
    where renter_otp_challenges.id = v_challenge.id;
 
   v_clean := regexp_replace(coalesce(p_code, ''), '\D', '', 'g');
-  if v_clean = '' or v_clean is distinct from v_challenge.code then
+  if v_clean = ''
+     or encode(extensions.digest(convert_to(v_clean, 'UTF8'), 'sha256'), 'hex')
+        is distinct from v_challenge.code_hash then
     -- Wrong code: zero rows (the client shows "code incorrect"). The
-    -- attempt was already counted above.
+    -- attempt was already counted above. Verification compares hashes
+    -- only — the plaintext column plays no part here.
     return;
   end if;
 
@@ -607,7 +629,7 @@ begin
   end if;
 
   return query
-  select c.code,
+  select c.code_inapp,
          c.expires_at,
          m.display_name
     from public.renter_otp_challenges c
@@ -624,7 +646,7 @@ $$;
 grant execute on function public.get_my_renter_otp() to authenticated;
 
 comment on function public.get_my_renter_otp() is
-  'In-app OTP delivery: returns the calling CUSTOMER''s own pending verification code (latest open challenge), plus the requesting boutique''s display name. Zero rows when none is pending. Scoped to auth.uid() — this is the only read path for codes until SMS delivery replaces it.';
+  'TEMPORARY in-app OTP delivery: returns the calling CUSTOMER''s own pending verification code (latest open, unexpired, unsuperseded, unverified challenge) plus the requesting boutique''s display name. Zero rows when none is pending. Scoped to auth.uid() — the ONLY read path for code_inapp. Drop together with the code_inapp column when SMS delivery ships; hash-based verification is unaffected.';
 
 -- ---------------------------------------------------------------------
 -- (6) Server-side enforcement: no offer issuance without verified OTP
