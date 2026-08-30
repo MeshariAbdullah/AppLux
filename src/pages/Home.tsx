@@ -19,6 +19,7 @@ import {
 import { useI18n, useT } from '@/lib/i18n';
 import { formatValidUntil } from '@/lib/offerExpiry';
 import { useStore } from '@/lib/store';
+import { RenterOtpCard } from '@/components/rental/RenterOtpCard';
 import {
   buildMerchantNameMap,
   useCustomerRentalData,
@@ -300,6 +301,11 @@ export default function Home() {
       <div className="px-5 pt-[calc(env(safe-area-inset-top)+22px)] pb-24 space-y-3">
         {/* ====== C05 greeting ====== */}
         {greetingRow}
+
+        {/* ====== In-app rental-session verification code (only when a
+              merchant has started a session for this account; renders
+              nothing otherwise). ====== */}
+        <RenterOtpCard active={configured} />
 
         {/* ====== Compact eligibility (preserved; design card chrome).
               Live values + the only path to /eligibility. ====== */}

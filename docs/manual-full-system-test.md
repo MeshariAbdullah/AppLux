@@ -75,7 +75,9 @@ ID (LND-XXXXXXXX) plus a screenshot for any technical error.
 | 5.1 | Merchant | Dashboard | Tap «إصدار عقد إيجار جديد» | Focused 5-step session opens; bottom nav hidden; «1 / 5» | | |
 | 5.2 | Merchant | Verify step | Look up the §1 customer's mobile | Existence only — customer NAME NOT shown; NO last-4-of-ID prompt anywhere | | |
 | 5.3 | Merchant | Lookup done | Send the verification code, then enter a WRONG code | «الرمز غير صحيح»; still no name revealed | | |
-| 5.4 | Merchant | Lookup done | Enter the correct code the customer provides (temporary dev code `000000` until the real OTP provider ships) | Customer name revealed only now | | |
+| 5.3b | Customer | Signed in on their own device | Open the Lend Home screen | The random one-time code card appears (code + boutique name + expiry); it is NOT visible to any other account | | |
+| 5.4 | Merchant | Lookup done | Enter the code the customer reads from their app | Customer name revealed only now | | |
+| 5.4b | Merchant (API) | Verified session skipped | Attempt to insert a rental_invoices row directly via the REST API without a verified code | Rejected server-side with P0195 — issuance is impossible without OTP | | |
 | 5.5 | Merchant | Operation step | Item description, days, daily rate, ORIGINAL item value above the eligibility limit | Eligibility check returns insufficient; reduce-value path offered | | |
 | 5.6 | Merchant | Operation step | Set a value within the limit and continue | «العميل مؤهَّل» (live read each time) | | |
 | 5.7 | Merchant | Contract step | Try to issue WITHOUT the customer National ID | Issue CTA disabled until a valid 10-digit ID (1/2 prefix) is entered | | |

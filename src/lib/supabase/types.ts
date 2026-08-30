@@ -714,6 +714,17 @@ export type Database = {
           has_nafath: boolean;
         }>;
       };
+      /** In-app OTP delivery: the calling CUSTOMER's own pending
+       *  verification code (scoped to auth.uid() server-side). Zero
+       *  rows when none is pending. */
+      get_my_renter_otp: {
+        Args: Record<string, never>;
+        Returns: Array<{
+          code: string;
+          expires_at: string;
+          merchant_name: LocalizedJson | null;
+        }>;
+      };
       get_renter_eligibility: {
         Args: { p_renter_id: string };
         Returns: Array<{

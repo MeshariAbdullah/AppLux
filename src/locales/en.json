@@ -118,7 +118,8 @@
     "disputeProposalHandled": "This offer was already handled.",
     "disputeOwnProposal": "You can't respond to your own offer.",
     "disputeAlreadyResponded": "Your response to this offer is already recorded.",
-    "disputeNotFound": "Case not found."
+    "disputeNotFound": "Case not found.",
+    "otpRequiredForIssue": "Issuing the offer requires a successful customer verification code. Complete the verification step and try again."
   },
   "welcome": {
     "eyebrow": "Lend",
@@ -497,7 +498,13 @@
     },
     "browseStores": "Browse stores",
     "browseAll": "All",
-    "stageLine": "Stage {current} of {total} · {stage}"
+    "stageLine": "Stage {current} of {total} · {stage}",
+    "renterOtp": {
+      "title": "Rental session verification code",
+      "titleNamed": "Verification code for your rental session at {merchant}",
+      "body": "Read this code to the merchant to complete verification. It only confirms you own this account — never share it outside the rental session.",
+      "expires": "Valid until {time}"
+    }
   },
   "sections": {
     "activeInvoices": "Active invoices",
@@ -1279,15 +1286,15 @@
         "title": "Verify the renter",
         "hint": "Look up the renter by Saudi mobile number, then confirm a short code to authorise this session.",
         "mobileLabel": "Renter mobile",
-        "mobileHint": "9 digits, starts with 5. We'll send a one-time code.",
+        "mobileHint": "9 digits, starts with 5. A verification code will appear inside the customer's app.",
         "mobileAccepted": "Number accepted · {e164}",
         "lookupCta": "Look up renter",
         "otp": {
           "sendCta": "Send verification code to the customer",
           "resendCta": "Resend code",
-          "sentChip": "A verification code was issued for this customer",
+          "sentChip": "Verification code issued — it now shows inside the customer's Lend app",
           "codeLabel": "Verification code",
-          "codeHint": "Ask the customer for the code they received and enter it here. The code only confirms the presence of the registered Lend mobile's owner — it is not a National ID verification."
+          "codeHint": "The customer finds the code on the Home screen of their Lend app. Enter it as they read it to you. The code only confirms the presence of the registered Lend account's owner — it is not a National ID verification."
         },
         "confirmCta": "Confirm and continue",
         "nafathBadge": "Nafath verified",
@@ -1304,7 +1311,7 @@
         },
         "privacy": {
           "title": "Renter is registered",
-          "body": "We'll send a one-time code to {mask}. The renter's details will only appear here after the code is confirmed."
+          "body": "A one-time verification code will be issued for the Lend account linked to {mask} and shown inside the customer's app. The customer's details appear here only after the code is confirmed."
         },
         "notFound": {
           "body": "No Lend account is linked to this mobile. The renter must complete their account before you can open a rental session for them.",
@@ -1322,7 +1329,8 @@
           "otpWrongCode": "That code is not correct. Check with the customer and try again.",
           "otpNoActiveChallenge": "No active code for this customer — send a new one.",
           "otpTooManyAttempts": "Too many attempts — send a new code.",
-          "otpThrottled": "A code was just issued — wait a moment before retrying."
+          "otpThrottled": "A code was just issued — wait a moment before retrying.",
+          "otpVerificationExpired": "The customer verification for this session has expired — send a new code and verify again before issuing."
         }
       },
       "operation": {

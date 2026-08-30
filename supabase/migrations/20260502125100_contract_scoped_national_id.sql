@@ -15,44 +15,61 @@
 --      Format-checked; nullable so historical rows stay valid.
 --   2. One-time BACKFILL of the four party-snapshot columns on
 --      rental_contracts for legacy contracts created before
---      20260502123500 (their snapshots are NULL and the UI fell back
---      to LIVE profile/merchant rows). After this freeze, historical
---      contracts no longer depend on profiles.national_id at all.
+--      20260502123500. SEMANTICS: this copies the exact value each
+--      contract was already displaying through its live-profile
+--      fallback, freezing it as the RECORDED contractual value. It
+--      does NOT verify the value and does not imply any government
+--      identity verification — recorded value ≠ verified identity.
 --   3. Immutability guards — once written, the party snapshot columns
 --      on rental_contracts (P0151) and the merchant-entered
 --      lessee_national_id on rental_invoices (P0152) cannot be changed
---      by end-user roles. Historical contractual truth is preserved;
---      SECURITY DEFINER lifecycle RPCs are unaffected.
+--      by end-user roles, and end-user roles can no longer write
+--      profiles.national_id at all (P0153).
 --   4. accept_rental_invoice — the lessee National ID snapshot now
 --      comes from the INVOICE (merchant-entered, customer-reviewed),
 --      falling back to profiles.national_id only for offers issued
 --      before this migration (offers expire after 1 hour, so the
 --      fallback window is tiny). Everything else is unchanged.
 --   5. Customer-presence OTP — renter_otp_challenges +
---      merchant_start_renter_otp / merchant_verify_renter_otp.
---      Replaces the mobile + "last 4 of National ID" presence check.
---      *** TEMPORARY DEV CODE — see the honest-limitations note in
---      section 5. This is NOT real OTP security yet. ***
---   6. Drops the National-ID-based account verification surface:
+--      merchant_start_renter_otp / merchant_verify_renter_otp /
+--      get_my_renter_otp. Replaces the mobile + "last 4 of National
+--      ID" presence check. A cryptographically random 6-digit code is
+--      generated server-side per challenge; while no SMS provider is
+--      integrated, the code is retrievable ONLY by the CUSTOMER
+--      through their own authenticated Lend session (in-app
+--      delivery). There is NO fixed code, NO development bypass, and
+--      the merchant/client never learns the code from the server.
+--   6. SERVER-SIDE ENFORCEMENT — an AFTER INSERT trigger on
+--      rental_invoices refuses offer issuance by end-user roles
+--      unless a VERIFIED, UNUSED, UNEXPIRED challenge exists binding
+--      (this merchant user → this customer), and consumes it in the
+--      same transaction (P0195). Calling PostgREST/RPCs directly
+--      cannot bypass the OTP step.
+--   7. Drops the National-ID-based account verification surface:
 --      confirm_renter_presence, merchant_set_customer_national_id,
 --      and the has_national_id column of lookup_renter_by_mobile.
---   7. handle_new_auth_user — customer signup no longer reads or
+--   8. handle_new_auth_user — customer signup no longer reads or
 --      persists a National ID. (Merchant signup still records the
---      authorized REPRESENTATIVE's ID — that is merchant-onboarding
+--      authorized REPRESENTATIVE's ID — merchant-onboarding
 --      compliance data, unrelated to customer identity.)
---   8. Drops profiles_national_id_customer_unique — National ID is no
---      longer an account-identity datum, so account-level uniqueness
---      no longer applies. Existing profiles.national_id VALUES ARE
---      KEPT (not nulled, not dropped): merchant rep IDs live in the
---      same column, and keeping customer values is the safe,
---      reversible choice while the product transitions.
+--   9. Drops profiles_national_id_customer_unique — National ID is no
+--      longer an account-identity datum.
 --
--- WHAT IS DELIBERATELY NOT DONE:
---   * profiles.national_id is NOT dropped and NOT nulled. Nothing
---     reads it for customers any more (after this + the client
---     release) except the legacy-offer fallback in (4). A later
---     cleanup migration may null customer values once no pre-existing
---     issued offers remain.
+-- WHY profiles.national_id IS KEPT (column + existing values):
+--   * MERCHANT-role profile rows store the authorized REPRESENTATIVE's
+--     National ID in this same column — handle_new_auth_user's
+--     merchant branch (unchanged, see section 8) still writes it on
+--     every merchant signup, in addition to
+--     merchant_applications.authorized_national_id. Dropping the
+--     column would break merchant onboarding.
+--   * CUSTOMER-role values are legacy data retained untouched for
+--     reversibility. After this migration nothing writes them (the
+--     trigger stops, the client stops, and P0153 blocks end-user
+--     writes), and the ONLY remaining reader is the legacy-offer
+--     fallback inside accept_rental_invoice (section 4) — explicitly
+--     temporary and removable once no pre-migration offers remain
+--     (their 1-hour expiry passed). A later cleanup migration may
+--     null customer-role values.
 --
 -- Idempotent throughout. ROLLBACK: re-apply the 20260502123700 body of
 -- accept_rental_invoice, the 20260502124400 body of
@@ -77,7 +94,7 @@ alter table public.rental_invoices
   check (lessee_national_id is null or lessee_national_id ~ '^[12][0-9]{9}$');
 
 comment on column public.rental_invoices.lessee_national_id is
-  'National ID the MERCHANT recorded for this specific rental offer. Reviewed by the customer during contract review; frozen onto rental_contracts.lessee_national_id at acceptance. NOT a government-verified identity — it is contract data the customer approves.';
+  'National ID the MERCHANT recorded for this specific rental offer. Reviewed by the customer during contract review; frozen onto rental_contracts.lessee_national_id at acceptance. A RECORDED value, not a government-verified identity — the customer approves the contract containing it.';
 
 -- ---------------------------------------------------------------------
 -- (2) One-time freeze of legacy contract snapshots
@@ -87,6 +104,11 @@ comment on column public.rental_invoices.lessee_national_id is
 -- sources the fallback used, so no historical contract depends on
 -- mutable profile/merchant data afterwards. Only NULL columns are
 -- touched; snapshots written at acceptance are never rewritten.
+--
+-- SEMANTICS: the copied lessee_national_id is the value the customer
+-- account carried when these contracts were formed and displayed — a
+-- RECORDED contractual value. Freezing it here does NOT verify it and
+-- must never be presented as a government-verified identity.
 
 update public.rental_contracts c
    set lessor_legal_name = coalesce(c.lessor_legal_name, nullif(trim(m.company_name), '')),
@@ -166,12 +188,46 @@ create trigger rental_invoices_guard_lessee_national_id
   for each row
   execute function public.guard_invoice_lessee_national_id();
 
+-- profiles.national_id is no longer writable by end-user roles at all:
+-- no client flow writes it any more (customer signup stopped, the
+-- merchant backfill RPC is dropped below), so any remaining write path
+-- through the permissive profiles self-update RLS policy would be a
+-- regression. Merchant signup still populates it, but through the
+-- SECURITY DEFINER trigger (runs as the function owner — unaffected).
+
+create or replace function public.guard_profile_national_id()
+returns trigger
+language plpgsql
+set search_path = public
+as $$
+begin
+  if current_user in ('anon', 'authenticated') then
+    if new.national_id is distinct from old.national_id then
+      raise exception 'profiles.national_id is not writable — National ID is contract data'
+        using errcode = 'P0153';
+    end if;
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists profiles_guard_national_id on public.profiles;
+create trigger profiles_guard_national_id
+  before update on public.profiles
+  for each row
+  execute function public.guard_profile_national_id();
+
 -- ---------------------------------------------------------------------
 -- (4) accept_rental_invoice — snapshot the INVOICE's National ID
 -- ---------------------------------------------------------------------
 -- Identical to the 20260502123700 body except the lessee National ID
 -- source: invoice first (merchant-entered, customer-reviewed), profile
 -- only as a fallback for offers issued before this migration.
+-- >>> TEMPORARY LEGACY READER: the profiles.national_id fallback below
+-- is the ONLY remaining live reader of customer profile National IDs.
+-- It exists solely for offers issued before this migration that are
+-- still inside their 1-hour acceptance window, and can be deleted in
+-- any later migration once that window has passed. <<<
 
 create or replace function public.accept_rental_invoice(p_invoice_id uuid)
 returns uuid
@@ -220,9 +276,6 @@ begin
 
   -- Party identity snapshots. Lessee National ID: the value the
   -- MERCHANT entered on this offer and the customer just reviewed.
-  -- Legacy fallback (profiles.national_id) exists only for offers
-  -- issued before 20260502125100 that are still inside their 1-hour
-  -- acceptance window.
   select company_name, commercial_reg_number
     into v_lessor_name, v_lessor_cr
     from merchants where id = v_invoice.merchant_id;
@@ -231,6 +284,7 @@ begin
     from profiles where id = v_invoice.customer_user_id;
   v_lessee_nid := nullif(trim(coalesce(v_invoice.lessee_national_id, '')), '');
   if v_lessee_nid is null then
+    -- TEMPORARY legacy fallback (see header of this section).
     select nullif(trim(coalesce(national_id, '')), '') into v_lessee_nid
       from profiles where id = v_invoice.customer_user_id;
   end if;
@@ -300,48 +354,65 @@ comment on function public.accept_rental_invoice(uuid) is
   'Accept issued/viewed invoice → pending contract (row-locked; LND ref + party snapshots + eligibility backstop). Lessee National ID snapshot comes from the invoice (merchant-entered, customer-reviewed); profile fallback only for pre-20260502125100 offers. P0170 expired; P0003 non-actionable; P0150 identity; P0161 eligibility; P0001/P0002 unchanged.';
 
 -- ---------------------------------------------------------------------
--- (5) Customer-presence OTP (TEMPORARY development implementation)
+-- (5) Customer-presence OTP
 -- ---------------------------------------------------------------------
--- Model: the merchant enters the customer's mobile; a one-time code is
--- issued for that customer's registered mobile; the CUSTOMER provides
--- the code; the merchant enters it; verification succeeds only when the
--- code matches server-side. Success means "presence of the person
--- controlling the registered Lend mobile was confirmed for this
--- in-store session" — it is NOT a National ID or government identity
+-- Model: the merchant enters the customer's mobile; the server
+-- generates a RANDOM one-time code for that customer's account; the
+-- CUSTOMER retrieves the code inside their own authenticated Lend app
+-- (get_my_renter_otp) and tells it to the merchant; the merchant
+-- enters it; verification succeeds only when the code matches
+-- server-side. Success means "presence of the person controlling the
+-- registered Lend account/mobile was confirmed for this in-store
+-- session" — it is NOT a National ID or government identity
 -- verification.
 --
--- *** HONEST LIMITATION — TEMPORARY DEV CODE ***
--- No SMS provider is integrated yet, so merchant_start_renter_otp
--- currently issues the FIXED development code '000000'. That provides
--- NO real security and exists only so the end-to-end flow is testable
--- before the real OTP provider lands. The production integration seam
--- is deliberate and small:
---   * REAL INTEGRATION: replace the v_code assignment below with a
---     random 6-digit code and deliver it to the customer's mobile via
---     the SMS provider (e.g. the existing otp-send edge function /
---     Twilio Verify) — OR point the client's src/lib/otp provider at
---     the otp-send / otp-verify edge functions and stop calling these
---     RPCs. Nothing else in the flow changes either way.
---   * The verify RPC, challenge lifecycle (expiry, attempt cap,
---     consumption) and everything downstream stay as-is.
+-- SECURITY MODEL (no fixed code, no bypass):
+--   * The code is generated with pgcrypto randomness per challenge and
+--     never returned to the merchant-side caller by any RPC.
+--   * The ONLY read path is get_my_renter_otp, which returns a code
+--     exclusively for auth.uid() = the challenge's customer — i.e.
+--     the person logged into the customer's own Lend account. A
+--     merchant (or attacker) calling the RPCs directly learns nothing.
+--   * The table has RLS enabled with no policies and all client
+--     privileges revoked; only the SECURITY DEFINER RPCs touch it.
+--   * Challenge lifecycle: 10-minute code validity, 5 verify attempts,
+--     supersession on re-send, and single-use consumption AT OFFER
+--     ISSUANCE (section 6).
+--
+-- PRODUCTION SEAM (real OTP later): replace the in-app delivery with
+-- SMS — either extend merchant_start_renter_otp to hand the generated
+-- code to an SMS sender, or switch the client's src/lib/otp provider
+-- to the pre-existing otp-send / otp-verify Twilio edge functions. The
+-- verify semantics, binding, and issuance enforcement stay unchanged.
 
 create table if not exists public.renter_otp_challenges (
   id                uuid primary key default gen_random_uuid(),
   customer_user_id  uuid not null references public.profiles(id) on delete cascade,
   mobile            text not null,
-  code_hash         text not null,
+  -- Plaintext by design: the code must be retrievable by the CUSTOMER
+  -- (in-app delivery) for its 10-minute life. Access is definer-only.
+  code              text not null,
   attempts          int  not null default 0,
   expires_at        timestamptz not null,
-  consumed_at       timestamptz,
+  -- Set by merchant_verify_renter_otp on a correct code.
+  verified_at       timestamptz,
+  -- Set when a newer challenge replaces this (unverified) one.
+  superseded_at     timestamptz,
+  -- Single-use consumption: stamped by the issuance trigger (section
+  -- 6) with the offer this verification was spent on.
+  used_invoice_id   uuid references public.rental_invoices(id) on delete set null,
+  used_at           timestamptz,
   created_by        uuid not null references public.profiles(id) on delete cascade,
   created_at        timestamptz not null default now()
 );
 
 create index if not exists renter_otp_challenges_lookup_idx
   on public.renter_otp_challenges(created_by, customer_user_id, created_at desc);
+create index if not exists renter_otp_challenges_customer_idx
+  on public.renter_otp_challenges(customer_user_id, created_at desc);
 
--- No client access at all — the SECURITY DEFINER RPCs below are the
--- only surface. (Definer functions run as the table owner and are not
+-- No client access at all — the SECURITY DEFINER RPCs are the only
+-- surface. (Definer functions run as the table owner and are not
 -- subject to these policies.)
 alter table public.renter_otp_challenges enable row level security;
 revoke all on public.renter_otp_challenges from anon, authenticated;
@@ -384,27 +455,32 @@ begin
        and customer_user_id = v_customer
        and created_at > now() - interval '15 seconds'
   ) then
-    raise exception 'Verification code was just sent — wait a moment'
+    raise exception 'Verification code was just issued — wait a moment'
       using errcode = 'P0192';
   end if;
 
-  -- TEMPORARY DEV CODE (see header note): fixed '000000' until the SMS
-  -- provider integration replaces this with a random code + delivery.
-  v_code := '000000';
+  -- Cryptographically random 6-digit code (pgcrypto). 24 random bits
+  -- mod 1e6 — the residual modulo bias is negligible for a 5-attempt,
+  -- 10-minute one-time code.
+  v_code := lpad(
+    ((('x' || encode(extensions.gen_random_bytes(3), 'hex'))::bit(24)::int) % 1000000)::text,
+    6, '0');
 
-  -- Supersede any previous open challenge for this pair.
+  -- Supersede any previous open (unverified, unused) challenge for
+  -- this pair — exactly one code is live at a time.
   update public.renter_otp_challenges
-     set consumed_at = now()
+     set superseded_at = now()
    where created_by = auth.uid()
      and customer_user_id = v_customer
-     and consumed_at is null;
+     and verified_at is null
+     and superseded_at is null;
 
   insert into public.renter_otp_challenges
-    (customer_user_id, mobile, code_hash, expires_at, created_by)
+    (customer_user_id, mobile, code, expires_at, created_by)
   values (
     v_customer,
     v_canonical,
-    encode(extensions.digest(convert_to(v_code, 'UTF8'), 'sha256'), 'hex'),
+    v_code,
     now() + interval '10 minutes',
     auth.uid()
   );
@@ -414,7 +490,7 @@ $$;
 grant execute on function public.merchant_start_renter_otp(text) to authenticated;
 
 comment on function public.merchant_start_renter_otp(text) is
-  'Starts a customer-presence OTP challenge for the merchant rental session. TEMPORARY: issues the fixed development code 000000 (no SMS provider yet) — replace code generation + delivery for the real integration. P0030 role; P0190 mobile format; P0191 no customer; P0192 throttled.';
+  'Starts a customer-presence OTP challenge for the merchant rental session: generates a random 6-digit code retrievable ONLY by the customer via get_my_renter_otp (in-app delivery until SMS integration). Never returns the code to the caller. P0030 role; P0190 mobile format; P0191 no customer; P0192 throttled.';
 
 create or replace function public.merchant_verify_renter_otp(
   p_mobile text,
@@ -460,7 +536,8 @@ begin
     from public.renter_otp_challenges c
    where c.created_by = auth.uid()
      and c.customer_user_id = v_customer
-     and c.consumed_at is null
+     and c.verified_at is null
+     and c.superseded_at is null
    order by c.created_at desc
    limit 1
    for update;
@@ -480,19 +557,18 @@ begin
    where renter_otp_challenges.id = v_challenge.id;
 
   v_clean := regexp_replace(coalesce(p_code, ''), '\D', '', 'g');
-  if v_clean = ''
-     or encode(extensions.digest(convert_to(v_clean, 'UTF8'), 'sha256'), 'hex')
-        is distinct from v_challenge.code_hash then
+  if v_clean = '' or v_clean is distinct from v_challenge.code then
     -- Wrong code: zero rows (the client shows "code incorrect"). The
     -- attempt was already counted above.
     return;
   end if;
 
-  -- Success — consume the challenge and return the customer's safe
-  -- profile fields (same disclosure boundary the previous presence
-  -- check used: nothing before verification, name/mobile/city after).
+  -- Correct code — mark VERIFIED (not consumed: consumption happens
+  -- when the merchant issues the offer, section 6) and return the
+  -- customer's safe profile fields. Same disclosure boundary as
+  -- before: nothing identifying pre-verification.
   update public.renter_otp_challenges
-     set consumed_at = now()
+     set verified_at = now()
    where renter_otp_challenges.id = v_challenge.id;
 
   return query
@@ -509,10 +585,122 @@ $$;
 grant execute on function public.merchant_verify_renter_otp(text, text) to authenticated;
 
 comment on function public.merchant_verify_renter_otp(text, text) is
-  'Verifies the customer-presence OTP for the merchant rental session and returns the customer''s safe profile fields on success (zero rows on a wrong code). Confirms control of the registered Lend mobile ONLY — not a National ID or government identity verification. P0030 role; P0190 mobile; P0191 no customer; P0193 no active/expired challenge; P0194 attempt cap.';
+  'Verifies the customer-presence OTP for the merchant rental session; on success marks the challenge VERIFIED (consumed later, at offer issuance) and returns the customer''s safe profile fields (zero rows on a wrong code). Confirms control of the registered Lend account/mobile ONLY — not a National ID or government identity verification. P0030 role; P0190 mobile; P0191 no customer; P0193 no active/expired challenge; P0194 attempt cap.';
+
+-- The customer's read path — in-app delivery of their own pending
+-- code. Strictly scoped to auth.uid(): nobody else (merchant included)
+-- can retrieve a code from the server.
+create or replace function public.get_my_renter_otp()
+returns table (
+  code           text,
+  expires_at     timestamptz,
+  merchant_name  jsonb
+)
+language plpgsql
+stable
+security definer
+set search_path = public
+as $$
+begin
+  if auth.uid() is null then
+    raise exception 'Not authenticated' using errcode = 'P0080';
+  end if;
+
+  return query
+  select c.code,
+         c.expires_at,
+         m.display_name
+    from public.renter_otp_challenges c
+    left join public.merchants m on m.owner_user_id = c.created_by
+   where c.customer_user_id = auth.uid()
+     and c.verified_at is null
+     and c.superseded_at is null
+     and c.expires_at > now()
+   order by c.created_at desc
+   limit 1;
+end;
+$$;
+
+grant execute on function public.get_my_renter_otp() to authenticated;
+
+comment on function public.get_my_renter_otp() is
+  'In-app OTP delivery: returns the calling CUSTOMER''s own pending verification code (latest open challenge), plus the requesting boutique''s display name. Zero rows when none is pending. Scoped to auth.uid() — this is the only read path for codes until SMS delivery replaces it.';
 
 -- ---------------------------------------------------------------------
--- (6) Remove the National-ID-based account verification surface
+-- (6) Server-side enforcement: no offer issuance without verified OTP
+-- ---------------------------------------------------------------------
+-- Offers are created by a direct merchant INSERT into rental_invoices
+-- (RLS rental_invoices_merchant_insert; there is no insert RPC and no
+-- admin insert policy). This AFTER INSERT trigger is therefore THE
+-- enforcement point: for end-user roles, the insert commits only when
+-- a challenge exists that is
+--   * created by the inserting auth user (the merchant owner — RLS
+--     already guarantees auth.uid() owns NEW.merchant_id),
+--   * for exactly NEW.customer_user_id (which the start RPC resolved
+--     from the verified mobile),
+--   * VERIFIED within the last 30 minutes (one in-store session),
+--   * not yet spent on another invoice,
+-- and that challenge is consumed (used_invoice_id = the new offer) in
+-- the same transaction. FOR UPDATE serializes concurrent inserts, so
+-- one verification can never issue two offers.
+--
+-- Caller detection: this function is SECURITY DEFINER (it must read
+-- the privilege-revoked challenges table), which switches current_user
+-- to the function owner — so end-user requests are detected via
+-- auth.uid() (present exactly when a JWT-authenticated PostgREST
+-- request performs the insert; RLS guarantees that user owns
+-- NEW.merchant_id). Privileged writers (seeds, SQL editor, service
+-- role) carry no JWT → auth.uid() is null → unaffected.
+
+create or replace function public.enforce_renter_otp_on_invoice()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_challenge_id uuid;
+begin
+  if auth.uid() is null then
+    return new;
+  end if;
+
+  select c.id into v_challenge_id
+    from public.renter_otp_challenges c
+   where c.created_by = auth.uid()
+     and c.customer_user_id = new.customer_user_id
+     and c.verified_at is not null
+     and c.verified_at > now() - interval '30 minutes'
+     and c.used_invoice_id is null
+   order by c.verified_at desc
+   limit 1
+   for update;
+
+  if v_challenge_id is null then
+    raise exception 'Customer verification required — complete the OTP step before issuing'
+      using errcode = 'P0195';
+  end if;
+
+  update public.renter_otp_challenges
+     set used_invoice_id = new.id,
+         used_at         = now()
+   where id = v_challenge_id;
+
+  return new;
+end;
+$$;
+
+drop trigger if exists rental_invoices_enforce_renter_otp on public.rental_invoices;
+create trigger rental_invoices_enforce_renter_otp
+  after insert on public.rental_invoices
+  for each row
+  execute function public.enforce_renter_otp_on_invoice();
+
+comment on function public.enforce_renter_otp_on_invoice() is
+  'Server-side OTP gate for offer issuance: an end-user INSERT into rental_invoices requires a challenge verified by the same merchant user for the same customer within 30 minutes and not yet spent; the challenge is consumed (single-use) in the same transaction. P0195 otherwise. Direct PostgREST calls cannot bypass the OTP step.';
+
+-- ---------------------------------------------------------------------
+-- (7) Remove the National-ID-based account verification surface
 -- ---------------------------------------------------------------------
 
 drop function if exists public.confirm_renter_presence(text, text);
@@ -557,13 +745,14 @@ $$;
 grant execute on function public.lookup_renter_by_mobile(text) to authenticated;
 
 -- ---------------------------------------------------------------------
--- (7) Customer signup no longer touches National ID
+-- (8) Customer signup no longer touches National ID
 -- ---------------------------------------------------------------------
 -- Identical to the 20260502124400 body except the CUSTOMER branch stops
 -- reading raw_user_meta_data->>'national_id' (the client no longer
 -- sends it). The MERCHANT branch still records the authorized
 -- representative's National ID — merchant-onboarding compliance data,
--- deliberately unchanged.
+-- deliberately unchanged (this is also why profiles.national_id must
+-- remain a column: merchant-role rows keep receiving the rep ID here).
 
 create or replace function public.handle_new_auth_user()
 returns trigger
@@ -766,7 +955,7 @@ end;
 $$;
 
 -- ---------------------------------------------------------------------
--- (8) National ID is no longer an account-identity datum
+-- (9) National ID is no longer an account-identity datum
 -- ---------------------------------------------------------------------
 -- The partial unique index enforced one-customer-per-National-ID at the
 -- ACCOUNT level. Contract-level data has no such account constraint.

@@ -6,39 +6,48 @@
 //
 // Providers:
 //
-//   'dev-rpc' (CURRENT DEFAULT — temporary):
+//   'rpc-inapp' (CURRENT DEFAULT — pending SMS integration):
 //     Backed by the merchant_start_renter_otp /
 //     merchant_verify_renter_otp SECURITY DEFINER RPCs
-//     (20260502125100). The challenge lifecycle (expiry, attempt cap,
-//     consumption, server-side code check) is real, but NO SMS is sent
-//     yet — the server issues a fixed development code, so this
-//     provides NO real security. It exists only so the end-to-end flow
-//     works before the real OTP provider integration lands.
+//     (20260502125100). The server generates a cryptographically
+//     random 6-digit code per challenge; while no SMS provider is
+//     integrated, the code is DELIVERED IN-APP — the CUSTOMER
+//     retrieves it inside their own authenticated Lend session
+//     (get_my_renter_otp / getMyRenterOtp below) and reads it to the
+//     merchant. There is NO fixed code and NO bypass: the merchant
+//     side never learns the code from the server, and this client
+//     contains no code either. Offer issuance is additionally
+//     enforced server-side (P0195): without a verified challenge the
+//     invoice INSERT is rejected regardless of UI state.
 //
-//   'twilio-edge' (the production seam):
+//   'twilio-edge' (the SMS seam):
 //     The pre-existing otp-send / otp-verify Supabase Edge Functions
 //     (Twilio Verify). Activate by setting VITE_OTP_PROVIDER=twilio-edge
 //     at build time AND deploying the edge functions with the Twilio
 //     secrets. Same request/response shape — no UI change needed.
+//     NOTE: until the server-side issuance gate is pointed at the
+//     Twilio verification result, keep the RPC provider — the P0195
+//     gate consumes RPC challenges.
 //
 // What a successful verification MEANS (be precise — see the product
 // terminology decision): "control/presence of the customer's registered
-// Lend mobile was confirmed for this in-store session." It is NOT a
-// National ID verification and NOT a government identity verification.
+// Lend account/mobile was confirmed for this in-store session." It is
+// NOT a National ID verification and NOT a government identity
+// verification.
 // =====================================================================
 
 import { requireSupabase } from '@/lib/supabase';
-import type { AppRole } from '@/lib/supabase';
+import type { AppRole, LocalizedJson } from '@/lib/supabase';
 import { normalizeMobile } from '@/lib/mobile';
 
-type OtpProvider = 'dev-rpc' | 'twilio-edge';
+type OtpProvider = 'rpc-inapp' | 'twilio-edge';
 
-/** Build-time provider selection. Defaults to the temporary dev-rpc
- *  provider; flip to 'twilio-edge' when the real integration ships. */
+/** Build-time provider selection. Defaults to the in-app RPC provider;
+ *  flip to 'twilio-edge' when the real SMS integration ships. */
 function resolveProvider(): OtpProvider {
   return import.meta.env.VITE_OTP_PROVIDER === 'twilio-edge'
     ? 'twilio-edge'
-    : 'dev-rpc';
+    : 'rpc-inapp';
 }
 
 export type OtpSendResult = {
@@ -82,7 +91,7 @@ export class OtpError extends Error {
 }
 
 // ---------------------------------------------------------------------
-// dev-rpc provider (temporary)
+// rpc-inapp provider (default until SMS delivery ships)
 // ---------------------------------------------------------------------
 
 function mapRpcError(err: unknown): OtpError {
@@ -226,6 +235,40 @@ export async function lookupRenterByMobile(
     ? {
         id: row.id,
         has_nafath: row.has_nafath,
+      }
+    : null;
+}
+
+// ---------------------------------------------------------------------
+// Customer side — in-app code delivery (rpc-inapp provider only)
+// ---------------------------------------------------------------------
+
+export type PendingRenterOtp = {
+  /** The one-time code the customer reads to the merchant. */
+  code: string;
+  /** Server-side deadline for entering the code. */
+  expiresAt: string;
+  /** Requesting boutique's display name ({ar,en}) when resolvable. */
+  merchantName: LocalizedJson | null;
+};
+
+/**
+ * The CUSTOMER's own pending verification code, if any. Backed by the
+ * get_my_renter_otp RPC, which is strictly scoped to auth.uid() — this
+ * is the in-app delivery channel while SMS is not integrated. Returns
+ * null when no code is pending (or when the caller isn't signed in as
+ * the customer the challenge targets).
+ */
+export async function getMyRenterOtp(): Promise<PendingRenterOtp | null> {
+  const sb = requireSupabase();
+  const { data, error } = await sb.rpc('get_my_renter_otp');
+  if (error) throw error;
+  const row = Array.isArray(data) ? data[0] : null;
+  return row
+    ? {
+        code: row.code,
+        expiresAt: row.expires_at,
+        merchantName: (row.merchant_name as LocalizedJson | null) ?? null,
       }
     : null;
 }

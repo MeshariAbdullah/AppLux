@@ -137,6 +137,13 @@ export function translateError(
     // maps these to specific copy via OtpError; this is the fallback.
     if (code === 'P0192' || code === 'P0193' || code === 'P0194')
       return t('errors.conflict');
+    // Server-side issuance gate: no verified/unspent OTP challenge for
+    // this merchant+customer (enforce_renter_otp_on_invoice). The
+    // merchant session intercepts this and routes back to the verify
+    // step; this copy is the fallback for any other surface.
+    if (code === 'P0195') return t('errors.otpRequiredForIssue');
+    // profiles.national_id is not writable by end users (P0153).
+    if (code === 'P0153') return t('errors.unauthorized');
     if (code === 'P0110') return t('errors.validation'); // empty path guard
     if (code === 'P0114') return t('errors.conflict'); // wrong contract state
     // P0001 = default RAISE — all current uses are state guards

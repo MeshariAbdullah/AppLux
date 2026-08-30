@@ -534,9 +534,9 @@ export default function MerchantRentalSession() {
   };
 
   // Issues a one-time code for the customer registered under the typed
-  // mobile. The OTP service (src/lib/otp) hides the provider — the
-  // temporary dev-rpc implementation today, the real SMS provider
-  // later, with no change here.
+  // mobile. The OTP service (src/lib/otp) hides the provider — a
+  // random server-generated code delivered inside the customer's own
+  // Lend app today, the real SMS provider later, with no change here.
   const handleSendOtp = async () => {
     if (session.verify.status !== 'found' && session.verify.status !== 'otp_sent') return;
     if (session.verify.otpBusy) return;
@@ -594,10 +594,11 @@ export default function MerchantRentalSession() {
 
     if (!supabaseAuth.configured) {
       if (DEV_DEMO_FALLBACK) {
-        // Mirror the live dev-rpc provider: only the fixed development
-        // code passes. Renter details are synthesized at verification
-        // time, matching the live disclosure boundary.
-        if (code !== '000000') {
+        // Demo mode has no backend and no real customers — any 6-digit
+        // input advances the flow. This branch is tree-shaken from
+        // production builds AND unreachable when Supabase is
+        // configured; the live path is enforced server-side (P0195).
+        if (code.length !== 6) {
           updateVerify({ error: t('merchant.session.verify.errors.otpWrongCode') });
           return;
         }
@@ -857,6 +858,20 @@ export default function MerchantRentalSession() {
     } catch (err) {
       logEvent('rpc_failure', 'warn', { op: 'create_invoice_with_items' }, err);
       const code = (err as { code?: unknown })?.code;
+      if (code === 'P0195') {
+        // Server-side OTP gate: the verification this session performed
+        // has expired (30-minute window) or was already spent. Return
+        // the merchant to the verify step to re-run the customer OTP —
+        // the drafted operation/contract fields are preserved.
+        updateIssue({ submitting: false, error: null });
+        updateVerify({
+          status: 'found',
+          challenge: '',
+          error: t('merchant.session.verify.errors.otpVerificationExpired'),
+        });
+        setStep('verify');
+        return;
+      }
       if (code === 'P0180') {
         // The rental start passed between setup and issuance — return to
         // the setup step with the inline start error (data preserved),
