@@ -1,11 +1,21 @@
 // =====================================================================
-// APNs registration + tap deep-linking (native iOS only; a silent
-// no-op on the web). Server-authoritative ownership: the token is
-// stored via the register_push_token RPC under the SIGNED-IN user —
-// re-registration moves a device to its current user, sign-out
-// best-effort revokes. Notification taps navigate only to whitelisted
-// in-app dispute routes carried in the payload; nothing sensitive is
-// ever in the push itself.
+// Push registration + tap deep-linking (native platforms only; a
+// silent no-op on the web). The same Capacitor plugin yields an APNs
+// token on iOS and an FCM token on Android — the REAL platform is
+// reported to register_push_token so the dispatcher can route
+// delivery per platform.
+//
+// NOTE (Android rollout): until the backend push phase lands
+// (push_device_tokens platform check extended to 'android' + an FCM
+// branch in the push-dispatch function), Android registration is
+// expected to fail server-side with a check-constraint error — logged
+// as a warn, never surfaced. iOS behavior is unchanged.
+//
+// Server-authoritative ownership: the token is stored via the
+// register_push_token RPC under the SIGNED-IN user — re-registration
+// moves a device to its current user, sign-out best-effort revokes.
+// Notification taps navigate only to whitelisted in-app routes
+// carried in the payload; nothing sensitive is ever in the push.
 // =====================================================================
 
 import { Capacitor } from '@capacitor/core';
@@ -37,7 +47,10 @@ export async function startPushRegistration(
     await PushNotifications.addListener('registration', (t) => {
       lastToken = t.value;
       const sb = requireSupabase();
-      sb.rpc('register_push_token', { p_token: t.value, p_platform: 'ios' }).then(
+      // 'ios' → APNs token, 'android' → FCM token. The platform value
+      // drives per-platform delivery in the dispatcher.
+      const platform = Capacitor.getPlatform() === 'android' ? 'android' : 'ios';
+      sb.rpc('register_push_token', { p_token: t.value, p_platform: platform }).then(
         ({ error }) => {
           if (error) logEvent('rpc_failure', 'warn', { op: 'register_push_token' }, error);
         },
