@@ -88,23 +88,35 @@ What exists today:
   registration fails softly against the `'ios'`-only CHECK (logged
   warn; nothing user-visible).
 
-Required backend phase (deliberately NOT implemented yet — approve it
-as its own change):
+Backend phase — PREPARED in this repo, awaiting your manual Firebase
+setup before deploy:
 
-1. **New migration** (never touch applied ones): widen the CHECK to
-   `platform in ('ios','android')`.
-2. **push-dispatch**: branch on `push_device_tokens.platform` — keep the
-   APNs path as-is; add an FCM HTTP v1 sender for `'android'` tokens
-   (OAuth2 via a Firebase **service-account JSON** stored as an edge
-   function secret, e.g. `FCM_SERVICE_ACCOUNT`; project id from it).
-   Same payload contract: `title` + `data.route` for tap routing —
-   the client's route whitelist already handles taps identically.
-3. **Firebase project (manual)**: create/attach a Firebase project, add
-   an Android app with package `sa.lend.app`, download
-   `google-services.json` into `android/app/` (untracked — the Gradle
-   template auto-applies the google-services plugin only when the file
-   exists), and store the service-account JSON as the edge secret.
-4. Redeploy `push-dispatch` after (2).
+1. **Migration `20260502125200_android_push_tokens.sql`** (unapplied):
+   widens the platform CHECK to `('ios','android')`. Safe to apply any
+   time — it only permits android rows.
+2. **push-dispatch** (updated in repo, redeploy required): branches per
+   token platform — APNs path byte-for-byte unchanged; FCM HTTP v1 for
+   android tokens (OAuth2 service-account flow via the
+   `FCM_SERVICE_ACCOUNT` edge secret, ~50-min token cache). Payload
+   parity with iOS: generic `title` + `data.route` only; UNREGISTERED /
+   404 revokes the token exactly like APNs 410; same 5-attempt retry
+   and per-job logging. Deploying it BEFORE Firebase exists is safe:
+   android sends fail with a clear reason, iOS is untouched.
+3. **Firebase project (MANUAL — yours)**: create/attach a Firebase
+   project → add an Android app with package `sa.lend.app` → download
+   `google-services.json` into `android/app/` (git-ignored; Gradle
+   auto-applies the google-services plugin only when it exists) →
+   Project settings → Service accounts → generate a private key and
+   store the FULL JSON as the `FCM_SERVICE_ACCOUNT` edge function
+   secret. Nothing Firebase-related is ever committed.
+4. Deploy order: migration → Firebase secrets → redeploy
+   `push-dispatch` → rebuild the Android app with google-services.json
+   present.
+
+**Release gate:** until step 3–4 are done, Android is suitable for
+internal/preliminary testing ONLY (everything works except push
+delivery + registration). Do not promote past internal testing before
+push parity is live.
 
 No other native capability needs Android work: camera/photo capture go
 through the web `<input type="file">` → system chooser (no manifest
@@ -129,11 +141,13 @@ are internal SPA routes (no Android App Links registered — matches iOS).
 4. **First build**: `npm run android:aab` → upload
    `app-release.aab` to **Internal testing** first.
 5. **versionCode/versionName**: bump `versionCode` every upload.
-6. **App icon / adaptive icon**: the scaffold ships Capacitor's default
-   launcher icons — replace `android/app/src/main/res/mipmap-*` with
-   Lend-branded adaptive icons (foreground + background layers, 108dp
-   safe zone) before any public track. Play listing also needs a
-   512×512 icon PNG.
+6. **App icon / adaptive icon**: DONE in-repo — Lend launcher icons
+   (legacy square + round, and adaptive foreground layers on a white
+   background color) are generated from the iOS AppIcon source across
+   all densities. Play listing still needs the 512×512 PNG (use the
+   iOS `AppIcon-512@2x.png` downscaled). The SPLASH screens are still
+   Capacitor defaults — replace before a public track if you want a
+   branded launch image.
 7. **Screenshots**: at least 2 phone screenshots (and 7"/10" tablet
    shots if you enable tablets); **feature graphic** 1024×500.
 8. **Privacy policy**: same URL as iOS (`VITE_PRIVACY_POLICY_URL`).
@@ -156,10 +170,13 @@ are internal SPA routes (no Android App Links registered — matches iOS).
 
 ## iPad note (companion change in this branch)
 
-The iOS target is Universal (`TARGETED_DEVICE_FAMILY = "1,2"` now
-declared at target AND project level, all four iPad orientations, no
-`UIRequiresFullScreen`, storyboard launch screen, build number bumped
-to 3). If a TestFlight build still opens as a scaled iPhone window on
-iPad, the archive was made from stale local project state — verify in
-Xcode under App target → General → Supported Destinations that iPad is
-listed, then re-archive.
+The iOS target is Universal (`TARGETED_DEVICE_FAMILY = "1,2"` declared
+at target AND project level, all four iPad orientations, no
+`UIRequiresFullScreen`, storyboard launch screen).
+
+**Build number:** the repo keeps `CURRENT_PROJECT_VERSION = 2` and the
+repo CANNOT know the latest App Store Connect build number. Before
+archiving, check App Store Connect → TestFlight → highest build number
+ever uploaded, and set CURRENT_PROJECT_VERSION (Xcode → App target →
+Build, or `cd ios/App && xcrun agvtool new-version -all <N>`) to that
+number + 1. Never archive with a number ≤ an uploaded build.

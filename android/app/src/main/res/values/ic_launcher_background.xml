@@ -1,4 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- Adaptive-icon background layer — white, matching the Lend app
+         icon's own ground (generated from the iOS AppIcon source). -->
     <color name="ic_launcher_background">#FFFFFF</color>
 </resources>

@@ -270,7 +270,8 @@ export function PaymentSimulationSheet({
 
       <div
         className={cn(
-          'relative w-full max-w-[480px] bg-canvas-50 rounded-t-3xl shadow-plush',
+          // Width tracks the MobileShell tablet strategy.
+          'relative w-full max-w-[480px] md:max-w-[600px] lg:max-w-[680px] bg-canvas-50 rounded-t-3xl shadow-plush',
           'ring-1 ring-canvas-200 animate-slide-up-soft',
           'flex flex-col max-h-[90vh]',
         )}

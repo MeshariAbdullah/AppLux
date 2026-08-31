@@ -1,4 +1,5 @@
-// push-dispatch — drains pending push_jobs and delivers them to APNs.
+// push-dispatch — drains pending push_jobs and delivers them per
+// device platform: APNs for iOS tokens, FCM HTTP v1 for Android tokens.
 // Single-file, Supabase-Dashboard-compatible (no shared imports).
 //
 // Invoke on a schedule (Dashboard cron / pg_cron+pg_net) or manually.
@@ -6,13 +7,21 @@
 // `apikey` header (verify_jwt = false); the service-role key is used
 // internally for DB access. Clients can never call it.
 //
-// Secrets (Edge Function secrets — NEVER in the client bundle):
-//   APNS_TEAM_ID      — Apple Developer Team ID
-//   APNS_KEY_ID       — APNs Auth Key ID (the .p8 key)
-//   APNS_PRIVATE_KEY  — the .p8 file content (PEM, with BEGIN/END lines)
-//   APNS_TOPIC        — bundle id, e.g. sa.lend.app
-//   APNS_ENV          — "sandbox" | "production" (default sandbox)
+// Secrets (Edge Function secrets — NEVER in the client bundle / git):
+//   APNS_TEAM_ID         — Apple Developer Team ID
+//   APNS_KEY_ID          — APNs Auth Key ID (the .p8 key)
+//   APNS_PRIVATE_KEY     — the .p8 file content (PEM, with BEGIN/END lines)
+//   APNS_TOPIC           — bundle id, e.g. sa.lend.app
+//   APNS_ENV             — "sandbox" | "production" (default sandbox)
+//   FCM_SERVICE_ACCOUNT  — Firebase service-account JSON (the full file
+//                          content). Optional: while absent, android
+//                          tokens fail with "fcm not configured" and
+//                          iOS delivery is completely unaffected.
 // Built-ins already present: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY.
+//
+// Payload parity (privacy rule shared by both platforms): generic
+// title only + the in-app deep-link route. No names, amounts, IDs, or
+// any contract/identity data ever rides in a push.
 import { createClient } from "npm:@supabase/supabase-js@2";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
@@ -25,6 +34,7 @@ const APNS_HOST =
   (Deno.env.get("APNS_ENV") ?? "sandbox") === "production"
     ? "https://api.push.apple.com"
     : "https://api.sandbox.push.apple.com";
+const FCM_SA_RAW = Deno.env.get("FCM_SERVICE_ACCOUNT") ?? "";
 const BATCH = 50;
 
 function b64url(data: Uint8Array | string): string {
@@ -32,6 +42,10 @@ function b64url(data: Uint8Array | string): string {
   return btoa(String.fromCharCode(...bytes))
     .replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 }
+
+// ---------------------------------------------------------------------
+// APNs (unchanged behavior)
+// ---------------------------------------------------------------------
 
 let cachedJwt: { value: string; iat: number } | null = null;
 async function apnsJwt(): Promise<string> {
@@ -53,6 +67,153 @@ async function apnsJwt(): Promise<string> {
   return jwt;
 }
 
+type SendOutcome = { ok: boolean; error?: string; tokenInvalid?: boolean };
+
+async function sendApns(
+  token: string,
+  job: { title: string; route: string | null; notification_id: string },
+): Promise<SendOutcome> {
+  const res = await fetch(`${APNS_HOST}/3/device/${token}`, {
+    method: "POST",
+    headers: {
+      authorization: `bearer ${await apnsJwt()}`,
+      "apns-topic": TOPIC,
+      "apns-push-type": "alert",
+      "apns-priority": "10",
+      "apns-collapse-id": job.notification_id,
+    },
+    body: JSON.stringify({
+      // Privacy-conscious: generic title only + the deep link.
+      aps: { alert: { title: job.title }, sound: "default", badge: 1 },
+      route: job.route,
+    }),
+  });
+  if (res.ok) return { ok: true };
+  const body = await res.text();
+  return {
+    ok: false,
+    error: `apns ${res.status} ${body}`.slice(0, 300),
+    tokenInvalid:
+      res.status === 410 ||
+      body.includes("BadDeviceToken") ||
+      body.includes("Unregistered"),
+  };
+}
+
+// ---------------------------------------------------------------------
+// FCM HTTP v1 (android tokens)
+// ---------------------------------------------------------------------
+// OAuth2 service-account flow: sign an RS256 JWT with the service
+// account's private key, exchange it for an access token, cache ~50min.
+
+type FcmServiceAccount = {
+  project_id: string;
+  client_email: string;
+  private_key: string;
+  token_uri?: string;
+};
+
+let fcmSa: FcmServiceAccount | null = null;
+function fcmAccount(): FcmServiceAccount | null {
+  if (fcmSa) return fcmSa;
+  if (!FCM_SA_RAW) return null;
+  try {
+    const parsed = JSON.parse(FCM_SA_RAW) as FcmServiceAccount;
+    if (!parsed.project_id || !parsed.client_email || !parsed.private_key) return null;
+    fcmSa = parsed;
+    return fcmSa;
+  } catch {
+    return null;
+  }
+}
+
+let cachedFcmToken: { value: string; iat: number } | null = null;
+async function fcmAccessToken(sa: FcmServiceAccount): Promise<string> {
+  const nowSec = Math.floor(Date.now() / 1000);
+  if (cachedFcmToken && nowSec - cachedFcmToken.iat < 50 * 60) {
+    return cachedFcmToken.value;
+  }
+  const tokenUri = sa.token_uri ?? "https://oauth2.googleapis.com/token";
+  const pem = sa.private_key.replace(/-----[^-]+-----/g, "").replace(/\s+/g, "");
+  const der = Uint8Array.from(atob(pem), (c) => c.charCodeAt(0));
+  const key = await crypto.subtle.importKey(
+    "pkcs8", der,
+    { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" }, false, ["sign"],
+  );
+  const header = b64url(JSON.stringify({ alg: "RS256", typ: "JWT" }));
+  const claims = b64url(JSON.stringify({
+    iss: sa.client_email,
+    scope: "https://www.googleapis.com/auth/firebase.messaging",
+    aud: tokenUri,
+    iat: nowSec,
+    exp: nowSec + 3600,
+  }));
+  const sig = new Uint8Array(await crypto.subtle.sign(
+    "RSASSA-PKCS1-v1_5", key, new TextEncoder().encode(`${header}.${claims}`),
+  ));
+  const assertion = `${header}.${claims}.${b64url(sig)}`;
+  const res = await fetch(tokenUri, {
+    method: "POST",
+    headers: { "content-type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({
+      grant_type: "urn:ietf:params:oauth:grant-type:jwt-bearer",
+      assertion,
+    }),
+  });
+  if (!res.ok) {
+    throw new Error(`fcm oauth ${res.status} ${(await res.text()).slice(0, 200)}`);
+  }
+  const data = (await res.json()) as { access_token?: string };
+  if (!data.access_token) throw new Error("fcm oauth: no access_token");
+  cachedFcmToken = { value: data.access_token, iat: nowSec };
+  return data.access_token;
+}
+
+async function sendFcm(
+  token: string,
+  job: { title: string; route: string | null; notification_id: string },
+): Promise<SendOutcome> {
+  const sa = fcmAccount();
+  if (!sa) return { ok: false, error: "fcm not configured (FCM_SERVICE_ACCOUNT missing)" };
+  const accessToken = await fcmAccessToken(sa);
+  const res = await fetch(
+    `https://fcm.googleapis.com/v1/projects/${sa.project_id}/messages:send`,
+    {
+      method: "POST",
+      headers: {
+        authorization: `Bearer ${accessToken}`,
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({
+        message: {
+          token,
+          // Same privacy posture as APNs: generic title, no body.
+          notification: { title: job.title },
+          // FCM data values MUST be strings; the tap handler in
+          // registerPush.ts reads data.route on both platforms.
+          data: job.route ? { route: job.route } : {},
+          android: {
+            priority: "HIGH",
+            collapse_key: job.notification_id,
+            notification: { default_sound: true },
+          },
+        },
+      }),
+    },
+  );
+  if (res.ok) return { ok: true };
+  const body = await res.text();
+  return {
+    ok: false,
+    error: `fcm ${res.status} ${body}`.slice(0, 300),
+    // UNREGISTERED = token no longer valid (app uninstalled / token
+    // rotated); 404 covers the same condition on some responses.
+    tokenInvalid: res.status === 404 || body.includes("UNREGISTERED"),
+  };
+}
+
+// ---------------------------------------------------------------------
+
 Deno.serve(async (req) => {
   // Service-to-service auth (matches the deployed Dashboard version):
   // the Cron scheduler sends the Supabase secret key in the `apikey`
@@ -69,8 +230,11 @@ Deno.serve(async (req) => {
       headers: { "content-type": "application/json" },
     });
   }
-  if (!TEAM_ID || !KEY_ID || !PRIVATE_KEY) {
-    return new Response(JSON.stringify({ error: "apns secrets not configured" }), { status: 500 });
+  // At least one delivery channel must be configured. APNs-only (the
+  // pre-Android state) and APNs+FCM are both valid; FCM-only would be
+  // too. Per-token failures are reported per job, never a crash.
+  if ((!TEAM_ID || !KEY_ID || !PRIVATE_KEY) && !fcmAccount()) {
+    return new Response(JSON.stringify({ error: "no push secrets configured (apns/fcm)" }), { status: 500 });
   }
   const sb = createClient(SUPABASE_URL, SERVICE_KEY);
 
@@ -82,31 +246,18 @@ Deno.serve(async (req) => {
   let sent = 0, failed = 0, tokensRevoked = 0;
   for (const job of jobs ?? []) {
     const { data: tokens } = await sb
-      .from("push_device_tokens").select("token")
+      .from("push_device_tokens").select("token, platform")
       .eq("user_id", job.user_id).is("revoked_at", null);
     let delivered = false, lastError = "no active device tokens";
     for (const t of tokens ?? []) {
       try {
-        const res = await fetch(`${APNS_HOST}/3/device/${t.token}`, {
-          method: "POST",
-          headers: {
-            authorization: `bearer ${await apnsJwt()}`,
-            "apns-topic": TOPIC,
-            "apns-push-type": "alert",
-            "apns-priority": "10",
-            "apns-collapse-id": job.notification_id,
-          },
-          body: JSON.stringify({
-            // Privacy-conscious: generic title only + the deep link.
-            aps: { alert: { title: job.title }, sound: "default", badge: 1 },
-            route: job.route,
-          }),
-        });
-        if (res.ok) { delivered = true; continue; }
-        const body = await res.text();
-        lastError = `${res.status} ${body}`.slice(0, 300);
+        const outcome = t.platform === "android"
+          ? await sendFcm(t.token, job)
+          : await sendApns(t.token, job);
+        if (outcome.ok) { delivered = true; continue; }
+        lastError = outcome.error ?? "send failed";
         // Stale/invalid token → revoke so we stop retrying it.
-        if (res.status === 410 || body.includes("BadDeviceToken") || body.includes("Unregistered")) {
+        if (outcome.tokenInvalid) {
           await sb.from("push_device_tokens")
             .update({ revoked_at: new Date().toISOString() })
             .eq("token", t.token);

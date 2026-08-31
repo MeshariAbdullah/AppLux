@@ -56,7 +56,9 @@ export function Sheet({ open, onClose, title, children, footer }: SheetProps) {
       <div
         className={cn(
           // Warm, plush, generous top radius; deeper shadow.
-          'relative w-full max-w-[440px] bg-white rounded-t-[28px] shadow-plush',
+          // Width tracks the MobileShell tablet strategy so sheets are
+          // never narrower than the app column behind them.
+          'relative w-full max-w-[440px] md:max-w-[600px] lg:max-w-[680px] bg-white rounded-t-[28px] shadow-plush',
           'pb-[env(safe-area-inset-bottom)] max-h-[88dvh] flex flex-col',
           'transition-transform duration-260 ease-plush',
           visible ? 'translate-y-0' : 'translate-y-full',
