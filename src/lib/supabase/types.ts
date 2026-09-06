@@ -223,8 +223,27 @@ export type RentalInvoiceRow = {
   light_damage_fraction: number;
   /** Late return multiplier (×). Multiplied by the daily rate to give
    *  the per-day late-return fee. Merchant-controlled; defaults to
-   *  1.50. */
+   *  1.50. Meaningful only when late_fee_type = 'multiplier'. */
   late_return_multiplier: number;
+  /** Pricing model (20260502125300): 'daily' → subtotal = daily rate ×
+   *  days (legacy default); 'total' → the merchant entered one total
+   *  rental amount and rental_days is duration only. Missing on
+   *  pre-migration rows → treat as 'daily'
+   *  (src/lib/pricing.resolveInvoicePricing is the compat seam). */
+  pricing_type: 'daily' | 'total' | null;
+  /** Light-damage charge model: 'percentage' (item value ×
+   *  light_damage_fraction, legacy default) or 'fixed'
+   *  (damage_fixed_amount SAR). */
+  damage_charge_type: 'percentage' | 'fixed' | null;
+  /** Fixed light-damage amount (SAR) — set when damage_charge_type is
+   *  'fixed'. */
+  damage_fixed_amount: number | null;
+  /** Late-fee model: 'multiplier' (daily rate × late_return_multiplier,
+   *  legacy default) or 'fixed' (late_fee_fixed_amount SAR per late
+   *  day). 'total' pricing requires 'fixed'. */
+  late_fee_type: 'multiplier' | 'fixed' | null;
+  /** Fixed fee per LATE DAY (SAR) — set when late_fee_type is 'fixed'. */
+  late_fee_fixed_amount: number | null;
   status: InvoiceStatus;
   issued_at: string | null;
   expires_at: string | null;

@@ -21,11 +21,29 @@ export type CreateInvoiceInput = {
    *  eligibility holds and the promissory note principal. */
   originalItemValue: number;
   /** Light damage fraction the merchant confirmed in the contract
-   *  preparation step. Defaults to 0.30. */
+   *  preparation step. Defaults to 0.30. Meaningful when
+   *  damageChargeType is 'percentage'. */
   lightDamageFraction?: number;
   /** Late return per-day multiplier (× daily rate) the merchant
-   *  confirmed. Defaults to 1.5. */
+   *  confirmed. Defaults to 1.5. Meaningful when lateFeeType is
+   *  'multiplier'. */
   lateReturnMultiplier?: number;
+  /** Pricing model (20260502125300). 'daily' (default): subtotal =
+   *  daily rate × days. 'total': subtotal/total carry the merchant's
+   *  entered total amount; item daily_rate is stored as 0 and
+   *  rental_days is duration only. */
+  pricingType?: 'daily' | 'total';
+  /** Light-damage charge model; defaults to 'percentage'. */
+  damageChargeType?: 'percentage' | 'fixed';
+  /** Fixed light-damage amount (SAR); required when damageChargeType
+   *  is 'fixed'. */
+  damageFixedAmount?: number | null;
+  /** Late-fee model; defaults to 'multiplier'. 'total' pricing must
+   *  pass 'fixed' (DB constraint enforces it too). */
+  lateFeeType?: 'multiplier' | 'fixed';
+  /** Fixed fee per late day (SAR); required when lateFeeType is
+   *  'fixed'. */
+  lateFeeFixedAmount?: number | null;
   notes?: string | null;
   expiresAt?: string | null;
   /** Merchant-set rental start moment (ISO timestamptz). When null
@@ -76,6 +94,11 @@ export async function createInvoiceWithItems(
       original_item_value: input.originalItemValue,
       light_damage_fraction: input.lightDamageFraction ?? 0.3,
       late_return_multiplier: input.lateReturnMultiplier ?? 1.5,
+      pricing_type: input.pricingType ?? 'daily',
+      damage_charge_type: input.damageChargeType ?? 'percentage',
+      damage_fixed_amount: input.damageFixedAmount ?? null,
+      late_fee_type: input.lateFeeType ?? 'multiplier',
+      late_fee_fixed_amount: input.lateFeeFixedAmount ?? null,
       status: 'issued' satisfies InvoiceStatus,
       issued_at: new Date().toISOString(),
       expires_at: input.expiresAt ?? null,

@@ -42,6 +42,15 @@ import {
   normalizeDigits,
 } from '@/lib/validation/customer';
 import {
+  computeLateFeePerDay,
+  computeLightDamageCharge,
+  computeRentalTotal,
+  type DamageChargeType,
+  type LateFeeType,
+  type PricingConfig,
+  type PricingType,
+} from '@/lib/pricing';
+import {
   classifyMobile,
   maskMobile,
   type MobileIssue,
@@ -156,13 +165,24 @@ type OperationDraft = {
    *  is created. Default seeded at wizard entry to "now". Required
    *  per Phase 8f validation. */
   startsAt: string;
+  /** Pricing model — 'daily' (rate × days, legacy default) or 'total'
+   *  (one merchant-entered amount; days stay duration-only). */
+  pricingType: PricingType;
   rentalDays: string;     // strings for input ergonomics; coerced on use
   dailyRate: string;
+  /** Merchant-entered total rental amount — used only in 'total' mode.
+   *  Kept separately from dailyRate so switching modes never leaks a
+   *  stale calculation into the other model. */
+  totalRentalAmount: string;
   originalItemValue: string;
-  // Contract overrides — merchant-controlled in the new 'contract' step.
+  // Contract overrides — merchant-controlled in the 'contract' step.
   // Stored as strings so the inputs remain ergonomic; coerced on use.
-  lightDamagePercent: string;  // 0..100, default '30'
-  lateReturnMultiplier: string; // ×, default '1.5'
+  damageChargeType: DamageChargeType;   // 'percentage' | 'fixed'
+  lightDamagePercent: string;  // 0..100, default '30' (percentage mode)
+  damageFixedAmount: string;   // SAR (fixed mode)
+  lateFeeType: LateFeeType;    // 'multiplier' | 'fixed'
+  lateReturnMultiplier: string; // ×, default '1.5' (multiplier mode)
+  lateFeeFixedAmount: string;  // SAR per late day (fixed mode)
 };
 
 type EligibilityState = {
@@ -210,11 +230,17 @@ const INITIAL_SESSION: SessionState = {
     // moment they open the flow — INITIAL_SESSION is captured at
     // module load and would otherwise be stale.
     startsAt: '',
+    pricingType: 'daily',
     rentalDays: '1',
     dailyRate: '',
+    totalRentalAmount: '',
     originalItemValue: '',
+    damageChargeType: 'percentage',
     lightDamagePercent: '30',
+    damageFixedAmount: '',
+    lateFeeType: 'multiplier',
     lateReturnMultiplier: '1.5',
+    lateFeeFixedAmount: '',
   },
   eligibility: { row: null, loading: false, error: null },
   issue: { invoice: null, submitting: false, error: null },
@@ -252,13 +278,41 @@ function macroVerificationState(s: VerificationStatus): MacroVerification {
   return 'idle';
 }
 
+/** The wizard draft → the centralized PricingConfig (src/lib/pricing).
+ *  Every preview amount in this wizard flows through the same helpers
+ *  the contract template uses, so what the merchant sees here is what
+ *  the customer approves. */
+function draftPricingConfig(draft: OperationDraft): PricingConfig {
+  return {
+    pricingType: draft.pricingType,
+    dailyRate: Number(draft.dailyRate) || 0,
+    rentalDays: Math.max(Number(draft.rentalDays) || 1, 1),
+    totalAmount: Number(draft.totalRentalAmount) || 0,
+    itemValue: Number(draft.originalItemValue) || 0,
+    damageChargeType: draft.damageChargeType,
+    lightDamageFraction: clampLightFraction(draft.lightDamagePercent),
+    damageFixedAmount: Number(draft.damageFixedAmount) || 0,
+    lateFeeType: draft.lateFeeType,
+    lateReturnMultiplier: clampLateMultiplier(draft.lateReturnMultiplier),
+    lateFeeFixedAmount: Number(draft.lateFeeFixedAmount) || 0,
+  };
+}
+
 /** Rental fee — what the customer pays for the rental period. Separate
  *  from the original item value, which represents the underlying value
- *  of the rented piece. */
+ *  of the rented piece. daily → rate × days; total → the entered
+ *  amount, with days as duration only. */
 function computeRentalAmount(draft: OperationDraft): number {
-  const rate = Number(draft.dailyRate) || 0;
-  const days = Math.max(Number(draft.rentalDays) || 1, 1);
-  return rate * days;
+  return computeRentalTotal(draftPricingConfig(draft));
+}
+
+/** Draft-level validity of the AMOUNT inputs for the active pricing
+ *  model — the inactive model's field is deliberately ignored so a
+ *  stale value can never block or corrupt the flow. */
+function pricingAmountValid(draft: OperationDraft): boolean {
+  return draft.pricingType === 'total'
+    ? Number(draft.totalRentalAmount) > 0
+    : Number(draft.dailyRate) > 0;
 }
 
 function readOriginalItemValue(draft: OperationDraft): number {
@@ -674,10 +728,11 @@ export default function MerchantRentalSession() {
   const handleOperationContinue = async () => {
     const op = session.operation;
     // Mandatory fields — every operation must declare the item, period,
-    // daily rate, AND the original item value (basis for eligibility +
-    // promissory note).
+    // the amount for the ACTIVE pricing model (daily rate, or the total
+    // rental amount), AND the original item value (basis for
+    // eligibility + promissory note).
     if (!op.itemName.trim()) return;
-    if (Number(op.dailyRate) <= 0) return;
+    if (!pricingAmountValid(op)) return;
     if (Number(op.rentalDays) < 1) return;
     if (!(Number(op.originalItemValue) > 0)) return;
 
@@ -747,13 +802,17 @@ export default function MerchantRentalSession() {
     // CTA until valid; this guard keeps handler + view in sync.
     const idCheck = classifyNationalId(session.operation.lesseeNationalId);
     if (idCheck.kind !== 'valid') return;
-
-    const rate = Number(session.operation.dailyRate) || 0;
-    const days = Math.max(Number(session.operation.rentalDays) || 1, 1);
-    const rentalFee = rate * days;
-    const itemValue = Number(session.operation.originalItemValue) || 0;
-    const lightDamageFraction = clampLightFraction(session.operation.lightDamagePercent);
-    const lateReturnMultiplier = clampLateMultiplier(session.operation.lateReturnMultiplier);
+    // Pricing + penalty config — the same helpers the customer-facing
+    // template uses. Guards mirror the ContractCard's disabled state.
+    if (!pricingAmountValid(session.operation)) return;
+    if (!penaltyConfigValid(session.operation)) return;
+    const cfg = draftPricingConfig(session.operation);
+    const rate = cfg.pricingType === 'daily' ? cfg.dailyRate : 0;
+    const days = cfg.rentalDays;
+    const rentalFee = computeRentalTotal(cfg);
+    const itemValue = cfg.itemValue;
+    const lightDamageFraction = cfg.lightDamageFraction;
+    const lateReturnMultiplier = cfg.lateReturnMultiplier;
 
     // --- Dev-only synthetic issuance ----------------------------------
     // Production builds tree-shake this branch (DEV_DEMO_FALLBACK = false).
@@ -777,6 +836,13 @@ export default function MerchantRentalSession() {
           original_item_value: itemValue,
           light_damage_fraction: lightDamageFraction,
           late_return_multiplier: lateReturnMultiplier,
+          pricing_type: cfg.pricingType,
+          damage_charge_type: cfg.damageChargeType,
+          damage_fixed_amount:
+            cfg.damageChargeType === 'fixed' ? cfg.damageFixedAmount : null,
+          late_fee_type: cfg.lateFeeType,
+          late_fee_fixed_amount:
+            cfg.lateFeeType === 'fixed' ? cfg.lateFeeFixedAmount : null,
           status: 'issued',
           issued_at: now,
           expires_at: null,
@@ -822,6 +888,16 @@ export default function MerchantRentalSession() {
         originalItemValue: itemValue,
         lightDamageFraction,
         lateReturnMultiplier,
+        // Flexible pricing/penalty config (20260502125300). In 'total'
+        // mode the item daily_rate is 0 and rental_days stays duration
+        // only; fixed amounts travel only when their mode is active.
+        pricingType: cfg.pricingType,
+        damageChargeType: cfg.damageChargeType,
+        damageFixedAmount:
+          cfg.damageChargeType === 'fixed' ? cfg.damageFixedAmount : null,
+        lateFeeType: cfg.lateFeeType,
+        lateFeeFixedAmount:
+          cfg.lateFeeType === 'fixed' ? cfg.lateFeeFixedAmount : null,
         // Merchant-set rental start moment. `parseDateTimeLocal`
         // interprets the picker value in the browser's (i.e. the
         // merchant's) timezone; `.toISOString()` normalises to UTC
@@ -1536,6 +1612,42 @@ function RenterSummary({
 
 // ---------------------------------------------------------------------
 
+/** Two-option segmented control — used for the pricing model and the
+ *  damage / late-fee charge models. RTL-friendly (flex order follows
+ *  the document direction) and deliberately minimal so the forms don't
+ *  feel heavier than a pair of labeled buttons. */
+function ModeToggle<T extends string>({
+  value,
+  options,
+  onChange,
+}: {
+  value: T;
+  options: Array<{ value: T; label: string }>;
+  onChange: (v: T) => void;
+}) {
+  return (
+    <div className="flex rounded-xl2 bg-canvas-100 ring-1 ring-canvas-200 p-1 gap-1" role="radiogroup">
+      {options.map((o) => (
+        <button
+          key={o.value}
+          type="button"
+          role="radio"
+          aria-checked={o.value === value}
+          onClick={() => onChange(o.value)}
+          className={cn(
+            'flex-1 h-9 rounded-[10px] text-[12px] font-semibold transition-colors px-2',
+            o.value === value
+              ? 'bg-white text-ink-900 shadow-soft ring-1 ring-canvas-200'
+              : 'text-ink-500 hover:text-ink-700',
+          )}
+        >
+          {o.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 function OperationCard({
   t,
   operation,
@@ -1599,9 +1711,14 @@ function OperationCard({
             </span>
           </div>
           <div className="text-[11.5px] text-ink-400 num">
-            {t('merchant.session.operation.summary')
-              .replace('{days}', String(Math.max(Number(operation.rentalDays) || 1, 1)))
-              .replace('{rate}', formatCurrency(Number(operation.dailyRate) || 0))}
+            {operation.pricingType === 'total'
+              ? t('merchant.session.operation.totalSummary').replace(
+                  '{days}',
+                  String(Math.max(Number(operation.rentalDays) || 1, 1)),
+                )
+              : t('merchant.session.operation.summary')
+                  .replace('{days}', String(Math.max(Number(operation.rentalDays) || 1, 1)))
+                  .replace('{rate}', formatCurrency(Number(operation.dailyRate) || 0))}
           </div>
           {parseDateTimeLocal(operation.startsAt) && rentalEnd && (
             <div className="text-[11.5px] text-ink-500 num">
@@ -1694,20 +1811,70 @@ function OperationCard({
             </FormField>
           </div>
 
+          {/* Pricing model — daily (rate × days) or one total amount.
+              Switching models only changes WHICH field feeds the
+              calculation; the other field is ignored everywhere, so a
+              stale value can never leak into the offer. 'total' pricing
+              forces the fixed late fee (no daily rate to multiply). */}
+          <FormField
+            label={t('merchant.session.operation.pricingTypeLabel')}
+            required
+            hint={
+              operation.pricingType === 'total'
+                ? t('merchant.session.operation.pricingTotalHint')
+                : t('merchant.session.operation.pricingDailyHint')
+            }
+          >
+            <ModeToggle<PricingType>
+              value={operation.pricingType}
+              options={[
+                { value: 'daily', label: t('merchant.session.operation.pricingDaily') },
+                { value: 'total', label: t('merchant.session.operation.pricingTotal') },
+              ]}
+              onChange={(v) =>
+                setOperation({
+                  pricingType: v,
+                  ...(v === 'total' ? { lateFeeType: 'fixed' as LateFeeType } : {}),
+                })
+              }
+            />
+          </FormField>
+
           <div className="grid grid-cols-2 gap-3">
-            <FormField label={t('merchant.session.operation.rateLabel')} required>
-              <NumericField
-                inputMode="decimal"
-                digitsOnly="decimal"
-                value={operation.dailyRate}
-                onValueChange={(v) => setOperation({ dailyRate: v })}
-                trailing={
-                  <span className="text-ink-400 text-[12px] font-medium">
-                    {t('common.sar')}
-                  </span>
-                }
-              />
-            </FormField>
+            {operation.pricingType === 'total' ? (
+              <FormField
+                label={t('merchant.session.operation.totalAmountLabel')}
+                required
+                hint={t('merchant.session.operation.totalAmountHint')}
+              >
+                <NumericField
+                  inputMode="decimal"
+                  digitsOnly="decimal"
+                  value={operation.totalRentalAmount}
+                  onValueChange={(v) => setOperation({ totalRentalAmount: v })}
+                  placeholder="0"
+                  trailing={
+                    <span className="text-ink-400 text-[12px] font-medium">
+                      {t('common.sar')}
+                    </span>
+                  }
+                />
+              </FormField>
+            ) : (
+              <FormField label={t('merchant.session.operation.rateLabel')} required>
+                <NumericField
+                  inputMode="decimal"
+                  digitsOnly="decimal"
+                  value={operation.dailyRate}
+                  onValueChange={(v) => setOperation({ dailyRate: v })}
+                  trailing={
+                    <span className="text-ink-400 text-[12px] font-medium">
+                      {t('common.sar')}
+                    </span>
+                  }
+                />
+              </FormField>
+            )}
             <FormField
               label={t('merchant.session.operation.itemValueLabel')}
               required
@@ -1739,7 +1906,9 @@ function OperationCard({
                 {formatCurrency(rentalAmount)}
               </div>
               <div className="mt-1 text-[10.5px] text-ink-400">
-                {t('merchant.session.operation.rentalAmountHint')}
+                {operation.pricingType === 'total'
+                  ? t('merchant.session.operation.rentalAmountTotalHint')
+                  : t('merchant.session.operation.rentalAmountHint')}
               </div>
             </div>
             <div className="rounded-xl2 bg-lavender-50/60 ring-1 ring-lavender-200/60 px-4 py-3">
@@ -1769,7 +1938,7 @@ function OperationCard({
             loading={loading}
             disabled={
               !operation.itemName.trim() ||
-              !(Number(operation.dailyRate) > 0) ||
+              !pricingAmountValid(operation) ||
               !(Number(operation.rentalDays) >= 1) ||
               !(Number(operation.originalItemValue) > 0) ||
               startInvalid ||
@@ -1917,6 +2086,25 @@ function EligibilityCard({
 // Contract overrides — clamp helpers
 // ---------------------------------------------------------------------
 
+/** Penalty inputs valid for the ACTIVE modes only — inactive-mode
+ *  fields are ignored so stale values never block or leak through.
+ *  'total' pricing additionally requires the fixed late fee (there is
+ *  no daily rate to multiply; the DB constraint enforces the same). */
+function penaltyConfigValid(draft: OperationDraft): boolean {
+  if (draft.damageChargeType === 'fixed') {
+    if (draft.damageFixedAmount.trim() === '' || !(Number(draft.damageFixedAmount) >= 0)) {
+      return false;
+    }
+  }
+  if (draft.pricingType === 'total' && draft.lateFeeType !== 'fixed') return false;
+  if (draft.lateFeeType === 'fixed') {
+    if (draft.lateFeeFixedAmount.trim() === '' || !(Number(draft.lateFeeFixedAmount) >= 0)) {
+      return false;
+    }
+  }
+  return true;
+}
+
 function clampLightFraction(raw: string): number {
   const n = Number(raw);
   if (!Number.isFinite(n) || n <= 0) return 0.3;
@@ -1971,10 +2159,15 @@ function ContractCard({
   onIssue: () => void;
 }) {
   const { locale } = useI18n();
-  const days = Math.max(Number(operation.rentalDays) || 1, 1);
-  const dailyRate = Number(operation.dailyRate) || 0;
-  const lightFrac = clampLightFraction(operation.lightDamagePercent);
-  const lateMult = clampLateMultiplier(operation.lateReturnMultiplier);
+  // ONE config drives the preview tiles, the clause preview, and the
+  // eventual payload — the same helpers the customer-facing template
+  // uses (src/lib/pricing), so nothing here can drift from what the
+  // customer approves.
+  const cfg = draftPricingConfig(operation);
+  const days = cfg.rentalDays;
+  const dailyRate = cfg.pricingType === 'daily' ? cfg.dailyRate : 0;
+  const lightFrac = cfg.lightDamageFraction;
+  const lateMult = cfg.lateReturnMultiplier;
   // Contract-scoped identity: required to issue. Inline error appears
   // once the merchant has typed something that can't be a valid ID.
   const idCheck = classifyNationalId(operation.lesseeNationalId);
@@ -1999,6 +2192,13 @@ function ContractCard({
       original_item_value: originalItemValue,
       light_damage_fraction: lightFrac,
       late_return_multiplier: lateMult,
+      pricing_type: cfg.pricingType,
+      damage_charge_type: cfg.damageChargeType,
+      damage_fixed_amount:
+        cfg.damageChargeType === 'fixed' ? cfg.damageFixedAmount : null,
+      late_fee_type: cfg.lateFeeType,
+      late_fee_fixed_amount:
+        cfg.lateFeeType === 'fixed' ? cfg.lateFeeFixedAmount : null,
       status: 'issued',
       issued_at: new Date().toISOString(),
       expires_at: null,
@@ -2034,8 +2234,8 @@ function ContractCard({
     lateReturnMultiplier: lateMult,
   }).clauses;
 
-  const lightDamageAmount = Math.round(originalItemValue * lightFrac);
-  const latePerDay = Math.round(dailyRate * lateMult);
+  const lightDamageAmount = computeLightDamageCharge(cfg);
+  const latePerDay = computeLateFeePerDay(cfg);
 
   return (
     <StepShell
@@ -2085,59 +2285,131 @@ function ContractCard({
                 {t('merchant.session.contract.adjustableTitle')}
               </div>
 
-              <FormField label={t('merchant.session.contract.lightDamageLabel')}>
-                <div className="flex items-center gap-2">
-                  <Input
-                    type="number"
+              {/* Light damage — percentage of item value OR a fixed SAR
+                  amount. Only the active mode's field renders, so a
+                  stale value in the other mode can never be sent. */}
+              <FormField label={t('merchant.session.contract.damageTypeLabel')}>
+                <ModeToggle<DamageChargeType>
+                  value={operation.damageChargeType}
+                  options={[
+                    { value: 'percentage', label: t('merchant.session.contract.damagePercentOption') },
+                    { value: 'fixed', label: t('merchant.session.contract.damageFixedOption') },
+                  ]}
+                  onChange={(v) => setOperation({ damageChargeType: v })}
+                />
+              </FormField>
+              {operation.damageChargeType === 'percentage' ? (
+                <FormField label={t('merchant.session.contract.lightDamageLabel')}>
+                  <div className="flex items-center gap-2">
+                    <Input
+                      type="number"
+                      inputMode="decimal"
+                      min={1}
+                      max={100}
+                      step={1}
+                      value={operation.lightDamagePercent}
+                      onChange={(e) =>
+                        setOperation({ lightDamagePercent: e.target.value })
+                      }
+                    />
+                    <span className="text-[12px] font-semibold text-ink-500 num">
+                      {t('merchant.session.contract.lightDamageUnit')}
+                    </span>
+                  </div>
+                  <div className="mt-1 text-[11px] text-ink-500 leading-relaxed">
+                    {t('merchant.session.contract.lightDamageHint')}
+                  </div>
+                  <div className="mt-0.5 text-[11.5px] text-ink-700 num">
+                    {t('merchant.session.contract.lightDamagePreview', {
+                      amount: formatCurrency(lightDamageAmount),
+                    })}
+                  </div>
+                </FormField>
+              ) : (
+                <FormField label={t('merchant.session.contract.damageFixedLabel')}>
+                  <NumericField
                     inputMode="decimal"
-                    min={1}
-                    max={100}
-                    step={1}
-                    value={operation.lightDamagePercent}
-                    onChange={(e) =>
-                      setOperation({ lightDamagePercent: e.target.value })
+                    digitsOnly="decimal"
+                    value={operation.damageFixedAmount}
+                    onValueChange={(v) => setOperation({ damageFixedAmount: v })}
+                    placeholder="0"
+                    trailing={
+                      <span className="text-ink-400 text-[12px] font-medium">
+                        {t('common.sar')}
+                      </span>
                     }
                   />
-                  <span className="text-[12px] font-semibold text-ink-500 num">
-                    {t('merchant.session.contract.lightDamageUnit')}
-                  </span>
-                </div>
-                <div className="mt-1 text-[11px] text-ink-500 leading-relaxed">
-                  {t('merchant.session.contract.lightDamageHint')}
-                </div>
-                <div className="mt-0.5 text-[11.5px] text-ink-700 num">
-                  {t('merchant.session.contract.lightDamagePreview', {
-                    amount: formatCurrency(lightDamageAmount),
-                  })}
-                </div>
-              </FormField>
+                  <div className="mt-1 text-[11px] text-ink-500 leading-relaxed">
+                    {t('merchant.session.contract.damageFixedHint')}
+                  </div>
+                </FormField>
+              )}
 
-              <FormField label={t('merchant.session.contract.lateReturnLabel')}>
-                <div className="flex items-center gap-2">
-                  <Input
-                    type="number"
+              {/* Late return — multiplier of the daily rate OR a fixed
+                  SAR amount PER LATE DAY. Total pricing has no daily
+                  rate, so the multiplier option is unavailable there. */}
+              <FormField label={t('merchant.session.contract.lateTypeLabel')}>
+                {operation.pricingType === 'total' ? (
+                  <div className="rounded-xl2 bg-canvas-100/70 ring-1 ring-canvas-200 px-3.5 py-2.5 text-[11.5px] text-ink-500 leading-relaxed">
+                    {t('merchant.session.contract.lateFixedForcedNote')}
+                  </div>
+                ) : (
+                  <ModeToggle<LateFeeType>
+                    value={operation.lateFeeType}
+                    options={[
+                      { value: 'multiplier', label: t('merchant.session.contract.lateMultiplierOption') },
+                      { value: 'fixed', label: t('merchant.session.contract.lateFixedOption') },
+                    ]}
+                    onChange={(v) => setOperation({ lateFeeType: v })}
+                  />
+                )}
+              </FormField>
+              {operation.lateFeeType === 'multiplier' && operation.pricingType !== 'total' ? (
+                <FormField label={t('merchant.session.contract.lateReturnLabel')}>
+                  <div className="flex items-center gap-2">
+                    <Input
+                      type="number"
+                      inputMode="decimal"
+                      min={0.1}
+                      max={10}
+                      step={0.1}
+                      value={operation.lateReturnMultiplier}
+                      onChange={(e) =>
+                        setOperation({ lateReturnMultiplier: e.target.value })
+                      }
+                    />
+                    <span className="text-[12px] font-semibold text-ink-500 num">
+                      {t('merchant.session.contract.lateReturnUnit')}
+                    </span>
+                  </div>
+                  <div className="mt-1 text-[11px] text-ink-500 leading-relaxed">
+                    {t('merchant.session.contract.lateReturnHint')}
+                  </div>
+                  <div className="mt-0.5 text-[11.5px] text-ink-700 num">
+                    {t('merchant.session.contract.lateReturnPreview', {
+                      amount: formatCurrency(latePerDay),
+                    })}
+                  </div>
+                </FormField>
+              ) : (
+                <FormField label={t('merchant.session.contract.lateFixedLabel')}>
+                  <NumericField
                     inputMode="decimal"
-                    min={0.1}
-                    max={10}
-                    step={0.1}
-                    value={operation.lateReturnMultiplier}
-                    onChange={(e) =>
-                      setOperation({ lateReturnMultiplier: e.target.value })
+                    digitsOnly="decimal"
+                    value={operation.lateFeeFixedAmount}
+                    onValueChange={(v) => setOperation({ lateFeeFixedAmount: v })}
+                    placeholder="0"
+                    trailing={
+                      <span className="text-ink-400 text-[12px] font-medium">
+                        {t('common.sar')}
+                      </span>
                     }
                   />
-                  <span className="text-[12px] font-semibold text-ink-500 num">
-                    {t('merchant.session.contract.lateReturnUnit')}
-                  </span>
-                </div>
-                <div className="mt-1 text-[11px] text-ink-500 leading-relaxed">
-                  {t('merchant.session.contract.lateReturnHint')}
-                </div>
-                <div className="mt-0.5 text-[11.5px] text-ink-700 num">
-                  {t('merchant.session.contract.lateReturnPreview', {
-                    amount: formatCurrency(latePerDay),
-                  })}
-                </div>
-              </FormField>
+                  <div className="mt-1 text-[11px] text-ink-500 leading-relaxed">
+                    {t('merchant.session.contract.lateFixedHint')}
+                  </div>
+                </FormField>
+              )}
             </section>
           )}
 
@@ -2204,7 +2476,12 @@ function ContractCard({
                 block
                 onClick={onIssue}
                 loading={issuing}
-                disabled={issuing || issueDisabled || idCheck.kind !== 'valid'}
+                disabled={
+                  issuing ||
+                  issueDisabled ||
+                  idCheck.kind !== 'valid' ||
+                  !penaltyConfigValid(operation)
+                }
                 leading={<DocIcon size={16} />}
               >
                 {t('merchant.session.contract.issuePackageCta', {

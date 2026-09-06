@@ -82,6 +82,9 @@ ID (LND-XXXXXXXX) plus a screenshot for any technical error.
 | 5.4 | Merchant | Lookup done | Enter the code the customer reads from their app | Customer name revealed only now | | |
 | 5.4b | Merchant (API) | Verified session skipped | Attempt to insert a rental_invoices row directly via the REST API without a verified code | Rejected server-side with P0195 — issuance is impossible without OTP | | |
 | 5.5 | Merchant | Operation step | Item description, days, daily rate, ORIGINAL item value above the eligibility limit | Eligibility check returns insufficient; reduce-value path offered | | |
+| 5.5b | Merchant | Operation step | Switch «نوع التسعير» to «مبلغ إجمالي للإيجار», enter a total amount | Daily-rate field disappears; the rental-amount tile shows the entered total exactly; days remain as duration only | | |
+| 5.5c | Merchant | Contract step (total pricing) | Check the late-charge section | Multiplier option unavailable with an explanatory note; a fixed per-late-day SAR amount is required | | |
+| 5.5d | Merchant | Contract step | Switch damage basis to «مبلغ ثابت» and enter a SAR amount | Percentage field hidden; preview clause states the fixed amount with no percentage wording; issue blocked until the amount is entered | | |
 | 5.6 | Merchant | Operation step | Set a value within the limit and continue | «العميل مؤهَّل» (live read each time) | | |
 | 5.7 | Merchant | Contract step | Try to issue WITHOUT the customer National ID | Issue CTA disabled until a valid 10-digit ID (1/2 prefix) is entered | | |
 | 5.7b | Merchant | Contract step | Enter the customer's full National ID, review adjustable clauses, issue the package | ONE issuance; M11 success: green check, REAL invoice reference, «المرحلة 2 من 4 · مراجعة العميل» | | |

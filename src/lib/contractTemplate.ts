@@ -27,6 +27,11 @@
 
 import { ENABLE_PAYMENTS_AND_NOTES } from '@/lib/featureFlags';
 import { GREGORIAN_LOCALE_AR, GREGORIAN_LOCALE_EN } from '@/lib/format/date';
+import {
+  computeLateFeePerDay,
+  computeLightDamageCharge,
+  resolveInvoicePricing,
+} from '@/lib/pricing';
 import type {
   ContractClause,
   Localized,
@@ -38,13 +43,14 @@ import type {
   RentalInvoiceRow,
 } from './supabase';
 
-// Defaults — used when the merchant didn't override these in the
-// contract preparation step. The current source of truth is the
-// invoice row's light_damage_fraction + late_return_multiplier
-// columns; these are the fallback for older rows or callers that
-// don't pass overrides.
-export const DEFAULT_LIGHT_DAMAGE_FRACTION = 0.30;
-export const DEFAULT_LATE_RETURN_MULTIPLIER = 1.5;
+// Defaults — re-exported from the centralized pricing module
+// (src/lib/pricing.ts) which is now the single source of the formulas
+// AND the backward-compatibility resolution for pre-20260502125300
+// rows.
+export {
+  DEFAULT_LIGHT_DAMAGE_FRACTION,
+  DEFAULT_LATE_RETURN_MULTIPLIER,
+} from '@/lib/pricing';
 
 const SAR = (n: number) =>
   `${n.toLocaleString('en-US', { maximumFractionDigits: 0 })} SAR`;
@@ -144,26 +150,39 @@ export function buildContractFromTemplate({
   lateReturnMultiplier,
   branchHours,
 }: TemplateInputs): ContractTemplateOutput {
-  const lightFrac =
-    lightDamageFraction ??
-    (typeof invoice.light_damage_fraction === 'number'
-      ? Number(invoice.light_damage_fraction)
-      : DEFAULT_LIGHT_DAMAGE_FRACTION);
-  const lateMult =
-    lateReturnMultiplier ??
-    (typeof invoice.late_return_multiplier === 'number'
-      ? Number(invoice.late_return_multiplier)
-      : DEFAULT_LATE_RETURN_MULTIPLIER);
-  const totalReplacement = items.reduce(
-    (s, it) => s + Number(it.replacement_value ?? 0),
-    0,
-  );
-  const lightDamage = Math.round(totalReplacement * lightFrac);
-  const dailyRate = items[0]?.daily_rate ? Number(items[0].daily_rate) : 0;
-  const latePerDay = Math.round(dailyRate * lateMult);
+  // Centralized pricing/penalty math + backward compatibility: rows
+  // from before 20260502125300 resolve to daily/percentage/multiplier
+  // and render exactly as before. The explicit override params (used
+  // by the merchant preview while the wizard edits values) apply on
+  // top of the resolved config for the legacy modes.
+  const cfg = {
+    ...resolveInvoicePricing(invoice, items),
+    ...(lightDamageFraction != null ? { lightDamageFraction } : {}),
+    ...(lateReturnMultiplier != null ? { lateReturnMultiplier } : {}),
+  };
+  const lightFrac = cfg.lightDamageFraction;
+  const lateMult = cfg.lateReturnMultiplier;
+  const totalReplacement = cfg.itemValue;
+  const lightDamage = computeLightDamageCharge(cfg);
+  const latePerDay = computeLateFeePerDay(cfg);
   const rentalFee = Number(invoice.subtotal_amount);
   const deposit = Number(invoice.security_deposit);
   const total = Number(invoice.total_amount);
+  // Clause fragments that depend on the chosen charge models. Wording
+  // rule: these state the merchant-entered contractual terms that the
+  // customer reviews and accepts — never any claim of external/legal
+  // enforcement.
+  const lightDamageBasis =
+    cfg.damageChargeType === 'fixed'
+      ? { ar: 'مبلغاً ثابتاً متفقاً عليه', en: 'a fixed agreed amount' }
+      : {
+          ar: `${Math.round(lightFrac * 100)}% من قيمة القطعة`,
+          en: `${Math.round(lightFrac * 100)}% of the item value`,
+        };
+  const lateBasis =
+    cfg.lateFeeType === 'fixed'
+      ? { ar: 'مبلغ ثابت لكل يوم تأخير', en: 'a fixed amount per late day' }
+      : { ar: `${lateMult}× السعر اليومي`, en: `${lateMult}× the daily rate` };
 
   // NOTE: the lessor is a contracting PARTY, not a contract term — its
   // identity lives in the الأطراف section (with the CR number since
@@ -218,8 +237,8 @@ export function buildContractFromTemplate({
       id: 'light-damage',
       title: { ar: 'الضرر الجزئي (الخفيف)', en: 'Light damage' },
       body: {
-        ar: `يلتزم المستأجر بدفع ما يعادل ${SARAr(lightDamage)} (${Math.round(lightFrac * 100)}% من قيمة القطعة) لتغطية الأضرار البسيطة كالبقع أو الخدوش الخفيفة.`,
-        en: `Lessee is liable for up to ${SAR(lightDamage)} (${Math.round(lightFrac * 100)}% of the item value) covering minor damages such as stains or light scuffs.`,
+        ar: `يلتزم المستأجر بدفع ما يعادل ${SARAr(lightDamage)} (${lightDamageBasis.ar}) لتغطية الأضرار البسيطة كالبقع أو الخدوش الخفيفة.`,
+        en: `Lessee is liable for up to ${SAR(lightDamage)} (${lightDamageBasis.en}) covering minor damages such as stains or light scuffs.`,
       },
     },
     {
@@ -234,8 +253,8 @@ export function buildContractFromTemplate({
       id: 'late-return',
       title: { ar: 'التأخّر في الإرجاع', en: 'Late return' },
       body: {
-        ar: `يُحتسب التأخر بعد انتهاء موعد الإرجاع المتفق عليه، مع مراعاة أوقات فتح وإغلاق التاجر. ويُحتسب عن كل يوم تأخير مبلغ ${SARAr(latePerDay)} (${lateMult}× السعر اليومي)، بحد أقصى قيمة القطعة الكاملة.`,
-        en: `Late return is calculated after the agreed return deadline, taking the merchant's opening and closing hours into account. A fee of ${SAR(latePerDay)} per delayed day (${lateMult}× the daily rate) applies, capped at the full value of the item.`,
+        ar: `يُحتسب التأخر بعد انتهاء موعد الإرجاع المتفق عليه، مع مراعاة أوقات فتح وإغلاق التاجر. ويُحتسب عن كل يوم تأخير مبلغ ${SARAr(latePerDay)} (${lateBasis.ar})، بحد أقصى قيمة القطعة الكاملة.`,
+        en: `Late return is calculated after the agreed return deadline, taking the merchant's opening and closing hours into account. A fee of ${SAR(latePerDay)} per delayed day (${lateBasis.en}) applies, capped at the full value of the item.`,
       },
     },
     {
@@ -271,8 +290,14 @@ export function buildContractFromTemplate({
       partialDamage: lightDamage,
       totalDamage: totalReplacement,
       note: {
-        ar: `يُحتسب الضرر الخفيف بنسبة ${Math.round(lightFrac * 100)}% من قيمة القطعة. التأخّر في الإرجاع: ${SARAr(latePerDay)} عن كل يوم.`,
-        en: `Light damage is ${Math.round(lightFrac * 100)}% of the item value. Late return: ${SAR(latePerDay)} per day.`,
+        ar:
+          cfg.damageChargeType === 'fixed'
+            ? `يُحتسب الضرر الخفيف كمبلغ ثابت قدره ${SARAr(lightDamage)}. التأخّر في الإرجاع: ${SARAr(latePerDay)} عن كل يوم.`
+            : `يُحتسب الضرر الخفيف بنسبة ${Math.round(lightFrac * 100)}% من قيمة القطعة. التأخّر في الإرجاع: ${SARAr(latePerDay)} عن كل يوم.`,
+        en:
+          cfg.damageChargeType === 'fixed'
+            ? `Light damage is a fixed amount of ${SAR(lightDamage)}. Late return: ${SAR(latePerDay)} per day.`
+            : `Light damage is ${Math.round(lightFrac * 100)}% of the item value. Late return: ${SAR(latePerDay)} per day.`,
       },
     },
   };
