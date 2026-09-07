@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Header, Screen } from '@/components/layout';
+import { Header, ResponsiveGrid, Screen } from '@/components/layout';
 import { Card, EmptyState, PageSkeleton, StatusChip, type StatusTone } from '@/components/ui';
 import { AlertIcon, ChevronIcon, GavelIcon, InfoIcon } from '@/components/icons';
 import { cn } from '@/lib/cn';
@@ -110,7 +110,7 @@ export default function MerchantDamages() {
     <>
       <Header title={t('merchant.damages.title')} showBack />
       <Screen padded={false} className="bg-canvas">
-        <div className="px-5 pt-5 pb-10 space-y-5">
+        <div className="container-wide pt-5 pb-10 space-y-5">
           <p className="text-[12.5px] text-ink-500 leading-relaxed px-1">
             {t('merchant.damages.subtitle')}
           </p>
@@ -126,44 +126,44 @@ export default function MerchantDamages() {
           ) : configured ? (
             <>
               {liveOpen.length > 0 && (
-                <div className="space-y-2.5">
+                <ResponsiveGrid md={2} className="gap-2.5">
                   {liveOpen.map((e) => (
                     <LiveCaseCard key={e.row.id} entry={e} />
                   ))}
-                </div>
+                </ResponsiveGrid>
               )}
               {liveClosed.length > 0 && (
                 <div>
                   <div className="text-[11.5px] font-semibold text-ink-400 uppercase tracking-wide px-1 mb-2">
                     {t('merchant.disputes.phase.resolved')}
                   </div>
-                  <div className="space-y-2.5 opacity-90">
+                  <ResponsiveGrid md={2} className="gap-2.5 opacity-90">
                     {liveClosed.map((e) => (
                       <LiveCaseCard key={e.row.id} entry={e} />
                     ))}
-                  </div>
+                  </ResponsiveGrid>
                 </div>
               )}
             </>
           ) : (
             <>
               {demoOpen.length > 0 && (
-                <div className="space-y-2.5">
+                <ResponsiveGrid md={2} className="gap-2.5">
                   {demoOpen.map((d) => (
                     <DemoCard key={d.id} item={d} />
                   ))}
-                </div>
+                </ResponsiveGrid>
               )}
               {demoSettled.length > 0 && (
                 <div>
                   <div className="text-[11.5px] font-semibold text-ink-400 uppercase tracking-wide px-1 mb-2">
                     {t('merchant.damages.status.settled')}
                   </div>
-                  <div className="space-y-2.5 opacity-90">
+                  <ResponsiveGrid md={2} className="gap-2.5 opacity-90">
                     {demoSettled.map((d) => (
                       <DemoCard key={d.id} item={d} />
                     ))}
-                  </div>
+                  </ResponsiveGrid>
                 </div>
               )}
             </>

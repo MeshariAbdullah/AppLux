@@ -46,7 +46,9 @@ export function Header({
   return (
     <header
       className={cn(
-        'relative px-5 pt-[calc(env(safe-area-inset-top)+18px)] pb-5',
+        // Gutters track PageContainer (20px phone → 32px tablet) so
+        // the header row aligns with the content column below it.
+        'relative px-5 md:px-8 pt-[calc(env(safe-area-inset-top)+18px)] pb-5',
         variant === 'hero'
           ? 'bg-gradient-to-b from-ink-900 via-ink-800 to-ink-900 text-white'
           : 'bg-canvas-50/85 backdrop-blur-md',

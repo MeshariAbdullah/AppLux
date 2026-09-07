@@ -254,7 +254,7 @@ export default function MerchantPending() {
   if (configured && liveApp === undefined) {
     return (
       <Screen padded={false} className="bg-beige-100">
-        <div className="px-5 pt-[calc(env(safe-area-inset-top)+24px)] pb-10">
+        <div className="container-narrow pt-[calc(env(safe-area-inset-top)+24px)] pb-10">
           <PageSkeleton rows={4} />
         </div>
       </Screen>
@@ -270,7 +270,7 @@ export default function MerchantPending() {
   return (
     <>
       <Screen padded={false} className="bg-beige-100">
-        <div className="px-5 pt-[calc(env(safe-area-inset-top)+40px)] pb-10 flex flex-col items-center">
+        <div className="container-narrow pt-[calc(env(safe-area-inset-top)+40px)] pb-10 flex flex-col items-center">
           {/* M07 — centered status circle + title + subtitle */}
           <span
             className={`h-[76px] w-[76px] rounded-full grid place-items-center ${visual.circle}`}

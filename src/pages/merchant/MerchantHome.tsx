@@ -368,7 +368,7 @@ export default function MerchantHome() {
   return (
     <>
       <Screen padded={false} className="bg-beige-100">
-        <div className="px-5 pt-[calc(env(safe-area-inset-top)+22px)] pb-24 space-y-3">
+        <div className="container-wide pt-[calc(env(safe-area-inset-top)+22px)] pb-24 space-y-3">
           {/* ====== M09 masthead ====== */}
           <div className="flex items-center gap-2.5">
             <div className="flex-1 min-w-0">
@@ -387,8 +387,8 @@ export default function MerchantHome() {
             )}
           </div>
 
-          {/* ====== Stat tiles (2×2) ====== */}
-          <div className="grid grid-cols-2 gap-2.5 pt-1">
+          {/* ====== Stat tiles — 2×2 on phones, one row on md+ ====== */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5 pt-1">
             <StatTile value={activeCount} label={t('merchant.home.stats.active')} />
             <StatTile
               value={pendingCount}
@@ -421,19 +421,21 @@ export default function MerchantHome() {
               {t('merchant.home.attentionEmpty')}
             </div>
           ) : (
-            feed.map((item) => (
-              <Link key={item.key} to={item.to} className="block">
-                <div className="rounded-[14px] bg-white ring-1 ring-beige-200 px-[18px] py-[15px] space-y-2 transition-transform active:scale-[0.995]">
-                  <div className="flex items-center justify-between gap-3">
-                    <span className="text-[13.5px] font-bold text-ink-900 truncate">
-                      {item.title}
-                    </span>
-                    <StatusChip size="sm" tone={item.chipTone} dot={false} label={item.chipLabel} />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5 items-start [&>*]:min-w-0">
+              {feed.map((item) => (
+                <Link key={item.key} to={item.to} className="block">
+                  <div className="rounded-[14px] bg-white ring-1 ring-beige-200 px-[18px] py-[15px] space-y-2 transition-transform active:scale-[0.995]">
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="text-[13.5px] font-bold text-ink-900 truncate">
+                        {item.title}
+                      </span>
+                      <StatusChip size="sm" tone={item.chipTone} dot={false} label={item.chipLabel} />
+                    </div>
+                    <div className="text-[12px] text-ink-500 truncate">{item.meta}</div>
                   </div>
-                  <div className="text-[12px] text-ink-500 truncate">{item.meta}</div>
-                </div>
-              </Link>
-            ))
+                </Link>
+              ))}
+            </div>
           )}
 
           {/* ====== Secondary destinations (kept reachable: the design

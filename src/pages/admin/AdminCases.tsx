@@ -152,7 +152,7 @@ export default function AdminCases() {
     <>
       <Header title={t('admin.cases.title')} showBack />
       <Screen padded={false} className="bg-canvas">
-        <div className="px-5 pt-5 pb-10 space-y-4">
+        <div className="container-wide pt-5 pb-10 space-y-4">
           {/* Filter chips — real states only. */}
           <div className="flex gap-2 overflow-x-auto scrollbar-none -mx-1 px-1" role="tablist">
             {FILTERS.map((f) => {
@@ -190,7 +190,7 @@ export default function AdminCases() {
               title={t('admin.disputes.emptyFiltered')}
             />
           ) : (
-            <div className="space-y-2.5">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5 items-start [&>*]:min-w-0">
               {filtered.map((e) => {
                 const { row } = e;
                 const needsAction = row.dispute_phase === 'lend_mediation';

@@ -31,7 +31,9 @@ export function BottomNav() {
       className="shrink-0 z-30 bg-white/95 backdrop-blur-md pb-[env(safe-area-inset-bottom)] border-t border-beige-200"
       aria-label="primary"
     >
-      <ul className="grid grid-cols-4 px-2 pt-2.5 pb-3">
+      {/* Tablet/desktop: cap the row so the four tabs stay a reachable
+          cluster instead of spreading across the widened canvas. */}
+      <ul className="grid grid-cols-4 px-2 pt-2.5 pb-3 mx-auto w-full max-w-[560px]">
         {tabs.map((tab) => (
           <li key={tab.to}>
             <NavLink

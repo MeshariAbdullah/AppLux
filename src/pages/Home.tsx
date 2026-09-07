@@ -287,7 +287,7 @@ export default function Home() {
   if (configured && liveLoading) {
     return (
       <Screen padded={false} className="bg-beige-100">
-        <div className="px-5 pt-[calc(env(safe-area-inset-top)+22px)] pb-24 space-y-4">
+        <div className="container-page pt-[calc(env(safe-area-inset-top)+22px)] pb-24 space-y-4">
           {greetingRow}
           <CardSkeleton />
           <PageSkeleton rows={3} />
@@ -298,7 +298,7 @@ export default function Home() {
 
   return (
     <Screen padded={false} className="bg-beige-100">
-      <div className="px-5 pt-[calc(env(safe-area-inset-top)+22px)] pb-24 space-y-3">
+      <div className="container-page pt-[calc(env(safe-area-inset-top)+22px)] pb-24 space-y-3">
         {/* ====== C05 greeting ====== */}
         {greetingRow}
 

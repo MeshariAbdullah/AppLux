@@ -57,7 +57,7 @@ export default function Nafath() {
   return (
     <>
       <Header title={t('nafath.title')} showBack />
-      <Screen className="bg-canvas">
+      <Screen width="narrow" className="bg-canvas">
         <div className="space-y-6">
           <div className="relative overflow-hidden rounded-xl3 bg-gradient-to-br from-ink-900 via-ink-800 to-ink-900 text-white p-6 shadow-plush">
             <div

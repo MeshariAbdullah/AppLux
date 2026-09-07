@@ -47,7 +47,7 @@ export default function RegisterSuccess() {
         <BrandSlogan size="sm" className="mt-7" />
       </div>
 
-      <div className="relative px-6 pb-[calc(env(safe-area-inset-bottom)+24px)]">
+      <div className="relative px-6 pb-[calc(env(safe-area-inset-bottom)+24px)] mx-auto w-full max-w-[440px]">
         <Button
           size="lg"
           block

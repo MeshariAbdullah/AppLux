@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { Header, Screen } from '@/components/layout';
+import { DetailLayout, Header, Screen } from '@/components/layout';
 import {
   Button,
   Card,
@@ -262,7 +262,7 @@ export default function MerchantDamageDetails() {
       <>
         <Header title={demoCase.id} subtitle={demoCase.customerName} showBack />
         <Screen padded={false} className="bg-canvas">
-          <div className="px-5 pt-5 pb-10 space-y-4">
+          <div className="container-wide pt-5 pb-10 space-y-4">
             <Card padded className="space-y-2.5">
               <FactRow label={t('disputes.claim.type')} value={t(`merchant.damages.severity.${demoCase.severity}`)} />
               <FactRow label={t('disputes.claim.amount')} value={<span className="num">{formatCurrency(demoCase.claimAmount)}</span>} />
@@ -291,7 +291,14 @@ export default function MerchantDamageDetails() {
     <>
       <Header title={kase.case_number} subtitle={customerName} showBack />
       <Screen padded={false} className="bg-canvas">
-        <div className="px-5 pt-5 pb-10 space-y-4">
+        {/* Phone: one column, current order. lg+: hero + phase
+            timeline + claim facts form a sticky rail; evidence and the
+            dispute panels take the main column. */}
+        <div className="container-wide pt-5 pb-10">
+        <DetailLayout
+          asideFirst
+          aside={
+          <>
           {/* ---------- hero ---------- */}
           <Card padded className="space-y-3">
             <div className="flex items-start gap-3">
@@ -404,7 +411,10 @@ export default function MerchantDamageDetails() {
               </>
             )}
           </Card>
-
+          </>
+          }
+          main={
+          <>
           {/* ---------- evidence ---------- */}
           <EvidenceCard
             title={t('merchant.damageCase.evidence')}
@@ -590,6 +600,9 @@ export default function MerchantDamageDetails() {
               </div>
             </Card>
           )}
+          </>
+          }
+        />
         </div>
       </Screen>
     </>

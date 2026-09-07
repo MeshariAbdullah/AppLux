@@ -114,7 +114,7 @@ export default function MerchantProfile() {
       <>
         <Header title={t('merchant.profile.title')} />
         <Screen padded={false} className="bg-beige-100">
-          <div className="px-5 pt-5 pb-24">
+          <div className="container-page pt-5 pb-24">
             <PageSkeleton rows={4} />
           </div>
         </Screen>
@@ -127,7 +127,7 @@ export default function MerchantProfile() {
     <>
       <Header title={t('merchant.profile.title')} />
       <Screen padded={false} className="bg-beige-100">
-        <div className="px-5 pt-5 pb-24 space-y-4">
+        <div className="container-page pt-5 pb-24 space-y-4">
           {/* Store identity — M16 header */}
           <div className="flex items-center gap-3.5">
             <span className="h-14 w-14 shrink-0 rounded-full bg-green-50 text-green-700 grid place-items-center text-[19px] font-bold">

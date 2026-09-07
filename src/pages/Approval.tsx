@@ -160,7 +160,7 @@ export default function Approval() {
     <>
       <Screen padded={false} className="bg-beige-100">
         {/* C10 — centered green success. */}
-        <div className="px-6 pt-[calc(env(safe-area-inset-top)+72px)] pb-6 text-center flex flex-col items-center">
+        <div className="container-narrow pt-[calc(env(safe-area-inset-top)+72px)] pb-6 text-center flex flex-col items-center">
           <span className="h-[84px] w-[84px] rounded-full bg-green-700 text-white grid place-items-center ring-[14px] ring-green-50 animate-stamp-in">
             <CheckIcon size={34} strokeWidth={2.5} />
           </span>
@@ -172,7 +172,7 @@ export default function Approval() {
           </p>
         </div>
 
-        <div className="px-5 pb-10 space-y-4">
+        <div className="container-narrow pb-10 space-y-4">
           {/* C10 reference card — real contract reference + the current
               journey stage chip (stage 3 · بدء الإيجار in the
               no-payment path). */}

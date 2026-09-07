@@ -199,7 +199,7 @@ export default function StoreDetails() {
           </div>
         </div>
 
-        <div className="px-5 pt-4 pb-10 space-y-4">
+        <div className="container-page pt-4 pb-10 space-y-4">
 
           {/* Quick contact (first branch) */}
           {store.branches[0] && (

@@ -463,7 +463,7 @@ export default function Review() {
       <Header title={t('review.title')} showBack />
       <ReviewStepper active={step} />
       <Screen padded={false} className="bg-canvas">
-        <div className="px-4 pt-4 pb-28 space-y-4">
+        <div className="container-page pt-4 pb-28 space-y-4">
           {/* Real offer expiry (20260502123800): the customer sees the
               exact persisted deadline before deciding. Actionable
               states only; no fallback when the value is missing. */}

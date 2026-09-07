@@ -256,7 +256,7 @@ export function PaymentSimulationSheet({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end justify-center"
+      className="fixed inset-0 z-50 flex items-end justify-center md:items-center md:p-6"
       role="dialog"
       aria-modal="true"
       aria-label={t('payment.simulation.title')}
@@ -270,15 +270,17 @@ export function PaymentSimulationSheet({
 
       <div
         className={cn(
-          // Width tracks the MobileShell tablet strategy.
-          'relative w-full max-w-[480px] md:max-w-[600px] lg:max-w-[680px] bg-canvas-50 rounded-t-3xl shadow-plush',
-          'ring-1 ring-canvas-200 animate-slide-up-soft',
-          'flex flex-col max-h-[90vh]',
+          // Phone: bottom sheet. md+: centered dialog card — same
+          // split as the shared <Sheet>, so overlays feel native on
+          // tablets/desktop instead of a stretched phone sheet.
+          'relative w-full max-w-[480px] md:max-w-[560px] bg-canvas-50 rounded-t-3xl md:rounded-3xl shadow-plush',
+          'ring-1 ring-canvas-200 animate-slide-up-soft md:animate-fade-in',
+          'flex flex-col max-h-[90vh] md:max-h-[85dvh]',
         )}
         style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
       >
-        {/* Drag handle */}
-        <div className="pt-2.5 pb-1 flex justify-center">
+        {/* Drag handle (phone bottom-sheet affordance only) */}
+        <div className="pt-2.5 pb-1 flex justify-center md:hidden">
           <span aria-hidden className="h-1 w-10 rounded-full bg-canvas-300" />
         </div>
 

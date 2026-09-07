@@ -33,7 +33,7 @@ export default function AdminModulePlaceholder() {
     <>
       <Header title={title} showBack />
       <Screen padded={false} className="bg-canvas">
-        <div className="px-5 pt-6 pb-10 space-y-5 flex flex-col min-h-full">
+        <div className="container-page pt-6 pb-10 space-y-5 flex flex-col min-h-full">
           <div className="relative overflow-hidden rounded-xl3 bg-gradient-to-br from-ink-900 via-ink-800 to-ink-900 text-white p-8 shadow-plush text-center">
             <div
               aria-hidden

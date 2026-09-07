@@ -235,7 +235,7 @@ export default function MerchantRentalClose() {
       <>
         <Header title={t('merchant.close.title')} showBack />
         <Screen padded={false} className="bg-beige-100">
-          <div className="px-5 pt-10 pb-10 space-y-5 flex flex-col min-h-full">
+          <div className="container-page pt-10 pb-10 space-y-5 flex flex-col min-h-full">
             {/* Design-language success header (matches M07/M11): green
                 halo circle + centered title/subtitle + real reference. */}
             <div className="flex flex-col items-center text-center">
@@ -331,7 +331,7 @@ export default function MerchantRentalClose() {
         showBack
       />
       <Screen padded={false} className="bg-canvas">
-        <div className="px-5 pt-5 pb-10 space-y-5">
+        <div className="container-page pt-5 pb-10 space-y-5">
           <form className="space-y-4" onSubmit={onSubmit} noValidate>
             {/* M14 intent card — what closing does, in the design's
                 white-card language (the dark hero is gone). */}

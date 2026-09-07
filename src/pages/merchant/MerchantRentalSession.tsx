@@ -992,8 +992,8 @@ export default function MerchantRentalSession() {
         <div
           className={
             session.step === 'issued'
-              ? 'px-6 pt-[calc(env(safe-area-inset-top)+16px)] pb-10 flex flex-col justify-center min-h-full'
-              : 'px-5 pt-5 pb-10 space-y-5'
+              ? 'container-page pt-[calc(env(safe-area-inset-top)+16px)] pb-10 flex flex-col justify-center min-h-full'
+              : 'container-page pt-5 pb-10 space-y-5'
           }
         >
           {session.step !== 'issued' && <SessionEyebrow stepIndex={stepIndex} t={t} />}

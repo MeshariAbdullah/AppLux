@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, type ChangeEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Header, Screen } from '@/components/layout';
+import { FormGrid, formGridFull, Header, Screen } from '@/components/layout';
 import { Button, FormField, Input, Select, Textarea } from '@/components/ui';
 import { translateAuthError } from '@/lib/errors';
 import { logEvent } from '@/lib/observability/log';
@@ -151,7 +151,7 @@ export default function Register() {
         }
       />
 
-      <div className="px-5 pt-3">
+      <div className="container-narrow pt-3">
         <div className="flex gap-1.5">
           {STEPS.map((_, i) => (
             <span
@@ -166,7 +166,7 @@ export default function Register() {
         <div className="sr-only">{Math.round(progress)}%</div>
       </div>
 
-      <Screen className="bg-canvas">
+      <Screen width="narrow" className="bg-canvas">
         <div>
           <h1 className="editorial-title text-[24px] text-ink-900 leading-tight">{t(current.titleKey)}</h1>
           <p className="mt-2 text-[13.5px] text-ink-500 leading-relaxed">{t(current.subKey)}</p>
@@ -193,7 +193,7 @@ export default function Register() {
           )}
 
           {step === 1 && (
-            <>
+            <FormGrid>
               <FormField label={t('register.mobile')} required error={errors.mobile}>
                 <Input
                   inputMode="tel"
@@ -231,7 +231,7 @@ export default function Register() {
                   ))}
                 </Select>
               </FormField>
-              <FormField label={t('register.address')} required error={errors.address}>
+              <FormField label={t('register.address')} required error={errors.address} className={formGridFull}>
                 <Textarea
                   placeholder={t('register.addressPh')}
                   rows={3}
@@ -240,11 +240,11 @@ export default function Register() {
                   invalid={Boolean(errors.address)}
                 />
               </FormField>
-            </>
+            </FormGrid>
           )}
 
           {step === 2 && (
-            <>
+            <FormGrid>
               <FormField label={t('register.profession')} required error={errors.profession}>
                 <Select
                   value={values.profession}
@@ -284,8 +284,7 @@ export default function Register() {
                   }
                 />
               </FormField>
-
-            </>
+            </FormGrid>
           )}
 
           <div className="pt-2 space-y-2">
@@ -539,7 +538,7 @@ function SupabaseRegister() {
 
   return (
     <Screen padded={false} className="bg-beige-100">
-      <div className="px-5 pt-[calc(env(safe-area-inset-top)+16px)] pb-10">
+      <div className="container-narrow pt-[calc(env(safe-area-inset-top)+16px)] pb-10">
         {/* C02 header row — back square + title (M02 pattern). */}
         <div className="flex items-center gap-3">
           <button

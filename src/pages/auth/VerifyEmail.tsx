@@ -151,7 +151,7 @@ export default function VerifyEmail() {
 
   return (
     <Screen padded={false} className="bg-beige-100">
-      <div className="px-6 pt-[calc(env(safe-area-inset-top)+72px)] pb-10 flex flex-col items-center text-center">
+      <div className="container-narrow pt-[calc(env(safe-area-inset-top)+72px)] pb-10 flex flex-col items-center text-center">
         <span className="h-[76px] w-[76px] rounded-full bg-green-50 text-green-700 grid place-items-center">
           <MailIcon size={28} />
         </span>

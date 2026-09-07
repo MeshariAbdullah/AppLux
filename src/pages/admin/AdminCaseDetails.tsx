@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import { Navigate, useNavigate, useParams } from 'react-router-dom';
-import { Header, Screen } from '@/components/layout';
+import { DetailLayout, Header, Screen } from '@/components/layout';
 import {
   Button,
   Card,
@@ -249,7 +249,14 @@ function AdminCaseDetailsInner({
     <>
       <Header title={kase.case_number} subtitle={merchantName} showBack />
       <Screen padded={false} className="bg-canvas">
-        <div className="px-5 pt-5 pb-10 space-y-4">
+        {/* Phone: one column, current order. lg+: case summary (status
+            + claim facts) is a sticky rail; response, evidence,
+            mediation and the event log take the main column. */}
+        <div className="container-wide pt-5 pb-10">
+        <DetailLayout
+          asideFirst
+          aside={
+          <>
           {/* hero */}
           <Card padded className="space-y-3">
             <div className="flex items-start gap-3">
@@ -322,7 +329,10 @@ function AdminCaseDetailsInner({
               </>
             )}
           </Card>
-
+          </>
+          }
+          main={
+          <>
           {/* customer response */}
           {kase.customer_response_at && (
             <Card padded className="space-y-2">
@@ -537,6 +547,9 @@ function AdminCaseDetailsInner({
               </div>
             </Card>
           )}
+          </>
+          }
+        />
         </div>
       </Screen>
     </>

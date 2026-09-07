@@ -496,7 +496,7 @@ export default function MerchantDamageNew() {
         showBack
       />
       <Screen padded={false} className="bg-canvas">
-        <div className="px-5 pt-5 pb-10 space-y-5">
+        <div className="container-page pt-5 pb-10 space-y-5">
           <form className="space-y-4" onSubmit={onSubmit} noValidate>
             {/* M15 warning banner — opening a case halts the normal
                 return path; shown FIRST per the design. */}

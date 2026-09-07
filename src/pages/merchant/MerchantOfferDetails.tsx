@@ -178,7 +178,7 @@ export default function MerchantOfferDetails() {
     <>
       <Header title={t('merchant.offer.title')} showBack />
       <Screen padded={false} className="bg-canvas">
-        <div className="px-5 pt-5 pb-10 space-y-4">
+        <div className="container-page pt-5 pb-10 space-y-4">
           <Card padded className="space-y-4">
             <div className="flex items-center gap-3">
               <span className="h-11 w-11 shrink-0 rounded-2xl bg-gold-50 text-gold-700 grid place-items-center">

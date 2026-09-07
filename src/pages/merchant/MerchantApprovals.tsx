@@ -102,7 +102,7 @@ export default function MerchantApprovals() {
     <>
       <Header title={t('merchant.approvals.title')} showBack />
       <Screen padded={false} className="bg-canvas">
-        <div className="px-5 pt-5 pb-10 space-y-4">
+        <div className="container-page pt-5 pb-10 space-y-4">
           <p className="text-[12.5px] text-ink-500 leading-relaxed px-1">
             {t('merchant.approvals.subtitle')}
           </p>

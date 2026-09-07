@@ -52,8 +52,11 @@ export default function Welcome() {
         <BrandSlogan size="lg" tone="dark" className="!font-bold" />
       </div>
 
-      {/* Action sheet — C01: 24px top radius, role picker + sign-in. */}
-      <div className="relative bg-beige-100 text-navy-700 rounded-t-3xl px-5 pt-6 pb-[calc(env(safe-area-inset-bottom)+24px)] space-y-3">
+      {/* Action sheet — C01: 24px top radius, role picker + sign-in.
+          The sheet surface spans the shell; the CTAs inside sit in a
+          narrow centered column so buttons never stretch on tablets. */}
+      <div className="relative bg-beige-100 text-navy-700 rounded-t-3xl px-5 pt-6 pb-[calc(env(safe-area-inset-bottom)+24px)]">
+      <div className="mx-auto w-full max-w-[440px] space-y-3">
         <Link
           to="/auth/register"
           className={cn(
@@ -107,6 +110,7 @@ export default function Welcome() {
             </span>
           </Link>
         )}
+      </div>
       </div>
       </div>
     </div>

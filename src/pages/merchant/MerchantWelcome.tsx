@@ -80,7 +80,10 @@ export default function MerchantWelcome() {
 
       {/* Action sheet — M01: 24px top radius, 24/20/28 padding, 12px
           row gap; sits flush at the bottom of the viewport. */}
-      <div className="relative bg-beige-100 text-navy-700 rounded-t-3xl px-5 pt-6 pb-[calc(env(safe-area-inset-bottom)+28px)] space-y-3">
+      <div className="relative bg-beige-100 text-navy-700 rounded-t-3xl px-5 pt-6 pb-[calc(env(safe-area-inset-bottom)+28px)]">
+      {/* CTAs sit in a narrow centered column so buttons never stretch
+          across the tablet/desktop canvas. */}
+      <div className="mx-auto w-full max-w-[440px] space-y-3">
         <Link
           to="/merchant/register"
           className={cn(
@@ -115,6 +118,7 @@ export default function MerchantWelcome() {
         <p className="text-center text-[11px] text-ink-400 leading-relaxed px-6">
           {t('welcome.terms')}
         </p>
+      </div>
       </div>
       </div>
     </div>

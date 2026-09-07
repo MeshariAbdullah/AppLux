@@ -168,7 +168,7 @@ export default function NoteTracking() {
     <>
       <Header title={t('track.noteTitle')} showBack />
       <Screen padded={false} className="bg-canvas">
-        <div className="px-5 pt-5 pb-10 space-y-5">
+        <div className="container-page pt-5 pb-10 space-y-5">
           {/* Premium note hero — soft gold tint, framed as an official record */}
           <div className="relative overflow-hidden rounded-xl3 bg-gradient-to-br from-gold-50 via-white to-canvas-50 hairline p-6 shadow-card">
             <div

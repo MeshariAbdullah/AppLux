@@ -118,7 +118,7 @@ export default function Profile() {
   return (
     <>
       <Screen padded={false} className="bg-beige-100">
-        <div className="px-5 pt-[calc(env(safe-area-inset-top)+22px)] pb-24 space-y-4">
+        <div className="container-page pt-[calc(env(safe-area-inset-top)+22px)] pb-24 space-y-4">
           {/* ====== C13 masthead ====== */}
           <div className="flex items-center gap-3.5">
             <span className="h-14 w-14 shrink-0 rounded-full bg-navy-700 text-white grid place-items-center text-[19px] font-bold">

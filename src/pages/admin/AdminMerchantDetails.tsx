@@ -183,7 +183,7 @@ export default function AdminMerchantDetails() {
       <>
         <Header title={t('admin.merchantRequest.title')} showBack />
         <Screen padded={false} className="bg-canvas">
-          <div className="px-4 pt-6">
+          <div className="container-page pt-6">
             <PageSkeleton rows={4} />
           </div>
         </Screen>
@@ -196,7 +196,7 @@ export default function AdminMerchantDetails() {
       <>
         <Header title={t('admin.merchantRequest.title')} showBack />
         <Screen padded={false} className="bg-canvas">
-          <div className="px-4 pt-6">
+          <div className="container-page pt-6">
             <EmptyState
               icon={<InfoIcon size={22} />}
               title={t('admin.merchantRequest.notFound.title')}
@@ -278,7 +278,7 @@ export default function AdminMerchantDetails() {
         showBack
       />
       <Screen padded={false} className="bg-canvas">
-        <div className="px-5 pt-5 pb-10 space-y-5">
+        <div className="container-page pt-5 pb-10 space-y-5">
           {/* Hero */}
           <div className="relative overflow-hidden rounded-xl3 bg-gradient-to-br from-ink-900 via-ink-800 to-ink-900 text-white p-6 shadow-plush">
             <div

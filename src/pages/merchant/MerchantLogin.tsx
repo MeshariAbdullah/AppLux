@@ -189,7 +189,7 @@ export default function MerchantLogin() {
         >
           <ArrowIcon size={16} className="rtl:rotate-0 ltr:rotate-180" />
         </button>
-        <div className="px-5 pt-[calc(env(safe-area-inset-top)+14px)] pb-10 space-y-5">
+        <div className="container-narrow pt-[calc(env(safe-area-inset-top)+14px)] pb-10 space-y-5">
           {/* M08 masthead — centered mark, portal title, account-type chip */}
           <div className="flex flex-col items-center gap-3 pt-6">
             <LendLogo variant="mark" theme="light" size={52} />

@@ -181,7 +181,7 @@ export default function InvoiceTracking() {
     <>
       <Header title={t('track.invoiceTitle')} showBack />
       <Screen padded={false} className="bg-canvas">
-        <div className="px-5 pt-5 pb-10 space-y-5">
+        <div className="container-page pt-5 pb-10 space-y-5">
           {/* ====== FOCUSED HERO ======
               Task-first: who you're renting from + what you're renting,
               right at the top. Status + amount + due date sit beneath. */}

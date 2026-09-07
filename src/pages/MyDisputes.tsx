@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Header, Screen } from '@/components/layout';
+import { Header, ResponsiveGrid, Screen } from '@/components/layout';
 import { Card, EmptyState, PageSkeleton, StatusChip, type StatusTone } from '@/components/ui';
 import { ChevronIcon, InfoIcon, ShieldIcon } from '@/components/icons';
 import { cn } from '@/lib/cn';
@@ -145,7 +145,7 @@ export default function MyDisputes() {
     <>
       <Header title={t('disputes.list.title')} showBack />
       <Screen padded={false} className="bg-canvas">
-        <div className="px-5 pt-5 pb-10 space-y-4">
+        <div className="container-wide pt-5 pb-10 space-y-4">
           <div className="flex gap-2 overflow-x-auto scrollbar-none -mx-1 px-1" role="tablist">
             {FILTERS.map((f) => {
               const active = f === filter;
@@ -181,7 +181,7 @@ export default function MyDisputes() {
               description={t('disputes.list.emptyHint')}
             />
           ) : (
-            <div className="space-y-2.5">
+            <ResponsiveGrid md={2} className="gap-2.5">
               {filtered.map((e) => (
                 <Link key={e.row.id} to={`/disputes/${e.row.id}`} className="block">
                   <Card padded className="space-y-2.5 transition-transform active:scale-[0.995]">
@@ -234,7 +234,7 @@ export default function MyDisputes() {
                   </Card>
                 </Link>
               ))}
-            </div>
+            </ResponsiveGrid>
           )}
         </div>
       </Screen>

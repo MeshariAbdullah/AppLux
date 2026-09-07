@@ -568,7 +568,7 @@ export default function MerchantRegister() {
     return (
       <>
         <Header title={t('merchant.register.title')} showBack />
-        <Screen className="bg-canvas">
+        <Screen width="narrow" className="bg-canvas">
           <Card padded className="text-center space-y-3">
             <div className="mx-auto h-11 w-11 rounded-xl bg-warn-50 text-warn-600 grid place-items-center ring-1 ring-warn-500/25">
               <BuildingIcon size={20} />
@@ -624,7 +624,7 @@ export default function MerchantRegister() {
     return (
       <>
         <Header title={t('merchant.register.title')} />
-        <Screen className="bg-canvas">
+        <Screen width="narrow" className="bg-canvas">
           <Card padded className="space-y-4">
             <div className="text-center space-y-2">
               <div className="mx-auto h-11 w-11 rounded-xl bg-lavender-50 text-lavender-700 grid place-items-center ring-1 ring-lavender-200">
@@ -749,7 +749,7 @@ export default function MerchantRegister() {
       </div>
 
       <Screen padded={false} className="bg-beige-100">
-        <div className="px-5 pt-5 pb-6 flex flex-col min-h-full">
+        <div className="container-narrow pt-5 pb-6 flex flex-col min-h-full">
           <div>
             <h1 className="text-[18px] font-bold text-navy-700">{t(current.titleKey)}</h1>
             <p className="mt-1 text-[12.5px] text-ink-500 leading-relaxed">{t(current.subKey)}</p>

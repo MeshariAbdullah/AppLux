@@ -216,7 +216,7 @@ export default function AdminHome() {
         trailing={<LangToggle tone="dark" />}
       />
       <Screen padded={false} className="bg-canvas">
-        <div className="px-5 pt-5 pb-10 space-y-5">
+        <div className="container-wide pt-5 pb-10 space-y-5">
           {/* Hero */}
           <div className="relative overflow-hidden rounded-xl3 bg-gradient-to-br from-ink-900 via-ink-800 to-ink-900 text-white p-6 shadow-plush">
             <div
@@ -528,7 +528,7 @@ export default function AdminHome() {
           {/* Quick navigation to modules */}
           <section>
             <SectionHeader title={t('admin.home.modules.title')} />
-            <div className="grid grid-cols-2 gap-2.5">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2.5 items-stretch">
               {quickModules.map((m) => (
                 <Link key={m.to} to={m.to} className="block">
                   <Card

@@ -55,7 +55,7 @@ export default function ForgotPassword() {
     return (
       <>
         <Header title={t('auth.forgotPassword.title')} showBack />
-        <Screen className="bg-canvas">
+        <Screen width="narrow" className="bg-canvas">
           <div className="rounded-xl3 bg-white ring-1 ring-canvas-200 p-5 shadow-soft space-y-3 text-center">
             <div className="mx-auto h-11 w-11 rounded-2xl bg-success-50 text-success-600 grid place-items-center">
               <BadgeCheckIcon size={20} />
@@ -81,7 +81,7 @@ export default function ForgotPassword() {
   return (
     <>
       <Header title={t('auth.forgotPassword.title')} showBack />
-      <Screen className="bg-canvas">
+      <Screen width="narrow" className="bg-canvas">
         <div>
           <h1 className="editorial-title text-[24px] text-ink-900 leading-tight">
             {t('auth.forgotPassword.title')}

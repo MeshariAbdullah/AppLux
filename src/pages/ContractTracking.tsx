@@ -467,7 +467,7 @@ export default function ContractTracking() {
     <>
       <Header title={t('track.contractTitle')} showBack />
       <Screen padded={false} className="bg-canvas">
-        <div className="px-5 pt-5 pb-10 space-y-5">
+        <div className="container-page pt-5 pb-10 space-y-5">
           {/* Hero — soft tinted, framed as an official record */}
           <div className="relative overflow-hidden rounded-[14px] bg-white ring-1 ring-beige-200 p-6">
             <div className="relative inline-flex items-center gap-1.5 rounded-full bg-green-50 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.14em] text-green-700">

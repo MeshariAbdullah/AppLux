@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { Screen } from '@/components/layout';
+import { ResponsiveGrid, Screen } from '@/components/layout';
 import { MerchantTabBar } from '@/components/merchant/MerchantTabBar';
 import { EmptyState, Input, PageSkeleton, StatusChip } from '@/components/ui';
 import { InfoIcon, SearchIcon } from '@/components/icons';
@@ -239,7 +239,7 @@ export default function MerchantRentals() {
     return (
       <>
         <Screen padded={false} className="bg-beige-100">
-          <div className="px-5 pt-[calc(env(safe-area-inset-top)+22px)] pb-24">
+          <div className="container-wide pt-[calc(env(safe-area-inset-top)+22px)] pb-24">
             <PageSkeleton rows={4} />
           </div>
         </Screen>
@@ -251,7 +251,7 @@ export default function MerchantRentals() {
   return (
     <>
       <Screen padded={false} className="bg-beige-100">
-        <div className="px-5 pt-[calc(env(safe-area-inset-top)+22px)] pb-24 space-y-3">
+        <div className="container-wide pt-[calc(env(safe-area-inset-top)+22px)] pb-24 space-y-3">
           {/* ====== M12 masthead: title + search toggle ====== */}
           <div className="flex items-center gap-2.5">
             <h1 className="flex-1 text-[19px] font-bold text-navy-700">
@@ -322,14 +322,14 @@ export default function MerchantRentals() {
               description={t('merchant.rentals.emptyHint')}
             />
           ) : (
-            <div className="space-y-3">
+            <ResponsiveGrid md={2}>
               {filteredReviews.map((r) => (
                 <ReviewCard key={r.id} entry={r} formatCurrency={formatCurrency} formatDate={formatDate} />
               ))}
               {filteredRentals.map((r) => (
                 <RentalCard key={r.id} rental={r} />
               ))}
-            </div>
+            </ResponsiveGrid>
           )}
         </div>
       </Screen>

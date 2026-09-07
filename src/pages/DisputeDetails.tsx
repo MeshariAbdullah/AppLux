@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { Header, Screen } from '@/components/layout';
+import { DetailLayout, Header, Screen } from '@/components/layout';
 import {
   Button,
   Card,
@@ -232,7 +232,14 @@ export default function DisputeDetails() {
     <>
       <Header title={t('disputes.title')} showBack />
       <Screen padded={false} className="bg-canvas">
-        <div className="px-5 pt-5 pb-10 space-y-4">
+        {/* Phone: one column in the current order. lg+: the case
+            summary (status + facts) becomes a sticky side rail while
+            evidence and the phase panels take the wide main column. */}
+        <div className="container-wide pt-5 pb-10">
+        <DetailLayout
+          asideFirst
+          aside={
+          <>
           {/* ---------- neutral hero ---------- */}
           <Card padded className="space-y-3">
             <div className="flex items-start gap-3">
@@ -303,7 +310,10 @@ export default function DisputeDetails() {
               </Link>
             )}
           </Card>
-
+          </>
+          }
+          main={
+          <>
           {/* ---------- evidence ---------- */}
           <EvidenceCard
             title={t('disputes.evidence.merchantTitle')}
@@ -462,6 +472,9 @@ export default function DisputeDetails() {
               formatDate={formatDate}
             />
           )}
+          </>
+          }
+        />
         </div>
       </Screen>
     </>

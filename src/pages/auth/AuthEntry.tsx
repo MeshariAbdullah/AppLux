@@ -21,7 +21,7 @@ export default function AuthEntry() {
   return (
     <>
       <Header title={t('welcome.eyebrow')} showBack />
-      <Screen className="bg-canvas">
+      <Screen width="narrow" className="bg-canvas">
         <div className="space-y-6">
           <div className="pt-1">
             <span className="inline-flex items-center gap-1.5 rounded-full bg-gold-50 px-3 py-1 text-[11px] font-semibold text-gold-700">

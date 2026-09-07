@@ -98,6 +98,26 @@ html[dir='ltr'] body {
 .no-scrollbar::-webkit-scrollbar { display: none; }
 .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
+@layer components {
+  /* =====================================================================
+   * Responsive page columns — THE single source of the app's horizontal
+   * rhythm (PageContainer in src/components/layout renders these same
+   * classes). The MobileShell canvas widens on tablet/desktop
+   * (720/960/1080px); every page body sits in one of these centered
+   * columns so content never stretches edge-to-edge:
+   *   .container-narrow  520px  auth + focused forms
+   *   .container-page    640px  default reading/list column
+   *   .container-wide   1024px  grids + two-column DetailLayout pages
+   *   .container-full    no cap (rare full-bleed art)
+   * Gutters scale 20px (phone) → 32px (md+). mx-auto + logical
+   * properties: RTL needs nothing special.
+   * ==================================================================== */
+  .container-narrow { @apply mx-auto w-full max-w-[520px] px-5 md:px-8; }
+  .container-page   { @apply mx-auto w-full max-w-[640px] px-5 md:px-8; }
+  .container-wide   { @apply mx-auto w-full max-w-[1024px] px-5 md:px-8; }
+  .container-full   { @apply mx-auto w-full px-5 md:px-8; }
+}
+
 @layer utilities {
   /* Canvas surface + logical-property helpers */
   .bg-canvas { background-color: var(--lend-canvas); }

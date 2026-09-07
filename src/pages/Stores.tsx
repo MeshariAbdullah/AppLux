@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Screen } from '@/components/layout';
+import { ResponsiveGrid, Screen } from '@/components/layout';
 import { EmptyState, Input, Skeleton } from '@/components/ui';
 import { InfoIcon, SearchIcon } from '@/components/icons';
 import { CACHE_TTL, cacheKeys } from '@/lib/cache/keys';
@@ -130,7 +130,7 @@ export default function Stores() {
 
   return (
     <Screen padded={false} className="bg-beige-100">
-      <div className="px-5 pt-[calc(env(safe-area-inset-top)+22px)] pb-24 space-y-3">
+      <div className="container-wide pt-[calc(env(safe-area-inset-top)+22px)] pb-24 space-y-3">
         {/* ====== C06 masthead: title + search toggle ====== */}
         <div className="flex items-center gap-2.5">
           <h1 className="flex-1 text-[19px] font-bold text-navy-700">
@@ -192,11 +192,11 @@ export default function Stores() {
         </div>
 
         {loading ? (
-          <div className="space-y-3">
-            {Array.from({ length: 3 }).map((_, i) => (
+          <ResponsiveGrid md={2} lg={3}>
+            {Array.from({ length: 6 }).map((_, i) => (
               <StoreSkeleton key={i} />
             ))}
-          </div>
+          </ResponsiveGrid>
         ) : filtered.length === 0 ? (
           <EmptyState
             icon={<InfoIcon size={22} />}
@@ -204,11 +204,13 @@ export default function Stores() {
             description={t('stores.emptyHint')}
           />
         ) : (
-          <div className="space-y-3">
+          // One column on phones (unchanged); two on iPad portrait,
+          // three on iPad landscape/desktop.
+          <ResponsiveGrid md={2} lg={3}>
             {filtered.map((s) => (
               <StoreCard key={s.id} store={s} />
             ))}
-          </div>
+          </ResponsiveGrid>
         )}
       </div>
     </Screen>

@@ -219,7 +219,7 @@ export default function Login() {
         >
           <ArrowIcon size={16} className="rtl:rotate-0 ltr:rotate-180" />
         </button>
-        <div className="px-5 pt-[calc(env(safe-area-inset-top)+14px)] pb-10 space-y-5">
+        <div className="container-narrow pt-[calc(env(safe-area-inset-top)+14px)] pb-10 space-y-5">
           {/* C03 masthead — centered mark + welcome-back title */}
           <div className="flex flex-col items-center gap-3 pt-8">
             <LendLogo variant="mark" theme="light" size={52} />

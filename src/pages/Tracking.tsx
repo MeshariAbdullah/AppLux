@@ -82,7 +82,7 @@ export default function Tracking() {
     <>
       <Header title={t('tracking.title')} subtitle={t('tracking.subtitle')} showBack />
       <Screen padded={false} className="bg-canvas">
-        <div className="px-5 pt-5 pb-10 space-y-5">
+        <div className="container-page pt-5 pb-10 space-y-5">
           {/* Hero status card */}
           <div className="relative overflow-hidden rounded-[14px] bg-navy-700 text-white p-6">
             <div className="relative flex items-start gap-3">

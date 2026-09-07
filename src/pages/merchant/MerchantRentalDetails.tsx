@@ -342,7 +342,7 @@ export default function MerchantRentalDetails() {
         }
       />
       <Screen padded={false} className="bg-canvas">
-        <div className="px-5 pt-5 pb-10 space-y-5">
+        <div className="container-page pt-5 pb-10 space-y-5">
           {/* M13 journey card — the shared four-stage reference journey
               rendered as a horizontal stepper. */}
           <div className="rounded-[14px] bg-white ring-1 ring-beige-200 px-4 py-5">
