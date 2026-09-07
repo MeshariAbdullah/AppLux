@@ -302,24 +302,30 @@ grant execute on function public.process_overdue_customer_responses() to authent
 comment on function public.process_overdue_customer_responses() is
   'Sweeps open awaiting_customer cases whose 48h response deadline passed: documents the non-response and moves each case to Lend review (lend_mediation) on the available information. Cron/service-invoked; admins may invoke manually. Returns the number of cases escalated.';
 
--- Schedule every 15 minutes where pg_cron is available (Supabase). If
--- this block reports that pg_cron is missing, enable the extension in
+-- Schedule every 15 minutes where pg_cron is available (Supabase).
+-- Availability is detected via pg_extension (no reliance on exception
+-- condition names — 'undefined_schema' is NOT a valid PL/pgSQL
+-- condition and fails at compile time), and the cron.* calls are fully
+-- dynamic (EXECUTE) so this block parses even where pg_cron is absent.
+-- If the WARNING below fires, enable the pg_cron extension in
 -- Dashboard → Database → Extensions and schedule manually:
 --   select cron.schedule('dispute-response-deadline-sweep',
 --                        '*/15 * * * *',
---                        $sweep$select public.process_overdue_customer_responses()$sweep$);
+--                        'select public.process_overdue_customer_responses()');
 do $$
 begin
-  perform cron.unschedule('dispute-response-deadline-sweep');
-exception when others then null;
-end $$;
-do $$
-begin
-  perform cron.schedule('dispute-response-deadline-sweep', '*/15 * * * *',
-    'select public.process_overdue_customer_responses()');
-  raise notice 'dispute-response-deadline-sweep scheduled via pg_cron (every 15 min)';
-exception when undefined_schema or undefined_function or undefined_table then
-  raise warning 'pg_cron not available — enable the pg_cron extension and schedule process_overdue_customer_responses() manually (see comment above)';
+  if exists (select 1 from pg_extension where extname = 'pg_cron') then
+    begin
+      execute $u$select cron.unschedule('dispute-response-deadline-sweep')$u$;
+    exception when others then
+      null; -- job didn't exist yet — first run
+    end;
+    execute $s$select cron.schedule('dispute-response-deadline-sweep', '*/15 * * * *',
+      'select public.process_overdue_customer_responses()')$s$;
+    raise notice 'dispute-response-deadline-sweep scheduled via pg_cron (every 15 min)';
+  else
+    raise warning 'pg_cron is not enabled — enable the pg_cron extension and run the cron.schedule statement in the comment above to activate the sweeper';
+  end if;
 end $$;
 
 -- ---------------------------------------------------------------------
