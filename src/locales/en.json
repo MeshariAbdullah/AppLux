@@ -120,7 +120,8 @@
     "disputeOwnProposal": "You can't respond to your own offer.",
     "disputeAlreadyResponded": "Your response to this offer is already recorded.",
     "disputeNotFound": "Case not found.",
-    "otpRequiredForIssue": "Issuing the offer requires a successful customer verification code. Complete the verification step and try again."
+    "otpRequiredForIssue": "Issuing the offer requires a successful customer verification code. Complete the verification step and try again.",
+    "disputeResponseWindowClosed": "The response window for this claim has closed. Non-response is documented in the case record and the case proceeds on the available information."
   },
   "welcome": {
     "eyebrow": "Lend",
@@ -717,6 +718,10 @@
     "dispute_dismissed": {
       "title": "Case closed administratively",
       "body": "Processing of the case inside Lend ended without this being a ruling for either party."
+    },
+    "dispute_customer_no_response": {
+      "title": "Non-response documented",
+      "body": "The claim response window ended and the non-response was documented in the case record. The case moved to Lend review on the available information."
     }
   },
   "profile": {
@@ -2296,7 +2301,9 @@
         "customer_accepted_lend_proposal": "Renter accepted Lend's proposal",
         "lend_proposal_rejected": "Lend proposal rejected",
         "dispute_resolved": "Case closed with agreement",
-        "dispute_unresolved": "Case closed without agreement"
+        "dispute_unresolved": "Case closed without agreement",
+        "customer_response_deadline_set": "Customer response window set (48 hours)",
+        "customer_no_response_recorded": "Customer non-response documented"
       },
       "rental": {
         "endedViaDispute": "This rental ended through the dispute path, not a normal return.",
@@ -2306,7 +2313,13 @@
       "receiptTitle": "Documented receipt photos",
       "receiptHint": "The photos the renter documented when receiving the item.",
       "customerLabel": "Renter",
-      "acceptedAt": "Accepted on"
+      "acceptedAt": "Accepted on",
+      "deadline": {
+        "endsAt": "Awaiting the customer’s response — window ends: {dateTime}",
+        "expiredBody": "The customer’s 48-hour response window has ended. The non-response is being documented and the case will proceed to Lend review on the available information.",
+        "recordedTitle": "Customer non-response documented",
+        "recordedBody": "The customer did not respond within the set window. The non-response was documented and the case moved to Lend review on the available information."
+      }
     }
   },
   "admin": {
@@ -2641,6 +2654,10 @@
           "title": "No overdue cases",
           "hint": "Overdue invoices queued for collection will appear here."
         }
+      },
+      "deadline": {
+        "recordedTitle": "Customer non-response documented within the window",
+        "recordedBody": "The case moved to review after the customer response window ended. The claim file is ready for review on the available information — the contract, claim, evidence, and case record are all reviewable from this page."
       }
     },
     "case": {
@@ -3117,6 +3134,15 @@
         "finished": "Finished"
       },
       "entry": "Dispute cases"
+    },
+    "deadline": {
+      "requiredTitle": "You have a claim from the merchant. Please respond within 48 hours.",
+      "endsAt": "Response window ends: {dateTime}",
+      "consequence": "If no response is received within the window, the non-response will be documented and the case will proceed on the available information.",
+      "expiredTitle": "The response window has ended",
+      "expiredBody": "The 48-hour response window has ended. The non-response is being documented in the case record, and the case proceeds on the available information.",
+      "recordedTitle": "Non-response documented",
+      "recordedBody": "The response window ended and the non-response was documented in the case record. The case continues under Lend review on the available information. Documentation does not mean the claim was approved."
     }
   },
   "disputeFile": {

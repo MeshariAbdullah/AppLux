@@ -14,7 +14,8 @@
     "android:sync": "npm run build && npx cap sync android",
     "android:open": "npx cap open android",
     "android:aab": "npm run android:sync && cd android && ./gradlew bundleRelease",
-    "test:pricing": "esbuild src/lib/pricing.ts --bundle --format=esm --outfile=scripts/.pricing-bundle.mjs && node --test scripts/pricing.test.mjs"
+    "test:pricing": "esbuild src/lib/pricing.ts --bundle --format=esm --outfile=scripts/.pricing-bundle.mjs && node --test scripts/pricing.test.mjs",
+    "test:disputes": "esbuild src/lib/disputeDeadline.ts --bundle --format=esm --outfile=scripts/.dispute-deadline-bundle.mjs && node --test scripts/dispute-deadline.test.mjs"
   },
   "dependencies": {
     "@capacitor/core": "^7.0.0",

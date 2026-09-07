@@ -30,6 +30,8 @@ import { cn } from '@/lib/cn';
 import { logEvent } from '@/lib/observability/log';
 import { translateError, withSupportId } from '@/lib/errors';
 import { useI18n, useT } from '@/lib/i18n';
+import { customerDeadlineState } from '@/lib/disputeDeadline';
+import { formatValidUntil } from '@/lib/offerExpiry';
 import { prepareEvidenceImage, PrepareImageError } from '@/lib/image/prepareEvidenceImage';
 import { useSensitiveFlow } from '@/lib/session/flowGuard';
 import { exportDisputeFilePdf } from '@/lib/pdf/disputeFilePdf';
@@ -335,6 +337,23 @@ export default function DisputeDetails() {
             </Card>
           )}
 
+          {/* ---------- documented non-response (20260502125400) ----------
+              Documentation of the missed 48h window — NEVER worded as
+              acceptance of the claim. Shown in every later phase. */}
+          {kase.customer_no_response_recorded_at && (
+            <Card padded className="space-y-1.5">
+              <div className="flex items-center gap-2.5">
+                <ClockIcon size={15} className="text-ink-400 shrink-0" />
+                <div className="text-[13px] font-semibold text-ink-900">
+                  {t('disputes.deadline.recordedTitle')}
+                </div>
+              </div>
+              <p className="text-[12.5px] text-ink-600 leading-relaxed">
+                {t('disputes.deadline.recordedBody')}
+              </p>
+            </Card>
+          )}
+
           {/* ---------- phase panels ---------- */}
           {kase.dispute_phase === 'awaiting_customer' && (
             <AwaitingPanel
@@ -555,6 +574,17 @@ function AwaitingPanel({
   const [photos, setPhotos] = useState<ObjEvidence[]>([]);
   const [processing, setProcessing] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+  const { locale } = useI18n();
+  // 48h response window (20260502125400). The 15s tick flips the panel
+  // into the expired state while the screen stays open; the server
+  // (P0212 + the sweeper) stays authoritative regardless of clocks.
+  const [nowMs, setNowMs] = useState(() => Date.now());
+  useEffect(() => {
+    const id = window.setInterval(() => setNowMs(Date.now()), 15_000);
+    return () => window.clearInterval(id);
+  }, []);
+  const deadlineState = customerDeadlineState(kase, nowMs);
+  const deadlineLabel = formatValidUntil(kase.customer_response_deadline, locale);
 
   // Free preview object URLs on unmount.
   const photosRef = useRef<ObjEvidence[]>(photos);
@@ -595,7 +625,39 @@ function AwaitingPanel({
       <SectionHeader title={t('disputes.await.title')} className="mb-0" />
       <p className="text-[12.5px] text-ink-500 leading-relaxed">{t('disputes.await.hint')}</p>
 
-      {!objectOpen && (
+      {/* 48h response window. active → banner + normal actions;
+          expired → the actions are withdrawn (the server refuses late
+          responses with P0212 and the sweeper documents the
+          non-response); none (legacy, no deadline) → unchanged. */}
+      {deadlineState === 'active' && (
+        <div className="rounded-xl2 bg-warn-50 ring-1 ring-warn-500/25 px-3.5 py-3 space-y-1">
+          <div className="flex items-center gap-2 text-[12.5px] font-semibold text-warn-700">
+            <ClockIcon size={13} className="shrink-0" />
+            <span>{t('disputes.deadline.requiredTitle')}</span>
+          </div>
+          {deadlineLabel && (
+            <div className="text-[12px] text-ink-700 num">
+              {t('disputes.deadline.endsAt', { dateTime: deadlineLabel })}
+            </div>
+          )}
+          <p className="text-[11.5px] text-ink-500 leading-relaxed">
+            {t('disputes.deadline.consequence')}
+          </p>
+        </div>
+      )}
+
+      {deadlineState === 'expired' && (
+        <div className="rounded-xl2 bg-canvas-100 ring-1 ring-canvas-200 px-3.5 py-3 space-y-1">
+          <div className="text-[12.5px] font-semibold text-ink-900">
+            {t('disputes.deadline.expiredTitle')}
+          </div>
+          <p className="text-[11.5px] text-ink-600 leading-relaxed">
+            {t('disputes.deadline.expiredBody')}
+          </p>
+        </div>
+      )}
+
+      {deadlineState !== 'expired' && !objectOpen && (
         <div className="space-y-2.5">
           <Button size="lg" block disabled={busy} onClick={() => setAcceptOpen(true)}>
             {t('disputes.await.accept')}
@@ -611,7 +673,7 @@ function AwaitingPanel({
         </div>
       )}
 
-      {objectOpen && (
+      {deadlineState !== 'expired' && objectOpen && (
         <div className="space-y-3.5">
           <div className="text-[13.5px] font-semibold text-ink-900">
             {t('disputes.await.objectForm.title')}

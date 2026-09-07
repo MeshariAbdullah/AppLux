@@ -123,6 +123,10 @@ export function translateError(
     if (code === 'P0208') return t('errors.disputeAlreadyResponded');
     if (code === 'P0209') return t('errors.disputeNotFound');
     if (code === 'P0210') return t('errors.validation');
+    // Customer response window closed (20260502125400): the 48h
+    // deadline passed — non-response is documented and the case
+    // proceeds to Lend review; there is no late-response path.
+    if (code === 'P0212') return t('errors.disputeResponseWindowClosed');
     if (code === 'P0221') return t('errors.validation');
     if (code === 'P0211') return t('errors.unauthorized');
     // Case raised against a contract that never started (pending /

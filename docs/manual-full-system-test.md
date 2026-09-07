@@ -91,6 +91,19 @@ ID (LND-XXXXXXXX) plus a screenshot for any technical error.
 | 5.8 | Merchant | Success screen | Verify absence of payment/note/Nafath/Nafith wording | None anywhere | | |
 | 5.9 | Merchant | Success screen | Tap «متابعة الإيجارات» | Rentals list opens pre-filtered to «مراجعة العميل» with the new offer | | |
 
+## 5b. Dispute customer-response deadline (48h)
+
+| # | Actor | Starting condition | Action | Expected result | Pass/Fail | Notes |
+|---|---|---|---|---|---|---|
+| 5b.1 | Merchant | Active rental | Raise a damage claim | Case opens in «بانتظار رد العميل»; merchant detail shows «بانتظار رد العميل — تنتهي المهلة في: …» (48h) | | |
+| 5b.2 | Customer | Claim received | Open the dispute | Banner: response required within 48 hours + exact end time + the documentation notice; accept/object actions available | | |
+| 5b.3 | Customer | Within the window | Object with a reason | Existing two-round settlement flow continues exactly as before | | |
+| 5b.4 | Customer | Window passed (or deadline forced past in SQL) | Try to respond | Actions withdrawn in UI; direct RPC call refused with P0212 — no late-response path | | |
+| 5b.5 | System | Sweep runs (cron / `select process_overdue_customer_responses();`) | — | Non-response documented; case moves to «مراجعة لِند»; both parties + admins get the «توثيق عدم الرد» notification; contract still active; nothing reads as claim approval | | |
+| 5b.6 | Merchant | After the sweep | Open case detail | «تم توثيق عدم استجابة العميل» card; case no longer blocked | | |
+| 5b.7 | Admin | Cases list → the case | Review | Documented non-response banner + full event log incl. «تم تحديد مهلة رد العميل» and «تم توثيق عدم استجابة العميل خلال المهلة» | | |
+| 5b.8 | Any | Legacy case created before the migration | Open it | Renders exactly as before (no deadline UI); customer can still respond; sweeper never touches it | | |
+
 ## 6. Customer reviews and accepts
 
 | # | Actor | Starting condition | Action | Expected result | Pass/Fail | Notes |

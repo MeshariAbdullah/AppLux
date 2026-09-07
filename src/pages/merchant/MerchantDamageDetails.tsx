@@ -30,6 +30,8 @@ import { cn } from '@/lib/cn';
 import { logEvent } from '@/lib/observability/log';
 import { translateError, withSupportId } from '@/lib/errors';
 import { useI18n, useT } from '@/lib/i18n';
+import { customerDeadlineState } from '@/lib/disputeDeadline';
+import { formatValidUntil } from '@/lib/offerExpiry';
 import { useSensitiveFlow } from '@/lib/session/flowGuard';
 import { useStore } from '@/lib/store';
 import { exportDisputeFilePdf } from '@/lib/pdf/disputeFilePdf';
@@ -120,7 +122,7 @@ function timelineStates(kase: DamageCaseRow, events: DisputeEventRow[]): Record<
 
 export default function MerchantDamageDetails() {
   const t = useT();
-  const { formatCurrency, formatDate, dir } = useI18n();
+  const { formatCurrency, formatDate, dir, locale } = useI18n();
   const navigate = useNavigate();
   const { id } = useParams();
   const { merchantDamages } = useStore();
@@ -446,6 +448,25 @@ export default function MerchantDamageDetails() {
             </Card>
           )}
 
+          {/* ---------- documented non-response (20260502125400) ----------
+              The customer's 48h window passed without a response; the
+              non-response is documented and the case proceeds to Lend
+              review on the available information. Never worded as
+              claim acceptance. */}
+          {kase.customer_no_response_recorded_at && (
+            <Card padded className="space-y-1.5">
+              <div className="flex items-center gap-2.5">
+                <ClockIcon size={15} className="text-ink-400 shrink-0" />
+                <div className="text-[13px] font-semibold text-ink-900">
+                  {t('merchant.disputes.deadline.recordedTitle')}
+                </div>
+              </div>
+              <p className="text-[12.5px] text-ink-600 leading-relaxed">
+                {t('merchant.disputes.deadline.recordedBody')}
+              </p>
+            </Card>
+          )}
+
           {/* ---------- phase panels ---------- */}
           {kase.dispute_phase === 'awaiting_customer' && (
             <Card padded className="space-y-2.5">
@@ -458,6 +479,23 @@ export default function MerchantDamageDetails() {
               <p className="text-[12.5px] text-ink-600 leading-relaxed">
                 {t('merchant.disputes.await.body')}
               </p>
+              {/* 48h customer response window — the merchant sees the
+                  exact end time, or (past it) that the case is about to
+                  proceed and is never blocked by silence. Legacy cases
+                  without a deadline show the original copy only. */}
+              {customerDeadlineState(kase, Date.now()) === 'active' &&
+                formatValidUntil(kase.customer_response_deadline, locale) && (
+                  <div className="rounded-xl2 bg-warn-50 ring-1 ring-warn-500/25 px-3.5 py-2.5 text-[12px] text-warn-700 num">
+                    {t('merchant.disputes.deadline.endsAt', {
+                      dateTime: formatValidUntil(kase.customer_response_deadline, locale)!,
+                    })}
+                  </div>
+                )}
+              {customerDeadlineState(kase, Date.now()) === 'expired' && (
+                <div className="rounded-xl2 bg-canvas-100 ring-1 ring-canvas-200 px-3.5 py-2.5 text-[12px] text-ink-600 leading-relaxed">
+                  {t('merchant.disputes.deadline.expiredBody')}
+                </div>
+              )}
             </Card>
           )}
 

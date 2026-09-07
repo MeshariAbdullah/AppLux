@@ -352,6 +352,7 @@ export type NotificationType =
   | 'dispute_proposal_received'
   | 'dispute_proposal_accepted'
   | 'dispute_proposal_rejected'
+  | 'dispute_customer_no_response'
   | 'dispute_moved_to_lend'
   | 'dispute_lend_proposal'
   | 'dispute_resolved'
@@ -488,6 +489,13 @@ export type DamageCaseRow = {
   customer_response_at: string | null;
   customer_objection_reason: string | null;
   agreed_amount: number | null;
+  /** 48h deadline for the customer's INITIAL claim response
+   *  (20260502125400). NULL on legacy rows — those render without a
+   *  deadline (src/lib/disputeDeadline.ts is the display seam). */
+  customer_response_deadline: string | null;
+  /** When customer non-response was DOCUMENTED and the case moved to
+   *  Lend review. Documentation only — never claim acceptance. */
+  customer_no_response_recorded_at: string | null;
   created_at: string;
   updated_at: string;
 };

@@ -500,6 +500,24 @@ function AdminCaseDetailsInner({
             />
           )}
 
+          {/* documented customer non-response (20260502125400) — review
+              context only: the case reached Lend review because the 48h
+              window passed, on the available information; never a
+              judgment and never claim acceptance. */}
+          {kase.customer_no_response_recorded_at && (
+            <Card padded className="space-y-1.5">
+              <div className="flex items-center gap-2.5">
+                <ClockIcon size={15} className="text-ink-400 shrink-0" />
+                <div className="text-[13px] font-semibold text-ink-900">
+                  {t('admin.cases.deadline.recordedTitle')}
+                </div>
+              </div>
+              <p className="text-[12.5px] text-ink-600 leading-relaxed">
+                {t('admin.cases.deadline.recordedBody')}
+              </p>
+            </Card>
+          )}
+
           {/* persisted event history */}
           {events.length > 0 && (
             <Card padded className="space-y-2.5">
