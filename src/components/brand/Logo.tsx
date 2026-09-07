@@ -1,33 +1,39 @@
 // =====================================================================
-// LendLogo — official brand mark, reconstructed from the Lend Brand
-// Guidelines V1.0 (2026) specification.
+// LendLogo — official brand mark, from the approved brand guidelines.
 // =====================================================================
-// The mark represents the complete rental cycle:
-//   * top navy semi-circle arc = pickup from the store
-//   * bottom green semi-circle arc = documented return
-//   * central navy dot = platform certifying every step
+// GEOMETRY SOURCE OF TRUTH: lend-logo-mark-primary.svg /
+// lend-logo-mark-on-dark.svg, extracted directly from the approved
+// brand guidelines PDF. The mark is a continuous ring drawn as two
+// cubic-bezier halves plus a center dot, in a 100×100 design box
+// (scale = size / 100):
 //
-// This is a geometric construction from the guideline's spec — the
-// PDF describes two arcs on a circle and a centre dot. Nothing is
-// interpreted or invented; changing any value below (arc widths,
-// dot radius, spacing between mark and wordmark) is a brand
-// violation.
+//   top half:    M 15 50  C 15 26.667, 26.667 15, 50 15
+//                         C 73.333 15, 85 26.667, 85 50
+//   bottom half: M 85 50  C 85 73.333, 73.333 85, 50 85
+//                         C 26.667 85, 15 73.333, 15 50
+//   stroke width 12.5, round line caps, no fill
+//   center dot:  circle (50, 50) r 10
 //
-// Colors:
-//   Deep Navy    #1B2951 — primary, key text, dot, top arc
-//   Vibrant Green #12A67E — bottom arc, "verified" accent
+// Color variants:
+//   primary — top #1B2951, bottom #12A67E, dot #1B2951 (light surfaces)
+//   onDark  — top + dot #FFFFFF, bottom #12A67E (dark navy surfaces)
+//   mono    — everything #1B2951
 //
-// Composition variants:
-//   * mark      — icon only, square viewBox
-//   * wordmark  — the "LEND" letter-spaced wordmark only
-//   * lockup    — mark above wordmark, the default hero use
+// BRAND RULES (enforced here):
+//   * Proportions are fixed — one `size` scales the whole mark; there
+//     is no independent width/height and no way to distort it.
+//   * Minimum size 24 (clamped; a dev-build warning flags violations).
+//   * Clear space around the mark = half the dot's diameter = 10 units
+//     (0.1 × size). The 100-box edge sits 8.75 units outside the
+//     stroke, so keep at least CLEAR_SPACE_RATIO × size of empty
+//     layout around the rendered box.
 //
-// Themes:
-//   * light  — primary on a light surface
-//   * dark   — placed on a dark navy surface (mark colors unchanged,
-//              wordmark switches to white for legibility)
-//   * mono   — Deep Navy only, no green (per the guide's monochrome
-//              variant on white surfaces)
+// NOTE: the Claude Design project's Design System still carries the
+// OLD mark (side-gapped arcs, larger dot) — do not copy geometry from
+// there; only the SVG spec above is authoritative.
+//
+// Wordmark: "LEND", Inter Bold, letter-spacing 0.35em (tracking =
+// 0.35 × font size), Deep Navy on light / white on dark.
 // =====================================================================
 
 import type { SVGProps } from 'react';
@@ -36,13 +42,55 @@ import { cn } from '@/lib/cn';
 export const LEND_NAVY = '#1B2951';
 export const LEND_GREEN = '#12A67E';
 
+/** Clear space required around the mark, as a fraction of `size`. */
+export const LEND_MARK_CLEAR_SPACE_RATIO = 0.1;
+/** Brand minimum rendered size for the mark. */
+export const LEND_MARK_MIN_SIZE = 24;
+
+// Exact path data from the approved SVGs (100×100 design box).
+export const LEND_MARK_TOP_PATH =
+  'M 15 50 C 15 26.667 26.667 15 50 15 C 73.333 15 85 26.667 85 50';
+export const LEND_MARK_BOTTOM_PATH =
+  'M 85 50 C 85 73.333 73.333 85 50 85 C 26.667 85 15 73.333 15 50';
+export const LEND_MARK_STROKE = 12.5;
+export const LEND_MARK_DOT_RADIUS = 10;
+
 export type LogoVariant = 'mark' | 'wordmark' | 'lockup';
-export type LogoTheme = 'light' | 'dark' | 'mono';
+/** Brand color variants. `light`/`dark` are legacy aliases kept so the
+ *  existing call sites keep working: light → primary, dark → onDark. */
+export type LogoTheme = 'light' | 'dark' | 'mono' | 'primary' | 'onDark';
+
+type MarkColors = { top: string; bottom: string; dot: string };
+
+function markColors(theme: LogoTheme): MarkColors {
+  switch (theme) {
+    case 'dark':
+    case 'onDark':
+      return { top: '#FFFFFF', bottom: LEND_GREEN, dot: '#FFFFFF' };
+    case 'mono':
+      return { top: LEND_NAVY, bottom: LEND_NAVY, dot: LEND_NAVY };
+    default: // 'light' | 'primary'
+      return { top: LEND_NAVY, bottom: LEND_GREEN, dot: LEND_NAVY };
+  }
+}
+
+function brandSize(requested: number): number {
+  if (requested < LEND_MARK_MIN_SIZE) {
+    if (import.meta.env.DEV) {
+      console.warn(
+        `[lend] LendLogo size ${requested} is below the brand minimum ` +
+          `${LEND_MARK_MIN_SIZE}; clamping.`,
+      );
+    }
+    return LEND_MARK_MIN_SIZE;
+  }
+  return requested;
+}
 
 type LogoProps = {
   variant?: LogoVariant;
   theme?: LogoTheme;
-  /** Size in pixels of the LONGER axis. Default 40. Guide minimum 24. */
+  /** Size in pixels of the LONGER axis. Default 40. Brand minimum 24. */
   size?: number;
   /** Optional accessible label. If omitted the SVG is aria-hidden. */
   label?: string;
@@ -57,29 +105,25 @@ export function LendLogo({
   className,
 }: LogoProps) {
   const commonProps = accessibilityProps(label);
+  const px = brandSize(size);
   if (variant === 'mark') {
-    return (
-      <Mark {...commonProps} theme={theme} height={size} className={className} />
-    );
+    return <Mark {...commonProps} theme={theme} height={px} className={className} />;
   }
   if (variant === 'wordmark') {
     return (
-      <Wordmark {...commonProps} theme={theme} height={size} className={className} />
+      <Wordmark {...commonProps} theme={theme} height={px} className={className} />
     );
   }
-  // lockup — mark above wordmark, spacing derived from the mark's outer
-  // diameter (guide: clear space ≥ half the diameter of the central dot).
-  return (
-    <Lockup {...commonProps} theme={theme} height={size} className={className} />
-  );
+  return <Lockup {...commonProps} theme={theme} height={px} className={className} />;
 }
 
 // ---------------------------------------------------------------------
-// Mark — just the geometric symbol
+// Mark — the geometric symbol, exactly the approved SVG geometry
 // ---------------------------------------------------------------------
-// 40×40 viewBox. Outer stroke radius = 15, stroke width = 4, centre dot
-// radius = 3. Top half of the ring is Navy, bottom half is Green. These
-// numbers come from the brand spec's proportions; they are NOT tunable.
+// The paths render inside the untransformed 100×100 viewBox and the
+// svg is always square, so the proportions cannot be changed by
+// callers. The stroke's outer edge reaches 8.75 units from the box
+// edge; required clear space is 10 units (see the header).
 function Mark({
   theme,
   height,
@@ -90,45 +134,36 @@ function Mark({
   height: number;
   className?: string;
 } & Omit<SVGProps<SVGSVGElement>, 'width' | 'height'>) {
-  const green = theme === 'mono' ? LEND_NAVY : LEND_GREEN;
-  // On dark navy surfaces the navy arc + dot flip to white (design M01)
-  // — mirrors the wordmark's dark-theme behavior; green is unchanged.
-  const navy = theme === 'dark' ? '#FFFFFF' : LEND_NAVY;
+  const c = markColors(theme);
   return (
     <svg
-      viewBox="0 0 40 40"
+      viewBox="0 0 100 100"
       width={height}
       height={height}
       fill="none"
       className={className}
       {...rest}
     >
-      {/* Top navy arc — semi-circle from left (180°) to right (0°) via top */}
       <path
-        d="M 5 20 A 15 15 0 0 1 35 20"
-        stroke={navy}
-        strokeWidth={4}
+        d={LEND_MARK_TOP_PATH}
+        stroke={c.top}
+        strokeWidth={LEND_MARK_STROKE}
         strokeLinecap="round"
       />
-      {/* Bottom green arc — semi-circle from right (0°) to left (180°) via bottom */}
       <path
-        d="M 35 20 A 15 15 0 0 1 5 20"
-        stroke={green}
-        strokeWidth={4}
+        d={LEND_MARK_BOTTOM_PATH}
+        stroke={c.bottom}
+        strokeWidth={LEND_MARK_STROKE}
         strokeLinecap="round"
       />
-      {/* Central Navy dot — the certifying platform */}
-      <circle cx={20} cy={20} r={3} fill={navy} />
+      <circle cx={50} cy={50} r={LEND_MARK_DOT_RADIUS} fill={c.dot} />
     </svg>
   );
 }
 
 // ---------------------------------------------------------------------
-// Wordmark — "LEND" letter-spaced in Inter Bold
+// Wordmark — "LEND", Inter Bold, 0.35em letter-spacing
 // ---------------------------------------------------------------------
-// The wordmark height is set by the caller; the viewBox scales
-// isotropically. Letter-spacing is fixed at 0.25em per the brand spec's
-// "LEND" spec (verified in the PDF's lockup samples).
 function Wordmark({
   theme,
   height,
@@ -139,10 +174,11 @@ function Wordmark({
   height: number;
   className?: string;
 } & Omit<SVGProps<SVGSVGElement>, 'width' | 'height'>) {
-  const fill = theme === 'dark' ? '#FFFFFF' : LEND_NAVY;
-  // Aspect ratio chosen so "LEND" with 0.25em tracking fits the 120×32
-  // viewBox at font-size 22. This is the wordmark used in the guide's
-  // in-app and app-store applications.
+  const fill =
+    theme === 'dark' || theme === 'onDark' ? '#FFFFFF' : LEND_NAVY;
+  // font-size 22 → tracking 0.35 × 22 = 7.7 units. SVG letter-spacing
+  // also trails the last glyph, so the anchor shifts start-ward by
+  // half the trailing space to keep the word optically centred.
   const width = Math.round((height * 120) / 32);
   return (
     <svg
@@ -153,14 +189,14 @@ function Wordmark({
       {...rest}
     >
       <text
-        x="60"
+        x="56.15"
         y="23"
         textAnchor="middle"
         fill={fill}
         fontFamily="Inter, system-ui, -apple-system, sans-serif"
         fontWeight={700}
         fontSize={22}
-        letterSpacing="5"
+        letterSpacing="7.7"
       >
         LEND
       </text>
@@ -169,12 +205,11 @@ function Wordmark({
 }
 
 // ---------------------------------------------------------------------
-// Lockup — mark + wordmark stacked
+// Lockup — mark above wordmark
 // ---------------------------------------------------------------------
-// Guide spec: clear space around the mark ≥ half the diameter of the
-// central dot. Central dot radius is 3, diameter 6, so clear space ≥ 3.
-// The lockup uses a 12-unit gap between the mark and the wordmark
-// baseline to give the mark room to breathe.
+// Gap between mark box and wordmark = the mark's clear space (10 units
+// of the mark's 100-box). viewBox: 100 (mark) + 10 (clear space) + 22
+// (wordmark row) = 132 tall; 120 wide to fit the tracked wordmark.
 function Lockup({
   theme,
   height,
@@ -185,47 +220,43 @@ function Lockup({
   height: number;
   className?: string;
 } & Omit<SVGProps<SVGSVGElement>, 'width' | 'height'>) {
-  // The lockup's aspect ratio is 1 (mark) : 0.55 (wordmark row) vertically.
-  // viewBox height = 40 (mark) + 12 (gap) + 22 (wordmark) = 74.
-  // Width = max(mark 40, wordmark ~90) = 92 → centre-align both.
-  const green = theme === 'mono' ? LEND_NAVY : LEND_GREEN;
-  const wordmarkFill = theme === 'dark' ? '#FFFFFF' : LEND_NAVY;
-  const width = Math.round((height * 92) / 74);
+  const c = markColors(theme);
+  const wordmarkFill =
+    theme === 'dark' || theme === 'onDark' ? '#FFFFFF' : LEND_NAVY;
+  const width = Math.round((height * 120) / 132);
   return (
     <svg
-      viewBox="0 0 92 74"
+      viewBox="0 0 120 132"
       width={width}
       height={height}
       fill="none"
       className={className}
       {...rest}
     >
-      {/* Mark centred horizontally within the lockup */}
-      <g transform="translate(26 0)">
+      <g transform="translate(10 0)">
         <path
-          d="M 5 20 A 15 15 0 0 1 35 20"
-          stroke={LEND_NAVY}
-          strokeWidth={4}
+          d={LEND_MARK_TOP_PATH}
+          stroke={c.top}
+          strokeWidth={LEND_MARK_STROKE}
           strokeLinecap="round"
         />
         <path
-          d="M 35 20 A 15 15 0 0 1 5 20"
-          stroke={green}
-          strokeWidth={4}
+          d={LEND_MARK_BOTTOM_PATH}
+          stroke={c.bottom}
+          strokeWidth={LEND_MARK_STROKE}
           strokeLinecap="round"
         />
-        <circle cx={20} cy={20} r={3} fill={LEND_NAVY} />
+        <circle cx={50} cy={50} r={LEND_MARK_DOT_RADIUS} fill={c.dot} />
       </g>
-      {/* Wordmark below, centred on the 92-unit lockup width */}
       <text
-        x={46}
-        y={68}
+        x="56.15"
+        y="127"
         textAnchor="middle"
         fill={wordmarkFill}
         fontFamily="Inter, system-ui, -apple-system, sans-serif"
         fontWeight={700}
         fontSize={22}
-        letterSpacing="5"
+        letterSpacing="7.7"
       >
         LEND
       </text>
@@ -238,11 +269,9 @@ function accessibilityProps(label: string | undefined) {
   return { role: 'img', 'aria-label': label } as SVGProps<SVGSVGElement>;
 }
 
-// Convenience: subtle util for placing the logo inline with text where
-// consumers want the mark only. The `cn` import is kept in case
-// downstream callers use conditional classnames.
+// Inline convenience — mark only, at the brand-minimum default size.
 export function LogoMarkInline({
-  size = 16,
+  size = LEND_MARK_MIN_SIZE,
   className,
 }: {
   size?: number;

@@ -42,8 +42,13 @@ export default function Welcome() {
           vertically-centered block on navy. */}
       <div className="relative flex-1 flex flex-col items-center justify-center gap-5 px-7 pt-[calc(env(safe-area-inset-top)+24px)] pb-8 text-center">
         <LendLogo variant="mark" theme="dark" size={88} />
+        {/* Brand wordmark: Inter Bold, 0.35em tracking. Inline style,
+            not a tracking-* class — the RTL letter-spacing reset in
+            index.css zeroes tracking classes, and the Latin wordmark
+            must keep its spec tracking in Arabic too. */}
         <div
-          className="text-[19px] font-bold tracking-[0.45em] text-white num"
+          className="text-[19px] font-bold text-white num"
+          style={{ letterSpacing: '0.35em', marginInlineEnd: '-0.35em' }}
           dir="ltr"
           aria-hidden
         >
