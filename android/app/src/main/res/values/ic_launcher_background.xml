@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Adaptive-icon background layer — white, matching the Lend app
-         icon's own ground (generated from the iOS AppIcon source). -->
-    <color name="ic_launcher_background">#FFFFFF</color>
+    <!-- Adaptive-icon background layer — Deep Navy, matching the iOS
+         app icon ground. The foreground layer carries the approved
+         onDark Lend mark (white top / green bottom / white dot). -->
+    <color name="ic_launcher_background">#1B2951</color>
 </resources>
