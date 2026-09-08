@@ -30,3 +30,6 @@ xcuserdata/
 # Playwright (responsive smoke suite)
 test-results/
 playwright-report/
+
+# App Store screenshot intermediates
+appstore/.captures/

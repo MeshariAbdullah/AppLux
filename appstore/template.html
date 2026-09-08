@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8" />
+<title>Lend App Store screenshot template</title>
+<!-- =====================================================================
+  Lend App Store screenshot composition template.
+  ---------------------------------------------------------------------
+  Rendered headless by appstore/render.mjs at exact canvas sizes
+  (1320×2868 for the 6.9" slot, 1284×2778 for 6.5"). All metrics are
+  in vw so one template serves both sizes. The script injects
+  window.renderShot(params) with:
+    { headline: [ [ {t, green?} … ] per line ],
+      sub, img, bg: 'navy'|'beige', statusBg, lockup: bool,
+      locale: 'ar'|'en' }
+  Fonts + screenshot are served by the script through an intercepted
+  origin, so rendering needs no network. Brand rules: IBM Plex Sans
+  Arabic for Arabic (NEVER letter-spaced), Inter for Latin, palette
+  Deep Navy #1B2951 / Vibrant Green #12A67E / Warm Beige #F5F5F0.
+===================================================================== -->
+<style>
+  @font-face { font-family: 'IBM Plex Sans Arabic'; font-weight: 400; src: url(fonts/plex-arabic-400.woff2) format('woff2'); }
+  @font-face { font-family: 'IBM Plex Sans Arabic'; font-weight: 500; src: url(fonts/plex-arabic-500.woff2) format('woff2'); }
+  @font-face { font-family: 'IBM Plex Sans Arabic'; font-weight: 600; src: url(fonts/plex-arabic-600.woff2) format('woff2'); }
+  @font-face { font-family: 'IBM Plex Sans Arabic'; font-weight: 700; src: url(fonts/plex-arabic-700.woff2) format('woff2'); }
+  @font-face { font-family: 'Inter'; font-weight: 400; src: url(fonts/inter-400.woff2) format('woff2'); }
+  @font-face { font-family: 'Inter'; font-weight: 600; src: url(fonts/inter-600.woff2) format('woff2'); }
+  @font-face { font-family: 'Inter'; font-weight: 700; src: url(fonts/inter-700.woff2) format('woff2'); }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 100%; height: 100%; overflow: hidden; }
+  body {
+    font-family: 'IBM Plex Sans Arabic', sans-serif;
+    letter-spacing: 0; /* brand rule: never letter-space Arabic */
+    display: flex; flex-direction: column;
+  }
+  body.navy  { background: #1B2951; color: #FFFFFF; }
+  body.beige { background: #F5F5F0; color: #1B2951; }
+
+  /* ---------- headline block (top ~22%) ---------- */
+  .head {
+    padding: 7vw 8.4vw 0 8.4vw; /* ≥110px side margins at 1320 */
+    text-align: start;          /* RTL → right-aligned */
+  }
+  .lockup { display: flex; align-items: center; gap: 1.6vw; margin-bottom: 3.2vw; }
+  .lockup svg { display: block; }
+  .lockup .word {
+    font-family: 'Inter', 'IBM Plex Sans Arabic', sans-serif;
+    font-weight: 700; font-size: 2.5vw; letter-spacing: 0.35em; /* Latin wordmark only */
+    direction: ltr;
+  }
+  body.navy  .lockup .word { color: #FFFFFF; }
+  body.beige .lockup .word { color: #1B2951; }
+  h1 {
+    font-size: 8.8vw;          /* ≈116px at 1320 */
+    font-weight: 700;
+    line-height: 1.5;          /* tall box — Arabic marks never clip */
+  }
+  h1 .green { color: #12A67E; }
+  body.beige h1 .green { color: #0F8A6A; }
+  .sub {
+    margin-top: 1.4vw;
+    font-size: 3.95vw;         /* ≈52px at 1320 */
+    font-weight: 400;
+    line-height: 1.75;
+  }
+  body.navy  .sub { color: rgba(255, 255, 255, 0.72); }
+  body.beige .sub { color: #4A5573; }
+
+  /* ---------- device frame ---------- */
+  .stage { flex: 1; display: flex; justify-content: center; margin-top: 3.4vw; }
+  .device {
+    width: 83.4vw;
+    border: 0.62vw solid #0A1128;         /* thin dark edge */
+    border-bottom: none;                   /* cropped at canvas bottom */
+    border-radius: 5.6vw 5.6vw 0 0;
+    overflow: hidden;
+    background: #0A1128;
+    box-shadow: 0 3vw 7vw rgba(5, 8, 23, 0.35); /* one soft shadow */
+  }
+  .screen { border-radius: 5vw 5vw 0 0; overflow: hidden; background: #F5F5F0; }
+  .statusbar {
+    height: 9.1vw;             /* ≈120px at 1320 ≈ 40pt */
+    display: flex; align-items: flex-end; justify-content: space-between;
+    padding: 0 3.4vw 0.6vw 3.4vw;
+    color: #0A1128;
+  }
+  .statusbar .time {
+    font-family: 'Inter', sans-serif; font-weight: 600;
+    font-size: 2.9vw; direction: ltr;
+  }
+  .statusbar svg { display: block; }
+  .screen img { display: block; width: 100%; height: auto; }
+</style>
+</head>
+<body>
+  <div class="head" id="head"></div>
+  <div class="stage">
+    <div class="device">
+      <div class="screen">
+        <div class="statusbar" id="statusbar"></div>
+        <img id="shot" alt="" />
+      </div>
+    </div>
+  </div>
+
+<script>
+  // Approved Lend mark — exact geometry from the brand SVGs (100-box).
+  function markSvg(size, onDark) {
+    const top = onDark ? '#FFFFFF' : '#1B2951';
+    const dot = onDark ? '#FFFFFF' : '#1B2951';
+    return `<svg viewBox="0 0 100 100" width="${size}" height="${size}" fill="none">
+      <path d="M 15 50 C 15 26.667 26.667 15 50 15 C 73.333 15 85 26.667 85 50" stroke="${top}" stroke-width="12.5" stroke-linecap="round"/>
+      <path d="M 85 50 C 85 73.333 73.333 85 50 85 C 26.667 85 15 73.333 15 50" stroke="#12A67E" stroke-width="12.5" stroke-linecap="round"/>
+      <circle cx="50" cy="50" r="10" fill="${dot}"/>
+    </svg>`;
+  }
+
+  // iOS-style status glyphs (RTL: time trailing-right, icons left).
+  function statusSvg() {
+    return `<svg width="6.5vw" height="2.6vw" viewBox="0 0 86 34" fill="currentColor">
+      <rect x="0"  y="18" width="6" height="10" rx="1.5"/>
+      <rect x="9"  y="14" width="6" height="14" rx="1.5"/>
+      <rect x="18" y="9"  width="6" height="19" rx="1.5"/>
+      <rect x="27" y="4"  width="6" height="24" rx="1.5"/>
+      <path d="M50 12 a14 14 0 0 1 19 0 l-2.6 2.7 a10.3 10.3 0 0 0-13.8 0z"/>
+      <path d="M53.7 16.8 a9 9 0 0 1 11.6 0 L62.7 19.5 a5.3 5.3 0 0 0-6.4 0z"/>
+      <circle cx="59.5" cy="23.5" r="3.4"/>
+      <rect x="74" y="8" width="0" height="0"/>
+    </svg>
+    <svg width="4.2vw" height="2.1vw" viewBox="0 0 56 28" style="margin-inline-start:1vw">
+      <rect x="1" y="1" width="46" height="26" rx="8" fill="none" stroke="currentColor" stroke-opacity="0.4" stroke-width="2"/>
+      <rect x="5" y="5" width="38" height="18" rx="5" fill="currentColor"/>
+      <path d="M50 9 v10 a6 6 0 0 0 0 -10z" fill="currentColor" fill-opacity="0.4"/>
+    </svg>`;
+  }
+
+  window.renderShot = function (p) {
+    document.body.className = p.bg;
+    document.documentElement.dir = p.locale === 'en' ? 'ltr' : 'rtl';
+    const head = document.getElementById('head');
+    let html = '';
+    if (p.lockup) {
+      html += `<div class="lockup">${markSvg('5vw', p.bg === 'navy')}<span class="word">LEND</span></div>`;
+    }
+    html += '<h1>' + p.headline.map(
+      (line) => line.map(
+        (seg) => (seg.green ? `<span class="green">${seg.t}</span>` : seg.t),
+      ).join(' '),
+    ).join('<br/>') + '</h1>';
+    html += `<div class="sub">${p.sub}</div>`;
+    head.innerHTML = html;
+    const bar = document.getElementById('statusbar');
+    bar.style.background = p.statusBg;
+    bar.innerHTML = `<span class="time">9:41</span><span style="display:flex;align-items:center">${statusSvg()}</span>`;
+    document.getElementById('shot').src = p.img;
+    return new Promise((resolve) => {
+      const img = document.getElementById('shot');
+      if (img.complete) resolve(); else img.onload = () => resolve();
+    });
+  };
+</script>
+</body>
+</html>
