@@ -20,14 +20,17 @@
 //     enforced server-side (P0195): without a verified challenge the
 //     invoice INSERT is rejected regardless of UI state.
 //
-//   'twilio-edge' (the SMS seam):
-//     The pre-existing otp-send / otp-verify Supabase Edge Functions
-//     (Twilio Verify). Activate by setting VITE_OTP_PROVIDER=twilio-edge
-//     at build time AND deploying the edge functions with the Twilio
-//     secrets. Same request/response shape — no UI change needed.
-//     NOTE: until the server-side issuance gate is pointed at the
-//     Twilio verification result, keep the RPC provider — the P0195
-//     gate consumes RPC challenges.
+//   'sms-edge' (MSEGAT SMS delivery — send-only):
+//     sendOtp goes through the otp-send Supabase Edge Function, which
+//     starts the SAME merchant_start_renter_otp challenge under the
+//     caller's JWT and then delivers the DB-generated code by SMS via
+//     MSEGAT (secrets live only in Edge Function env). VERIFICATION IS
+//     UNCHANGED: verifyOtp always calls merchant_verify_renter_otp, so
+//     the P0195 issuance gate keeps consuming DB challenges. Activate
+//     with VITE_OTP_PROVIDER=sms-edge at build time AND the deployed
+//     otp-send function + MSEGAT secrets. In sms-edge mode the in-app
+//     code card (RenterOtpCard) hides itself — the code arrives on the
+//     customer's phone instead.
 //
 // What a successful verification MEANS (be precise — see the product
 // terminology decision): "control/presence of the customer's registered
@@ -40,14 +43,20 @@ import { requireSupabase } from '@/lib/supabase';
 import type { AppRole, LocalizedJson } from '@/lib/supabase';
 import { normalizeMobile } from '@/lib/mobile';
 
-type OtpProvider = 'rpc-inapp' | 'twilio-edge';
+type OtpProvider = 'rpc-inapp' | 'sms-edge';
 
 /** Build-time provider selection. Defaults to the in-app RPC provider;
- *  flip to 'twilio-edge' when the real SMS integration ships. */
+ *  set VITE_OTP_PROVIDER=sms-edge to deliver codes by SMS (MSEGAT). */
 function resolveProvider(): OtpProvider {
-  return import.meta.env.VITE_OTP_PROVIDER === 'twilio-edge'
-    ? 'twilio-edge'
+  return import.meta.env.VITE_OTP_PROVIDER === 'sms-edge'
+    ? 'sms-edge'
     : 'rpc-inapp';
+}
+
+/** True when codes are delivered by SMS — UI surfaces (the in-app
+ *  RenterOtpCard, merchant hint copy) key off this. */
+export function isSmsOtpDelivery(): boolean {
+  return resolveProvider() === 'sms-edge';
 }
 
 export type OtpSendResult = {
@@ -77,7 +86,8 @@ export class OtpError extends Error {
       | 'no_active_challenge'
       | 'too_many_attempts'
       | 'throttled'
-      | 'twilio_not_configured'
+      | 'otp_not_configured'
+      | 'sms_send_failed'
       | 'send_failed'
       | 'verify_failed'
       | 'forbidden'
@@ -141,7 +151,9 @@ async function verifyOtpViaRpc(
 }
 
 // ---------------------------------------------------------------------
-// twilio-edge provider (production seam — pre-existing edge functions)
+// sms-edge provider — SEND ONLY (MSEGAT via the otp-send function).
+// There is deliberately no verify-via-edge path: verification is
+// always merchant_verify_renter_otp, whatever the delivery mode.
 // ---------------------------------------------------------------------
 
 function mapInvokeError(err: unknown): OtpError {
@@ -149,10 +161,15 @@ function mapInvokeError(err: unknown): OtpError {
   // `context.status` and a parsed `context.body`.
   const anyErr = err as { message?: string; context?: { status?: number; body?: unknown } } | undefined;
   const status = anyErr?.context?.status;
-  const body = anyErr?.context?.body as { error?: string } | undefined;
+  const body = anyErr?.context?.body as { error?: string; code?: string } | undefined;
   if (status === 401) return new OtpError('unauthorized', body?.error);
   if (status === 403) return new OtpError('forbidden', body?.error);
-  if (body?.error === 'twilio_not_configured') return new OtpError('twilio_not_configured');
+  if (body?.error === 'otp_not_configured') return new OtpError('otp_not_configured');
+  if (body?.error === 'sms_send_failed') return new OtpError('sms_send_failed');
+  if (body?.error === 'invalid_mobile') return new OtpError('invalid_mobile');
+  // The function relays the DB start-RPC refusal with its SQLSTATE so
+  // throttle / no-customer messages stay identical across providers.
+  if (body?.error === 'otp_start_failed') return mapRpcError({ code: body.code });
   return new OtpError('unknown', anyErr?.message ?? 'OTP request failed');
 }
 
@@ -166,19 +183,6 @@ async function sendOtpViaEdge(canonicalMobile: string): Promise<OtpSendResult> {
   return data;
 }
 
-async function verifyOtpViaEdge(
-  canonicalMobile: string,
-  code: string,
-): Promise<OtpVerifyResult> {
-  const sb = requireSupabase();
-  const { data, error } = await sb.functions.invoke<OtpVerifyResult>('otp-verify', {
-    body: { mobile: canonicalMobile, code },
-  });
-  if (error) throw mapInvokeError(error);
-  if (!data) throw new OtpError('verify_failed');
-  return data;
-}
-
 // ---------------------------------------------------------------------
 // Public API
 // ---------------------------------------------------------------------
@@ -188,7 +192,7 @@ async function verifyOtpViaEdge(
 export async function sendOtp(mobileInput: string): Promise<OtpSendResult> {
   const n = normalizeMobile(mobileInput);
   if (!n) throw new OtpError('invalid_mobile');
-  return resolveProvider() === 'twilio-edge'
+  return resolveProvider() === 'sms-edge'
     ? sendOtpViaEdge(n.canonical)
     : sendOtpViaRpc(n.canonical);
 }
@@ -202,9 +206,10 @@ export async function verifyOtp(mobileInput: string, code: string): Promise<OtpV
   if (!n) throw new OtpError('invalid_mobile');
   const clean = code.replace(/\D/g, '');
   if (clean.length < 4) throw new OtpError('invalid_code');
-  return resolveProvider() === 'twilio-edge'
-    ? verifyOtpViaEdge(n.canonical, clean)
-    : verifyOtpViaRpc(n.canonical, clean);
+  // ALL providers verify against the database (merchant_verify_renter_otp):
+  // the P0195 offer-issuance gate consumes DB challenges, so verification
+  // must never be delegated to an SMS provider.
+  return verifyOtpViaRpc(n.canonical, clean);
 }
 
 /**

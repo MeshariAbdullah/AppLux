@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { ShieldIcon } from '@/components/icons';
 import { useI18n, useT } from '@/lib/i18n';
-import { getMyRenterOtp, type PendingRenterOtp } from '@/lib/otp';
+import { getMyRenterOtp, isSmsOtpDelivery, type PendingRenterOtp } from '@/lib/otp';
 import { formatGregorian } from '@/lib/format/date';
 
 // =====================================================================
@@ -27,8 +27,12 @@ export function RenterOtpCard({ active }: { active: boolean }) {
   const { locale } = useI18n();
   const [pending, setPending] = useState<PendingRenterOtp | null>(null);
 
+  // SMS delivery mode: the code arrives on the customer's phone —
+  // the in-app card must not render (and must not poll).
+  const smsMode = isSmsOtpDelivery();
+
   useEffect(() => {
-    if (!active) {
+    if (!active || smsMode) {
       setPending(null);
       return;
     }
@@ -51,9 +55,9 @@ export function RenterOtpCard({ active }: { active: boolean }) {
       window.clearInterval(id);
       window.removeEventListener('focus', onFocus);
     };
-  }, [active]);
+  }, [active, smsMode]);
 
-  if (!active || !pending) return null;
+  if (!active || smsMode || !pending) return null;
 
   const merchantLabel =
     pending.merchantName?.[locale]?.trim() ||

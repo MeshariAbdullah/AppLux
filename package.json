@@ -17,7 +17,8 @@
     "test:pricing": "esbuild src/lib/pricing.ts --bundle --format=esm --outfile=scripts/.pricing-bundle.mjs && node --test scripts/pricing.test.mjs",
     "test:disputes": "esbuild src/lib/disputeDeadline.ts --bundle --format=esm --outfile=scripts/.dispute-deadline-bundle.mjs && node --test scripts/dispute-deadline.test.mjs",
     "test:responsive": "playwright test",
-    "appstore:ar": "node appstore/render.mjs"
+    "appstore:ar": "node appstore/render.mjs",
+    "test:otp": "esbuild supabase/functions/_shared/msegat.ts --bundle --format=esm --outfile=scripts/.msegat-bundle.mjs && esbuild supabase/functions/_shared/mobile.ts --bundle --format=esm --outfile=scripts/.mobile-bundle.mjs && node --test scripts/msegat-otp.test.mjs"
   },
   "dependencies": {
     "@capacitor/core": "^7.0.0",

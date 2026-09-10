@@ -36,7 +36,7 @@ import {
   type RentalEligibilityRow,
   type RentalInvoiceRow,
 } from '@/lib/supabase';
-import { lookupRenterByMobile, sendOtp, verifyOtp, OtpError } from '@/lib/otp';
+import { isSmsOtpDelivery, lookupRenterByMobile, sendOtp, verifyOtp, OtpError } from '@/lib/otp';
 import {
   classifyNationalId,
   normalizeDigits,
@@ -580,6 +580,10 @@ export default function MerchantRentalSession() {
           return t('merchant.session.verify.errors.otpTooManyAttempts');
         case 'invalid_code':
           return t('merchant.session.verify.errors.otpWrongCode');
+        case 'otp_not_configured':
+          return t('merchant.session.verify.errors.otpNotConfigured');
+        case 'sms_send_failed':
+          return t('merchant.session.verify.errors.otpSmsDeliveryFailed');
         default:
           return t('merchant.session.verify.errors.otpSendFailed');
       }
@@ -1444,11 +1448,11 @@ function VerifyCard({
                     aria-live="polite"
                   >
                     <BadgeCheckIcon size={12} className="shrink-0" />
-                    <span>{t('merchant.session.verify.otp.sentChip')}</span>
+                    <span>{t(isSmsOtpDelivery() ? 'merchant.session.verify.otp.sentChipSms' : 'merchant.session.verify.otp.sentChip')}</span>
                   </div>
                   <FormField
                     label={t('merchant.session.verify.otp.codeLabel')}
-                    hint={t('merchant.session.verify.otp.codeHint')}
+                    hint={t(isSmsOtpDelivery() ? 'merchant.session.verify.otp.codeHintSms' : 'merchant.session.verify.otp.codeHint')}
                   >
                     <Input
                       inputMode="numeric"

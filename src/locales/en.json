@@ -1300,7 +1300,9 @@
           "resendCta": "Resend code",
           "sentChip": "Verification code issued — it now shows inside the customer's Lend app",
           "codeLabel": "Verification code",
-          "codeHint": "The customer finds the code on the Home screen of their Lend app. Enter it as they read it to you. The code only confirms the presence of the registered Lend account's owner — it is not a National ID verification."
+          "codeHint": "The customer finds the code on the Home screen of their Lend app. Enter it as they read it to you. The code only confirms the presence of the registered Lend account's owner — it is not a National ID verification.",
+          "sentChipSms": "We sent the verification code to the customer’s phone by SMS.",
+          "codeHintSms": "The code reaches the customer’s phone by SMS within moments. Enter it exactly as they read it to you. The code only confirms the presence of the registered Lend account holder — it is not a National ID verification."
         },
         "confirmCta": "Confirm and continue",
         "nafathBadge": "Nafath verified",
@@ -1336,7 +1338,9 @@
           "otpNoActiveChallenge": "No active code for this customer — send a new one.",
           "otpTooManyAttempts": "Too many attempts — send a new code.",
           "otpThrottled": "A code was just issued — wait a moment before retrying.",
-          "otpVerificationExpired": "The customer verification for this session has expired — send a new code and verify again before issuing."
+          "otpVerificationExpired": "The customer verification for this session has expired — send a new code and verify again before issuing.",
+          "otpSmsDeliveryFailed": "Could not send the verification SMS right now. Try again in a moment; if it keeps failing, contact Lend support.",
+          "otpNotConfigured": "SMS verification is not enabled on this server yet. Contact Lend support."
         }
       },
       "operation": {
