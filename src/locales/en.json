@@ -359,6 +359,23 @@
       "resent": "A new code was sent to your email.",
       "changeEmail": "Change email address",
       "backToLogin": "Back to sign in"
+    },
+    "regOtp": {
+      "title": "Confirm your mobile number",
+      "body": "We sent a 6-digit verification code by SMS to",
+      "verifyCta": "Confirm code & create account",
+      "resendCta": "Resend code",
+      "resendIn": "You can resend in {seconds}s",
+      "errors": {
+        "wrongCode": "That code is not correct. Check the SMS and try again.",
+        "expired": "The code has expired — request a new one.",
+        "cooldown": "A code was just sent — wait a moment before requesting another.",
+        "sendLimit": "Too many codes were requested for this number — try again later.",
+        "tooManyAttempts": "Too many attempts — request a new code.",
+        "smsFailed": "Could not send the verification SMS right now. Try again in a moment.",
+        "notConfigured": "SMS verification is currently unavailable. Try later or contact Lend support.",
+        "generic": "Could not verify the mobile number right now. Try again."
+      }
     }
   },
   "register": {

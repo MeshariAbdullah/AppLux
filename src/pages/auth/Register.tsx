@@ -9,6 +9,12 @@ import { useStore, emptyRegistration, type RegistrationDraft } from '@/lib/store
 import { useSupabaseAuth, updateProfile } from '@/lib/supabase';
 import { classifyMobile, sanitizeMobileInput, type MobileIssue } from '@/lib/mobile';
 import {
+  isRegistrationOtpEnabled,
+  RegistrationOtpError,
+  sendRegistrationOtp,
+  verifyRegistrationOtp,
+} from '@/lib/otp/registration';
+import {
   classifyEmail,
   classifyFullName,
   normalizeDigits,
@@ -419,6 +425,94 @@ function SupabaseRegister() {
       : undefined;
   const mobileError = errors.mobile ?? liveMobileError;
 
+  // ------------------------------------------------------------------
+  // Registration OTP (flag-gated; independent of the renter/session
+  // OTP). Flow: validate form → send code → inline verify panel →
+  // on success continue straight into the account creation.
+  // ------------------------------------------------------------------
+  const regOtpEnabled = configured && isRegistrationOtpEnabled();
+  const [otpStage, setOtpStage] = useState<'idle' | 'sent'>('idle');
+  const [otpVerifiedFor, setOtpVerifiedFor] = useState<string | null>(null);
+  const [otpCode, setOtpCode] = useState('');
+  const [otpBusy, setOtpBusy] = useState(false);
+  const [otpError, setOtpError] = useState<string | null>(null);
+  const [resendAt, setResendAt] = useState(0);
+  const [nowMs, setNowMs] = useState(() => Date.now());
+
+  useEffect(() => {
+    if (otpStage !== 'sent') return;
+    const id = window.setInterval(() => setNowMs(Date.now()), 1000);
+    return () => window.clearInterval(id);
+  }, [otpStage]);
+
+  // Editing the number closes the panel; a previously verified number
+  // stays remembered — verification is keyed to the exact canonical
+  // mobile, so a changed number always re-verifies.
+  useEffect(() => {
+    setOtpStage('idle');
+    setOtpCode('');
+    setOtpError(null);
+  }, [mobile]);
+
+  const regOtpErrorMessage = (err: unknown): string => {
+    if (err instanceof RegistrationOtpError) {
+      switch (err.code) {
+        case 'invalid_mobile':
+          return mobileIssueToMessage('invalid_format', t);
+        case 'cooldown':
+          return t('auth.regOtp.errors.cooldown');
+        case 'send_limit':
+          return t('auth.regOtp.errors.sendLimit');
+        case 'no_active_challenge':
+          return t('auth.regOtp.errors.expired');
+        case 'too_many_attempts':
+          return t('auth.regOtp.errors.tooManyAttempts');
+        case 'otp_not_configured':
+          return t('auth.regOtp.errors.notConfigured');
+        case 'sms_send_failed':
+          return t('auth.regOtp.errors.smsFailed');
+        default:
+          return t('auth.regOtp.errors.generic');
+      }
+    }
+    return t('auth.regOtp.errors.generic');
+  };
+
+  const onVerifyRegOtp = async () => {
+    if (otpBusy || submitting || !normalizedMobile) return;
+    setOtpBusy(true);
+    setOtpError(null);
+    try {
+      const ok = await verifyRegistrationOtp(normalizedMobile.canonical, otpCode);
+      if (!ok) {
+        setOtpError(t('auth.regOtp.errors.wrongCode'));
+        return;
+      }
+      setOtpVerifiedFor(normalizedMobile.canonical);
+      setOtpStage('idle');
+      await performSignUp();
+    } catch (err) {
+      setOtpError(regOtpErrorMessage(err));
+    } finally {
+      setOtpBusy(false);
+    }
+  };
+
+  const onResendRegOtp = async () => {
+    if (otpBusy || Date.now() < resendAt || !normalizedMobile) return;
+    setOtpBusy(true);
+    setOtpError(null);
+    try {
+      await sendRegistrationOtp(normalizedMobile.canonical);
+      setResendAt(Date.now() + 60_000);
+      setOtpCode('');
+    } catch (err) {
+      setOtpError(regOtpErrorMessage(err));
+    } finally {
+      setOtpBusy(false);
+    }
+  };
+
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (submitting) return;
@@ -446,6 +540,40 @@ function SupabaseRegister() {
     setErrors(next);
     if (Object.keys(next).length > 0) return;
 
+    // Registration OTP gate: verify the mobile before the account is
+    // created. Account creation continues automatically after a
+    // successful code check (onVerifyRegOtp → performSignUp).
+    if (regOtpEnabled && otpVerifiedFor !== normalizedMobile!.canonical) {
+      setOtpBusy(true);
+      setOtpError(null);
+      try {
+        await sendRegistrationOtp(normalizedMobile!.canonical);
+        setOtpStage('sent');
+        setResendAt(Date.now() + 60_000);
+        setOtpCode('');
+      } catch (err) {
+        if (err instanceof RegistrationOtpError && err.code === 'cooldown') {
+          // A live code already exists (e.g. after a back-and-forth) —
+          // open the panel and let the user type it.
+          setOtpStage('sent');
+          setResendAt(Date.now() + 60_000);
+          setOtpError(regOtpErrorMessage(err));
+        } else {
+          setErrors({ form: regOtpErrorMessage(err) });
+        }
+      } finally {
+        setOtpBusy(false);
+      }
+      return;
+    }
+
+    await performSignUp();
+  };
+
+  const performSignUp = async () => {
+    if (submitting) return;
+    const nameCheck = classifyFullName(fullName);
+    const emailCheck = classifyEmail(email);
     setSubmitting(true);
     try {
       const result = await signUp({
@@ -653,6 +781,65 @@ function SupabaseRegister() {
             />
           </FormField>
 
+          {/* Registration OTP panel — appears after «إنشاء حساب» when
+              the flag is on; verification continues into the account
+              creation automatically. */}
+          {regOtpEnabled && otpStage === 'sent' && (
+            <div
+              className="rounded-xl2 bg-white ring-1 ring-beige-200 p-4 space-y-3"
+              aria-live="polite"
+            >
+              <div className="text-[13.5px] font-bold text-ink-900">
+                {t('auth.regOtp.title')}
+              </div>
+              <p className="text-[12px] text-ink-500 leading-relaxed">
+                {t('auth.regOtp.body')}{' '}
+                <span className="num" dir="ltr">{normalizedMobile?.e164 ?? ''}</span>
+              </p>
+              <div dir="ltr">
+                <Input
+                  inputMode="numeric"
+                  autoComplete="one-time-code"
+                  maxLength={6}
+                  placeholder="••••••"
+                  value={otpCode}
+                  onChange={(e) => {
+                    setOtpCode(e.target.value.replace(/\D/g, '').slice(0, 6));
+                    if (otpError) setOtpError(null);
+                  }}
+                  invalid={Boolean(otpError)}
+                  className="num text-center"
+                  style={{ letterSpacing: '0.3em' }}
+                />
+              </div>
+              {otpError && (
+                <div className="text-[12px] text-danger-700 leading-relaxed">{otpError}</div>
+              )}
+              <Button
+                type="button"
+                block
+                loading={otpBusy || submitting}
+                disabled={otpCode.length !== 6}
+                onClick={onVerifyRegOtp}
+                className="!bg-navy-700 hover:!bg-navy-800 active:!bg-navy-800"
+              >
+                {t('auth.regOtp.verifyCta')}
+              </Button>
+              <button
+                type="button"
+                onClick={onResendRegOtp}
+                disabled={otpBusy || submitting || nowMs < resendAt}
+                className="w-full text-center text-[12.5px] font-bold text-green-700 hover:text-green-800 disabled:text-ink-300"
+              >
+                {nowMs < resendAt
+                  ? t('auth.regOtp.resendIn', {
+                      seconds: Math.max(1, Math.ceil((resendAt - nowMs) / 1000)),
+                    })
+                  : t('auth.regOtp.resendCta')}
+              </button>
+            </div>
+          )}
+
           {errors.form && (
             <div className="rounded-xl2 bg-danger-50 ring-1 ring-danger-500/25 px-3.5 py-2.5 text-[12.5px] text-danger-700 leading-relaxed">
               {errors.form}
@@ -660,15 +847,17 @@ function SupabaseRegister() {
           )}
 
           <div className="pt-2 space-y-3">
-            <Button
-              type="submit"
-              size="lg"
-              block
-              loading={submitting}
-              className="!bg-navy-700 hover:!bg-navy-800 active:!bg-navy-800"
-            >
-              {t('register.submit')}
-            </Button>
+            {!(regOtpEnabled && otpStage === 'sent') && (
+              <Button
+                type="submit"
+                size="lg"
+                block
+                loading={submitting || otpBusy}
+                className="!bg-navy-700 hover:!bg-navy-800 active:!bg-navy-800"
+              >
+                {t('register.submit')}
+              </Button>
+            )}
             <div className="text-center text-[13px] text-ink-500">
               {t('auth.haveAccount')}{' '}
               <Link

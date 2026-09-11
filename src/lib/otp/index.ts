@@ -43,14 +43,14 @@ import { requireSupabase } from '@/lib/supabase';
 import type { AppRole, LocalizedJson } from '@/lib/supabase';
 import { normalizeMobile } from '@/lib/mobile';
 
-type OtpProvider = 'rpc-inapp' | 'sms-edge';
+import { buildTimeOtpEnv, resolveRenterOtpProvider, type RenterOtpProvider } from './flags';
 
-/** Build-time provider selection. Defaults to the in-app RPC provider;
- *  set VITE_OTP_PROVIDER=sms-edge to deliver codes by SMS (MSEGAT). */
-function resolveProvider(): OtpProvider {
-  return import.meta.env.VITE_OTP_PROVIDER === 'sms-edge'
-    ? 'sms-edge'
-    : 'rpc-inapp';
+/** Build-time provider selection for the RENTER/SESSION flow.
+ *  VITE_RENTER_OTP_PROVIDER wins; the legacy VITE_OTP_PROVIDER keeps
+ *  working (backward compatible). Independent of the registration
+ *  OTP flag — see ./flags. */
+function resolveProvider(): RenterOtpProvider {
+  return resolveRenterOtpProvider(buildTimeOtpEnv());
 }
 
 /** True when codes are delivered by SMS — UI surfaces (the in-app
