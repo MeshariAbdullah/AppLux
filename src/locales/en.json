@@ -740,6 +740,10 @@
     "dispute_customer_no_response": {
       "title": "Non-response documented",
       "body": "The claim response window ended and the non-response was documented in the case record. The case moved to Lend review on the available information."
+    },
+    "renter_otp_ready": {
+      "title": "New verification code",
+      "body": "A verification code is available to complete a rental contract. Open the app to view it."
     }
   },
   "profile": {

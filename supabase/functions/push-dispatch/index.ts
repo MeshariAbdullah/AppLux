@@ -71,7 +71,7 @@ type SendOutcome = { ok: boolean; error?: string; tokenInvalid?: boolean };
 
 async function sendApns(
   token: string,
-  job: { title: string; route: string | null; notification_id: string },
+  job: { title: string; body?: string | null; route: string | null; notification_id: string },
 ): Promise<SendOutcome> {
   const res = await fetch(`${APNS_HOST}/3/device/${token}`, {
     method: "POST",
@@ -84,7 +84,13 @@ async function sendApns(
     },
     body: JSON.stringify({
       // Privacy-conscious: generic title only + the deep link.
-      aps: { alert: { title: job.title }, sound: "default", badge: 1 },
+      aps: {
+        // Title-only for historical types; body rides along only when
+        // the job carries privacy-safe copy (never codes/names/amounts).
+        alert: job.body ? { title: job.title, body: job.body } : { title: job.title },
+        sound: "default",
+        badge: 1,
+      },
       route: job.route,
     }),
   });
@@ -171,7 +177,7 @@ async function fcmAccessToken(sa: FcmServiceAccount): Promise<string> {
 
 async function sendFcm(
   token: string,
-  job: { title: string; route: string | null; notification_id: string },
+  job: { title: string; body?: string | null; route: string | null; notification_id: string },
 ): Promise<SendOutcome> {
   const sa = fcmAccount();
   if (!sa) return { ok: false, error: "fcm not configured (FCM_SERVICE_ACCOUNT missing)" };
@@ -187,8 +193,11 @@ async function sendFcm(
       body: JSON.stringify({
         message: {
           token,
-          // Same privacy posture as APNs: generic title, no body.
-          notification: { title: job.title },
+          // Same privacy posture as APNs: generic title; body only
+          // when the job carries privacy-safe copy.
+          notification: job.body
+            ? { title: job.title, body: job.body }
+            : { title: job.title },
           // FCM data values MUST be strings; the tap handler in
           // registerPush.ts reads data.route on both platforms.
           data: job.route ? { route: job.route } : {},

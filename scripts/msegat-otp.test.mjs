@@ -124,6 +124,28 @@ test('no MSEGAT credential can reach the frontend bundle', () => {
   assert.ok(!clientOtp.includes('VITE_MSEGAT'));
 });
 
+test('in-app renter OTP: push nudge is code-free, SMS path opts out', () => {
+  const migration = readFileSync(
+    path.join(root, 'supabase/migrations/20260502125700_renter_otp_inapp_push.sql'), 'utf8');
+  // The notification insert block must never reference the code.
+  const notifyBlock = migration.slice(
+    migration.indexOf("if p_delivery = 'inapp' then"),
+    migration.indexOf('end if;', migration.indexOf("if p_delivery = 'inapp' then")),
+  );
+  assert.ok(notifyBlock.length > 0, 'in-app notify block exists');
+  assert.ok(!notifyBlock.includes('v_code'), 'push notification never carries the code');
+  assert.ok(migration.includes("'renter_otp_ready'"));
+  assert.ok(migration.includes("p_delivery text default 'inapp'"), 'client RPC default stays in-app');
+  // The SMS edge function suppresses the in-app nudge.
+  assert.ok(edgeFn.includes("p_delivery: 'sms'"));
+  // The push job body copy is the approved code-free text.
+  assert.ok(migration.includes('وصلك رمز تحقق لإكمال إنشاء عقد إيجار'));
+  // The dispatcher only ever forwards job.title/job.body — no code path.
+  const dispatch = readFileSync(
+    path.join(root, 'supabase/functions/push-dispatch/index.ts'), 'utf8');
+  assert.ok(dispatch.includes('job.body'), 'dispatcher forwards the optional body');
+});
+
 test('edge function reads secrets only via Deno.env and never logs code/key/body', () => {
   assert.ok(edgeFn.includes("Deno.env.get('MSEGAT_API_KEY')"));
   // No hardcoded credential fallbacks next to the secret reads.

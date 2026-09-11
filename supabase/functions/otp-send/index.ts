@@ -113,6 +113,9 @@ serve(async (req) => {
   //    P0192 throttle). Error codes pass through for client mapping.
   const { error: startErr } = await supabase.rpc('merchant_start_renter_otp', {
     p_mobile: normalized.canonical,
+    // SMS delivery: the code arrives by text — suppress the in-app
+    // "code is waiting in the app" push nudge (20260502125700).
+    p_delivery: 'sms',
   });
   if (startErr) {
     const code = (startErr as { code?: string }).code ?? 'start_failed';

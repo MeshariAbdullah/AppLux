@@ -49,6 +49,31 @@ Or Dashboard → Project → **Edge Functions → Secrets**. `SUPABASE_URL`,
 Rollback = remove `VITE_OTP_PROVIDER` (or set `rpc-inapp`) and
 redeploy the frontend; nothing server-side needs to change.
 
+## Renter/session OTP without SMS (in-app + push nudge)
+
+To cut SMS cost, the rental-session OTP can run fully in-app
+(20260502125700) while REGISTRATION OTP keeps SMS:
+
+```
+VITE_RENTER_OTP_PROVIDER=rpc-inapp        # rental/session: in-app + push
+VITE_REGISTRATION_OTP_PROVIDER=sms-edge   # signup: still SMS
+# remove/ignore any legacy VITE_OTP_PROVIDER=sms-edge, or override it
+# with VITE_RENTER_OTP_PROVIDER as above
+```
+
+In `rpc-inapp` mode the client calls merchant_start_renter_otp
+directly (default p_delivery='inapp'): the customer reads the code
+from the RenterOtpCard on Home as before, and additionally receives a
+CODE-FREE push — title «رمز تحقق جديد», body «وصلك رمز تحقق لإكمال
+إنشاء عقد إيجار. افتح التطبيق للاطلاع عليه.», deep link `/home` —
+exactly one push per created challenge (a resend is a new challenge →
+one new push; the 15s throttle prevents spam). The SMS path stays
+deployed: otp-send now passes p_delivery='sms', which suppresses the
+nudge, so flipping back to `sms-edge` later needs only the env change
+(plus redeploying otp-send once so it sends p_delivery). Enabling the
+in-app mode requires applying 20260502125700 and redeploying
+push-dispatch (push_jobs gained an optional body column).
+
 ## Manual QA — one real SMS
 
 Prereqs: secrets set, function deployed, an `sms-edge` build, a real

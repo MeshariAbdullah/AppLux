@@ -346,6 +346,7 @@ export type ContractReceiptPhotoRow = {
  *  20260502124700). Rows are created solely by DB triggers/RPCs. */
 export type NotificationType =
   | 'offer_issued'
+  | 'renter_otp_ready'
   | 'dispute_claim_submitted'
   | 'dispute_customer_accepted'
   | 'dispute_customer_objected'
