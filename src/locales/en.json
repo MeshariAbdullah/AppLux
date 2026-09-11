@@ -2082,7 +2082,8 @@
         },
         "errors": {
           "createFailed": "Could not create the report. Please try again."
-        }
+        },
+        "defaultDescription": "Damage report for {contract}"
       }
     },
     "damageCase": {
@@ -2330,7 +2331,9 @@
         "dispute_resolved": "Case closed with agreement",
         "dispute_unresolved": "Case closed without agreement",
         "customer_response_deadline_set": "Customer response window set (48 hours)",
-        "customer_no_response_recorded": "Customer non-response documented"
+        "customer_no_response_recorded": "Customer non-response documented",
+        "case_dismissed_by_lend": "Case closed administratively",
+        "unknown": "Case update"
       },
       "rental": {
         "endedViaDispute": "This rental ended through the dispute path, not a normal return.",

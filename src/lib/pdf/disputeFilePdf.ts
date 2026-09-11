@@ -42,6 +42,7 @@ import {
   listInvoiceItems,
 } from '@/lib/supabase';
 import { buildContractFromTemplate } from '@/lib/contractTemplate';
+import { caseDescriptionDisplay } from '@/lib/disputeEventLabel';
 
 type TFn = (k: string, v?: Record<string, string | number>) => string;
 
@@ -456,7 +457,7 @@ export async function exportDisputeFilePdf(ctx: DisputeFileContext): Promise<{ p
       kvRow(F('claimType'), t(`merchant.damages.severity.${sevKey}`)),
       kvRow(F('claimAmount'), formatCurrency(Number(kase.claim_amount)), { ltrValue: true }),
       kvRow(F('claimAt'), formatDate(kase.raised_at)),
-      ...(kase.description ? [paragraph(kase.description)] : []),
+      ...(kase.description ? [paragraph(caseDescriptionDisplay(t, kase.description))] : []),
       ...(merchImgs.length || merchantEvidence.length - merchImgs.length > 0
         ? imageGrid(merchImgs, merchantEvidence.length - merchImgs.length, F('mediaUnavailable'))
         : [paragraph(F('noMedia'))]),

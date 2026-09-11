@@ -2082,7 +2082,8 @@
         },
         "errors": {
           "createFailed": "تعذر إنشاء البلاغ. حاول مرة أخرى."
-        }
+        },
+        "defaultDescription": "بلاغ ضرر للعقد {contract}"
       }
     },
     "damageCase": {
@@ -2330,7 +2331,9 @@
         "dispute_resolved": "أُغلقت الحالة باتفاق",
         "dispute_unresolved": "أُغلقت الحالة دون اتفاق",
         "customer_response_deadline_set": "تم تحديد مهلة رد العميل (48 ساعة)",
-        "customer_no_response_recorded": "تم توثيق عدم استجابة العميل خلال المهلة"
+        "customer_no_response_recorded": "تم توثيق عدم استجابة العميل خلال المهلة",
+        "case_dismissed_by_lend": "أُغلقت الحالة إداريًا",
+        "unknown": "تحديث على الحالة"
       },
       "rental": {
         "endedViaDispute": "انتهى هذا الإيجار عبر مسار النزاع، وليس كإرجاع اعتيادي.",

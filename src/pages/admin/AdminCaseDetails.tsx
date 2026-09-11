@@ -50,6 +50,7 @@ import {
   type RentalContractRow,
 } from '@/lib/supabase';
 import { adminPhaseLabelKey, adminPhaseTone } from './AdminCases';
+import { caseDescriptionDisplay, disputeEventLabel } from '@/lib/disputeEventLabel';
 import { exportDisputeFilePdf } from '@/lib/pdf/disputeFilePdf';
 
 // =====================================================================
@@ -332,7 +333,7 @@ function AdminCaseDetailsInner({
               <>
                 <CardDivider />
                 <p className="text-[13px] text-ink-700 leading-relaxed whitespace-pre-line">
-                  {kase.description}
+                  {caseDescriptionDisplay(t, kase.description)}
                 </p>
               </>
             )}
@@ -551,7 +552,7 @@ function AdminCaseDetailsInner({
                     <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-canvas-300" />
                     <div className="min-w-0 flex-1 flex items-baseline justify-between gap-2 text-[12px]">
                       <span className="text-ink-700">
-                        {t(`merchant.disputes.events.${e.event_type}`)}
+                        {disputeEventLabel(t, e.event_type)}
                       </span>
                       <span className="text-ink-400 num shrink-0">{formatDate(e.created_at)}</span>
                     </div>

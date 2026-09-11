@@ -399,7 +399,11 @@ export default function MerchantDamageNew() {
           raised_by_user_id: supabaseAuth.session?.user?.id ?? null,
           severity: mapSeverityToDB(severity),
           claim_amount: claimValue,
-          description: notes || `Damage report for ${rental.contractRef}`,
+          // Localized default (Arabic-first app): the previous literal
+          // English string surfaced verbatim on the case screens.
+          description:
+            notes ||
+            t('merchant.damage.new.defaultDescription', { contract: rental.contractRef }),
         });
 
         // Phase 4A invalidation — IMMEDIATELY after mutation success,

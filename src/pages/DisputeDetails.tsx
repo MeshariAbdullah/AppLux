@@ -31,6 +31,7 @@ import { logEvent } from '@/lib/observability/log';
 import { translateError, withSupportId } from '@/lib/errors';
 import { useI18n, useT } from '@/lib/i18n';
 import { customerDeadlineState } from '@/lib/disputeDeadline';
+import { caseDescriptionDisplay } from '@/lib/disputeEventLabel';
 import { formatValidUntil } from '@/lib/offerExpiry';
 import { prepareEvidenceImage, PrepareImageError } from '@/lib/image/prepareEvidenceImage';
 import { useSensitiveFlow } from '@/lib/session/flowGuard';
@@ -301,7 +302,7 @@ export default function DisputeDetails() {
                     {t('disputes.claim.description')}
                   </div>
                   <p className="text-[13px] text-ink-700 leading-relaxed whitespace-pre-line">
-                    {kase.description}
+                    {caseDescriptionDisplay(t, kase.description)}
                   </p>
                 </div>
               </>

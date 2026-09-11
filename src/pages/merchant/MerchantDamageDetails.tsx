@@ -31,6 +31,7 @@ import { logEvent } from '@/lib/observability/log';
 import { translateError, withSupportId } from '@/lib/errors';
 import { useI18n, useT } from '@/lib/i18n';
 import { customerDeadlineState } from '@/lib/disputeDeadline';
+import { caseDescriptionDisplay, disputeEventLabel } from '@/lib/disputeEventLabel';
 import { formatValidUntil } from '@/lib/offerExpiry';
 import { useSensitiveFlow } from '@/lib/session/flowGuard';
 import { useStore } from '@/lib/store';
@@ -412,7 +413,7 @@ export default function MerchantDamageDetails() {
               <>
                 <CardDivider />
                 <p className="text-[13px] text-ink-700 leading-relaxed whitespace-pre-line">
-                  {kase.description}
+                  {caseDescriptionDisplay(t, kase.description)}
                 </p>
               </>
             )}
@@ -601,7 +602,7 @@ export default function MerchantDamageDetails() {
                     <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-canvas-300" />
                     <div className="min-w-0 flex-1 flex items-baseline justify-between gap-2 text-[12px]">
                       <span className="text-ink-700">
-                        {t(`merchant.disputes.events.${e.event_type}`)}
+                        {disputeEventLabel(t, e.event_type)}
                       </span>
                       <span className="text-ink-400 num shrink-0">{formatDate(e.created_at)}</span>
                     </div>
