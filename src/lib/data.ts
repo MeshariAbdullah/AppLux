@@ -94,6 +94,10 @@ export const SEED_INVOICES: Invoice[] = [
     dueDate: '2026-04-25',
     amount: 1850,
     status: 'due',
+    // Demo parity with live invoices: the pending offer routes into
+    // the review wizard at /review/<scanToken> (the RM-88231 seed is
+    // this same lavender-gown rental).
+    scanToken: 'RM-88231',
   },
   {
     id: 'inv-1041',

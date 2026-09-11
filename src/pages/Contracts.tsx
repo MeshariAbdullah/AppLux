@@ -87,6 +87,11 @@ export default function Contracts() {
         ? invoiceRows
             .filter((r) => r.status === 'issued' || r.status === 'viewed')
             .map((r) => adaptInvoice(r, invoiceItemsByInvoiceId?.[r.id] ?? [], nameMap[r.merchant_id]))
+            // The adapter maps an EXPIRED issued/viewed offer out of
+            // 'due' (20260502123800) — honor that here like Home does,
+            // so a no-longer-actionable offer never sits under
+            // "بانتظار موافقتك" with a dead review path.
+            .filter((i) => i.status === 'due')
         : null,
     [invoiceRows, nameMap, invoiceItemsByInvoiceId],
   );
@@ -233,7 +238,17 @@ function PendingInvoiceRow({ invoice }: { invoice: Invoice }) {
   const validUntil = formatValidUntil(invoice.expiresAt, locale);
   return (
     <Link
-      to={`/track/invoice/${invoice.id}`}
+      // Same rule as Home's "مراجعة": the review WIZARD at
+      // /review/<scanToken> is where the customer actually reads the
+      // clauses and approves/rejects; /track/invoice/<id> is the
+      // read-only tracking page and is only the fallback when no scan
+      // token exists. Routing pending offers to the tracking page left
+      // the rentals list with no way into the approval flow.
+      to={
+        invoice.scanToken
+          ? `/review/${invoice.scanToken}`
+          : `/track/invoice/${invoice.id}`
+      }
       className="flex items-center gap-3 py-3.5 -mx-1 px-1 rounded-2xl transition-colors hover:bg-canvas-100/60 active:bg-canvas-100"
     >
       <span className="h-11 w-11 shrink-0 rounded-2xl bg-warn-50 text-warn-700 ring-1 ring-warn-500/20 grid place-items-center">
@@ -432,8 +447,14 @@ function Field({
 function PastRentalRow({ item }: { item: HistoryItem }) {
   const t = useT();
   const { formatCurrency, formatDate } = useI18n();
+  // Live history ids are real contract ids (adaptContractToHistory) —
+  // the row opens the normal contract tracking page (which renders
+  // ended contracts). No id is ever displayed.
   return (
-    <div className="flex items-center justify-between gap-3 py-3.5">
+    <Link
+      to={`/track/contract/${item.id}`}
+      className="flex items-center justify-between gap-3 py-3.5 -mx-1 px-1 rounded-2xl transition-colors hover:bg-canvas-100/60 active:bg-canvas-100"
+    >
       <div className="min-w-0">
         <div className="text-[13.5px] font-semibold text-ink-900 truncate tracking-tight">
           {item.title}
@@ -453,7 +474,7 @@ function PastRentalRow({ item }: { item: HistoryItem }) {
           {t('contracts.past.settledNote')}
         </div>
       </div>
-    </div>
+    </Link>
   );
 }
 

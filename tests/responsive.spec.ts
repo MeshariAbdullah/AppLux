@@ -194,3 +194,51 @@ test('confirm dialog: tablet/desktop is a centered modal, not a bottom sheet', a
     await expect(page.locator('[role="dialog"]')).toHaveCount(0);
   }
 });
+
+// =====================================================================
+// Rentals list navigation (real-device regression): from /contracts,
+// "مراجعة" on a pending offer must enter the actual review/approval
+// flow — the wizard at /review/<scanToken> when the offer carries a
+// token, else the invoice tracking page — and past rentals must open
+// contract tracking. Demo seeds cover both pending variants.
+// =====================================================================
+
+test('rentals list: pending "مراجعة" opens the review flow; past rows navigate', async ({ page }) => {
+  await blockExternal(page);
+  await page.addInitScript((session) => {
+    window.localStorage.setItem('applux.session', JSON.stringify(session));
+  }, DEMO_SESSION);
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('/contracts', { waitUntil: 'domcontentloaded' });
+  await expect(page.getByText('بانتظار موافقتك')).toBeVisible();
+
+  const reviewRows = page.getByText('مراجعة', { exact: true });
+  // Offer WITH a scan token → review wizard (the approval flow).
+  const hrefs: (string | null)[] = [];
+  for (let i = 0; i < (await reviewRows.count()); i++) {
+    hrefs.push(await reviewRows.nth(i).evaluate((el) => el.closest('a')?.getAttribute('href') ?? null));
+  }
+  expect(hrefs).toContain('/review/RM-88231');
+  // Offer WITHOUT a token → invoice tracking fallback, never a dead row.
+  expect(hrefs).toContain('/track/invoice/inv-1039');
+  for (const h of hrefs) expect(h, 'every pending row navigates').toBeTruthy();
+
+  // The wizard actually loads (no 404/blank) after tapping the row.
+  await reviewRows.first().click();
+  await expect(page).toHaveURL(/\/review\/RM-88231$/);
+  await expect
+    .poll(async () => page.evaluate(() => document.querySelector('main')?.innerText.length ?? 0))
+    .toBeGreaterThan(50);
+
+  // Fallback target loads too (invoice details, not the not-found state).
+  await page.goto('/track/invoice/inv-1039', { waitUntil: 'domcontentloaded' });
+  await expect(page.getByText('فاتورة تنظيف وتلميع — بشت الأمراء')).toBeVisible();
+
+  // Past rentals are tappable and route to contract tracking.
+  await page.goto('/contracts', { waitUntil: 'domcontentloaded' });
+  const pastHref = await page
+    .getByText('حقيبة أكرا آيكن — حناء')
+    .first()
+    .evaluate((el) => el.closest('a')?.getAttribute('href'));
+  expect(pastHref).toMatch(/^\/track\/contract\//);
+});
