@@ -73,7 +73,17 @@ const sendFn = read('supabase/functions/registration-otp-send/index.ts');
 const verifyFn = read('supabase/functions/registration-otp-verify/index.ts');
 const renterOtp = read('src/lib/otp/index.ts');
 const register = read('src/pages/auth/Register.tsx');
+const merchantRegister = read('src/pages/merchant/MerchantRegister.tsx');
 const session = read('src/pages/merchant/MerchantRentalSession.tsx');
+
+test('migration supports both signup roles with per-role stamps', () => {
+  assert.ok(migration.includes("check (account_role in ('customer', 'merchant'))"));
+  assert.ok(migration.includes("p_account_role text default 'customer'"));
+  assert.ok(migration.includes("c.account_role = 'customer'"), 'customer stamp scoped');
+  assert.ok(migration.includes("c.account_role = 'merchant'"), 'merchant stamp scoped');
+  assert.ok(migration.includes('contact_mobile_verified_at'), 'merchant application stamp column');
+  assert.ok(migration.includes('on_merchant_application_stamp_mobile_verified'));
+});
 
 test('migration pins the approved parameters', () => {
   assert.ok(migration.includes("interval '5 minutes'"), '5-minute expiry');
@@ -81,7 +91,7 @@ test('migration pins the approved parameters', () => {
   assert.ok(migration.includes('attempts >= 5'), '5-attempt cap');
   assert.ok(migration.includes('code_hash'), 'hash storage');
   assert.ok(!migration.includes('code_inapp'), 'no plaintext column in the registration table');
-  assert.ok(migration.includes('grant execute on function public.registration_otp_start(text) to service_role'));
+  assert.ok(migration.includes('grant execute on function public.registration_otp_start(text, text) to service_role'));
   assert.ok(migration.includes("current_user in ('anon', 'authenticated')"), 'service-role guard');
 });
 
@@ -111,10 +121,33 @@ test('renter/session OTP path is untouched by the registration flow', () => {
   assert.ok(!session.includes('RegistrationOtp'), 'merchant session never uses registration OTP');
 });
 
-test('signup gates on the flag and uses the registration service', () => {
+test('customer signup gates on the flag and uses the registration service', () => {
   assert.ok(register.includes('isRegistrationOtpEnabled()'));
   assert.ok(register.includes('sendRegistrationOtp('));
   assert.ok(register.includes('verifyRegistrationOtp('));
   // Login must stay OTP-free.
   assert.ok(!read('src/pages/auth/Login.tsx').includes('RegistrationOtp'));
+  assert.ok(!read('src/pages/merchant/MerchantLogin.tsx').includes('RegistrationOtp'));
+});
+
+test('merchant signup requires OTP when enabled, bypasses when off', () => {
+  // Same flag, merchant role — behind regOtpEnabled which requires
+  // isRegistrationOtpEnabled(), so flag-off keeps signup unchanged
+  // (the flag matrix above proves off → false).
+  assert.ok(merchantRegister.includes('configured && isRegistrationOtpEnabled()'));
+  assert.ok(merchantRegister.includes("sendRegistrationOtp(canonical, 'merchant')")
+    || merchantRegister.includes("sendRegistrationOtp(n.canonical, 'merchant')"));
+  assert.ok(merchantRegister.includes('verifyRegistrationOtp('));
+  // The final submit re-checks the verified number before signUp.
+  assert.ok(merchantRegister.includes('regOtpVerifiedFor !== n.canonical'));
+});
+
+test('both signup flows share ONE MSEGAT secret set', () => {
+  for (const name of ['MSEGAT_USERNAME', 'MSEGAT_API_KEY', 'MSEGAT_SENDER_NAME']) {
+    assert.ok(sendFn.includes(`Deno.env.get('${name}')`), name);
+  }
+  // No role-specific credential names anywhere in functions or SQL.
+  for (const src of [sendFn, verifyFn, migration]) {
+    assert.ok(!/MSEGAT_(MERCHANT|CUSTOMER|REG)/.test(src), 'no duplicated secrets');
+  }
 });

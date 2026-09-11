@@ -62,15 +62,22 @@ function mapInvokeError(err: unknown): RegistrationOtpError {
   }
 }
 
+export type RegistrationAccountRole = 'customer' | 'merchant';
+
 /** Texts a 6-digit code to the mobile being registered (60s resend
- *  cooldown and hourly cap enforced server-side). */
-export async function sendRegistrationOtp(mobileInput: string): Promise<void> {
+ *  cooldown and hourly cap enforced server-side). `role` marks which
+ *  signup flow is verifying — customer registration by default,
+ *  merchant registration passes 'merchant'. */
+export async function sendRegistrationOtp(
+  mobileInput: string,
+  role: RegistrationAccountRole = 'customer',
+): Promise<void> {
   const n = normalizeMobile(mobileInput);
   if (!n) throw new RegistrationOtpError('invalid_mobile');
   const sb = requireSupabase();
   const { data, error } = await sb.functions.invoke<{ ok?: boolean }>(
     'registration-otp-send',
-    { body: { mobile: n.canonical } },
+    { body: { mobile: n.canonical, role } },
   );
   if (error) throw mapInvokeError(error);
   if (!data?.ok) throw new RegistrationOtpError('send_failed');

@@ -61,7 +61,7 @@ serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
   if (req.method !== 'POST') return json({ error: 'method_not_allowed' }, { status: 405 });
 
-  let body: { mobile?: unknown } = {};
+  let body: { mobile?: unknown; role?: unknown } = {};
   try {
     body = await req.json();
   } catch {
@@ -69,6 +69,10 @@ serve(async (req) => {
   }
   const normalized = typeof body.mobile === 'string' ? normalizeMobile(body.mobile) : null;
   if (!normalized) return json({ error: 'invalid_mobile' }, { status: 400 });
+  // Which signup flow is verifying (customer registration is the
+  // default; merchant registration passes 'merchant'). Same secrets,
+  // same delivery — the role only scopes the server-side stamp.
+  const role = body.role === 'merchant' ? 'merchant' : 'customer';
 
   // Fail BEFORE creating a challenge when SMS delivery cannot happen.
   const cfg = readMsegatConfig();
@@ -84,6 +88,7 @@ serve(async (req) => {
   );
   const { data: rows, error: startErr } = await service.rpc('registration_otp_start', {
     p_mobile: normalized.canonical,
+    p_account_role: role,
   });
   if (startErr) {
     const code = (startErr as { code?: string }).code ?? '';

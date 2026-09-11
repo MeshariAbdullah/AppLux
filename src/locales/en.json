@@ -375,7 +375,8 @@
         "smsFailed": "Could not send the verification SMS right now. Try again in a moment.",
         "notConfigured": "SMS verification is currently unavailable. Try later or contact Lend support.",
         "generic": "Could not verify the mobile number right now. Try again."
-      }
+      },
+      "verifyCtaMerchant": "Confirm code & continue"
     }
   },
   "register": {

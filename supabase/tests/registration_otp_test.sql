@@ -81,4 +81,49 @@ select teq('8 no challenge → NULL stamp, insert succeeds',
   (select (mobile_verified_at is null)::text from profiles
     where id = '99999999-0000-0000-0000-0000000000b2'), 'true');
 
+-- 9. MERCHANT flow: role recorded; verification stamps the
+--    application's contact_mobile_verified_at (not profiles) and is
+--    consumed; a CUSTOMER challenge never stamps an application.
+select * from public.registration_otp_start('0512347777', 'merchant') \gset m1_
+select teq('9a role recorded',
+  (select account_role from registration_otp_challenges where id = :'m1_challenge_id'), 'merchant');
+select teq('9b merchant code verifies',
+  (select public.registration_otp_check('0512347777', :'m1_code')::text), 'true');
+insert into auth.users (id, email) values
+  ('99999999-0000-0000-0000-0000000000b3','regotp-m@e.sa') on conflict (id) do nothing;
+insert into public.profiles (id, full_name, email, role, account_status)
+  values ('99999999-0000-0000-0000-0000000000b3','Merchant Reg','regotp-m@e.sa','merchant','pending');
+insert into public.merchant_applications
+  (applicant_user_id, company_name, commercial_reg_number, authorized_name,
+   authorized_national_id, city, primary_category, contact_phone)
+values ('99999999-0000-0000-0000-0000000000b3','Test Co','1010000000','Rep Name',
+        '1000000000','riyadh','dress','512347777');
+select teq('9c application stamped',
+  (select (contact_mobile_verified_at is not null)::text from merchant_applications
+    where applicant_user_id = '99999999-0000-0000-0000-0000000000b3'), 'true');
+select teq('9d merchant challenge consumed',
+  (select (consumed_at is not null)::text from registration_otp_challenges
+    where id = :'m1_challenge_id'), 'true');
+select teq('9e merchant profile NOT mobile-stamped (no profiles.mobile)',
+  (select (mobile_verified_at is null)::text from profiles
+    where id = '99999999-0000-0000-0000-0000000000b3'), 'true');
+
+-- 10. Role scoping: a verified CUSTOMER challenge does not stamp a
+--     merchant application for the same number.
+select * from public.registration_otp_start('0512348888', 'customer') \gset c2_
+select teq('10a customer code verifies',
+  (select public.registration_otp_check('0512348888', :'c2_code')::text), 'true');
+insert into public.merchant_applications
+  (applicant_user_id, company_name, commercial_reg_number, authorized_name,
+   authorized_national_id, city, primary_category, contact_phone)
+values ('99999999-0000-0000-0000-0000000000b3','Test Co 2','1010000001','Rep Name',
+        '1000000000','riyadh','dress','512348888');
+select teq('10b customer challenge does NOT stamp an application',
+  (select (contact_mobile_verified_at is null)::text from merchant_applications
+    where commercial_reg_number = '1010000001'), 'true');
+
+-- 11. Cooldown is per-mobile across roles (one live code per number).
+select traises('11 cross-role cooldown',
+  $q$select public.registration_otp_start('0512347777', 'customer')$q$, 'P0192');
+
 rollback;

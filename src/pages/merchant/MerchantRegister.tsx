@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState, type ChangeEvent } from 'react';
+import { useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react';
 import { Link, Navigate, useNavigate } from 'react-router-dom';
 import { Header, Screen } from '@/components/layout';
 import {
@@ -18,6 +18,13 @@ import { logEvent } from '@/lib/observability/log';
 import { useI18n, useT } from '@/lib/i18n';
 import { useStore } from '@/lib/store';
 import { normalizeDigits } from '@/lib/validation/customer';
+import { normalizeMobile } from '@/lib/mobile';
+import {
+  isRegistrationOtpEnabled,
+  RegistrationOtpError,
+  sendRegistrationOtp,
+  verifyRegistrationOtp,
+} from '@/lib/otp/registration';
 import {
   checkEmailAvailable,
   checkUnifiedNumberAvailable,
@@ -487,6 +494,120 @@ export default function MerchantRegister() {
     }
   };
 
+  // ------------------------------------------------------------------
+  // Registration OTP (flag-gated; same backend + MSEGAT secrets as the
+  // customer signup, role 'merchant'). Gates step 3 (authorized rep):
+  // the contact mobile must be verified before advancing, and the
+  // final submit re-checks the exact verified number.
+  // ------------------------------------------------------------------
+  const regOtpEnabled = configured && isRegistrationOtpEnabled();
+  const [regOtpStage, setRegOtpStage] = useState<'idle' | 'sent'>('idle');
+  const [regOtpVerifiedFor, setRegOtpVerifiedFor] = useState<string | null>(null);
+  const [regOtpCode, setRegOtpCode] = useState('');
+  const [regOtpBusy, setRegOtpBusy] = useState(false);
+  const [regOtpError, setRegOtpError] = useState<string | null>(null);
+  const [regResendAt, setRegResendAt] = useState(0);
+  const [regNowMs, setRegNowMs] = useState(() => Date.now());
+
+  useEffect(() => {
+    if (regOtpStage !== 'sent') return;
+    const id = window.setInterval(() => setRegNowMs(Date.now()), 1000);
+    return () => window.clearInterval(id);
+  }, [regOtpStage]);
+
+  // Editing the number closes the panel; verification stays keyed to
+  // the exact canonical mobile, so a changed number always re-verifies.
+  useEffect(() => {
+    setRegOtpStage('idle');
+    setRegOtpCode('');
+    setRegOtpError(null);
+  }, [values.contactMobile]);
+
+  const regOtpErrorMessage = (err: unknown): string => {
+    if (err instanceof RegistrationOtpError) {
+      switch (err.code) {
+        case 'invalid_mobile':
+          return t('merchant.register.errors.mobile');
+        case 'cooldown':
+          return t('auth.regOtp.errors.cooldown');
+        case 'send_limit':
+          return t('auth.regOtp.errors.sendLimit');
+        case 'no_active_challenge':
+          return t('auth.regOtp.errors.expired');
+        case 'too_many_attempts':
+          return t('auth.regOtp.errors.tooManyAttempts');
+        case 'otp_not_configured':
+          return t('auth.regOtp.errors.notConfigured');
+        case 'sms_send_failed':
+          return t('auth.regOtp.errors.smsFailed');
+        default:
+          return t('auth.regOtp.errors.generic');
+      }
+    }
+    return t('auth.regOtp.errors.generic');
+  };
+
+  const openRegOtp = async (canonical: string) => {
+    setRegOtpBusy(true);
+    setRegOtpError(null);
+    try {
+      await sendRegistrationOtp(canonical, 'merchant');
+      setRegOtpStage('sent');
+      setRegResendAt(Date.now() + 60_000);
+      setRegOtpCode('');
+    } catch (err) {
+      if (err instanceof RegistrationOtpError && err.code === 'cooldown') {
+        // A live code already exists (e.g. after going back and
+        // forward) — open the panel and let them type it.
+        setRegOtpStage('sent');
+        setRegResendAt(Date.now() + 60_000);
+        setRegOtpError(regOtpErrorMessage(err));
+      } else {
+        setRegOtpError(regOtpErrorMessage(err));
+        setRegOtpStage('sent'); // keep the panel visible with the error
+      }
+    } finally {
+      setRegOtpBusy(false);
+    }
+  };
+
+  const onVerifyRegOtp = async () => {
+    const n = normalizeMobile(values.contactMobile);
+    if (regOtpBusy || submitting || !n) return;
+    setRegOtpBusy(true);
+    setRegOtpError(null);
+    try {
+      const ok = await verifyRegistrationOtp(n.canonical, regOtpCode);
+      if (!ok) {
+        setRegOtpError(t('auth.regOtp.errors.wrongCode'));
+        return;
+      }
+      setRegOtpVerifiedFor(n.canonical);
+      setRegOtpStage('idle');
+      if (step === 2) setStep(3);
+    } catch (err) {
+      setRegOtpError(regOtpErrorMessage(err));
+    } finally {
+      setRegOtpBusy(false);
+    }
+  };
+
+  const onResendRegOtp = async () => {
+    const n = normalizeMobile(values.contactMobile);
+    if (regOtpBusy || Date.now() < regResendAt || !n) return;
+    setRegOtpBusy(true);
+    setRegOtpError(null);
+    try {
+      await sendRegistrationOtp(n.canonical, 'merchant');
+      setRegResendAt(Date.now() + 60_000);
+      setRegOtpCode('');
+    } catch (err) {
+      setRegOtpError(regOtpErrorMessage(err));
+    } finally {
+      setRegOtpBusy(false);
+    }
+  };
+
   const goNext = async () => {
     const e = validateStep(step);
     if (stepHasErrors(e)) {
@@ -526,6 +647,15 @@ export default function MerchantRegister() {
         return;
       }
     }
+    // Step 3 (Authorized rep): registration OTP gate — the contact
+    // mobile must be verified before the wizard can advance.
+    if (step === 2 && regOtpEnabled) {
+      const n = normalizeMobile(values.contactMobile);
+      if (n && regOtpVerifiedFor !== n.canonical) {
+        if (regOtpStage !== 'sent') await openRegOtp(n.canonical);
+        return;
+      }
+    }
     // Step 5 (Documents): confirm the quarantined receipt is still valid.
     if (step === DOCUMENTS_STEP && configured && values.docReceipt) {
       const status = await proveReceipt();
@@ -539,6 +669,17 @@ export default function MerchantRegister() {
       return;
     }
     if (submitting || submitted) return; // double-submit guard
+    // Belt-and-suspenders: the account is never created without a
+    // verified contact mobile while the flag is on (covers any path
+    // back through the wizard that changed the number).
+    if (regOtpEnabled) {
+      const n = normalizeMobile(values.contactMobile);
+      if (!n || regOtpVerifiedFor !== n.canonical) {
+        setStep(2);
+        if (n) await openRegOtp(n.canonical);
+        return;
+      }
+    }
     if (configured) await submitLive();
     else submitDemo();
   };
@@ -955,6 +1096,66 @@ export default function MerchantRegister() {
                   autoComplete="email"
                 />
               </FormField>
+
+              {/* Registration OTP panel — the contact mobile must be
+                  verified before the wizard advances (flag-gated). */}
+              {regOtpEnabled && regOtpStage === 'sent' && (
+                <div
+                  className="rounded-xl2 bg-white ring-1 ring-beige-200 p-4 space-y-3"
+                  aria-live="polite"
+                >
+                  <div className="text-[13.5px] font-bold text-ink-900">
+                    {t('auth.regOtp.title')}
+                  </div>
+                  <p className="text-[12px] text-ink-500 leading-relaxed">
+                    {t('auth.regOtp.body')}{' '}
+                    <span className="num" dir="ltr">
+                      {normalizeMobile(values.contactMobile)?.e164 ?? ''}
+                    </span>
+                  </p>
+                  <div dir="ltr">
+                    <Input
+                      inputMode="numeric"
+                      autoComplete="one-time-code"
+                      maxLength={6}
+                      placeholder="••••••"
+                      value={regOtpCode}
+                      onChange={(e) => {
+                        setRegOtpCode(e.target.value.replace(/\D/g, '').slice(0, 6));
+                        if (regOtpError) setRegOtpError(null);
+                      }}
+                      invalid={Boolean(regOtpError)}
+                      className="num text-center"
+                      style={{ letterSpacing: '0.3em' }}
+                    />
+                  </div>
+                  {regOtpError && (
+                    <div className="text-[12px] text-danger-700 leading-relaxed">{regOtpError}</div>
+                  )}
+                  <Button
+                    type="button"
+                    block
+                    loading={regOtpBusy}
+                    disabled={regOtpCode.length !== 6}
+                    onClick={() => void onVerifyRegOtp()}
+                    className="!bg-navy-700 hover:!bg-navy-800 active:!bg-navy-800"
+                  >
+                    {t('auth.regOtp.verifyCtaMerchant')}
+                  </Button>
+                  <button
+                    type="button"
+                    onClick={() => void onResendRegOtp()}
+                    disabled={regOtpBusy || regNowMs < regResendAt}
+                    className="w-full text-center text-[12.5px] font-bold text-green-700 hover:text-green-800 disabled:text-ink-300"
+                  >
+                    {regNowMs < regResendAt
+                      ? t('auth.regOtp.resendIn', {
+                          seconds: Math.max(1, Math.ceil((regResendAt - regNowMs) / 1000)),
+                        })
+                      : t('auth.regOtp.resendCta')}
+                  </button>
+                </div>
+              )}
             </>
           )}
 

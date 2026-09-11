@@ -100,8 +100,8 @@ MSEGAT secrets — no new credentials:
 | Challenge table + RPCs (hash-only, 5-min expiry, 5 attempts, 60s cooldown, 5 sends/hour) | `supabase/migrations/20260502125600_registration_otp.sql` |
 | Edge Functions | `registration-otp-send`, `registration-otp-verify` |
 | Client service + flags | `src/lib/otp/registration.ts`, `src/lib/otp/flags.ts` |
-| Signup UI step | `src/pages/auth/Register.tsx` (SupabaseRegister) |
-| Server stamp | `profiles.mobile_verified_at` via BEFORE INSERT trigger (challenge consumed, single use) |
+| Signup UI steps | customer: `src/pages/auth/Register.tsx` (SupabaseRegister); merchant: `src/pages/merchant/MerchantRegister.tsx` (authorized-rep step gate + final-submit guard) |
+| Server stamps | customer: `profiles.mobile_verified_at`; merchant: `merchant_applications.contact_mobile_verified_at` — both via BEFORE INSERT triggers (role-scoped challenge consumed, single use) |
 
 Independent switches (Vercel env, build-time; neither affects the
 other flow, both default OFF/current behavior):
@@ -114,8 +114,10 @@ VITE_RENTER_OTP_PROVIDER=sms-edge         # renter/session SMS delivery
 
 Deploy additions: apply `20260502125600` in the SQL Editor, then
 `supabase functions deploy registration-otp-send registration-otp-verify`
-(JWT verification ON — the anonymous signup form authenticates with
-the project anon key). DB test suite:
+(JWT verification ON — the anonymous signup forms authenticate with
+the project anon key). Covers BOTH customer and merchant signup —
+the send call carries `role: 'customer'|'merchant'`, same function,
+same secrets. DB test suite:
 `supabase/tests/registration_otp_test.sql` (psql, never production).
 
 Notes: verification is ours (`registration_otp_check`), MSEGAT only
