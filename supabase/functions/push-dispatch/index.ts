@@ -247,18 +247,26 @@ Deno.serve(async (req) => {
   }
   const sb = createClient(SUPABASE_URL, SERVICE_KEY);
 
-  const { data: jobs, error } = await sb
-    .from("push_jobs").select("*").eq("status", "pending")
-    .order("created_at").limit(BATCH);
+  // Atomic claim (20260502125800): pending jobs move to 'processing'
+  // under FOR UPDATE SKIP LOCKED before anything is sent, so
+  // overlapping invocations (cron + manual, double schedules, slow
+  // runs) partition the queue instead of each re-sending it. Stale
+  // 'processing' jobs from a crashed run are requeued by the same RPC
+  // after 10 minutes, bounded by the 5-attempt cap.
+  const { data: jobs, error } = await sb.rpc("claim_push_jobs", { p_batch: BATCH });
   if (error) return new Response(JSON.stringify({ error: error.message }), { status: 500 });
 
   let sent = 0, failed = 0, tokensRevoked = 0;
   for (const job of jobs ?? []) {
-    const { data: tokens } = await sb
+    const { data: tokenRows } = await sb
       .from("push_device_tokens").select("token, platform")
       .eq("user_id", job.user_id).is("revoked_at", null);
+    // Defense-in-depth: never hit the same token value twice per job.
+    const seen = new Set<string>();
+    const tokens = (tokenRows ?? []).filter((t) =>
+      seen.has(t.token) ? false : (seen.add(t.token), true));
     let delivered = false, lastError = "no active device tokens";
-    for (const t of tokens ?? []) {
+    for (const t of tokens) {
       try {
         const outcome = t.platform === "android"
           ? await sendFcm(t.token, job)
@@ -276,21 +284,23 @@ Deno.serve(async (req) => {
         lastError = String(e).slice(0, 300);
       }
     }
-    await sb.from("push_jobs").update(
-      delivered
-        ? { status: "sent", sent_at: new Date().toISOString(), attempts: job.attempts + 1 }
-        : job.attempts + 1 >= 5
-          ? { status: "failed", attempts: job.attempts + 1, last_error: lastError }
-          : { attempts: job.attempts + 1, last_error: lastError },
-    ).eq("id", job.id);
+    // Guarded finish (attempts were incremented at claim): only the
+    // 'processing' row this run holds can transition, so a duplicate
+    // or late finish writes nothing — a sent job is never re-sent.
+    const { error: finishErr } = await sb.rpc("finish_push_job", {
+      p_job_id: job.id,
+      p_delivered: delivered,
+      p_error: delivered ? null : lastError,
+    });
     if (delivered) sent++; else failed++;
     // Diagnosable without secrets: no tokens, no keys, truncated reason.
     console.log(JSON.stringify({
       job: job.id,
       user: String(job.user_id).slice(0, 8),
-      tokens: (tokens ?? []).length,
-      outcome: delivered ? "sent" : (job.attempts + 1 >= 5 ? "failed" : "retry"),
+      tokens: tokens.length,
+      outcome: delivered ? "sent" : (job.attempts >= 5 ? "failed" : "retry"),
       reason: delivered ? undefined : lastError.slice(0, 160),
+      finish_error: finishErr ? String(finishErr.message).slice(0, 160) : undefined,
     }));
   }
   return new Response(JSON.stringify({ processed: (jobs ?? []).length, sent, failed, tokensRevoked }), {

@@ -671,7 +671,9 @@ export type Database = {
         Returns: undefined;
       };
       register_push_token: {
-        Args: { p_token: string; p_platform: string };
+        // p_device_id: stable install id (20260502125800) — same-device
+        // re-registration revokes that device's older tokens.
+        Args: { p_token: string; p_platform: string; p_device_id?: string | null };
         Returns: undefined;
       };
       revoke_push_token: {

@@ -25,6 +25,24 @@ import { requireSupabase } from '@/lib/supabase/client';
 let started = false;
 let lastToken: string | null = null;
 
+// Stable per-install id: lets the server revoke THIS device's older
+// tokens on re-registration (reinstall/token rotation) without touching
+// the user's other devices. Storage is cleared on uninstall, which is
+// exactly when a fresh id (and a fresh token) is correct.
+const INSTALL_ID_KEY = 'lend.push.install_id';
+function deviceInstallId(): string | null {
+  try {
+    let id = localStorage.getItem(INSTALL_ID_KEY);
+    if (!id) {
+      id = crypto.randomUUID();
+      localStorage.setItem(INSTALL_ID_KEY, id);
+    }
+    return id;
+  } catch {
+    return null; // storage unavailable — registration proceeds without dedupe
+  }
+}
+
 // Exact real routes only (see routes.tsx) — anything else is ignored.
 const ROUTE_WHITELIST = [
   /^\/disputes\/[a-f0-9-]+$/i,
@@ -50,11 +68,23 @@ export async function startPushRegistration(
       // 'ios' → APNs token, 'android' → FCM token. The platform value
       // drives per-platform delivery in the dispatcher.
       const platform = Capacitor.getPlatform() === 'android' ? 'android' : 'ios';
-      sb.rpc('register_push_token', { p_token: t.value, p_platform: platform }).then(
-        ({ error }) => {
-          if (error) logEvent('rpc_failure', 'warn', { op: 'register_push_token' }, error);
-        },
-      );
+      const deviceId = deviceInstallId();
+      sb.rpc('register_push_token', {
+        p_token: t.value,
+        p_platform: platform,
+        p_device_id: deviceId,
+      }).then(({ error }) => {
+        if (!error) return;
+        // Legacy fallback: until 20260502125800 is applied the RPC has
+        // no p_device_id — registration must never break on that.
+        sb.rpc('register_push_token', { p_token: t.value, p_platform: platform }).then(
+          ({ error: legacyError }) => {
+            if (legacyError) {
+              logEvent('rpc_failure', 'warn', { op: 'register_push_token' }, legacyError);
+            }
+          },
+        );
+      });
     });
     await PushNotifications.addListener('registrationError', (e) => {
       // Transient APNs failure: unlatch so the next auth/focus pass
