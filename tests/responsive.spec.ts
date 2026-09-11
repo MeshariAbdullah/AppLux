@@ -125,3 +125,72 @@ for (const route of CUSTOMER_ROUTES) {
     }
   });
 }
+
+// =====================================================================
+// Confirmation dialog (ConfirmSheet → Sheet) — real-device regression:
+// phone = bottom sheet covering the bottom navigation with visible,
+// padded actions; tablet/desktop = centered dialog (max ~480px), never
+// a bottom sheet. Driven through the demo-mode profile delete-account
+// confirmation (same shared component as the dispute claim approval).
+// =====================================================================
+
+async function openProfileConfirm(page: Page) {
+  await page.goto('/profile', { waitUntil: 'domcontentloaded' });
+  await expect
+    .poll(async () => page.evaluate(() => document.querySelector('#root')?.childElementCount ?? 0))
+    .toBeGreaterThan(0);
+  await page.getByText('حذف الحساب', { exact: true }).click();
+  await expect(page.locator('[role="dialog"]')).toBeVisible();
+}
+
+function confirmPanel(page: Page) {
+  // The focusable panel inside the dialog (overlay button is its sibling).
+  return page.locator('[role="dialog"] > div[tabindex="-1"]');
+}
+
+test('confirm dialog: phone bottom sheet covers the nav, buttons visible', async ({ page }) => {
+  await blockExternal(page);
+  await page.addInitScript((session) => {
+    window.localStorage.setItem('applux.session', JSON.stringify(session));
+  }, DEMO_SESSION);
+  await page.setViewportSize({ width: 390, height: 844 });
+  await openProfileConfirm(page);
+
+  const panel = confirmPanel(page);
+  const box = (await panel.boundingBox())!;
+  // Bottom sheet: anchored to the very bottom edge of the viewport —
+  // nothing (bottom nav included) can sit visually below it.
+  expect(Math.abs(box.y + box.height - 844)).toBeLessThanOrEqual(1);
+  // The action buttons are on-screen and not glued to the bottom edge.
+  const confirmBtn = panel.getByRole('button', { name: 'نعم، احذف حسابي' });
+  await expect(confirmBtn).toBeVisible();
+  const btnBox = (await confirmBtn.boundingBox())!;
+  expect(btnBox.y + btnBox.height).toBeLessThanOrEqual(844 - 8);
+  // The topmost element over the bottom-nav area belongs to the dialog
+  // overlay/panel — the nav can never paint above the modal.
+  const navCovered = await page.evaluate(() => {
+    const el = document.elementFromPoint(195, 844 - 20);
+    return Boolean(el?.closest('[role="dialog"]'));
+  });
+  expect(navCovered, 'dialog must cover the bottom navigation').toBe(true);
+});
+
+test('confirm dialog: tablet/desktop is a centered modal, not a bottom sheet', async ({ page }) => {
+  await blockExternal(page);
+  await page.addInitScript((session) => {
+    window.localStorage.setItem('applux.session', JSON.stringify(session));
+  }, DEMO_SESSION);
+  for (const vp of [{ width: 834, height: 1194 }, { width: 1280, height: 800 }]) {
+    await page.setViewportSize({ width: vp.width, height: vp.height });
+    await openProfileConfirm(page);
+    const box = (await confirmPanel(page).boundingBox())!;
+    // Confirmation width: the sm dialog cap (~480px), within 420–520.
+    expect(box.width).toBeLessThanOrEqual(480 + 1);
+    // Horizontally centered…
+    expect(Math.abs(box.x + box.width / 2 - vp.width / 2)).toBeLessThanOrEqual(2);
+    // …and floating: clearly detached from the bottom edge.
+    expect(vp.height - (box.y + box.height)).toBeGreaterThan(40);
+    await page.keyboard.press('Escape');
+    await expect(page.locator('[role="dialog"]')).toHaveCount(0);
+  }
+});

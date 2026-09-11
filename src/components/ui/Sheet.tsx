@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { createPortal } from 'react-dom';
 import { cn } from '@/lib/cn';
 
 type SheetProps = {
@@ -7,13 +8,16 @@ type SheetProps = {
   title?: ReactNode;
   children: ReactNode;
   footer?: ReactNode;
+  /** Dialog width at md+ (phone bottom sheet is unaffected):
+   *  'md' — content sheets (560px), 'sm' — confirmations (480px). */
+  size?: 'md' | 'sm';
 };
 
 // Responsive dialog: bottom sheet on phones, centered dialog at md+
 // (tablet/desktop) — a full-width bottom sheet on an iPad reads as a
 // stretched phone control. One component, one API; the split is pure
 // CSS so behavior/focus/escape handling is identical on every device.
-export function Sheet({ open, onClose, title, children, footer }: SheetProps) {
+export function Sheet({ open, onClose, title, children, footer, size = 'md' }: SheetProps) {
   const [mounted, setMounted] = useState(open);
   const [visible, setVisible] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
@@ -50,7 +54,13 @@ export function Sheet({ open, onClose, title, children, footer }: SheetProps) {
   }, [open, onClose]);
 
   if (!mounted) return null;
-  return (
+  // PORTAL to <body>: the overlay must sit above the ENTIRE app shell
+  // (bottom navigation included) regardless of where the opener lives.
+  // Rendered inline, any ancestor stacking context (backdrop-filter,
+  // transform, z-indexed wrappers) can trap the dialog's z-50 below
+  // the z-30 nav bars — the "nav competes with the modal" bug from
+  // real-device testing.
+  return createPortal(
     <div
       className="fixed inset-0 z-50 flex items-end justify-center md:items-center md:p-6"
       role="dialog"
@@ -60,7 +70,7 @@ export function Sheet({ open, onClose, title, children, footer }: SheetProps) {
         aria-label="close"
         onClick={onClose}
         className={cn(
-          'absolute inset-0 bg-ink-950/55 backdrop-blur-[2px] transition-opacity duration-260',
+          'absolute inset-0 bg-ink-950/65 backdrop-blur-[3px] transition-opacity duration-260',
           visible ? 'opacity-100' : 'opacity-0',
         )}
       />
@@ -73,7 +83,8 @@ export function Sheet({ open, onClose, title, children, footer }: SheetProps) {
           // rounding; enters with a fade+settle instead of the slide.
           'relative w-full max-w-[440px] bg-white rounded-t-[28px] shadow-plush outline-none',
           'pb-[env(safe-area-inset-bottom)] max-h-[88dvh] flex flex-col',
-          'md:max-w-[560px] md:rounded-[28px] md:pb-0 md:max-h-[85dvh]',
+          size === 'sm' ? 'md:max-w-[480px]' : 'md:max-w-[560px]',
+          'md:rounded-[28px] md:pb-0 md:max-h-[85dvh]',
           'transition-[transform,opacity] duration-260 ease-plush',
           visible
             ? 'translate-y-0 opacity-100'
@@ -92,11 +103,15 @@ export function Sheet({ open, onClose, title, children, footer }: SheetProps) {
           {children}
         </div>
         {footer && (
-          <div className="px-6 py-4 border-t border-canvas-200/80 bg-white/95 backdrop-blur shrink-0 md:rounded-b-[28px]">
+          // Phone: extra bottom padding keeps the actions comfortably
+          // above the home-indicator edge (the panel adds the actual
+          // safe-area inset below this).
+          <div className="px-6 pt-4 pb-5 md:py-4 border-t border-canvas-200/80 bg-white/95 backdrop-blur shrink-0 md:rounded-b-[28px]">
             {footer}
           </div>
         )}
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

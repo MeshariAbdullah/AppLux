@@ -49,6 +49,7 @@ export function ConfirmSheet({
   return (
     <Sheet
       open={open}
+      size="sm"
       onClose={loading ? () => undefined : onClose}
       footer={
         <div className="flex items-center gap-3">
@@ -71,27 +72,29 @@ export function ConfirmSheet({
         </div>
       }
     >
-      <div className="flex items-start gap-4 pt-2">
+      {/* Stacked layout: the icon sits ABOVE the text instead of
+          beside it, so the title and body get the full sheet width —
+          a side icon narrowed the text column and made financially
+          important copy cramped on phones (real-device report). */}
+      <div className="pt-2 pb-1">
         {icon && (
           <span
             className={cn(
-              'h-12 w-12 shrink-0 rounded-2xl grid place-items-center',
+              'h-11 w-11 rounded-2xl grid place-items-center mb-3.5',
               toneClass[tone],
             )}
           >
             {icon}
           </span>
         )}
-        <div className="min-w-0 flex-1">
-          <div className="text-[16px] font-semibold text-ink-900 leading-snug tracking-tight">
-            {title}
-          </div>
-          {description && (
-            <p className="mt-1.5 text-[13.5px] text-ink-500 leading-relaxed">
-              {description}
-            </p>
-          )}
+        <div className="text-[17px] font-bold text-ink-900 leading-snug tracking-tight">
+          {title}
         </div>
+        {description && (
+          <p className="mt-2 text-[14px] text-ink-600 leading-[1.85]">
+            {description}
+          </p>
+        )}
       </div>
     </Sheet>
   );

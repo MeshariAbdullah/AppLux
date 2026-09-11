@@ -3039,9 +3039,9 @@
       "accept": "Accept the claim",
       "object": "Object to the claim",
       "acceptSheet": {
-        "title": "Confirm claim acceptance",
-        "body": "You are agreeing to the merchant's current claim of {amount}. This closes the case directly and is final within the Lend dispute flow.",
-        "confirm": "Confirm acceptance",
+        "title": "Confirm claim approval",
+        "body": "By confirming, you approve the merchant’s claim for {amount} and the case will be closed immediately. This action is final within Lend’s dispute process.",
+        "confirm": "Confirm approval",
         "cancel": "Back"
       },
       "objectForm": {

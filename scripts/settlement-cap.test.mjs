@@ -109,6 +109,40 @@ test('both party panels block over-cap submission and over-cap acceptance', () =
   assert.ok(!admin.includes('amountValue >= 0'));
 });
 
+// ---------------------------------------------------------------------
+// Claim-approval confirmation dialog (ConfirmSheet)
+// ---------------------------------------------------------------------
+
+test('claim-approval confirmation uses the approved copy — ليند, not Lend', () => {
+  const sheet = ar.disputes.await.acceptSheet;
+  assert.equal(sheet.title, 'تأكيد الموافقة على المطالبة');
+  assert.equal(sheet.body,
+    'بتأكيد الموافقة، سيتم اعتماد مطالبة التاجر بقيمة {amount} وإغلاق الحالة مباشرة. هذا الإجراء نهائي ضمن مسار النزاع في ليند.');
+  assert.equal(sheet.confirm, 'تأكيد الموافقة');
+  assert.equal(sheet.cancel, 'رجوع');
+  const enSheet = en.disputes.await.acceptSheet;
+  assert.equal(enSheet.title, 'Confirm claim approval');
+  assert.equal(enSheet.body,
+    'By confirming, you approve the merchant’s claim for {amount} and the case will be closed immediately. This action is final within Lend’s dispute process.');
+  assert.equal(enSheet.confirm, 'Confirm approval');
+  assert.equal(enSheet.cancel, 'Back');
+  // The dispute reject confirmations dropped Latin "Lend" too.
+  assert.ok(!ar.disputes.settlement.rejectSheet.bodyFinalRound.includes('Lend'));
+  assert.ok(!ar.disputes.lend.rejectSheet.body.includes('Lend'));
+});
+
+test('confirmation dialog is portaled, sized sm, and amount stays formatCurrency', () => {
+  const sheetSrc = read('src/components/ui/Sheet.tsx');
+  assert.ok(sheetSrc.includes('createPortal'), 'dialog escapes page stacking contexts');
+  assert.ok(sheetSrc.includes("size === 'sm' ? 'md:max-w-[480px]'"), 'confirm dialog width cap');
+  const confirmSrc = read('src/components/ui/ConfirmSheet.tsx');
+  assert.ok(confirmSrc.includes('size="sm"'));
+  // The approval call site still confirms with the same RPC-backed
+  // onAccept and the SAR-formatted claim amount — no logic change.
+  assert.ok(customer.includes("t('disputes.await.acceptSheet.body', {"));
+  assert.ok(customer.includes('amount: formatCurrency(Number(kase.claim_amount))'));
+});
+
 test('the cap comes from the contract item value on all three pages', () => {
   for (const src of [customer, merchant, admin]) {
     assert.ok(src.includes('Number(contract.original_item_value) || Number(contract.total_amount)'));
