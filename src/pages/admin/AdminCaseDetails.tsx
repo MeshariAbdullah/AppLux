@@ -84,7 +84,7 @@ type Bundle = {
 
 export default function AdminCaseDetails() {
   const t = useT();
-  const { formatCurrency, formatDate, locale } = useI18n();
+  const { formatCurrency, formatDate, formatNumber, locale } = useI18n();
   const navigate = useNavigate();
   const params = useParams();
   const { configured } = useSupabaseAuth();
@@ -99,7 +99,8 @@ export default function AdminCaseDetails() {
   }
 
   return <AdminCaseDetailsInner key={id} id={id ?? null} configured={configured} t={t}
-    formatCurrency={formatCurrency} formatDate={formatDate} locale={locale} navigate={navigate} />;
+    formatCurrency={formatCurrency} formatDate={formatDate} formatNumber={formatNumber}
+    locale={locale} navigate={navigate} />;
 }
 
 function AdminCaseDetailsInner({
@@ -108,6 +109,7 @@ function AdminCaseDetailsInner({
   t,
   formatCurrency,
   formatDate,
+  formatNumber,
   locale,
   navigate,
 }: {
@@ -116,6 +118,7 @@ function AdminCaseDetailsInner({
   t: (k: string, v?: Record<string, string | number>) => string;
   formatCurrency: (n: number) => string;
   formatDate: (d: string) => string;
+  formatNumber: (n: number) => string;
   locale: 'ar' | 'en';
   navigate: (to: string, opts?: { replace?: boolean }) => void;
 }) {
@@ -220,6 +223,11 @@ function AdminCaseDetailsInner({
   }
 
   const { kase, contract, merchant, customerName, itemName, proposals, events, evidence, receiptUrls } = bundle;
+  // Settlement ceiling = the original item value on this case's
+  // contract (server mirrors this rule in the RPCs — P0213).
+  const settlementCap = contract
+    ? Number(contract.original_item_value) || Number(contract.total_amount) || null
+    : null;
   const merchantName =
     merchant?.display_name?.[locale] ?? merchant?.display_name?.ar ?? merchant?.company_name ?? '—';
   const merchantEvidence = evidence.filter((e) => e.row.uploaded_by_user_id !== kase.customer_user_id);
@@ -384,7 +392,7 @@ function AdminCaseDetailsInner({
               <SectionHeader title={t('disputes.settlement.title')} className="mb-0" />
               {directProposals.map((p) => (
                 <div key={p.id} className="rounded-xl2 bg-canvas-100 hairline p-3.5 space-y-1.5">
-                  <div className="flex items-center justify-between gap-2">
+                  <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1">
                     <span className="text-[12.5px] font-semibold text-ink-900">
                       {t(
                         p.proposed_by_party === 'merchant'
@@ -405,8 +413,11 @@ function AdminCaseDetailsInner({
                       label={t(`disputes.settlement.status.${p.status}`)}
                     />
                   </div>
-                  <div className="text-[15px] font-bold text-ink-900 num">
-                    {formatCurrency(Number(p.amount))}
+                  <div className="pt-0.5">
+                    <div className="text-[11px] text-ink-400">{t('disputes.settlement.amountValue')}</div>
+                    <div className="mt-0.5 text-[17px] font-bold text-ink-900 num leading-tight" dir="ltr">
+                      {formatCurrency(Number(p.amount))}
+                    </div>
                   </div>
                   {p.note && <p className="text-[12px] text-ink-600 leading-relaxed">{p.note}</p>}
                   <div className="text-[11px] text-ink-400 num">{formatDate(p.created_at)}</div>
@@ -424,6 +435,8 @@ function AdminCaseDetailsInner({
               busy={busy}
               formatCurrency={formatCurrency}
               formatDate={formatDate}
+              formatNumber={formatNumber}
+              maxAmount={settlementCap}
               onSubmit={(amount, note) =>
                 runAction('lend_submit_mediation_proposal', async () => {
                   await lendSubmitMediationProposal(kase.id, amount, note || undefined);
@@ -636,6 +649,8 @@ function LendMediationCard({
   busy,
   formatCurrency,
   formatDate,
+  formatNumber,
+  maxAmount,
   onSubmit,
 }: {
   t: (k: string, v?: Record<string, string | number>) => string;
@@ -644,13 +659,21 @@ function LendMediationCard({
   busy: boolean;
   formatCurrency: (n: number) => string;
   formatDate: (d: string) => string;
+  formatNumber: (n: number) => string;
+  /** Settlement ceiling = the contract's original item value; null
+   *  only when the contract row failed to load (server still caps). */
+  maxAmount: number | null;
   onSubmit: (amount: number, note: string) => void;
 }) {
   const [amount, setAmount] = useState('');
   const [note, setNote] = useState('');
   const [confirmOpen, setConfirmOpen] = useState(false);
   const amountValue = Number(amount);
-  const amountValid = Number.isFinite(amountValue) && amountValue >= 0 && amount.trim() !== '';
+  const amountEntered = amount.trim() !== '' && Number.isFinite(amountValue);
+  // Business rule (also enforced by the RPC, P0213): > 0 and never
+  // above the original item value.
+  const overCap = amountEntered && maxAmount != null && amountValue > maxAmount;
+  const amountValid = amountEntered && amountValue > 0 && !overCap;
 
   const responseFor = (party: 'merchant' | 'customer') =>
     lendProposal?.dispute_proposal_responses.find((r) => r.party === party) ?? null;
@@ -697,6 +720,17 @@ function LendMediationCard({
               onChange={(e) => setAmount(e.target.value.replace(/[^0-9.]/g, ''))}
               placeholder="0"
             />
+            {overCap && maxAmount != null ? (
+              <p className="mt-1.5 text-[11.5px] text-danger-600 leading-relaxed">
+                {t('disputes.settlement.overCap', { amount: formatNumber(maxAmount) })}
+              </p>
+            ) : (
+              maxAmount != null && (
+                <p className="mt-1.5 text-[11.5px] text-ink-400 leading-relaxed">
+                  {t('disputes.settlement.maxHint', { amount: formatNumber(maxAmount) })}
+                </p>
+              )
+            )}
           </FormField>
           <FormField label={t('admin.disputes.mediation.noteLabel')}>
             <Textarea value={note} onChange={(e) => setNote(e.target.value)} rows={2} />
@@ -738,8 +772,11 @@ function LendMediationCard({
                 {formatDate(lendProposal.created_at)}
               </span>
             </div>
-            <div className="text-[16px] font-bold text-ink-900 num">
-              {formatCurrency(Number(lendProposal.amount))}
+            <div className="pt-0.5">
+              <div className="text-[11px] text-ink-400">{t('disputes.settlement.amountValue')}</div>
+              <div className="mt-0.5 text-[17px] font-bold text-ink-900 num leading-tight" dir="ltr">
+                {formatCurrency(Number(lendProposal.amount))}
+              </div>
             </div>
             {lendProposal.note && (
               <p className="text-[12px] text-ink-600 leading-relaxed">{lendProposal.note}</p>

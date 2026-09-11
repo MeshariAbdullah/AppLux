@@ -21,7 +21,8 @@
     "test:otp": "esbuild supabase/functions/_shared/msegat.ts --bundle --format=esm --outfile=scripts/.msegat-bundle.mjs && esbuild supabase/functions/_shared/mobile.ts --bundle --format=esm --outfile=scripts/.mobile-bundle.mjs && node --test scripts/msegat-otp.test.mjs",
     "test:registration": "esbuild src/lib/otp/flags.ts --bundle --format=esm --outfile=scripts/.otp-flags-bundle.mjs && node --test scripts/registration-otp.test.mjs",
     "test:push": "node --test scripts/push-dedupe.test.mjs",
-    "test:uuid": "esbuild src/lib/displayRef.ts --bundle --format=esm --outfile=scripts/.display-ref-bundle.mjs && node --test scripts/uuid-leak.test.mjs"
+    "test:uuid": "esbuild src/lib/displayRef.ts --bundle --format=esm --outfile=scripts/.display-ref-bundle.mjs && node --test scripts/uuid-leak.test.mjs",
+    "test:settlement": "node --test scripts/settlement-cap.test.mjs"
   },
   "dependencies": {
     "@capacitor/core": "^7.0.0",

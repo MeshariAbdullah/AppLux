@@ -121,7 +121,8 @@
     "disputeAlreadyResponded": "Your response to this offer is already recorded.",
     "disputeNotFound": "Case not found.",
     "otpRequiredForIssue": "Issuing the offer requires a successful customer verification code. Complete the verification step and try again.",
-    "disputeResponseWindowClosed": "The response window for this claim has closed. Non-response is documented in the case record and the case proceeds on the available information."
+    "disputeResponseWindowClosed": "The response window for this claim has closed. Non-response is documented in the case record and the case proceeds on the available information.",
+    "settlementOverCap": "The settlement offer cannot exceed the original item value."
   },
   "welcome": {
     "eyebrow": "Lend",
@@ -3082,6 +3083,10 @@
       "counterHint": "After rejecting you can submit your own offer in the next round.",
       "submitTitle": "Submit a settlement offer",
       "amountLabel": "Proposed amount",
+      "amountValue": "Offer amount",
+      "maxHint": "Maximum offer is the original item value: SAR {amount}",
+      "overCap": "The settlement offer cannot exceed the original item value: SAR {amount}",
+      "acceptBlockedOverCap": "This offer cannot be accepted because it exceeds the original item value: SAR {amount}. It can be rejected so the settlement continues.",
       "noteLabel": "Note (optional)",
       "submit": "Send offer",
       "waitingOther": "Waiting for the other party to respond to the current offer.",

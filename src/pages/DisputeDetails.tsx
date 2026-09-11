@@ -89,7 +89,7 @@ type Bundle = {
 
 export default function DisputeDetails() {
   const t = useT();
-  const { dir, formatCurrency, formatDate, locale } = useI18n();
+  const { dir, formatCurrency, formatDate, formatNumber, locale } = useI18n();
   const navigate = useNavigate();
   const { id } = useParams();
   const { configured, session } = useSupabaseAuth();
@@ -210,6 +210,12 @@ export default function DisputeDetails() {
   }
 
   const { kase, contract, merchant, itemName, proposals, evidence, receiptUrls } = bundle;
+  // Settlement ceiling = the original item value on this case's
+  // contract (server mirrors this rule in the RPCs — P0213). The
+  // total_amount fallback matches the pre-120500 legacy convention.
+  const settlementCap = contract
+    ? Number(contract.original_item_value) || Number(contract.total_amount) || null
+    : null;
   const merchantName =
     merchant?.display_name?.[locale] ?? merchant?.display_name?.ar ?? merchant?.company_name ?? '—';
   const merchantEvidence = evidence.filter((e) => e.row.uploaded_by_user_id !== kase.customer_user_id);
@@ -407,6 +413,8 @@ export default function DisputeDetails() {
               busy={busy}
               formatCurrency={formatCurrency}
               formatDate={formatDate}
+              formatNumber={formatNumber}
+              maxAmount={settlementCap}
               directProposals={directProposals}
               pendingDirect={pendingDirect}
               usedRounds={usedRounds}
@@ -429,6 +437,8 @@ export default function DisputeDetails() {
               busy={busy}
               formatCurrency={formatCurrency}
               formatDate={formatDate}
+              formatNumber={formatNumber}
+              maxAmount={settlementCap}
               lendProposal={lendProposal}
               onRespond={(accept) =>
                 runAction('respond_to_lend_proposal', () =>
@@ -814,7 +824,7 @@ function ProposalCard({
     p.status === 'accepted' ? 'success' : p.status === 'rejected' ? 'neutral' : 'warn';
   return (
     <div className="rounded-xl2 bg-canvas-100 hairline p-3.5 space-y-1.5">
-      <div className="flex items-center justify-between gap-2">
+      <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1">
         <span className="text-[12.5px] font-semibold text-ink-900">
           {t(`disputes.settlement.proposalFrom.${p.proposed_by_party}`)}
           {p.kind === 'direct' && p.round != null && (
@@ -826,7 +836,14 @@ function ProposalCard({
         </span>
         <StatusChip size="sm" tone={statusTone} dot={false} label={t(`disputes.settlement.status.${p.status}`)} />
       </div>
-      <div className="text-[15px] font-bold text-ink-900 num">{formatCurrency(Number(p.amount))}</div>
+      {/* The amount is the card's payload: own labeled line, full
+          width, never squeezed against the header. */}
+      <div className="pt-0.5">
+        <div className="text-[11px] text-ink-400">{t('disputes.settlement.amountValue')}</div>
+        <div className="mt-0.5 text-[17px] font-bold text-ink-900 num leading-tight" dir="ltr">
+          {formatCurrency(Number(p.amount))}
+        </div>
+      </div>
       {p.note && <p className="text-[12px] text-ink-600 leading-relaxed">{p.note}</p>}
       <div className="text-[11px] text-ink-400 num">{formatDate(p.created_at)}</div>
     </div>
@@ -859,6 +876,8 @@ function DirectSettlementPanel({
   busy,
   formatCurrency,
   formatDate,
+  formatNumber,
+  maxAmount,
   directProposals,
   pendingDirect,
   usedRounds,
@@ -869,6 +888,10 @@ function DirectSettlementPanel({
   busy: boolean;
   formatCurrency: (n: number) => string;
   formatDate: (d: string) => string;
+  formatNumber: (n: number) => string;
+  /** Settlement ceiling = the contract's original item value; null
+   *  only when the contract row failed to load (server still caps). */
+  maxAmount: number | null;
   directProposals: DisputeProposalWithResponses[];
   pendingDirect: DisputeProposalWithResponses | null;
   usedRounds: number;
@@ -886,7 +909,15 @@ function DirectSettlementPanel({
   const canSubmit = !pendingDirect && usedRounds < 2;
   const currentRound = Math.min(usedRounds + (pendingDirect ? 0 : 1), 2);
   const amountValue = Number(amount);
-  const amountValid = Number.isFinite(amountValue) && amountValue >= 0 && amount.trim() !== '';
+  const amountEntered = amount.trim() !== '' && Number.isFinite(amountValue);
+  // Business rule (also enforced by the RPC, P0213): > 0 and never
+  // above the original item value.
+  const overCap = amountEntered && maxAmount != null && amountValue > maxAmount;
+  const amountValid = amountEntered && amountValue > 0 && !overCap;
+  // Legacy protection: a pending proposal above today's cap cannot be
+  // accepted (server refuses too) — rejecting keeps the flow moving.
+  const pendingOverCap =
+    pendingDirect != null && maxAmount != null && Number(pendingDirect.amount) > maxAmount;
 
   return (
     <Card padded className="space-y-3.5">
@@ -906,7 +937,18 @@ function DirectSettlementPanel({
 
       {pendingFromMerchant && pendingDirect && (
         <div className="space-y-2.5">
-          <Button size="lg" block loading={busy} disabled={busy} onClick={() => onRespond(pendingDirect.id, true)}>
+          {pendingOverCap && maxAmount != null && (
+            <div className="rounded-xl2 bg-danger-50 ring-1 ring-danger-200 px-3.5 py-2.5 text-[12px] text-danger-700 leading-relaxed">
+              {t('disputes.settlement.acceptBlockedOverCap', { amount: formatNumber(maxAmount) })}
+            </div>
+          )}
+          <Button
+            size="lg"
+            block
+            loading={busy}
+            disabled={busy || pendingOverCap}
+            onClick={() => onRespond(pendingDirect.id, true)}
+          >
             {t('disputes.settlement.accept')}
           </Button>
           <button
@@ -962,6 +1004,17 @@ function DirectSettlementPanel({
               onChange={(e) => setAmount(e.target.value.replace(/[^0-9.]/g, ''))}
               placeholder="0"
             />
+            {overCap && maxAmount != null ? (
+              <p className="mt-1.5 text-[11.5px] text-danger-600 leading-relaxed">
+                {t('disputes.settlement.overCap', { amount: formatNumber(maxAmount) })}
+              </p>
+            ) : (
+              maxAmount != null && (
+                <p className="mt-1.5 text-[11.5px] text-ink-400 leading-relaxed">
+                  {t('disputes.settlement.maxHint', { amount: formatNumber(maxAmount) })}
+                </p>
+              )
+            )}
           </FormField>
           <FormField label={t('disputes.settlement.noteLabel')}>
             <Textarea value={note} onChange={(e) => setNote(e.target.value)} rows={2} />
@@ -990,6 +1043,8 @@ function LendPanel({
   busy,
   formatCurrency,
   formatDate,
+  formatNumber,
+  maxAmount,
   lendProposal,
   onRespond,
 }: {
@@ -997,10 +1052,18 @@ function LendPanel({
   busy: boolean;
   formatCurrency: (n: number) => string;
   formatDate: (d: string) => string;
+  formatNumber: (n: number) => string;
+  /** Settlement ceiling = the contract's original item value; null
+   *  only when the contract row failed to load (server still caps). */
+  maxAmount: number | null;
   lendProposal: DisputeProposalWithResponses | null;
   onRespond: (accept: boolean) => void;
 }) {
   const [rejectOpen, setRejectOpen] = useState(false);
+  // Legacy protection: an over-cap Lend proposal cannot be accepted
+  // (server refuses too, P0213) — rejecting stays available.
+  const lendOverCap =
+    lendProposal != null && maxAmount != null && Number(lendProposal.amount) > maxAmount;
   const myResponse =
     lendProposal?.dispute_proposal_responses.find((r) => r.party === 'customer') ?? null;
 
@@ -1022,8 +1085,11 @@ function LendPanel({
             <div className="text-[12.5px] font-semibold text-lavender-800">
               {t('disputes.lend.proposalTitle')}
             </div>
-            <div className="text-[16px] font-bold text-ink-900 num">
-              {formatCurrency(Number(lendProposal.amount))}
+            <div className="pt-0.5">
+              <div className="text-[11px] text-ink-400">{t('disputes.settlement.amountValue')}</div>
+              <div className="mt-0.5 text-[17px] font-bold text-ink-900 num leading-tight" dir="ltr">
+                {formatCurrency(Number(lendProposal.amount))}
+              </div>
             </div>
             {lendProposal.note && (
               <p className="text-[12px] text-ink-600 leading-relaxed">{lendProposal.note}</p>
@@ -1042,7 +1108,12 @@ function LendPanel({
             </div>
           ) : (
             <div className="space-y-2.5">
-              <Button size="lg" block loading={busy} disabled={busy} onClick={() => onRespond(true)}>
+              {lendOverCap && maxAmount != null && (
+                <div className="rounded-xl2 bg-danger-50 ring-1 ring-danger-200 px-3.5 py-2.5 text-[12px] text-danger-700 leading-relaxed">
+                  {t('disputes.settlement.acceptBlockedOverCap', { amount: formatNumber(maxAmount) })}
+                </div>
+              )}
+              <Button size="lg" block loading={busy} disabled={busy || lendOverCap} onClick={() => onRespond(true)}>
                 {t('disputes.lend.accept')}
               </Button>
               <button

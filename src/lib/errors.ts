@@ -127,6 +127,10 @@ export function translateError(
     // deadline passed — non-response is documented and the case
     // proceeds to Lend review; there is no late-response path.
     if (code === 'P0212') return t('errors.disputeResponseWindowClosed');
+    // Settlement offer above the original item value (20260502125900).
+    // The panels pre-validate with the exact cap; this is the server
+    // backstop copy for bypassed/stale submissions.
+    if (code === 'P0213') return t('errors.settlementOverCap');
     if (code === 'P0221') return t('errors.validation');
     if (code === 'P0211') return t('errors.unauthorized');
     // Case raised against a contract that never started (pending /
