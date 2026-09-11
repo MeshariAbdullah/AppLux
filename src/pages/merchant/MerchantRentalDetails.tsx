@@ -19,6 +19,7 @@ import {
   UsersIcon,
 } from '@/components/icons';
 import { cn } from '@/lib/cn';
+import { displayRef } from '@/lib/displayRef';
 import { CACHE_TTL, cacheKeys } from '@/lib/cache/keys';
 import { cachedFetch } from '@/lib/cache/memoryCache';
 import { ENABLE_PAYMENTS_AND_NOTES } from '@/lib/featureFlags';
@@ -475,8 +476,17 @@ export default function MerchantRentalDetails() {
                     to={`/merchant/damages/${rental.damageCaseId}`}
                     className="mt-1.5 inline-flex items-center gap-1.5 text-[12.5px] font-semibold text-danger-700 hover:underline"
                   >
-                    {t('merchant.rental.outcome.openCase')} ·{' '}
-                    <span className="num">{rental.damageCaseId}</span>
+                    {t('merchant.rental.outcome.openCase')}
+                    {/* Friendly DC-2026-… ref only; displayRef refuses
+                        UUIDs, so a plumbing slip shows no id at all. */}
+                    {displayRef(rental.damageCaseRef) && (
+                      <>
+                        {' · '}
+                        <span className="num" dir="ltr">
+                          {displayRef(rental.damageCaseRef)}
+                        </span>
+                      </>
+                    )}
                   </Link>
                 )}
               </div>

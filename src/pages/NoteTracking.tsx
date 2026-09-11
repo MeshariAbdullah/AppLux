@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Navigate, useNavigate, useParams } from 'react-router-dom';
 import { ENABLE_PAYMENTS_AND_NOTES } from '@/lib/featureFlags';
+import { displayRef } from '@/lib/displayRef';
 import { Header, Screen } from '@/components/layout';
 import {
   Button,
@@ -297,9 +298,12 @@ export default function NoteTracking() {
                       {linkedContract.counterparty}
                     </div>
                   </div>
-                  <span className="num text-[11.5px] text-ink-400 shrink-0">
-                    {linkedContract.id}
-                  </span>
+                  {/* Public contract reference only — never the row UUID. */}
+                  {displayRef(linkedContract.contractNumber ?? null) && (
+                    <span className="num text-[11.5px] text-ink-400 shrink-0" dir="ltr">
+                      {displayRef(linkedContract.contractNumber ?? null)}
+                    </span>
+                  )}
                 </Card>
               </button>
             </section>

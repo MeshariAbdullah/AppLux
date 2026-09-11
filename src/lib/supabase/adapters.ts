@@ -468,6 +468,9 @@ export function adaptContractToMerchantRental(
     status,
     closureStatus,
     damageCaseId: caseNonDismissed ? damageCase.id : undefined,
+    // Friendly DC-2026-… reference for display; the UUID above is for
+    // routing only and must never be rendered as text.
+    damageCaseRef: caseNonDismissed ? damageCase.case_number : undefined,
     closedAt: closedAt ?? undefined,
     contractRef: row.contract_number,
     noteRef: ctx.noteRef ?? note?.reference_number ?? row.contract_number,

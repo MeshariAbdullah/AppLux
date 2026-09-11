@@ -579,6 +579,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           ...(prev[rentalId] ?? {}),
           closureStatus: 'damaged',
           damageCaseId: id,
+          damageCaseRef: id, // demo ids are already friendly (DM-2026-###)
         },
       }));
       return created;

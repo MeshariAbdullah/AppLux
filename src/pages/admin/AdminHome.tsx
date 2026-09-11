@@ -27,7 +27,6 @@ import {
   HistoryIcon,
   InfoIcon,
   PackageIcon,
-  ReceiptIcon,
   ShieldIcon,
   SupportIcon,
   UsersIcon,
@@ -37,7 +36,6 @@ import { cn } from '@/lib/cn';
 import {
   caseSeverityTone as severityTone,
   caseStageTone as stageTone,
-  overdueBucketTone as bucketTone,
 } from '@/lib/format/statusTones';
 import { logEvent } from '@/lib/observability/log';
 import { useI18n, useT } from '@/lib/i18n';
@@ -47,8 +45,6 @@ import {
   SEED_ADMIN_PENDING_MERCHANTS,
   SEED_ADMIN_USERS,
   type AdminActiveCase,
-  type AdminOverdueBucket,
-  type AdminOverdueCase,
   type AdminPendingMerchant,
 } from '@/lib/data';
 
@@ -884,79 +880,3 @@ function CaseRow({
   );
 }
 
-function BucketTile({
-  bucket,
-  count,
-  label,
-}: {
-  bucket: AdminOverdueBucket;
-  count: number;
-  label: ReactNode;
-}) {
-  const tone = bucketTone(bucket);
-  const bg =
-    tone === 'warn'
-      ? 'bg-warn-50 text-warn-700'
-      : 'bg-danger-50 text-danger-700';
-  return (
-    <div className={cn('rounded-xl p-2.5 text-center', bg)}>
-      <div className="text-[10px] uppercase tracking-wide opacity-75">
-        {label}
-      </div>
-      <div className="mt-0.5 text-[16px] font-bold num leading-none">
-        {count}
-      </div>
-    </div>
-  );
-}
-
-function OverdueRow({
-  item,
-  formatCurrency,
-  t,
-  dir,
-}: {
-  item: AdminOverdueCase;
-  formatCurrency: (n: number) => string;
-  t: (key: string, vars?: Record<string, string | number>) => string;
-  dir: 'rtl' | 'ltr';
-}) {
-  return (
-    <Link to="/admin/cases" className="flex items-center gap-3 py-2.5 group">
-      <span className="h-10 w-10 shrink-0 rounded-xl bg-canvas-100 text-ink-700 grid place-items-center font-semibold text-[11.5px]">
-        {item.customerInitials}
-      </span>
-      <div className="flex-1 min-w-0">
-        <div className="text-[13.5px] font-semibold text-ink-900 truncate">
-          {item.customerName}
-        </div>
-        <div className="mt-0.5 flex items-center gap-1.5 text-[11.5px] text-ink-400 truncate">
-          <span className="truncate">{item.merchantName}</span>
-          <span className="text-ink-300">·</span>
-          <ReceiptIcon size={10} />
-          <span className="num">{item.id}</span>
-        </div>
-      </div>
-      <div className="flex flex-col items-end gap-1 shrink-0">
-        <div className="text-[13px] font-semibold num text-ink-900">
-          {formatCurrency(item.amount)}
-        </div>
-        <StatusChip
-          size="sm"
-          tone={bucketTone(item.bucket)}
-          dot
-          label={t('admin.home.overdue.daysOverdue', {
-            count: item.daysOverdue,
-          })}
-        />
-      </div>
-      <ChevronIcon
-        size={12}
-        className={cn(
-          'text-ink-300 shrink-0',
-          dir === 'rtl' ? '' : 'rotate-180',
-        )}
-      />
-    </Link>
-  );
-}

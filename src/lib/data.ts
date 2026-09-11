@@ -650,6 +650,9 @@ export type MerchantRental = {
   closedAt?: string;
   closureNotes?: string;
   damageCaseId?: string;
+  /** Friendly public reference of the open case (DC-2026-…) — the only
+   *  form ever RENDERED; damageCaseId stays routing-internal. */
+  damageCaseRef?: string;
 };
 
 export type MerchantApprovalStage =

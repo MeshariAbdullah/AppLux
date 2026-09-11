@@ -383,9 +383,13 @@ export default function AdminUserDetails() {
                     </span>
                   )}
                 </div>
-                <div className="mt-1 text-[12px] text-white/65 truncate num">
-                  {user.id}
-                </div>
+                {/* Contact line, not the internal UUID — raw ids never
+                    render, even on admin screens. */}
+                {user.mobile && (
+                  <div className="mt-1 text-[12px] text-white/65 truncate num" dir="ltr">
+                    +966 {user.mobile}
+                  </div>
+                )}
               </div>
             </div>
             <div className="relative mt-4 flex flex-wrap items-center gap-2">
