@@ -182,7 +182,12 @@ export function buildContractFromTemplate({
   const lateBasis =
     cfg.lateFeeType === 'fixed'
       ? { ar: 'مبلغ ثابت لكل يوم تأخير', en: 'a fixed amount per late day' }
-      : { ar: `${lateMult}× السعر اليومي`, en: `${lateMult}× the daily rate` };
+      : cfg.lateFeeType === 'percentage'
+        ? {
+            ar: `${Math.round(cfg.lateFeePercent)}% من قيمة الإيجار لكل يوم`,
+            en: `${Math.round(cfg.lateFeePercent)}% of the rental value per late day`,
+          }
+        : { ar: `${lateMult}× السعر اليومي`, en: `${lateMult}× the daily rate` };
 
   // NOTE: the lessor is a contracting PARTY, not a contract term — its
   // identity lives in the الأطراف section (with the CR number since

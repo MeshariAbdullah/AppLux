@@ -1428,11 +1428,9 @@
         "damageFixedLabel": "Fixed damage amount",
         "damageFixedHint": "An agreed fixed amount recorded on the contract for light damage, independent of the item value.",
         "lateTypeLabel": "Late-return charge basis",
-        "lateMultiplierOption": "Percentage / multiplier of price",
         "lateFixedOption": "Fixed amount per late day",
         "lateFixedLabel": "Fixed late amount (per day)",
         "lateFixedHint": "Charged for each day the return is late, capped at the item value.",
-        "lateFixedForcedNote": "With total-amount pricing there is no daily price to multiply, so the late charge is set as a fixed amount per late day.",
         "nationalIdLabel": "Customer National ID for this contract",
         "nationalIdHint": "Enter the customer's National ID to record it on this specific contract. The customer reviews it before approving the contract; it is not saved to their account.",
         "nationalIdInvalid": "National ID must be 10 digits and start with 1 or 2.",
@@ -1440,10 +1438,6 @@
         "lightDamageHint": "Percentage of the item value used for partial-damage liability.",
         "lightDamageUnit": "%",
         "lightDamagePreview": "Equals {amount}",
-        "lateReturnLabel": "Late-return multiplier",
-        "lateReturnHint": "Multiplier applied to the daily rate per day the item is overdue.",
-        "lateReturnUnit": "×",
-        "lateReturnPreview": "Equals {amount} per day",
         "previewTitle": "Contract preview",
         "previewSubtitle": "These are the clauses the customer will receive.",
         "summary": {
@@ -1455,7 +1449,12 @@
           "fullDamage": "Full damage",
           "lateReturnPerDay": "Late return / day"
         },
-        "issuePackageCta": "Issue rental package · {amount}"
+        "issuePackageCta": "Issue rental package · {amount}",
+        "latePercentOption": "Percentage of rental value",
+        "latePercentLabel": "Late percentage (per day)",
+        "latePercentHint": "A percentage of the rental value charged for each late day, capped at the item value.",
+        "lateExplainPercent": "Late return is charged at {pct}% of the rental value per day — {amount} for each late day.",
+        "lateExplainFixed": "Late return is charged a fixed {amount} per day."
       },
       "handoff": {
         "seal": "Rental package issued",

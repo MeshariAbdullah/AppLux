@@ -19,7 +19,12 @@
 
 export type PricingType = 'daily' | 'total';
 export type DamageChargeType = 'percentage' | 'fixed';
-export type LateFeeType = 'multiplier' | 'fixed';
+// 'percentage' and 'fixed' are the two modes new offers can use
+// (20260502130100): percentage of the RENTAL PRICE per late day, or a
+// fixed SAR amount per late day. 'multiplier' (daily rate × factor)
+// exists ONLY so contracts issued before the change keep rendering
+// their historical values — the wizard no longer offers it.
+export type LateFeeType = 'multiplier' | 'fixed' | 'percentage';
 
 export const DEFAULT_LIGHT_DAMAGE_FRACTION = 0.3;
 export const DEFAULT_LATE_RETURN_MULTIPLIER = 1.5;
@@ -42,8 +47,12 @@ export type PricingConfig = {
   /** SAR. Meaningful only in damage 'fixed' mode. */
   damageFixedAmount: number;
   lateFeeType: LateFeeType;
-  /** × of the daily rate. Meaningful only in late 'multiplier' mode. */
+  /** × of the daily rate. Meaningful only in the LEGACY 'multiplier'
+   *  mode (pre-20260502130100 offers). */
   lateReturnMultiplier: number;
+  /** Percent (0..100) of the RENTAL PRICE per late day. Meaningful
+   *  only in 'percentage' mode. Merchant-entered — never defaulted. */
+  lateFeePercent: number;
   /** SAR per late day. Meaningful only in late 'fixed' mode. */
   lateFeeFixedAmount: number;
 };
@@ -64,15 +73,21 @@ export function computeLightDamageCharge(cfg: PricingConfig): number {
   return Math.round(Math.max(cfg.itemValue, 0) * cfg.lightDamageFraction);
 }
 
-/** Fee per LATE DAY.
- *  multiplier → daily rate × multiplier (rounded, legacy behavior);
- *  fixed → the entered SAR amount, untouched. In 'total' pricing there
- *  is no daily rate, so 'multiplier' is invalid there (DB constraint +
- *  UI both enforce fixed); if legacy/odd data ever combines them, the
- *  multiplier falls back to an average daily base (total ÷ days) so
- *  the clause never silently renders 0. */
+/** Fee per LATE DAY — exactly the merchant's configured rule:
+ *  fixed      → the entered SAR amount, untouched (0 stays 0);
+ *  percentage → rental price × the entered percent (0 stays 0 — no
+ *               hidden default is ever injected);
+ *  multiplier → LEGACY (pre-20260502130100 rows only): daily rate ×
+ *               multiplier, preserved verbatim so historical contracts
+ *               keep rendering their stored terms; odd legacy data
+ *               combining it with 'total' pricing uses the average
+ *               daily base (total ÷ days) so the clause never
+ *               silently renders 0. */
 export function computeLateFeePerDay(cfg: PricingConfig): number {
   if (cfg.lateFeeType === 'fixed') return Math.max(cfg.lateFeeFixedAmount, 0);
+  if (cfg.lateFeeType === 'percentage') {
+    return Math.round(computeRentalTotal(cfg) * (Math.max(cfg.lateFeePercent, 0) / 100));
+  }
   const base =
     cfg.pricingType === 'total'
       ? Math.max(cfg.totalAmount, 0) / Math.max(cfg.rentalDays, 1)
@@ -122,7 +137,11 @@ export function resolveInvoicePricing(
   const damageChargeType: DamageChargeType =
     invoice.damage_charge_type === 'fixed' ? 'fixed' : 'percentage';
   const lateFeeType: LateFeeType =
-    invoice.late_fee_type === 'fixed' ? 'fixed' : 'multiplier';
+    invoice.late_fee_type === 'fixed'
+      ? 'fixed'
+      : invoice.late_fee_type === 'percentage'
+        ? 'percentage'
+        : 'multiplier';
   const rentalDays = items.length
     ? Math.max(...items.map((it) => it.rental_days || 0)) || 1
     : 1;
@@ -146,6 +165,12 @@ export function resolveInvoicePricing(
       invoice.late_return_multiplier,
       DEFAULT_LATE_RETURN_MULTIPLIER,
     ),
+    // 'percentage' rows store the FRACTION in late_return_multiplier
+    // (0.2 = 20%); resolved to percent with NO fallback — an absent
+    // value yields 0, never an invented rate (the DB constraint
+    // requires (0,1] for percentage rows anyway).
+    lateFeePercent:
+      lateFeeType === 'percentage' ? num(invoice.late_return_multiplier) * 100 : 0,
     lateFeeFixedAmount: num(invoice.late_fee_fixed_amount),
   };
 }

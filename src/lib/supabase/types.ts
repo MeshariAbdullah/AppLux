@@ -241,7 +241,7 @@ export type RentalInvoiceRow = {
   /** Late-fee model: 'multiplier' (daily rate × late_return_multiplier,
    *  legacy default) or 'fixed' (late_fee_fixed_amount SAR per late
    *  day). 'total' pricing requires 'fixed'. */
-  late_fee_type: 'multiplier' | 'fixed' | null;
+  late_fee_type: 'multiplier' | 'fixed' | 'percentage' | null;
   /** Fixed fee per LATE DAY (SAR) — set when late_fee_type is 'fixed'. */
   late_fee_fixed_amount: number | null;
   status: InvoiceStatus;

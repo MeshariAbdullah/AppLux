@@ -180,8 +180,11 @@ type OperationDraft = {
   damageChargeType: DamageChargeType;   // 'percentage' | 'fixed'
   lightDamagePercent: string;  // 0..100, default '30' (percentage mode)
   damageFixedAmount: string;   // SAR (fixed mode)
-  lateFeeType: LateFeeType;    // 'multiplier' | 'fixed'
-  lateReturnMultiplier: string; // ×, default '1.5' (multiplier mode)
+  // Only the two supported modes for NEW offers: 'percentage' of the
+  // rental price per late day, or a 'fixed' SAR amount per late day.
+  // ('multiplier' is legacy render-only — never issued anymore.)
+  lateFeeType: LateFeeType;
+  lateFeePercent: string;      // % of the rental price — NO default
   lateFeeFixedAmount: string;  // SAR per late day (fixed mode)
 };
 
@@ -238,8 +241,11 @@ const INITIAL_SESSION: SessionState = {
     damageChargeType: 'percentage',
     lightDamagePercent: '30',
     damageFixedAmount: '',
-    lateFeeType: 'multiplier',
-    lateReturnMultiplier: '1.5',
+    // The merchant must EXPLICITLY choose the late-fee value — no
+    // pre-filled multiplier/percentage (the old ×1.5 default is what
+    // silently produced unexplainable fees like 450).
+    lateFeeType: 'percentage',
+    lateFeePercent: '',
     lateFeeFixedAmount: '',
   },
   eligibility: { row: null, loading: false, error: null },
@@ -293,7 +299,9 @@ function draftPricingConfig(draft: OperationDraft): PricingConfig {
     lightDamageFraction: clampLightFraction(draft.lightDamagePercent),
     damageFixedAmount: Number(draft.damageFixedAmount) || 0,
     lateFeeType: draft.lateFeeType,
-    lateReturnMultiplier: clampLateMultiplier(draft.lateReturnMultiplier),
+    // Legacy multiplier mode is not issuable from this wizard.
+    lateReturnMultiplier: 0,
+    lateFeePercent: latePercentValue(draft.lateFeePercent),
     lateFeeFixedAmount: Number(draft.lateFeeFixedAmount) || 0,
   };
 }
@@ -816,7 +824,7 @@ export default function MerchantRentalSession() {
     const rentalFee = computeRentalTotal(cfg);
     const itemValue = cfg.itemValue;
     const lightDamageFraction = cfg.lightDamageFraction;
-    const lateReturnMultiplier = cfg.lateReturnMultiplier;
+    const lateReturnMultiplier = storedLateMultiplier(cfg);
 
     // --- Dev-only synthetic issuance ----------------------------------
     // Production builds tree-shake this branch (DEV_DEMO_FALLBACK = false).
@@ -1838,7 +1846,7 @@ function OperationCard({
               onChange={(v) =>
                 setOperation({
                   pricingType: v,
-                  ...(v === 'total' ? { lateFeeType: 'fixed' as LateFeeType } : {}),
+
                 })
               }
             />
@@ -2092,15 +2100,19 @@ function EligibilityCard({
 
 /** Penalty inputs valid for the ACTIVE modes only — inactive-mode
  *  fields are ignored so stale values never block or leak through.
- *  'total' pricing additionally requires the fixed late fee (there is
- *  no daily rate to multiply; the DB constraint enforces the same). */
+ *  Percentage late fees require an explicit percent in (0, 100] —
+ *  never a silent default (the DB percentage-bounds constraint
+ *  enforces the same fraction range). */
 function penaltyConfigValid(draft: OperationDraft): boolean {
   if (draft.damageChargeType === 'fixed') {
     if (draft.damageFixedAmount.trim() === '' || !(Number(draft.damageFixedAmount) >= 0)) {
       return false;
     }
   }
-  if (draft.pricingType === 'total' && draft.lateFeeType !== 'fixed') return false;
+  if (draft.lateFeeType === 'percentage') {
+    const pct = latePercentValue(draft.lateFeePercent);
+    if (draft.lateFeePercent.trim() === '' || !(pct > 0 && pct <= 100)) return false;
+  }
   if (draft.lateFeeType === 'fixed') {
     if (draft.lateFeeFixedAmount.trim() === '' || !(Number(draft.lateFeeFixedAmount) >= 0)) {
       return false;
@@ -2116,10 +2128,19 @@ function clampLightFraction(raw: string): number {
   return Math.min(Math.max(n / 100, 0.01), 1);
 }
 
-function clampLateMultiplier(raw: string): number {
+/** Merchant-entered late percent, verbatim — NO silent default.
+ *  Invalid input resolves to 0, which validation refuses. */
+function latePercentValue(raw: string): number {
   const n = Number(raw);
-  if (!Number.isFinite(n) || n <= 0) return 1.5;
-  return Math.min(Math.max(n, 0.1), 10);
+  return Number.isFinite(n) && n > 0 ? n : 0;
+}
+
+/** The value persisted in rental_invoices.late_return_multiplier:
+ *  percentage rows store the FRACTION of the rental price
+ *  (20260502130100); for fixed rows the column is ignored, so the
+ *  legacy schema default keeps the NOT NULL + (>0) checks satisfied. */
+function storedLateMultiplier(cfg: PricingConfig): number {
+  return cfg.lateFeeType === 'percentage' ? cfg.lateFeePercent / 100 : 1.5;
 }
 
 // ---------------------------------------------------------------------
@@ -2171,7 +2192,7 @@ function ContractCard({
   const days = cfg.rentalDays;
   const dailyRate = cfg.pricingType === 'daily' ? cfg.dailyRate : 0;
   const lightFrac = cfg.lightDamageFraction;
-  const lateMult = cfg.lateReturnMultiplier;
+  const lateMult = storedLateMultiplier(cfg);
   // Contract-scoped identity: required to issue. Inline error appears
   // once the merchant has typed something that can't be a valid ID.
   const idCheck = classifyNationalId(operation.lesseeNationalId);
@@ -2235,7 +2256,6 @@ function ContractCard({
     returnDate: new Date(Date.now() + days * 86_400_000).toISOString(),
     durationDays: days,
     lightDamageFraction: lightFrac,
-    lateReturnMultiplier: lateMult,
   }).clauses;
 
   const lightDamageAmount = computeLightDamageCharge(cfg);
@@ -2349,51 +2369,45 @@ function ContractCard({
                 </FormField>
               )}
 
-              {/* Late return — multiplier of the daily rate OR a fixed
-                  SAR amount PER LATE DAY. Total pricing has no daily
-                  rate, so the multiplier option is unavailable there. */}
+              {/* Late return — exactly two rules, both valid under
+                  either pricing model: a PERCENTAGE of the rental
+                  price per late day, or a fixed SAR amount per late
+                  day. No pre-filled value: the merchant states the
+                  rule explicitly, and the explanation line spells out
+                  the resulting per-day amount. */}
               <FormField label={t('merchant.session.contract.lateTypeLabel')}>
-                {operation.pricingType === 'total' ? (
-                  <div className="rounded-xl2 bg-canvas-100/70 ring-1 ring-canvas-200 px-3.5 py-2.5 text-[11.5px] text-ink-500 leading-relaxed">
-                    {t('merchant.session.contract.lateFixedForcedNote')}
-                  </div>
-                ) : (
-                  <ModeToggle<LateFeeType>
-                    value={operation.lateFeeType}
-                    options={[
-                      { value: 'multiplier', label: t('merchant.session.contract.lateMultiplierOption') },
-                      { value: 'fixed', label: t('merchant.session.contract.lateFixedOption') },
-                    ]}
-                    onChange={(v) => setOperation({ lateFeeType: v })}
-                  />
-                )}
+                <ModeToggle<LateFeeType>
+                  value={operation.lateFeeType}
+                  options={[
+                    { value: 'percentage', label: t('merchant.session.contract.latePercentOption') },
+                    { value: 'fixed', label: t('merchant.session.contract.lateFixedOption') },
+                  ]}
+                  onChange={(v) => setOperation({ lateFeeType: v })}
+                />
               </FormField>
-              {operation.lateFeeType === 'multiplier' && operation.pricingType !== 'total' ? (
-                <FormField label={t('merchant.session.contract.lateReturnLabel')}>
-                  <div className="flex items-center gap-2">
-                    <Input
-                      type="number"
-                      inputMode="decimal"
-                      min={0.1}
-                      max={10}
-                      step={0.1}
-                      value={operation.lateReturnMultiplier}
-                      onChange={(e) =>
-                        setOperation({ lateReturnMultiplier: e.target.value })
-                      }
-                    />
-                    <span className="text-[12px] font-semibold text-ink-500 num">
-                      {t('merchant.session.contract.lateReturnUnit')}
-                    </span>
-                  </div>
+              {operation.lateFeeType === 'percentage' ? (
+                <FormField label={t('merchant.session.contract.latePercentLabel')}>
+                  <NumericField
+                    inputMode="decimal"
+                    digitsOnly="decimal"
+                    value={operation.lateFeePercent}
+                    onValueChange={(v) => setOperation({ lateFeePercent: v })}
+                    placeholder="20"
+                    trailing={
+                      <span className="text-ink-400 text-[12px] font-medium num">%</span>
+                    }
+                  />
                   <div className="mt-1 text-[11px] text-ink-500 leading-relaxed">
-                    {t('merchant.session.contract.lateReturnHint')}
+                    {t('merchant.session.contract.latePercentHint')}
                   </div>
-                  <div className="mt-0.5 text-[11.5px] text-ink-700 num">
-                    {t('merchant.session.contract.lateReturnPreview', {
-                      amount: formatCurrency(latePerDay),
-                    })}
-                  </div>
+                  {latePercentValue(operation.lateFeePercent) > 0 && (
+                    <div className="mt-0.5 text-[11.5px] text-ink-700 leading-relaxed">
+                      {t('merchant.session.contract.lateExplainPercent', {
+                        pct: latePercentValue(operation.lateFeePercent),
+                        amount: formatCurrency(latePerDay),
+                      })}
+                    </div>
+                  )}
                 </FormField>
               ) : (
                 <FormField label={t('merchant.session.contract.lateFixedLabel')}>
@@ -2412,6 +2426,13 @@ function ContractCard({
                   <div className="mt-1 text-[11px] text-ink-500 leading-relaxed">
                     {t('merchant.session.contract.lateFixedHint')}
                   </div>
+                  {operation.lateFeeFixedAmount.trim() !== '' && (
+                    <div className="mt-0.5 text-[11.5px] text-ink-700 leading-relaxed">
+                      {t('merchant.session.contract.lateExplainFixed', {
+                        amount: formatCurrency(latePerDay),
+                      })}
+                    </div>
+                  )}
                 </FormField>
               )}
             </section>

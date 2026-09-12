@@ -40,7 +40,7 @@ export type CreateInvoiceInput = {
   damageFixedAmount?: number | null;
   /** Late-fee model; defaults to 'multiplier'. 'total' pricing must
    *  pass 'fixed' (DB constraint enforces it too). */
-  lateFeeType?: 'multiplier' | 'fixed';
+  lateFeeType?: 'multiplier' | 'fixed' | 'percentage';
   /** Fixed fee per late day (SAR); required when lateFeeType is
    *  'fixed'. */
   lateFeeFixedAmount?: number | null;

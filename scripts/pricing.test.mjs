@@ -131,3 +131,93 @@ test('unknown type strings degrade to the legacy behaviors', () => {
   assert.equal(cfg.damageChargeType, 'percentage');
   assert.equal(cfg.lateFeeType, 'multiplier');
 });
+
+// ---------------------------------------------------------------------
+// Late-return percentage mode (20260502130100) — the fee must be
+// exactly the merchant's configured rule, never a hidden default.
+// ---------------------------------------------------------------------
+
+test('percentage mode: rental price × percent per late day (the 300 @ 20% → 60 case)', () => {
+  const cfg = resolveInvoicePricing(
+    {
+      subtotal_amount: 300,
+      late_fee_type: 'percentage',
+      late_return_multiplier: 0.2, // stored as a fraction
+    },
+    [{ daily_rate: 300, rental_days: 1, replacement_value: 3000 }],
+  );
+  assert.equal(cfg.lateFeeType, 'percentage');
+  assert.equal(cfg.lateFeePercent, 20);
+  assert.equal(computeLateFeePerDay(cfg), 60);
+  // The item value (3000) plays NO part in the late fee.
+  assert.notEqual(computeLateFeePerDay(cfg), 450);
+});
+
+test('percentage mode uses the RENTAL PRICE under both pricing models', () => {
+  // daily: 100 × 3 days = 300 rental → 10% = 30/day
+  const daily = resolveInvoicePricing(
+    { subtotal_amount: 300, late_fee_type: 'percentage', late_return_multiplier: 0.1 },
+    [{ daily_rate: 100, rental_days: 3, replacement_value: 9000 }],
+  );
+  assert.equal(computeLateFeePerDay(daily), 30);
+  // total: entered 900 rental → 10% = 90/day (no daily rate involved)
+  const total = resolveInvoicePricing(
+    { pricing_type: 'total', subtotal_amount: 900, late_fee_type: 'percentage', late_return_multiplier: 0.1 },
+    [{ daily_rate: 0, rental_days: 3, replacement_value: 9000 }],
+  );
+  assert.equal(computeLateFeePerDay(total), 90);
+});
+
+test('zero/absent values yield ZERO — no invented percentage or multiplier', () => {
+  const zeroPct = resolveInvoicePricing(
+    { subtotal_amount: 300, late_fee_type: 'percentage', late_return_multiplier: 0 },
+    [{ daily_rate: 300, rental_days: 1, replacement_value: 3000 }],
+  );
+  assert.equal(computeLateFeePerDay(zeroPct), 0);
+  const absentPct = resolveInvoicePricing(
+    { subtotal_amount: 300, late_fee_type: 'percentage' },
+    [{ daily_rate: 300, rental_days: 1, replacement_value: 3000 }],
+  );
+  assert.equal(absentPct.lateFeePercent, 0);
+  assert.equal(computeLateFeePerDay(absentPct), 0);
+  const zeroFixed = resolveInvoicePricing(
+    { subtotal_amount: 300, late_fee_type: 'fixed', late_fee_fixed_amount: 0 },
+    [{ daily_rate: 300, rental_days: 1 }],
+  );
+  assert.equal(computeLateFeePerDay(zeroFixed), 0);
+});
+
+test('fixed mode: exactly the configured amount, per late day', () => {
+  const cfg = resolveInvoicePricing(
+    { subtotal_amount: 300, late_fee_type: 'fixed', late_fee_fixed_amount: 100 },
+    [{ daily_rate: 300, rental_days: 1 }],
+  );
+  assert.equal(computeLateFeePerDay(cfg), 100);
+  // Total for N late days is N × per-day by definition (per-day fee).
+  assert.equal(3 * computeLateFeePerDay(cfg), 300);
+});
+
+test('legacy multiplier rows keep their historical rendering (450 stays 450 THERE ONLY)', () => {
+  // A pre-change invoice: daily 300, stored multiplier 1.5 → 450/day.
+  // This is preserved so already-accepted contracts render unchanged —
+  // but it is unreachable for NEW offers (wizard offers only
+  // percentage/fixed and never writes 'multiplier').
+  const legacy = resolveInvoicePricing(
+    { subtotal_amount: 300, late_fee_type: 'multiplier', late_return_multiplier: 1.5 },
+    [{ daily_rate: 300, rental_days: 1, replacement_value: 3000 }],
+  );
+  assert.equal(computeLateFeePerDay(legacy), 450);
+});
+
+test('the wizard can no longer produce a multiplier offer or a silent default', () => {
+  const wizard = fsReadFileSync(new URL('../src/pages/merchant/MerchantRentalSession.tsx', import.meta.url), 'utf8');
+  assert.ok(!wizard.includes("lateFeeType: 'multiplier'"), 'multiplier not issuable');
+  assert.ok(!wizard.includes("lateReturnMultiplier: '1.5'"), 'no prefilled multiplier');
+  assert.ok(!wizard.includes('clampLateMultiplier'), 'silent 1.5 clamp removed');
+  assert.ok(wizard.includes("lateFeePercent: ''"), 'percentage starts EMPTY - merchant must choose');
+  assert.ok(wizard.includes('lateExplainPercent') && wizard.includes('lateExplainFixed'),
+    'calculation explanation shown in the UI');
+  // Preview and stored payload flow through ONE config seam.
+  assert.ok(wizard.includes('storedLateMultiplier(cfg)'));
+});
+import { readFileSync as fsReadFileSync } from 'node:fs';
