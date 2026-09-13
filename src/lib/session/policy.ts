@@ -16,7 +16,7 @@ import type { AppRole } from '@/lib/supabase/types';
 // earlier flat 10-day ceiling): maximum session lifetime before the
 // app requires a fresh login is
 //
-//   * customer — 14 days (their own phone),
+//   * customer — 30 days (their own phone),
 //   * merchant — 14 days (counter device),
 //   * admin    —  1 day  (sees full customer PII).
 //
@@ -54,7 +54,7 @@ const DAY = 86_400_000;
 /** The product knobs: maximum session lifetime (days) before
  *  re-login, per role. */
 export const SESSION_MAX_DAYS_BY_ROLE: Record<AppRole, number> = {
-  customer: 14,
+  customer: 30,
   merchant: 14,
   admin: 1,
 };

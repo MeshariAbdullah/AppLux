@@ -17,8 +17,8 @@ const read = (p) => readFileSync(path.join(root, p), 'utf8');
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
-test('per-role session ceilings: customer 14d, merchant 14d, admin 1d (idle AND absolute)', () => {
-  const expected = { customer: 14, merchant: 14, admin: 1 };
+test('per-role session ceilings: customer 30d, merchant 14d, admin 1d (idle AND absolute)', () => {
+  const expected = { customer: 30, merchant: 14, admin: 1 };
   assert.deepEqual(SESSION_MAX_DAYS_BY_ROLE, expected);
   for (const [role, days] of Object.entries(expected)) {
     const p = SESSION_POLICIES[role];
@@ -28,7 +28,7 @@ test('per-role session ceilings: customer 14d, merchant 14d, admin 1d (idle AND 
   }
   // Role still resolving → the customer policy (most lenient; the real
   // policy applies as soon as the role resolves).
-  assert.equal(resolveSessionPolicy(null).absoluteMs, 14 * DAY_MS);
+  assert.equal(resolveSessionPolicy(null).absoluteMs, 30 * DAY_MS);
   assert.equal(resolveSessionPolicy('admin').absoluteMs, 1 * DAY_MS);
 });
 
