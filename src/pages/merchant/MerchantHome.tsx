@@ -4,7 +4,6 @@ import { Screen } from '@/components/layout';
 import { Header } from '@/components/layout';
 import { PageSkeleton, StatusChip, type StatusTone } from '@/components/ui';
 import { LangToggle } from '@/components/auth/LangToggle';
-import { MerchantTabBar } from '@/components/merchant/MerchantTabBar';
 import {
   BadgeCheckIcon,
   BellIcon,
@@ -353,7 +352,6 @@ export default function MerchantHome() {
         <Screen className="bg-beige-100">
           <PageSkeleton rows={4} />
         </Screen>
-        <MerchantTabBar />
       </>
     );
   }
@@ -458,7 +456,6 @@ export default function MerchantHome() {
           </div>
         </div>
       </Screen>
-      <MerchantTabBar />
     </>
   );
 }

@@ -2,7 +2,7 @@ export { MobileShell } from './MobileShell';
 export { Header } from './Header';
 export { BottomNav } from './BottomNav';
 export { Screen } from './Screen';
-export { AppLayout } from './AppLayout';
+export { AppLayout, MerchantAppLayout } from './AppLayout';
 export { AuthLayout } from './AuthLayout';
 export { PageContainer, type PageWidth } from './PageContainer';
 export { ResponsiveGrid } from './ResponsiveGrid';

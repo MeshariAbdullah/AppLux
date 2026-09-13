@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { ResponsiveGrid, Screen } from '@/components/layout';
-import { MerchantTabBar } from '@/components/merchant/MerchantTabBar';
 import { EmptyState, Input, PageSkeleton, StatusChip } from '@/components/ui';
 import { InfoIcon, SearchIcon } from '@/components/icons';
 import { CACHE_TTL, cacheKeys } from '@/lib/cache/keys';
@@ -243,7 +242,6 @@ export default function MerchantRentals() {
             <PageSkeleton rows={4} />
           </div>
         </Screen>
-        <MerchantTabBar />
       </>
     );
   }
@@ -333,7 +331,6 @@ export default function MerchantRentals() {
           )}
         </div>
       </Screen>
-      <MerchantTabBar />
     </>
   );
 }

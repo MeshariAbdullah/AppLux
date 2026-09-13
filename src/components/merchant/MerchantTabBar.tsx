@@ -6,13 +6,13 @@ import type { ReactNode } from 'react';
 
 // =====================================================================
 // MerchantTabBar — design D1 (Lend Merchant Screens M09/M12/M16).
-// Four tabs: home / rentals / issue / account. Rendered ONLY by the
-// primary merchant surfaces (dashboard, rentals list, profile, and
-// the secondary lists) — never on registration, login, the pending
-// page, or focused form flows. Mirrors the customer BottomNav's
-// proven sticky + safe-area structure so browser and Capacitor
-// scrolling behave identically; pages that render it add bottom
-// padding so sticky actions never sit underneath it.
+// Four tabs: home / rentals / issue / account. Rendered EXCLUSIVELY
+// by MerchantAppLayout as the app shell's LAST ROW (exactly like the
+// customer BottomNav): the shell column is fixed-height and <Screen>
+// is the only scroll region, so the bar is pinned to the viewport
+// bottom on every authenticated merchant page and can never scroll,
+// jump, or disappear. Auth/onboarding routes live outside the layout
+// and show no nav. Never render this from a page.
 // =====================================================================
 
 type Tab = {
@@ -34,7 +34,7 @@ export function MerchantTabBar() {
   // deep-green icon + bold green label (no filled circle, no underline).
   return (
     <nav
-      className="sticky bottom-0 z-30 bg-white/95 backdrop-blur-md pb-[env(safe-area-inset-bottom)] border-t border-beige-200"
+      className="shrink-0 z-30 bg-white/95 backdrop-blur-md pb-[env(safe-area-inset-bottom)] border-t border-beige-200"
       aria-label="merchant"
     >
       {/* Tablet/desktop: cap the row so the four tabs stay a reachable

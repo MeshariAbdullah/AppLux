@@ -9,7 +9,6 @@ import {
   SupportIcon,
   UserIcon,
 } from '@/components/icons';
-import { MerchantTabBar } from '@/components/merchant/MerchantTabBar';
 import { getInitials } from '@/lib/format/initials';
 import { logEvent } from '@/lib/observability/log';
 import { releaseInfo } from '@/lib/releaseInfo';
@@ -118,7 +117,6 @@ export default function MerchantProfile() {
             <PageSkeleton rows={4} />
           </div>
         </Screen>
-        <MerchantTabBar />
       </>
     );
   }
@@ -228,7 +226,6 @@ export default function MerchantProfile() {
           </button>
         </div>
       </Screen>
-      <MerchantTabBar />
     </>
   );
 }

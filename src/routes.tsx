@@ -1,6 +1,6 @@
 import { Suspense, useEffect, type ReactElement } from 'react';
 import { Navigate, Route, Routes, useNavigate } from 'react-router-dom';
-import { AppLayout, AuthLayout } from '@/components/layout';
+import { AppLayout, MerchantAppLayout, AuthLayout } from '@/components/layout';
 import { useT } from '@/lib/i18n';
 import { lazyWithReload } from '@/lib/lazyWithReload';
 import { useStore } from '@/lib/store';
@@ -275,137 +275,43 @@ export function AppRoutes() {
             </RequireRole>
           }
         />
+        {/* Merchant app area — ONE guarded layout renders the fixed
+            MerchantTabBar as the shell's last row on EVERY page below
+            (auth/onboarding/pending stay outside and show no nav). */}
         <Route
-          path="/merchant/home"
           element={
             <RequireRole role="merchant" fallback="/merchant/welcome">
-              <MerchantHome />
+              <MerchantAppLayout />
             </RequireRole>
           }
-        />
-        <Route
-          path="/merchant/rentals"
-          element={
-            <RequireRole role="merchant" fallback="/merchant/welcome">
-              <MerchantRentals />
-            </RequireRole>
-          }
-        />
-        <Route
-          path="/merchant/rentals/:id"
-          element={
-            <RequireRole role="merchant" fallback="/merchant/welcome">
-              <MerchantRentalDetails />
-            </RequireRole>
-          }
-        />
-        <Route
-          path="/merchant/rentals/:id/contract"
-          element={
-            <RequireRole role="merchant" fallback="/merchant/welcome">
-              <MerchantRentalContract />
-            </RequireRole>
-          }
-        />
-        <Route
-          path="/merchant/rentals/:id/note"
-          element={
-            <RequireRole role="merchant" fallback="/merchant/welcome">
-              <MerchantRentalNote />
-            </RequireRole>
-          }
-        />
-        <Route
-          path="/merchant/rentals/:id/close"
-          element={
-            <RequireRole role="merchant" fallback="/merchant/welcome">
-              <MerchantRentalClose />
-            </RequireRole>
-          }
-        />
-        <Route
-          path="/merchant/rentals/:id/damage/new"
-          element={
-            <RequireRole role="merchant" fallback="/merchant/welcome">
-              <MerchantDamageNew />
-            </RequireRole>
-          }
-        />
-        <Route
-          path="/merchant/approvals"
-          element={
-            <RequireRole role="merchant" fallback="/merchant/welcome">
-              <MerchantApprovals />
-            </RequireRole>
-          }
-        />
-        <Route
-          path="/merchant/approvals/:id"
-          element={
-            <RequireRole role="merchant" fallback="/merchant/welcome">
-              <MerchantOfferDetails />
-            </RequireRole>
-          }
-        />
-        <Route
-          path="/merchant/damages"
-          element={
-            <RequireRole role="merchant" fallback="/merchant/welcome">
-              <MerchantDamages />
-            </RequireRole>
-          }
-        />
-        <Route
-          path="/merchant/notifications"
-          element={
-            <RequireRole role="merchant" fallback="/merchant/welcome">
-              <MerchantNotifications />
-            </RequireRole>
-          }
-        />
-        <Route
-          path="/merchant/damages/:id"
-          element={
-            <RequireRole role="merchant" fallback="/merchant/welcome">
-              <MerchantDamageDetails />
-            </RequireRole>
-          }
-        />
-        <Route
-          path="/merchant/history"
-          element={
-            <RequireRole role="merchant" fallback="/merchant/welcome">
-              <MerchantHistoryPage />
-            </RequireRole>
-          }
-        />
-        {/* Design D1 — "حسابي" tab: store profile, business info,
-            support, sign-out, release line + diagnostics gesture. */}
-        <Route
-          path="/merchant/profile"
-          element={
-            <RequireRole role="merchant" fallback="/merchant/welcome">
-              <MerchantProfile />
-            </RequireRole>
-          }
-        />
-        {/* Legacy issuance form RETIRED (data-consistency audit): its
-            payload wrote the quantity field into rental_days and forced
-            startsAt to "now". No in-app navigation ever pointed here —
-            the redirect only covers direct URLs / stale history, and
-            the approved wizard below is the single issuance path. */}
-        <Route
-          path="/merchant/invoice/new"
-          element={<Navigate to="/merchant/session/new" replace />}
-        />
-        <Route
-          path="/merchant/session/new"
-          element={
-            <RequireRole role="merchant" fallback="/merchant/welcome">
-              <MerchantRentalSession />
-            </RequireRole>
-          }
-        />
+        >
+          <Route path="/merchant/home" element={<MerchantHome />} />
+          <Route path="/merchant/rentals" element={<MerchantRentals />} />
+          <Route path="/merchant/rentals/:id" element={<MerchantRentalDetails />} />
+          <Route path="/merchant/rentals/:id/contract" element={<MerchantRentalContract />} />
+          <Route path="/merchant/rentals/:id/note" element={<MerchantRentalNote />} />
+          <Route path="/merchant/rentals/:id/close" element={<MerchantRentalClose />} />
+          <Route path="/merchant/rentals/:id/damage/new" element={<MerchantDamageNew />} />
+          <Route path="/merchant/approvals" element={<MerchantApprovals />} />
+          <Route path="/merchant/approvals/:id" element={<MerchantOfferDetails />} />
+          <Route path="/merchant/damages" element={<MerchantDamages />} />
+          <Route path="/merchant/notifications" element={<MerchantNotifications />} />
+          <Route path="/merchant/damages/:id" element={<MerchantDamageDetails />} />
+          <Route path="/merchant/history" element={<MerchantHistoryPage />} />
+          {/* Design D1 — "حسابي" tab: store profile, business info,
+              support, sign-out, release line + diagnostics gesture. */}
+          <Route path="/merchant/profile" element={<MerchantProfile />} />
+          {/* Legacy issuance form RETIRED (data-consistency audit): its
+              payload wrote the quantity field into rental_days and forced
+              startsAt to "now". No in-app navigation ever pointed here —
+              the redirect only covers direct URLs / stale history, and
+              the approved wizard below is the single issuance path. */}
+          <Route
+            path="/merchant/invoice/new"
+            element={<Navigate to="/merchant/session/new" replace />}
+          />
+          <Route path="/merchant/session/new" element={<MerchantRentalSession />} />
+        </Route>
 
         {/* Admin area — guarded by role */}
         <Route

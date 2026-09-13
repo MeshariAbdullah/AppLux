@@ -307,3 +307,67 @@ test('contract documents: documented-contract row labeled and never a dead link'
     await expect(page.getByText('اضغط للفتح')).toHaveCount(0);
   }
 });
+
+// =====================================================================
+// Merchant bottom navigation (real-device regression): rendered by the
+// shared MerchantAppLayout as the shell's last row, so it is pinned to
+// the canvas bottom on EVERY authenticated merchant page, never
+// scrolls with content, and never appears on auth/onboarding pages.
+// =====================================================================
+
+const DEMO_MERCHANT = {
+  id: 'M-DEMO-1', status: 'approved',
+  submittedAt: '2026-09-01T00:00:00Z', approvedAt: '2026-09-01T00:00:00Z',
+  rejectedAt: null, rejectionReason: null,
+  companyName: 'تاجر ليند', commercialReg: '1010101010',
+  authorizedName: 'م', authorizedId: '1', iban: '', city: 'riyadh',
+  address: 'x', contactEmail: 'm@e.sa', contactPhone: '0512345678', branches: [],
+};
+
+test('merchant nav: fixed on every main page, absent on auth, customer nav intact', async ({ page }) => {
+  await blockExternal(page);
+  await page.addInitScript((seed) => {
+    window.localStorage.setItem('applux.merchant', JSON.stringify(seed.merchant));
+    window.localStorage.setItem('applux.session', JSON.stringify(seed.session));
+  }, { merchant: DEMO_MERCHANT, session: DEMO_SESSION });
+
+  for (const vp of [{ width: 390, height: 844 }, { width: 834, height: 1194 }]) {
+    await page.setViewportSize(vp);
+    for (const route of ['/merchant/home', '/merchant/rentals', '/merchant/damages',
+                         '/merchant/session/new', '/merchant/profile']) {
+      await page.goto(route, { waitUntil: 'domcontentloaded' });
+      const nav = page.locator('nav[aria-label="merchant"]');
+      await expect(nav, `${route} @${vp.width}`).toBeVisible();
+      const shellBottom = await page.evaluate(() => {
+        const el = document.querySelector('#root > div > div');
+        return el ? el.getBoundingClientRect().bottom : 0;
+      });
+      const before = (await nav.boundingBox())!;
+      // Pinned to the app canvas bottom (= viewport bottom on phones).
+      expect(Math.abs(before.y + before.height - shellBottom), `${route} pinned`).toBeLessThanOrEqual(1);
+      // Scrolling the content region never moves the nav.
+      await page.evaluate(() => document.querySelector('main')?.scrollTo(0, 500));
+      const after = (await nav.boundingBox())!;
+      expect(Math.abs(after.y - before.y), `${route} stable under scroll`).toBeLessThanOrEqual(1);
+      // The scrollable content ends above the nav — nothing hidden.
+      const mainBottom = await page.evaluate(
+        () => document.querySelector('main')?.getBoundingClientRect().bottom ?? 0,
+      );
+      expect(mainBottom, `${route} content above nav`).toBeLessThanOrEqual(before.y + 1);
+    }
+    // Active tab highlighting.
+    await page.goto('/merchant/rentals', { waitUntil: 'domcontentloaded' });
+    await expect(
+      page.locator('nav[aria-label="merchant"] a[aria-current="page"]'),
+    ).toHaveAttribute('href', '/merchant/rentals');
+    // Auth/onboarding pages show no merchant nav.
+    await page.goto('/merchant/welcome', { waitUntil: 'domcontentloaded' });
+    await expect
+      .poll(async () => page.evaluate(() => document.querySelector('#root')?.childElementCount ?? 0))
+      .toBeGreaterThan(0);
+    await expect(page.locator('nav[aria-label="merchant"]')).toHaveCount(0);
+    // Customer nav is untouched.
+    await page.goto('/home', { waitUntil: 'domcontentloaded' });
+    await expect(page.locator('nav[aria-label="primary"]')).toBeVisible();
+  }
+});
