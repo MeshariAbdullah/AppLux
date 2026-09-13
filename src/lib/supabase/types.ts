@@ -670,6 +670,19 @@ export type Database = {
         Args: { p_case_id: string; p_reason: string };
         Returns: undefined;
       };
+      /** Read-only wizard-draft restore check (20260502130200):
+       *  renter payload iff a verified, unspent challenge inside the
+       *  P0195 window exists for the calling merchant. */
+      merchant_renter_verification_status: {
+        Args: { p_mobile: string };
+        Returns: {
+          id: string;
+          full_name: string;
+          mobile: string | null;
+          city: string | null;
+          has_nafath: boolean;
+        }[];
+      };
       register_push_token: {
         // p_device_id: stable install id (20260502125800) — same-device
         // re-registration revokes that device's older tokens.

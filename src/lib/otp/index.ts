@@ -201,6 +201,35 @@ export async function sendOtp(mobileInput: string): Promise<OtpSendResult> {
  *  customer's safe profile fields (name / mobile / city) — the same
  *  disclosure boundary as before: nothing identifying is revealed to
  *  the merchant until verification succeeds. */
+/**
+ * Read-only server check for a STILL-ISSUABLE verification: returns
+ * the renter payload iff a challenge verified by this merchant for
+ * this mobile's customer satisfies the exact P0195 issuance predicate
+ * (verified within 30 minutes, unspent). Null otherwise. Used to
+ * safely restore the rental-session wizard draft — device storage is
+ * never trusted for verification state.
+ */
+export async function checkRenterVerification(
+  mobileInput: string,
+): Promise<OtpVerifiedRenter | null> {
+  const n = normalizeMobile(mobileInput);
+  if (!n) return null;
+  const sb = requireSupabase();
+  const { data, error } = await sb.rpc('merchant_renter_verification_status', {
+    p_mobile: n.canonical,
+  });
+  if (error) throw mapRpcError(error);
+  const row = Array.isArray(data) ? data[0] : null;
+  if (!row) return null;
+  return {
+    id: row.id,
+    full_name: row.full_name,
+    mobile: row.mobile,
+    city: row.city,
+    has_nafath: row.has_nafath,
+  };
+}
+
 export async function verifyOtp(mobileInput: string, code: string): Promise<OtpVerifyResult> {
   const n = normalizeMobile(mobileInput);
   if (!n) throw new OtpError('invalid_mobile');

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Header, Screen } from '@/components/layout';
 import {
@@ -36,7 +36,19 @@ import {
   type RentalEligibilityRow,
   type RentalInvoiceRow,
 } from '@/lib/supabase';
-import { isSmsOtpDelivery, lookupRenterByMobile, sendOtp, verifyOtp, OtpError } from '@/lib/otp';
+import {
+  checkRenterVerification,
+  isSmsOtpDelivery,
+  lookupRenterByMobile,
+  sendOtp,
+  verifyOtp,
+  OtpError,
+} from '@/lib/otp';
+import {
+  buildMerchantSessionDraft,
+  merchantSessionDraftKey,
+  parseMerchantSessionDraft,
+} from '@/lib/merchantSessionDraft';
 import {
   classifyNationalId,
   normalizeDigits,
@@ -455,6 +467,167 @@ export default function MerchantRentalSession() {
   // .catch(() => {}) — the issue CTA stays disabled until merchantId
   // resolves.
   const wizardUserId = supabaseAuth.session?.user?.id ?? null;
+
+  // ------------------- Draft persistence (localStorage) --------------
+  // Safe form state only: the typed OTP code, renter PII, and every
+  // server-derived value are NEVER written (src/lib/merchantSessionDraft).
+  // A restored "verified" claim is re-confirmed against the server
+  // (merchant_renter_verification_status = the exact P0195 predicate)
+  // before any verified state is shown.
+  const draftStorageKey = merchantSessionDraftKey(wizardUserId ?? 'demo');
+  /** Persisted operation fields are plain strings — coerce the enum
+   *  fields back to their unions (unknown values fall back safely). */
+  const typedOperationPatch = (
+    op: Record<string, string>,
+    current: OperationDraft,
+  ): Partial<OperationDraft> => ({
+    ...op,
+    category: (CATEGORIES as readonly string[]).includes(op.category)
+      ? (op.category as RentalCategoryDB)
+      : current.category,
+    pricingType: op.pricingType === 'total' ? 'total' : 'daily',
+    damageChargeType: op.damageChargeType === 'fixed' ? 'fixed' : 'percentage',
+    lateFeeType: op.lateFeeType === 'fixed' ? 'fixed' : 'percentage',
+    startsAt: op.startsAt || current.startsAt,
+  });
+  const [draftBanner, setDraftBanner] = useState<null | 'restored' | 'reverify'>(null);
+  const draftRestoredRef = useRef(false);
+  const clearDraft = () => {
+    try {
+      window.localStorage.removeItem(draftStorageKey);
+    } catch {
+      /* storage unavailable — nothing persisted anyway */
+    }
+  };
+  const discardDraft = () => {
+    clearDraft();
+    setDraftBanner(null);
+    setSession({
+      ...INITIAL_SESSION,
+      operation: { ...INITIAL_SESSION.operation, startsAt: nowForDateTimeInput() },
+    });
+  };
+
+  // RESTORE — once, at wizard entry.
+  useEffect(() => {
+    if (draftRestoredRef.current) return;
+    draftRestoredRef.current = true;
+    let raw: string | null = null;
+    try {
+      raw = window.localStorage.getItem(draftStorageKey);
+    } catch {
+      return;
+    }
+    const draft = parseMerchantSessionDraft(raw, Date.now());
+    if (!draft) return;
+
+    // Form fields restore immediately; verification never does — it is
+    // either re-confirmed by the server below or the merchant lands on
+    // the verify step with everything else intact.
+    setSession((s) => ({
+      ...s,
+      step: draft.wasVerified ? s.step : draft.step,
+      verify: { ...s.verify, mobile: draft.mobile },
+      operation: { ...s.operation, ...typedOperationPatch(draft.operation, s.operation) },
+    }));
+
+    if (!draft.wasVerified) {
+      setDraftBanner('restored');
+      return;
+    }
+    if (!supabaseAuth.configured) {
+      // No server to confirm against (demo/dev) → verification state is
+      // never trusted from storage: back to the verify step.
+      setSession((s) => ({ ...s, step: 'verify' }));
+      setDraftBanner('reverify');
+      return;
+    }
+    void (async () => {
+      try {
+        const renter = await checkRenterVerification(draft.mobile);
+        if (renter) {
+          // Server-confirmed: the P0195 window is still open — restore
+          // the verified state FROM THE SERVER PAYLOAD and, for later
+          // steps, refetch the eligibility snapshot the step renders.
+          setSession((s) => ({
+            ...s,
+            step: draft.step,
+            verify: {
+              ...s.verify,
+              mobile: draft.mobile,
+              status: 'verified',
+              renterId: renter.id,
+              renter: {
+                id: renter.id,
+                full_name: renter.full_name,
+                mobile: renter.mobile,
+                email: null,
+                national_id: null,
+                city: renter.city,
+                role: 'customer',
+                account_status: 'active',
+                nafath_verified_at: renter.has_nafath
+                  ? new Date(0).toISOString()
+                  : null,
+                identity_verified: false,
+                identity_verified_at: null,
+                identity_provider: null,
+                identity_reference_id: null,
+                deletion_requested_at: null,
+                created_at: new Date(0).toISOString(),
+                updated_at: new Date(0).toISOString(),
+              },
+            },
+          }));
+          if (draft.step === 'eligibility' || draft.step === 'contract') {
+            updateEligibility({ loading: true, error: null });
+            try {
+              const row = await fetchRenterEligibility(renter.id);
+              updateEligibility({ row, loading: false, error: null });
+            } catch {
+              // Eligibility refetch failed → continue from the
+              // operation step; the merchant re-runs the check.
+              updateEligibility({ loading: false, error: null });
+              setSession((s) => ({ ...s, step: 'operation' }));
+            }
+          }
+          setDraftBanner('restored');
+          return;
+        }
+        // Server says the verification lapsed (window passed, spent, or
+        // superseded) → friendly re-verify state, form intact.
+        setSession((s) => ({ ...s, step: 'verify' }));
+        setDraftBanner('reverify');
+      } catch {
+        // Status check unavailable (offline / RPC missing) → never
+        // trust storage: verify step, form intact.
+        setSession((s) => ({ ...s, step: 'verify' }));
+        setDraftBanner('reverify');
+      }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [draftStorageKey]);
+
+  // SAVE — debounced; clears itself once the offer is issued or the
+  // state returns to pristine.
+  useEffect(() => {
+    if (!draftRestoredRef.current) return;
+    const id = window.setTimeout(() => {
+      try {
+        const draft = buildMerchantSessionDraft(session, Date.now());
+        if (draft) {
+          window.localStorage.setItem(draftStorageKey, JSON.stringify(draft));
+        } else {
+          window.localStorage.removeItem(draftStorageKey);
+        }
+      } catch {
+        /* storage unavailable — degrade to in-memory only */
+      }
+    }, 800);
+    return () => window.clearTimeout(id);
+  }, [session, draftStorageKey]);
+  // --------------------------------------------------------------------
+
   const { data: myMerchantRow } = useCachedQuery(
     supabaseAuth.configured && wizardUserId
       ? cacheKeys.myMerchant(wizardUserId)
@@ -867,6 +1040,7 @@ export default function MerchantRentalSession() {
           updated_at: now,
         };
         updateIssue({ invoice: fixture, submitting: false, error: null });
+        clearDraft();
         setStep('issued');
         return;
       }
@@ -942,6 +1116,7 @@ export default function MerchantRentalSession() {
         cacheInvalidatePrefix(cacheKeys.merchantInvoices(wizardUserId));
       }
       updateIssue({ invoice: result.invoice, submitting: false, error: null });
+      clearDraft();
       setStep('issued');
     } catch (err) {
       logEvent('rpc_failure', 'warn', { op: 'create_invoice_with_items' }, err);
@@ -1009,6 +1184,38 @@ export default function MerchantRentalSession() {
           }
         >
           {session.step !== 'issued' && <SessionEyebrow stepIndex={stepIndex} t={t} />}
+
+          {/* Draft restored / re-verify notice + the visible discard
+              action. Dismissible; discard resets the wizard and
+              removes the stored draft. */}
+          {draftBanner && session.step !== 'issued' && (
+            <div className="rounded-xl2 bg-lavender-50 ring-1 ring-lavender-200 px-4 py-3 flex flex-wrap items-center gap-x-3 gap-y-2">
+              <div className="flex-1 min-w-[200px] text-[12.5px] text-lavender-800 leading-relaxed">
+                {t(
+                  draftBanner === 'restored'
+                    ? 'merchant.session.draft.restored'
+                    : 'merchant.session.draft.reverify',
+                )}
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                <button
+                  type="button"
+                  onClick={discardDraft}
+                  className="h-8 px-3 rounded-lg bg-white text-danger-700 ring-1 ring-danger-200 text-[12px] font-semibold hover:bg-danger-50 transition-colors"
+                >
+                  {t('merchant.session.draft.discard')}
+                </button>
+                <button
+                  type="button"
+                  aria-label={t('merchant.session.draft.dismiss')}
+                  onClick={() => setDraftBanner(null)}
+                  className="h-8 w-8 grid place-items-center rounded-lg text-lavender-700 hover:bg-lavender-100 transition-colors text-[15px] leading-none"
+                >
+                  ×
+                </button>
+              </div>
+            </div>
+          )}
 
           {session.step === 'start' && <StartCard t={t} onBegin={handleStart} />}
 

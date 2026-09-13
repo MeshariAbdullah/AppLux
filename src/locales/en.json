@@ -1472,6 +1472,12 @@
         "stageLine": "Stage {current} of {total} · {stage}",
         "viewRentals": "View rentals",
         "validUntil": "Offer valid until {dateTime}"
+      },
+      "draft": {
+        "restored": "Rental offer draft restored.",
+        "reverify": "Rental offer draft restored, but the customer verification has lapsed — verify again to continue; the rest of your entries are kept.",
+        "discard": "Discard draft",
+        "dismiss": "Dismiss"
       }
     },
     "login": {
