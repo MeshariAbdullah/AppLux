@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 import { CACHE_TTL, cacheKeys } from '@/lib/cache/keys';
 import { useCachedQuery } from '@/lib/cache/useCachedQuery';
 import {
@@ -55,6 +55,10 @@ export type CustomerRentalData = {
   invoiceItemsByInvoiceId: Record<string, RentalInvoiceItemRow[]> | null;
   /** True until all three lists AND the merchant batch have settled. */
   loading: boolean;
+  /** Force-revalidate every query now (pull-to-refresh). Resolves when
+   *  all revalidations settle; per-query errors keep their normal
+   *  degrade-to-[] semantics and never reject this promise. */
+  refresh: () => Promise<void>;
 };
 
 export function useCustomerRentalData(
@@ -162,6 +166,17 @@ export function useCustomerRentalData(
       merchants === null ||
       invoiceItemsByInvoiceId === null);
 
+  const refreshAll = [inv.refresh, con.refresh, note.refresh, batch.refresh, itemsQ.refresh];
+  const refresh = useCallback(
+    async () => {
+      await Promise.all(refreshAll.map((r) => r()));
+    },
+    // Each refresh identity is stable per (active, key); listing them
+    // individually keeps the callback honest without a wrapper array dep.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    refreshAll,
+  );
+
   return {
     invoiceRows,
     contractRows,
@@ -169,6 +184,7 @@ export function useCustomerRentalData(
     merchants,
     invoiceItemsByInvoiceId,
     loading,
+    refresh,
   };
 }
 

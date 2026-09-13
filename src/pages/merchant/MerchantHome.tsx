@@ -83,6 +83,7 @@ export default function MerchantHome() {
     data: myMerchantData,
     loading: merchantLoading,
     error: merchantError,
+    refresh: refreshMyMerchant,
   } = useCachedQuery<MerchantRow | null>(
     userId ? cacheKeys.myMerchant(userId) : null,
     () =>
@@ -111,7 +112,11 @@ export default function MerchantHome() {
   // immediately. MerchantRentals shares merchant:{uid}:contracts.
   // Errors map to empty lists, matching the previous .catch(() => []).
   const merchantId = liveMerchant?.id ?? null;
-  const { data: contractRowsData, error: contractsError } = useCachedQuery(
+  const {
+    data: contractRowsData,
+    error: contractsError,
+    refresh: refreshContracts,
+  } = useCachedQuery(
     userId && merchantId ? cacheKeys.merchantContracts(userId) : null,
     () =>
       withTimeout(
@@ -121,7 +126,11 @@ export default function MerchantHome() {
       ),
     { ttlMs: CACHE_TTL.merchantLists, refetchOnFocus: true },
   );
-  const { data: issuedInvoicesData, error: invoicesError } = useCachedQuery(
+  const {
+    data: issuedInvoicesData,
+    error: invoicesError,
+    refresh: refreshInvoices,
+  } = useCachedQuery(
     userId && merchantId ? cacheKeys.merchantInvoices(userId, 'issued') : null,
     () =>
       withTimeout(
@@ -365,7 +374,13 @@ export default function MerchantHome() {
 
   return (
     <>
-      <Screen padded={false} className="bg-beige-100">
+      <Screen
+        padded={false}
+        className="bg-beige-100"
+        onRefresh={() =>
+          Promise.all([refreshMyMerchant(), refreshContracts(), refreshInvoices()])
+        }
+      >
         <div className="container-wide pt-[calc(env(safe-area-inset-top)+22px)] pb-24 space-y-3">
           {/* ====== M09 masthead ====== */}
           <div className="flex items-center gap-2.5">

@@ -98,6 +98,8 @@ export default function AdminCases() {
   const [entries, setEntries] = useState<Entry[] | null>(null);
   const [loading, setLoading] = useState<boolean>(() => configured);
   const [filter, setFilter] = useState<Filter>('all');
+  // Pull-to-refresh: bumping the key re-runs the load effect.
+  const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
     if (!configured) {
@@ -134,7 +136,7 @@ export default function AdminCases() {
     return () => {
       cancelled = true;
     };
-  }, [configured, locale]);
+  }, [configured, locale, reloadKey]);
 
   const filtered = useMemo(
     () => (entries ?? []).filter((e) => matchesFilter(e.row, filter)),
@@ -151,7 +153,11 @@ export default function AdminCases() {
   return (
     <>
       <Header title={t('admin.cases.title')} showBack />
-      <Screen padded={false} className="bg-canvas">
+      <Screen
+        padded={false}
+        className="bg-canvas"
+        onRefresh={() => setReloadKey((k) => k + 1)}
+      >
         <div className="container-wide pt-5 pb-10 space-y-4">
           {/* Filter chips — real states only. */}
           <div className="flex gap-2 overflow-x-auto scrollbar-none -mx-1 px-1" role="tablist">

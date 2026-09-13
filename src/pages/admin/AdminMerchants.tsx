@@ -52,6 +52,8 @@ export default function AdminMerchants() {
   const [liveLoading, setLiveLoading] = useState<boolean>(() => configured);
   const [tab, setTab] = useState<TabKey>('pending');
   const [page, setPage] = useState(0);
+  // Pull-to-refresh: bumping the key re-runs both load effects.
+  const [reloadKey, setReloadKey] = useState(0);
 
   // Filter change → back to page 1 (same rule for every future filter).
   const selectTab = (k: TabKey) => {
@@ -73,7 +75,7 @@ export default function AdminMerchants() {
     return () => {
       cancelled = true;
     };
-  }, [configured]);
+  }, [configured, reloadKey]);
 
   useEffect(() => {
     if (!configured) {
@@ -109,7 +111,7 @@ export default function AdminMerchants() {
     return () => {
       cancelled = true;
     };
-  }, [configured, tab, page]);
+  }, [configured, tab, page, reloadKey]);
 
   const counts = useMemo<Record<TabKey, number>>(() => {
     if (configured) {
@@ -154,7 +156,11 @@ export default function AdminMerchants() {
         showBack
         trailing={<LangToggle tone="dark" />}
       />
-      <Screen padded={false} className="bg-canvas">
+      <Screen
+        padded={false}
+        className="bg-canvas"
+        onRefresh={() => setReloadKey((k) => k + 1)}
+      >
         <div className="container-wide pt-5 pb-10 space-y-5">
           {/* Hero */}
           <div className="relative overflow-hidden rounded-xl3 bg-gradient-to-br from-ink-900 via-ink-800 to-ink-900 text-white p-6 shadow-plush">

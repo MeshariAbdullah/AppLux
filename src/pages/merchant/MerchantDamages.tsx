@@ -58,6 +58,8 @@ export default function MerchantDamages() {
   const [loading, setLoading] = useState<boolean>(() =>
     Boolean(configured && session?.user?.id),
   );
+  // Pull-to-refresh: bumping the key re-runs the load effect below.
+  const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
     const userId = session?.user?.id;
@@ -98,7 +100,7 @@ export default function MerchantDamages() {
     return () => {
       cancelled = true;
     };
-  }, [configured, session?.user?.id]);
+  }, [configured, session?.user?.id, reloadKey]);
 
   const demoOpen = merchantDamages.filter((d) => d.status !== 'settled');
   const demoSettled = merchantDamages.filter((d) => d.status === 'settled');
@@ -109,7 +111,11 @@ export default function MerchantDamages() {
   return (
     <>
       <Header title={t('merchant.damages.title')} showBack />
-      <Screen padded={false} className="bg-canvas">
+      <Screen
+        padded={false}
+        className="bg-canvas"
+        onRefresh={() => setReloadKey((k) => k + 1)}
+      >
         <div className="container-wide pt-5 pb-10 space-y-5">
           <p className="text-[12.5px] text-ink-500 leading-relaxed px-1">
             {t('merchant.damages.subtitle')}

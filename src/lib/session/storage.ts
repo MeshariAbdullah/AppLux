@@ -21,8 +21,11 @@ export const LAST_ACTIVITY_AT_KEY = 'lend.session.lastActivityAt';
 
 /** Every prefix the app owns. The sign-out sweep removes ALL keys under
  *  these prefixes and nothing else — unrelated browser storage is never
- *  touched. */
-const APP_KEY_PREFIXES = ['applux.', 'lend.'] as const;
+ *  touched. `lend:` (colon) covers the merchant rental-session draft
+ *  (`lend:merchant-rental-session-draft:{uid}` — it can hold a typed
+ *  lessee National ID, which must not outlive a logout on a shared
+ *  counter device). */
+const APP_KEY_PREFIXES = ['applux.', 'lend.', 'lend:'] as const;
 
 /** Locale preference key (src/lib/i18n.tsx). Deliberately SURVIVES the
  *  sign-out sweep: it holds a 2-letter language code (no PII), and

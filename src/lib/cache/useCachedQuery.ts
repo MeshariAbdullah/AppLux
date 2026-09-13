@@ -41,8 +41,10 @@ export type CachedQueryResult<T> = {
   /** True while a background revalidation is in flight (data visible). */
   refreshing: boolean;
   error: Error | null;
-  /** Force a revalidation now (ignores TTL). */
-  refresh: () => void;
+  /** Force a revalidation now (ignores TTL). Resolves when the
+   *  revalidation settles (pull-to-refresh awaits it); errors land in
+   *  `error`, never in the returned promise. */
+  refresh: () => Promise<void>;
 };
 
 export function useCachedQuery<T>(
@@ -72,11 +74,11 @@ export function useCachedQuery<T>(
   const cached = active && key ? cacheRead<T>(key) : undefined;
 
   const revalidate = useCallback(
-    (currentKey: string) => {
+    (currentKey: string): Promise<void> => {
       const hasValue = cacheRead(currentKey) !== undefined;
       if (hasValue) setRefreshing(true);
       else setLoading(true);
-      cacheFetch(currentKey, fetcherRef.current as () => Promise<unknown>)
+      return cacheFetch(currentKey, fetcherRef.current as () => Promise<unknown>)
         .then(() => setError(null))
         .catch((err: unknown) => {
           setError(err instanceof Error ? err : new Error(String(err)));
@@ -106,7 +108,7 @@ export function useCachedQuery<T>(
     const entry = cacheRead<T>(key);
     markCacheOutcome(Boolean(entry && entry.ageMs < opts.ttlMs));
     if (!entry || entry.ageMs >= opts.ttlMs) {
-      revalidate(key);
+      void revalidate(key);
     }
     // Fresh entry → nothing to do; render already served it.
     // opts.ttlMs is a constant from CACHE_TTL per call site.
@@ -120,15 +122,16 @@ export function useCachedQuery<T>(
       if (document.visibilityState !== 'visible') return;
       const entry = cacheRead<T>(key);
       // Floor prevents app-switcher flapping from hammering the backend.
-      if (!entry || entry.ageMs >= FOCUS_REVALIDATE_MIN_MS) revalidate(key);
+      if (!entry || entry.ageMs >= FOCUS_REVALIDATE_MIN_MS) void revalidate(key);
     };
     document.addEventListener('visibilitychange', onVisible);
     return () => document.removeEventListener('visibilitychange', onVisible);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [active, key, opts.refetchOnFocus, revalidate]);
 
-  const refresh = useCallback(() => {
-    if (active && key) revalidate(key);
+  const refresh = useCallback((): Promise<void> => {
+    if (active && key) return revalidate(key);
+    return Promise.resolve();
   }, [active, key, revalidate]);
 
   return {

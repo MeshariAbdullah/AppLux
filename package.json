@@ -25,7 +25,9 @@
     "test:settlement": "node --test scripts/settlement-cap.test.mjs",
     "test:i18n": "esbuild src/lib/disputeEventLabel.ts --bundle --format=esm --outfile=scripts/.dispute-event-label-bundle.mjs && node --test scripts/i18n-coverage.test.mjs",
     "test:rentals": "node --test scripts/rentals-nav.test.mjs",
-    "test:draft": "esbuild src/lib/merchantSessionDraft.ts --bundle --format=esm --outfile=scripts/.merchant-draft-bundle.mjs && node --test scripts/merchant-draft.test.mjs"
+    "test:draft": "esbuild src/lib/merchantSessionDraft.ts --bundle --format=esm --outfile=scripts/.merchant-draft-bundle.mjs && node --test scripts/merchant-draft.test.mjs",
+    "test:refresh": "esbuild src/lib/pullToRefresh.ts --bundle --format=esm --outfile=scripts/.pull-to-refresh-bundle.mjs && node --test scripts/pull-to-refresh.test.mjs",
+    "test:session": "esbuild src/lib/session/policy.ts --bundle --format=esm --outfile=scripts/.session-policy-bundle.mjs && esbuild src/lib/session/storage.ts --bundle --format=esm --outfile=scripts/.session-storage-bundle.mjs && node --test scripts/session-duration.test.mjs"
   },
   "dependencies": {
     "@capacitor/core": "^7.0.0",

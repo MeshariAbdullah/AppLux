@@ -33,6 +33,7 @@
     "next": "Next",
     "back": "Back",
     "loading": "Loading…",
+    "pullToRefresh": "Pull to refresh",
     "empty": "Nothing to show yet",
     "sar": "SAR",
     "viewAll": "View all",

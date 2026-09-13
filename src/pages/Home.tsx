@@ -137,6 +137,7 @@ export default function Home() {
     merchants,
     invoiceItemsByInvoiceId,
     loading: liveLoading,
+    refresh: refreshRentalData,
   } = useCustomerRentalData(configured, realSession?.user?.id);
 
   const nameMap = useMemo(
@@ -297,7 +298,7 @@ export default function Home() {
   }
 
   return (
-    <Screen padded={false} className="bg-beige-100">
+    <Screen padded={false} className="bg-beige-100" onRefresh={refreshRentalData}>
       <div className="container-page pt-[calc(env(safe-area-inset-top)+22px)] pb-24 space-y-3">
         {/* ====== C05 greeting ====== */}
         {greetingRow}

@@ -117,7 +117,13 @@ export default function Profile() {
 
   return (
     <>
-      <Screen padded={false} className="bg-beige-100">
+      <Screen
+        padded={false}
+        className="bg-beige-100"
+        // Live mode: re-pull the profile row (name, verification,
+        // deletion state). Demo mode has no server data to refresh.
+        onRefresh={configured ? refresh : undefined}
+      >
         <div className="container-page pt-[calc(env(safe-area-inset-top)+22px)] pb-24 space-y-4">
           {/* ====== C13 masthead ====== */}
           <div className="flex items-center gap-3.5">

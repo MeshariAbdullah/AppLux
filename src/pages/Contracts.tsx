@@ -74,6 +74,7 @@ export default function Contracts() {
     merchants,
     invoiceItemsByInvoiceId,
     loading: liveLoading,
+    refresh: refreshRentalData,
   } = useCustomerRentalData(configured, session?.user?.id);
 
   const nameMap = useMemo(
@@ -165,7 +166,7 @@ export default function Contracts() {
           </Link>
         }
       />
-      <Screen className="bg-canvas">
+      <Screen className="bg-canvas" onRefresh={refreshRentalData}>
         {hasNothing ? (
           <EmptyRentals />
         ) : (

@@ -371,3 +371,82 @@ test('merchant nav: fixed on every main page, absent on auth, customer nav intac
     await expect(page.locator('nav[aria-label="primary"]')).toBeVisible();
   }
 });
+
+// =====================================================================
+// Pull-to-refresh — the shared Screen gesture on main screens: pulling
+// down from the top shows the «اسحب للتحديث» indicator, releasing past
+// the threshold runs a refresh cycle (spinner) and closes cleanly.
+// Driven with synthetic TouchEvents on the app scroller.
+// =====================================================================
+
+async function dragPull(page: Page, from: number, to: number, release = true) {
+  await page.evaluate(
+    ([startY, endY, doRelease]) => {
+      const main = document.querySelector('main');
+      if (!main) throw new Error('no main scroller');
+      const mk = (clientY: number) =>
+        new Touch({ identifier: 1, target: main, clientX: 180, clientY });
+      const fire = (type: string, y: number) =>
+        main.dispatchEvent(
+          new TouchEvent(type, {
+            touches: type === 'touchend' ? [] : [mk(y)],
+            changedTouches: [mk(y)],
+            bubbles: true,
+            cancelable: true,
+          }),
+        );
+      fire('touchstart', startY as number);
+      // A few intermediate moves like a real finger.
+      const steps = 5;
+      for (let i = 1; i <= steps; i += 1) {
+        fire('touchmove', (startY as number) + (((endY as number) - (startY as number)) * i) / steps);
+      }
+      if (doRelease) fire('touchend', endY as number);
+    },
+    [from, to, release] as const,
+  );
+}
+
+/** Release a gesture held open by dragPull(..., false). */
+async function releasePull(page: Page) {
+  await page.evaluate(() => {
+    const main = document.querySelector('main');
+    if (!main) throw new Error('no main scroller');
+    main.dispatchEvent(
+      new TouchEvent('touchend', { touches: [], bubbles: true, cancelable: true }),
+    );
+  });
+}
+
+test('pull-to-refresh: indicator, refresh cycle, and short-pull cancel on Home', async ({ page }) => {
+  await blockExternal(page);
+  await page.addInitScript((session) => {
+    window.localStorage.setItem('applux.session', JSON.stringify(session));
+  }, DEMO_SESSION);
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('/home', { waitUntil: 'domcontentloaded' });
+  const indicator = page.locator('[data-testid="pull-indicator"]');
+  await expect(indicator).toHaveAttribute('data-phase', 'idle');
+
+  // Drag far past the threshold, hold: the approved copy is visible.
+  await dragPull(page, 200, 520, false);
+  await expect(indicator).toHaveAttribute('data-phase', 'ready');
+  await expect(page.getByText('اسحب للتحديث')).toBeVisible();
+
+  // Release → refresh cycle → back to idle with the indicator closed.
+  await releasePull(page);
+  await expect(indicator).toHaveAttribute('data-phase', 'refreshing');
+  await expect(indicator).toHaveAttribute('data-phase', 'idle', { timeout: 3000 });
+  const transform = await page.evaluate(
+    () => (document.querySelector('main > div') as HTMLElement).style.transform,
+  );
+  expect(transform).toContain('0px');
+
+  // A short pull refreshes nothing.
+  await dragPull(page, 200, 240);
+  await expect(indicator).toHaveAttribute('data-phase', 'idle');
+
+  // Merchant + admin screens carry the same indicator.
+  await page.goto('/merchant/login', { waitUntil: 'domcontentloaded' });
+  await expect(page.locator('[data-testid="pull-indicator"]')).toHaveCount(0);
+});

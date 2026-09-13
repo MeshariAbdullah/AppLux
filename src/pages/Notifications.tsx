@@ -131,7 +131,7 @@ export default function Notifications() {
   return (
     <>
       <Header title={t('notifications.title')} />
-      <Screen className="bg-canvas">
+      <Screen className="bg-canvas" onRefresh={refetch}>
         {!configured ? (
           empty
         ) : loading ? (

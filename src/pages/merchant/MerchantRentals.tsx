@@ -74,7 +74,11 @@ export default function MerchantRentals() {
   // (same key as MerchantHome / the rental-session wizard), so landing
   // here from the dashboard no longer re-resolves it.
   const userId = session?.user?.id ?? null;
-  const { data: myMerchantData, error: merchantError } = useCachedQuery(
+  const {
+    data: myMerchantData,
+    error: merchantError,
+    refresh: refreshMyMerchant,
+  } = useCachedQuery(
     configured && userId ? cacheKeys.myMerchant(userId) : null,
     () => fetchMyMerchant(userId!),
     { ttlMs: CACHE_TTL.myMerchant, refetchOnFocus: false },
@@ -88,7 +92,11 @@ export default function MerchantRentals() {
   // invalidated by close/damage mutations so returning here after
   // closing a rental shows the closed state immediately. Errors map
   // to an empty list like the old .catch(() => []).
-  const { data: contractRowsData, error: contractsError } = useCachedQuery(
+  const {
+    data: contractRowsData,
+    error: contractsError,
+    refresh: refreshContracts,
+  } = useCachedQuery(
     configured && userId && myMerchant
       ? cacheKeys.merchantContracts(userId)
       : null,
@@ -99,7 +107,11 @@ export default function MerchantRentals() {
 
   // M12: issued invoices ("مراجعة العميل" rows) — SAME cache key, TTL
   // and invalidation the dashboard already uses for this list.
-  const { data: invoiceRowsData, error: invoicesError } = useCachedQuery(
+  const {
+    data: invoiceRowsData,
+    error: invoicesError,
+    refresh: refreshInvoices,
+  } = useCachedQuery(
     configured && userId && myMerchant
       ? cacheKeys.merchantInvoices(userId, 'issued')
       : null,
@@ -248,7 +260,13 @@ export default function MerchantRentals() {
 
   return (
     <>
-      <Screen padded={false} className="bg-beige-100">
+      <Screen
+        padded={false}
+        className="bg-beige-100"
+        onRefresh={() =>
+          Promise.all([refreshMyMerchant(), refreshContracts(), refreshInvoices()])
+        }
+      >
         <div className="container-wide pt-[calc(env(safe-area-inset-top)+22px)] pb-24 space-y-3">
           {/* ====== M12 masthead: title + search toggle ====== */}
           <div className="flex items-center gap-2.5">

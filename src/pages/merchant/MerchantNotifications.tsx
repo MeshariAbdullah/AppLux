@@ -129,7 +129,7 @@ export default function MerchantNotifications() {
   return (
     <>
       <Header title={t('notifications.title')} showBack />
-      <Screen className="bg-canvas">
+      <Screen className="bg-canvas" onRefresh={refetch}>
         {!configured ? (
           empty
         ) : loading ? (

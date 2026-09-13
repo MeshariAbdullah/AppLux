@@ -49,7 +49,11 @@ export default function MerchantProfile() {
   const tapVersion = useTapReveal(() => navigate('/diagnostics'));
 
   const userId = session?.user?.id ?? null;
-  const { data: liveMerchant, loading: merchantLoading } = useCachedQuery(
+  const {
+    data: liveMerchant,
+    loading: merchantLoading,
+    refresh: refreshMyMerchant,
+  } = useCachedQuery(
     configured && userId ? cacheKeys.myMerchant(userId) : null,
     () => fetchMyMerchant(userId!),
     { ttlMs: CACHE_TTL.myMerchant },
@@ -124,7 +128,7 @@ export default function MerchantProfile() {
   return (
     <>
       <Header title={t('merchant.profile.title')} />
-      <Screen padded={false} className="bg-beige-100">
+      <Screen padded={false} className="bg-beige-100" onRefresh={refreshMyMerchant}>
         <div className="container-page pt-5 pb-24 space-y-4">
           {/* Store identity — M16 header */}
           <div className="flex items-center gap-3.5">

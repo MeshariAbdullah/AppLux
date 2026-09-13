@@ -44,6 +44,8 @@ export default function AdminUsers() {
   const [liveLoading, setLiveLoading] = useState<boolean>(() => configured);
   const [tab, setTab] = useState<TabKey>('all');
   const [query, setQuery] = useState('');
+  // Pull-to-refresh: bumping the key re-runs the load effect.
+  const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
     if (!configured) {
@@ -68,7 +70,7 @@ export default function AdminUsers() {
     return () => {
       cancelled = true;
     };
-  }, [configured]);
+  }, [configured, reloadKey]);
 
   const adminUsers = liveUsers ?? demoUsers;
 
@@ -137,7 +139,11 @@ export default function AdminUsers() {
         showBack
         trailing={<LangToggle tone="dark" />}
       />
-      <Screen padded={false} className="bg-canvas">
+      <Screen
+        padded={false}
+        className="bg-canvas"
+        onRefresh={() => setReloadKey((k) => k + 1)}
+      >
         <div className="container-wide pt-5 pb-10 space-y-5">
           {/* Hero */}
           <div className="relative overflow-hidden rounded-xl3 bg-gradient-to-br from-ink-900 via-ink-800 to-ink-900 text-white p-6 shadow-plush">
