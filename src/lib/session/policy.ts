@@ -12,18 +12,22 @@ import type { AppRole } from '@/lib/supabase/types';
 // by default; these timers are the app's own cap on how long a
 // sign-in lives.
 //
-// PRODUCT DECISION (session-duration spec): users stay signed in for
-// up to TEN DAYS before the app requires a fresh login — the earlier
-// short idle/absolute windows (minutes/hours) forced constant
-// re-logins on the phone app. Both timers now enforce exactly that
-// 10-day ceiling for every role:
+// PRODUCT DECISION (session-duration spec, per-role revision of the
+// earlier flat 10-day ceiling): maximum session lifetime before the
+// app requires a fresh login is
 //
-//   * absolute — hard cap 10 days from sign-in, however active.
-//   * idle     — also 10 days: within the allowed window, coming back
-//     to the app must NOT require a login. The idle machinery
+//   * customer — 14 days (their own phone),
+//   * merchant — 14 days (counter device),
+//   * admin    —  1 day  (sees full customer PII).
+//
+// For each role BOTH timers enforce that same ceiling:
+//
+//   * absolute — hard cap from sign-in, however active.
+//   * idle     — the same value: within the allowed window, coming
+//     back to the app must NOT require a login. The idle machinery
 //     (activity anchors, warning modal, sensitive-flow deferral)
-//     stays in place so the window can be narrowed per-role again by
-//     changing only these values.
+//     stays in place so an idle window shorter than the absolute cap
+//     can be reintroduced per-role by changing only these values.
 //
 // Everything else that protects the account is unchanged: sign-out
 // (user-chosen or timer-driven) still revokes the token and sweeps
@@ -47,23 +51,28 @@ export type SessionTimeoutPolicy = {
 
 const DAY = 86_400_000;
 
-/** The one product knob: maximum session lifetime before re-login. */
-export const SESSION_MAX_DAYS = 10;
+/** The product knobs: maximum session lifetime (days) before
+ *  re-login, per role. */
+export const SESSION_MAX_DAYS_BY_ROLE: Record<AppRole, number> = {
+  customer: 14,
+  merchant: 14,
+  admin: 1,
+};
 
 export const SESSION_POLICIES: Record<AppRole, SessionTimeoutPolicy> = {
   customer: {
-    idleMs: SESSION_MAX_DAYS * DAY,
-    absoluteMs: SESSION_MAX_DAYS * DAY,
+    idleMs: SESSION_MAX_DAYS_BY_ROLE.customer * DAY,
+    absoluteMs: SESSION_MAX_DAYS_BY_ROLE.customer * DAY,
     warningMs: 60_000,
   },
   merchant: {
-    idleMs: SESSION_MAX_DAYS * DAY,
-    absoluteMs: SESSION_MAX_DAYS * DAY,
+    idleMs: SESSION_MAX_DAYS_BY_ROLE.merchant * DAY,
+    absoluteMs: SESSION_MAX_DAYS_BY_ROLE.merchant * DAY,
     warningMs: 60_000,
   },
   admin: {
-    idleMs: SESSION_MAX_DAYS * DAY,
-    absoluteMs: SESSION_MAX_DAYS * DAY,
+    idleMs: SESSION_MAX_DAYS_BY_ROLE.admin * DAY,
+    absoluteMs: SESSION_MAX_DAYS_BY_ROLE.admin * DAY,
     warningMs: 60_000,
   },
 };

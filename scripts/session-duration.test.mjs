@@ -7,7 +7,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import {
-  SESSION_MAX_DAYS,
+  SESSION_MAX_DAYS_BY_ROLE,
   SESSION_POLICIES,
   resolveSessionPolicy,
 } from './.session-policy-bundle.mjs';
@@ -15,18 +15,21 @@ import {
 const root = path.resolve(import.meta.dirname, '..');
 const read = (p) => readFileSync(path.join(root, p), 'utf8');
 
-const TEN_DAYS_MS = 10 * 24 * 60 * 60 * 1000;
+const DAY_MS = 24 * 60 * 60 * 1000;
 
-test('every role keeps its session for exactly 10 days (idle AND absolute)', () => {
-  assert.equal(SESSION_MAX_DAYS, 10);
-  for (const role of ['customer', 'merchant', 'admin']) {
+test('per-role session ceilings: customer 14d, merchant 14d, admin 1d (idle AND absolute)', () => {
+  const expected = { customer: 14, merchant: 14, admin: 1 };
+  assert.deepEqual(SESSION_MAX_DAYS_BY_ROLE, expected);
+  for (const [role, days] of Object.entries(expected)) {
     const p = SESSION_POLICIES[role];
-    assert.equal(p.absoluteMs, TEN_DAYS_MS, `${role} absolute`);
-    assert.equal(p.idleMs, TEN_DAYS_MS, `${role} idle`);
+    assert.equal(p.absoluteMs, days * DAY_MS, `${role} absolute`);
+    assert.equal(p.idleMs, days * DAY_MS, `${role} idle`);
     assert.ok(p.warningMs > 0 && p.warningMs < p.idleMs, `${role} warning window`);
   }
-  // Role still resolving → the customer policy, same 10 days.
-  assert.equal(resolveSessionPolicy(null).absoluteMs, TEN_DAYS_MS);
+  // Role still resolving → the customer policy (most lenient; the real
+  // policy applies as soon as the role resolves).
+  assert.equal(resolveSessionPolicy(null).absoluteMs, 14 * DAY_MS);
+  assert.equal(resolveSessionPolicy('admin').absoluteMs, 1 * DAY_MS);
 });
 
 test('sessions persist via the Supabase refresh token — no custom token storage', () => {
