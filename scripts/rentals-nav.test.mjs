@@ -55,3 +55,28 @@ test('hero never headlines the public reference and renders it labeled instead',
   // The raw row UUID (contract.id) is never rendered as text.
   assert.ok(!/\{contract\.id\}\s*</.test(tracking));
 });
+
+test('documented-contract row: generated contract, tappable, friendly pending state', () => {
+  // Tappable row opens the generated clauses (contractTemplate), with
+  // the documented chip and the public reference — never a UUID.
+  assert.ok(tracking.includes("t('track.contract.documentedContract')"));
+  assert.ok(tracking.includes("t('track.contract.viewContract')"));
+  assert.ok(tracking.includes("t('track.contract.documentedChip')"));
+  assert.ok(tracking.includes("t('track.contract.contractPendingDoc')"), 'disabled state exists');
+  assert.ok(tracking.includes('onClick={openFullContract}'));
+  assert.ok(tracking.includes('contractTemplate ? ('), 'pending state when no template');
+  const row = tracking.slice(tracking.indexOf('documentedContract'), tracking.indexOf('contractPendingDoc'));
+  assert.ok(row.includes('contract.contractNumber'), 'public CN reference shown');
+  assert.ok(!/\{contract\.id\}/.test(row), 'no raw UUID');
+});
+
+test('merchant docs section says documented contract, not upload-like copy', () => {
+  const ar = JSON.parse(readFileSync(path.join(root, 'src/locales/ar.json'), 'utf8'));
+  const en = JSON.parse(readFileSync(path.join(root, 'src/locales/en.json'), 'utf8'));
+  assert.equal(ar.merchant.rental.docs.contract, 'عقد الإيجار الموثّق');
+  assert.equal(ar.merchant.rental.docs.hint, 'عرض العقد');
+  assert.equal(en.merchant.rental.docs.contract, 'Documented rental contract');
+  assert.equal(en.merchant.rental.docs.hint, 'View contract');
+  assert.equal(ar.track.contract.documentedChip, 'موثّق');
+  assert.equal(ar.track.contract.contractPendingDoc, 'سيظهر العقد بعد اكتمال التوثيق');
+});

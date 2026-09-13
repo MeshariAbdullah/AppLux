@@ -1252,7 +1252,11 @@
         "body": "The rental cannot start until the item receipt photos are uploaded and confirmed inside the acceptance flow.",
         "cta": "Complete receipt documentation"
       },
-      "endsChip": "Ends: {date}"
+      "endsChip": "Ends: {date}",
+      "documentedContract": "Documented rental contract",
+      "viewContract": "View contract",
+      "documentedChip": "Documented",
+      "contractPendingDoc": "The contract will be available after documentation is complete"
     },
     "note": {
       "principal": "Principal amount",
@@ -1795,8 +1799,8 @@
       },
       "docs": {
         "title": "Documents",
-        "hint": "Tap to open",
-        "contract": "Rental contract",
+        "hint": "View contract",
+        "contract": "Documented rental contract",
         "note": "Promissory note",
         "state": {
           "draft": "Draft",

@@ -284,3 +284,26 @@ test('contract hero: reference is labeled and small, badges clear, facts visible
     await expect(page.getByText('المدة').first()).toBeVisible();
   }
 });
+
+// =====================================================================
+// Contract documents section: the documented rental contract row is
+// present, correctly labeled (platform-generated, never a merchant
+// upload), and shows the friendly pending state instead of a dead
+// link when the record isn't complete (demo has no live template).
+// =====================================================================
+
+test('contract documents: documented-contract row labeled and never a dead link', async ({ page }) => {
+  await blockExternal(page);
+  await page.addInitScript((session) => {
+    window.localStorage.setItem('applux.session', JSON.stringify(session));
+  }, DEMO_SESSION);
+  for (const vp of [{ width: 390, height: 844 }, { width: 834, height: 1194 }]) {
+    await page.setViewportSize(vp);
+    await page.goto('/track/contract/LND-Q7F3KD', { waitUntil: 'domcontentloaded' });
+    await expect(page.getByText('عقد الإيجار الموثّق').first()).toBeVisible();
+    // No live template in demo → the friendly pending copy, not a link.
+    await expect(page.getByText('سيظهر العقد بعد اكتمال التوثيق')).toBeVisible();
+    // The old ambiguous hint is gone everywhere on the page.
+    await expect(page.getByText('اضغط للفتح')).toHaveCount(0);
+  }
+});

@@ -8,6 +8,7 @@ import {
   EmptyState,
   PageSkeleton,
   SectionHeader,
+  StatusChip,
 } from '@/components/ui';
 import {
   ArrowIcon,
@@ -96,6 +97,9 @@ export default function ContractTracking() {
   const [contractTemplate, setContractTemplate] =
     useState<ContractTemplateOutput | null>(null);
   const [showFullContract, setShowFullContract] = useState(false);
+  // The documents row scrolls the reader straight into the generated
+  // contract clauses when tapped.
+  const fullContractRef = useRef<HTMLElement | null>(null);
   // Bugs 17/19 resume: a pending contract whose receipt photos are not
   // confirmed can re-enter the guided flow via the invoice scan token.
   const [resumeToken, setResumeToken] = useState<string | null>(null);
@@ -462,6 +466,20 @@ export default function ContractTracking() {
   }
 
   const duration = daysBetween(contract.startDate, contract.endDate);
+  // The rental contract is PLATFORM-GENERATED from the approved offer
+  // (contractTemplate) — never a merchant upload. Documented = the
+  // customer accepted it into an active (or since-ended) state.
+  const contractDocumented =
+    contract.status === 'active' || contract.status === 'ended';
+  const openFullContract = () => {
+    setShowFullContract(true);
+    // Wait for the clauses section to mount before scrolling to it.
+    requestAnimationFrame(() =>
+      requestAnimationFrame(() =>
+        fullContractRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }),
+      ),
+    );
+  };
   // Never headline the public reference: adaptContract uses it as the
   // title fallback when the item name is unavailable — in that case
   // the merchant name leads and the reference stays in its labeled
@@ -711,6 +729,59 @@ export default function ContractTracking() {
           <section>
             <SectionHeader title={t('track.contract.linkedDocs')} />
             <div className="space-y-2.5">
+              {/* The documented rental contract — the PLATFORM-GENERATED
+                  clauses the customer approved (contractTemplate over the
+                  stored offer), never a merchant-uploaded file. Tapping
+                  opens the full contract view; until the record is
+                  complete the row shows a friendly pending state instead
+                  of a dead link. */}
+              {contractTemplate ? (
+                <button type="button" onClick={openFullContract} className="w-full text-start">
+                  <Card padded interactive className="flex items-center gap-3">
+                    <span className="h-10 w-10 shrink-0 rounded-xl bg-navy-50 text-navy-700 grid place-items-center">
+                      <DocIcon size={18} />
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
+                        <span className="text-[13.5px] font-semibold text-ink-900 truncate">
+                          {t('track.contract.documentedContract')}
+                        </span>
+                        {contractDocumented && (
+                          <StatusChip
+                            size="sm"
+                            tone="success"
+                            dot={false}
+                            label={t('track.contract.documentedChip')}
+                          />
+                        )}
+                      </div>
+                      {contract.contractNumber && (
+                        <div className="mt-0.5 text-[12px] text-ink-400 num truncate" dir="ltr">
+                          {contract.contractNumber}
+                        </div>
+                      )}
+                    </div>
+                    <span className="inline-flex items-center gap-1 text-[12px] font-semibold text-lavender-700 shrink-0">
+                      {t('track.contract.viewContract')}
+                      <ArrowIcon size={11} className={dir === 'rtl' ? 'rotate-180' : ''} />
+                    </span>
+                  </Card>
+                </button>
+              ) : (
+                <Card padded className="flex items-center gap-3">
+                  <span className="h-10 w-10 shrink-0 rounded-xl bg-canvas-100 text-ink-400 grid place-items-center">
+                    <DocIcon size={18} />
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <div className="text-[13.5px] font-semibold text-ink-500 truncate">
+                      {t('track.contract.documentedContract')}
+                    </div>
+                    <div className="mt-0.5 text-[12px] text-ink-400 leading-relaxed">
+                      {t('track.contract.contractPendingDoc')}
+                    </div>
+                  </div>
+                </Card>
+              )}
               {/* Promissory-note document link — hidden in the current
                   phase (ENABLE_PAYMENTS_AND_NOTES). */}
               {ENABLE_PAYMENTS_AND_NOTES && linkedNote && (
@@ -819,7 +890,7 @@ export default function ContractTracking() {
           </div>
 
           {showFullContract && contractTemplate && (
-            <section className="space-y-2.5 animate-fade-in">
+            <section ref={fullContractRef} className="space-y-2.5 animate-fade-in scroll-mt-4">
               <SectionHeader title={t('track.contract.fullContractTitle')} />
               <Card padded className="space-y-3.5">
                 {contractTemplate.clauses.map((c, i) => (
