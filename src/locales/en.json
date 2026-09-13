@@ -554,7 +554,8 @@
     "contract": {
       "active": "Active",
       "pending": "Pending",
-      "ended": "Ended"
+      "ended": "Ended",
+      "cancelled": "Cancelled"
     },
     "note": {
       "signed": "Signed",
@@ -3004,7 +3005,9 @@
         "confirmBody": "Processing of this case inside Lend will end without this being a ruling for either party; the contract continues in its current state. The reason is visible to both parties.",
         "reasonLabel": "Closure reason (visible to both parties)",
         "confirm": "Close case",
-        "cancel": "Back"
+        "cancel": "Back",
+        "reasonRequired": "Please enter a dismissal reason.",
+        "setupIncomplete": "The case could not be closed because required setup is incomplete. Apply the latest updates and try again."
       }
     }
   },

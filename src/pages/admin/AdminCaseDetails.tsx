@@ -248,7 +248,19 @@ function AdminCaseDetailsInner({
       const code = (err as { code?: unknown })?.code;
       if (code === 'P0201' || code === 'P0207') await refetch().catch(() => {});
       const eventId = logEvent('dispute_action_failed', 'warn', { op }, err);
-      setActionError(withSupportId(translateError(err, t), eventId));
+      let message = translateError(err, t);
+      // Administrative closure: replace the generic integrity copy with
+      // actionable messages. A 23xxx here means the dismissal
+      // vocabulary CHECKs are missing (20260502130000 not applied yet);
+      // P0221 is the server-side empty-reason guard.
+      if (op === 'admin_dismiss_dispute_case') {
+        if (code === 'P0221') {
+          message = t('admin.disputes.dismiss.reasonRequired');
+        } else if (typeof code === 'string' && code.startsWith('23')) {
+          message = t('admin.disputes.dismiss.setupIncomplete');
+        }
+      }
+      setActionError(withSupportId(message, eventId));
     } finally {
       setBusy(false);
     }
@@ -317,7 +329,7 @@ function AdminCaseDetailsInner({
                 />
                 <FactRow
                   label={t('admin.disputes.contractStateLabel')}
-                  value={contract.status}
+                  value={t(`status.contract.${contract.status}`)}
                 />
               </>
             )}
@@ -819,6 +831,7 @@ function DismissCard({
 }) {
   const [open, setOpen] = useState(false);
   const [reason, setReason] = useState('');
+  const [touched, setTouched] = useState(false);
   const valid = reason.trim().length > 0;
   return (
     <Card padded className="space-y-3">
@@ -827,7 +840,17 @@ function DismissCard({
         {t('admin.disputes.dismiss.confirmBody')}
       </p>
       <FormField label={t('admin.disputes.dismiss.reasonLabel')} required>
-        <Textarea value={reason} onChange={(e) => setReason(e.target.value)} rows={2} />
+        <Textarea
+          value={reason}
+          onChange={(e) => setReason(e.target.value)}
+          onBlur={() => setTouched(true)}
+          rows={2}
+        />
+        {touched && !valid && (
+          <p className="mt-1.5 text-[11.5px] text-danger-600 leading-relaxed">
+            {t('admin.disputes.dismiss.reasonRequired')}
+          </p>
+        )}
       </FormField>
       <button
         type="button"

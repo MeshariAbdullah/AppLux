@@ -134,3 +134,48 @@ test('ar/en dispute locale trees stay structurally identical', () => {
   assert.deepEqual(keys(ar.merchant.disputes).sort(), keys(en.merchant.disputes).sort());
   assert.deepEqual(keys(ar.merchant.damage).sort(), keys(en.merchant.damage).sort());
 });
+
+// ---------------------------------------------------------------------
+// Admin administrative closure (AdminCaseDetails) — validation, error
+// mapping, and localized copy.
+// ---------------------------------------------------------------------
+
+test('admin dismissal: required-reason validation and actionable error mapping', () => {
+  const adminPage = read('src/pages/admin/AdminCaseDetails.tsx');
+  // Inline required-reason message + disabled submit until valid.
+  assert.ok(adminPage.includes("t('admin.disputes.dismiss.reasonRequired')"));
+  assert.ok(adminPage.includes('disabled={busy || !valid}'));
+  // 23xxx (missing dismissal vocabulary, pre-130000 DB) and P0221 map
+  // to clear human-readable copy for the dismiss action.
+  assert.ok(adminPage.includes("op === 'admin_dismiss_dispute_case'"));
+  assert.ok(adminPage.includes("t('admin.disputes.dismiss.setupIncomplete')"));
+  // The card is hidden for already-closed cases.
+  assert.ok(adminPage.includes("kase.dispute_phase !== 'resolved' && (\n            <DismissCard"));
+  assert.equal(ar.admin.disputes.dismiss.reasonRequired, 'يرجى إدخال سبب الإغلاق.');
+  assert.equal(en.admin.disputes.dismiss.reasonRequired, 'Please enter a dismissal reason.');
+  assert.equal(ar.admin.disputes.dismiss.setupIncomplete,
+    'تعذر إغلاق الحالة بسبب إعدادات غير مكتملة. تأكد من تطبيق آخر التحديثات ثم حاول مرة أخرى.');
+  assert.equal(en.admin.disputes.dismiss.setupIncomplete,
+    'The case could not be closed because required setup is incomplete. Apply the latest updates and try again.');
+});
+
+test('admin case page renders localized copy — no raw "active", no Latin Lend in its dispute strings', () => {
+  const adminPage = read('src/pages/admin/AdminCaseDetails.tsx');
+  // Contract status renders through the localized status labels …
+  assert.ok(adminPage.includes('t(`status.contract.${contract.status}`)'));
+  assert.ok(!adminPage.includes('value={contract.status}'), 'raw English enum removed');
+  // … and every DB status value has AR+EN copy.
+  for (const s of ['pending', 'active', 'ended', 'cancelled']) {
+    assert.ok(/[؀-ۿ]/.test(ar.status.contract[s]), `ar status ${s}`);
+    assert.ok(en.status.contract[s], `en status ${s}`);
+  }
+  // The page's admin dispute strings use «ليند», not Latin "Lend".
+  for (const k of [ar.admin.disputes.mediation.title, ar.admin.disputes.mediation.neutralNotice,
+                   ar.admin.disputes.responses.title, ar.admin.disputes.unresolvedNote,
+                   ar.admin.disputes.dismiss.confirmBody]) {
+    assert.ok(!k.includes('Lend'), `Latin Lend remains: ${k.slice(0, 40)}`);
+    assert.ok(k.includes('ليند'), `ليند missing: ${k.slice(0, 40)}`);
+  }
+  // Legacy "Damage report for CN-…" descriptions stay localized.
+  assert.ok(adminPage.includes('caseDescriptionDisplay(t, kase.description)'));
+});
