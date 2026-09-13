@@ -242,3 +242,45 @@ test('rentals list: pending "مراجعة" opens the review flow; past rows navi
     .evaluate((el) => el.closest('a')?.getAttribute('href'));
   expect(pastHref).toMatch(/^\/track\/contract\//);
 });
+
+// =====================================================================
+// Contract tracking hero (real-device regression): the CN-…/LND-…
+// reference is a normal labeled value ("رقم العقد"), never the
+// oversized headline; status + end-date chips sit on their own row
+// clear of the icon block; fee and duration stay visible.
+// =====================================================================
+
+test('contract hero: reference is labeled and small, badges clear, facts visible', async ({ page }) => {
+  await blockExternal(page);
+  await page.addInitScript((session) => {
+    window.localStorage.setItem('applux.session', JSON.stringify(session));
+  }, DEMO_SESSION);
+  for (const vp of [{ width: 390, height: 844 }, { width: 834, height: 1194 }]) {
+    await page.setViewportSize(vp);
+    await page.goto('/track/contract/LND-Q7F3KD', { waitUntil: 'domcontentloaded' });
+
+    // The labeled reference: normal size (≤14px), LTR, copyable.
+    const ref = page.locator('div.select-all', { hasText: 'LND-Q7F3KD' }).first();
+    await expect(ref).toBeVisible();
+    const refPx = parseFloat(await ref.evaluate((el) => getComputedStyle(el).fontSize));
+    expect(refPx, 'reference is a normal value, not a headline').toBeLessThanOrEqual(14);
+
+    // The hero headline is the ITEM (or merchant), never the reference.
+    const title = page.locator('.editorial-title').first();
+    expect((await title.textContent())?.trim()).not.toMatch(/^(CN|LND)-/);
+    const titlePx = parseFloat(await title.evaluate((el) => getComputedStyle(el).fontSize));
+    expect(titlePx).toBeLessThanOrEqual(18);
+
+    // Badges (status + end date) sit ABOVE the icon/title block — no
+    // overlap between the chip row and the document icon.
+    const endsChip = page.getByText('ينتهي:').first();
+    await expect(endsChip).toBeVisible();
+    const chipBox = (await endsChip.boundingBox())!;
+    const titleBox = (await title.boundingBox())!;
+    expect(chipBox.y + chipBox.height).toBeLessThanOrEqual(titleBox.y + 1);
+
+    // Fee + duration remain visible in the facts grid.
+    await expect(page.getByText('رسم التأجير').first()).toBeVisible();
+    await expect(page.getByText('المدة').first()).toBeVisible();
+  }
+});

@@ -38,3 +38,20 @@ test('merchant name passes through untouched and no raw id renders on the card',
     contracts.indexOf('function RentalBundleCard'));
   assert.ok(!/\{invoice\.id\}\s*</.test(row), 'uuid never rendered as text');
 });
+
+// ---------------------------------------------------------------------
+// Contract tracking hero — structural guards (same suite: customer
+// rental surfaces).
+// ---------------------------------------------------------------------
+
+const tracking = readFileSync(path.join(root, 'src/pages/ContractTracking.tsx'), 'utf8');
+
+test('hero never headlines the public reference and renders it labeled instead', () => {
+  assert.ok(tracking.includes('titleIsReference'), 'reference-as-title fallback is detected');
+  assert.ok(tracking.includes("t('review.contract.reference')"), 'labeled رقم العقد row');
+  assert.ok(!tracking.includes('text-[22px] leading-tight truncate text-ink-900'),
+    'oversized 22px hero title removed');
+  assert.ok(tracking.includes("t('track.contract.endsChip'"), 'end-date badge present');
+  // The raw row UUID (contract.id) is never rendered as text.
+  assert.ok(!/\{contract\.id\}\s*</.test(tracking));
+});

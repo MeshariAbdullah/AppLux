@@ -462,36 +462,78 @@ export default function ContractTracking() {
   }
 
   const duration = daysBetween(contract.startDate, contract.endDate);
+  // Never headline the public reference: adaptContract uses it as the
+  // title fallback when the item name is unavailable — in that case
+  // the merchant name leads and the reference stays in its labeled
+  // grid cell below.
+  const titleIsReference =
+    !contract.title || contract.title === contract.contractNumber;
+  const heroTitle = titleIsReference
+    ? contract.counterparty || t('track.contractTitle')
+    : contract.title;
+  const heroSubtitle =
+    !titleIsReference && contract.counterparty && contract.counterparty !== '—'
+      ? contract.counterparty
+      : null;
 
   return (
     <>
       <Header title={t('track.contractTitle')} showBack />
       <Screen padded={false} className="bg-canvas">
         <div className="container-page pt-5 pb-10 space-y-5">
-          {/* Hero — soft tinted, framed as an official record */}
-          <div className="relative overflow-hidden rounded-[14px] bg-white ring-1 ring-beige-200 p-6">
-            <div className="relative inline-flex items-center gap-1.5 rounded-full bg-green-50 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.14em] text-green-700">
-              <BadgeCheckIcon size={11} />
-              {t('track.recordedOn', { date: formatDate(contract.startDate) })}
+          {/* Hero — official record summary. Hierarchy (real-device
+              fix): status/end-date chips on their own wrapping row, a
+              MODERATE item/merchant title, then four labeled facts —
+              the CN-… reference renders as a normal labeled value in
+              that grid, never as the oversized headline (adaptContract
+              falls back to the reference as `title` when the item name
+              is unavailable, which used to blow it up to 22px). */}
+          <div className="relative overflow-hidden rounded-[14px] bg-white ring-1 ring-beige-200 p-5 sm:p-6">
+            <div className="flex flex-wrap items-center gap-2">
+              <ContractStatusChip status={contract.status} />
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-canvas-100 ring-1 ring-canvas-200 px-2.5 py-1 text-[11px] font-semibold text-ink-600 num">
+                <BadgeCheckIcon size={11} className="text-ink-400" />
+                {t('track.contract.endsChip', { date: formatDate(contract.endDate) })}
+              </span>
             </div>
-            <div className="relative mt-4 flex items-start gap-3">
-              <span className="h-11 w-11 rounded-xl bg-white text-ink-700 hairline grid place-items-center shrink-0">
+            <div className="mt-4 flex items-start gap-3">
+              <span className="h-11 w-11 rounded-xl bg-canvas-50 text-ink-700 hairline grid place-items-center shrink-0">
                 <DocIcon size={20} />
               </span>
               <div className="min-w-0 flex-1">
                 <div className="text-[10.5px] font-semibold text-ink-400 uppercase tracking-[0.08em]">
                   {t('track.contractTitle')}
                 </div>
-                <div className="mt-1.5 editorial-title text-[22px] leading-tight truncate text-ink-900">
-                  {contract.title}
+                <div className="mt-1 editorial-title text-[18px] leading-snug text-ink-900">
+                  {heroTitle}
                 </div>
-                <div className="mt-1 text-[12px] text-ink-500 truncate">
-                  {contract.counterparty}
+                {heroSubtitle && (
+                  <div className="mt-0.5 text-[12px] text-ink-500 truncate">
+                    {heroSubtitle}
+                  </div>
+                )}
+              </div>
+            </div>
+            <div className="mt-4 grid grid-cols-2 gap-x-4 gap-y-3 text-[12px]">
+              {contract.contractNumber && (
+                <div>
+                  <div className="text-ink-400 uppercase tracking-wide text-[10.5px] font-medium">
+                    {t('review.contract.reference')}
+                  </div>
+                  {/* Copyable, normal-sized public reference. */}
+                  <div className="mt-0.5 font-semibold num text-ink-900 select-all" dir="ltr">
+                    {contract.contractNumber}
+                  </div>
+                </div>
+              )}
+              <div>
+                <div className="text-ink-400 uppercase tracking-wide text-[10.5px] font-medium">
+                  {t('track.contract.startOn')}
+                </div>
+                <div className="mt-0.5 font-semibold num text-ink-900">
+                  {formatDate(contract.startDate)}
                 </div>
               </div>
-              <ContractStatusChip status={contract.status} />
-            </div>
-            <div className="relative mt-4 grid grid-cols-2 gap-3 text-[12px]">
               <div>
                 <div className="text-ink-400 uppercase tracking-wide text-[10.5px] font-medium">
                   {t('track.contract.rentalFee')}

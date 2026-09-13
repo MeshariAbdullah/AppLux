@@ -1251,7 +1251,8 @@
         "title": "Receipt documentation incomplete",
         "body": "The rental cannot start until the item receipt photos are uploaded and confirmed inside the acceptance flow.",
         "cta": "Complete receipt documentation"
-      }
+      },
+      "endsChip": "Ends: {date}"
     },
     "note": {
       "principal": "Principal amount",
