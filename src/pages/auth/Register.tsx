@@ -459,6 +459,14 @@ function SupabaseRegister() {
       switch (err.code) {
         case 'invalid_mobile':
           return mobileIssueToMessage('invalid_format', t);
+        case 'invalid_email':
+          return t('auth.errors.emailFormat');
+        case 'email_taken':
+          return t('auth.regOtp.errors.emailTaken');
+        case 'mobile_taken':
+          return t('auth.regOtp.errors.mobileTaken');
+        case 'preflight_failed':
+          return t('auth.regOtp.errors.preflight');
         case 'cooldown':
           return t('auth.regOtp.errors.cooldown');
         case 'send_limit':
@@ -503,7 +511,12 @@ function SupabaseRegister() {
     setOtpBusy(true);
     setOtpError(null);
     try {
-      await sendRegistrationOtp(normalizedMobile.canonical);
+      const emailCheck = classifyEmail(email);
+      await sendRegistrationOtp(
+        normalizedMobile.canonical,
+        'customer',
+        emailCheck.kind === 'valid' ? emailCheck.canonical : email.trim(),
+      );
       setResendAt(Date.now() + 60_000);
       setOtpCode('');
     } catch (err) {
@@ -547,7 +560,14 @@ function SupabaseRegister() {
       setOtpBusy(true);
       setOtpError(null);
       try {
-        await sendRegistrationOtp(normalizedMobile!.canonical);
+        // The email rides along for the server-side duplicate
+        // preflight: a taken email/mobile is rejected HERE — before
+        // any SMS is sent or OTP challenge created.
+        await sendRegistrationOtp(
+          normalizedMobile!.canonical,
+          'customer',
+          emailCheck.kind === 'valid' ? emailCheck.canonical : email.trim(),
+        );
         setOtpStage('sent');
         setResendAt(Date.now() + 60_000);
         setOtpCode('');
@@ -558,6 +578,10 @@ function SupabaseRegister() {
           setOtpStage('sent');
           setResendAt(Date.now() + 60_000);
           setOtpError(regOtpErrorMessage(err));
+        } else if (err instanceof RegistrationOtpError && err.code === 'email_taken') {
+          setErrors({ email: regOtpErrorMessage(err) });
+        } else if (err instanceof RegistrationOtpError && err.code === 'mobile_taken') {
+          setErrors({ mobile: regOtpErrorMessage(err) });
         } else {
           setErrors({ form: regOtpErrorMessage(err) });
         }

@@ -528,6 +528,14 @@ export default function MerchantRegister() {
       switch (err.code) {
         case 'invalid_mobile':
           return t('merchant.register.errors.mobile');
+        case 'invalid_email':
+          return t('auth.errors.emailFormat');
+        case 'email_taken':
+          return t('auth.regOtp.errors.emailTaken');
+        case 'mobile_taken':
+          return t('auth.regOtp.errors.mobileTaken');
+        case 'preflight_failed':
+          return t('auth.regOtp.errors.preflight');
         case 'cooldown':
           return t('auth.regOtp.errors.cooldown');
         case 'send_limit':
@@ -551,7 +559,9 @@ export default function MerchantRegister() {
     setRegOtpBusy(true);
     setRegOtpError(null);
     try {
-      await sendRegistrationOtp(canonical, 'merchant');
+      // The signup email rides along for the server-side duplicate
+      // preflight — a taken email is rejected here, before any SMS.
+      await sendRegistrationOtp(canonical, 'merchant', values.email.trim());
       setRegOtpStage('sent');
       setRegResendAt(Date.now() + 60_000);
       setRegOtpCode('');
@@ -562,6 +572,11 @@ export default function MerchantRegister() {
         setRegOtpStage('sent');
         setRegResendAt(Date.now() + 60_000);
         setRegOtpError(regOtpErrorMessage(err));
+      } else if (err instanceof RegistrationOtpError && err.code === 'email_taken') {
+        // The signup email got taken since Step 1's availability check
+        // — route back to the email field, same UX as every other
+        // taken-email path. No SMS was sent, no challenge created.
+        returnToStep0EmailTaken();
       } else {
         setRegOtpError(regOtpErrorMessage(err));
         setRegOtpStage('sent'); // keep the panel visible with the error
@@ -598,7 +613,7 @@ export default function MerchantRegister() {
     setRegOtpBusy(true);
     setRegOtpError(null);
     try {
-      await sendRegistrationOtp(n.canonical, 'merchant');
+      await sendRegistrationOtp(n.canonical, 'merchant', values.email.trim());
       setRegResendAt(Date.now() + 60_000);
       setRegOtpCode('');
     } catch (err) {

@@ -135,8 +135,8 @@ test('merchant signup requires OTP when enabled, bypasses when off', () => {
   // isRegistrationOtpEnabled(), so flag-off keeps signup unchanged
   // (the flag matrix above proves off → false).
   assert.ok(merchantRegister.includes('configured && isRegistrationOtpEnabled()'));
-  assert.ok(merchantRegister.includes("sendRegistrationOtp(canonical, 'merchant')")
-    || merchantRegister.includes("sendRegistrationOtp(n.canonical, 'merchant')"));
+  assert.ok(merchantRegister.includes("sendRegistrationOtp(canonical, 'merchant', values.email.trim())")
+    || merchantRegister.includes("sendRegistrationOtp(n.canonical, 'merchant', values.email.trim())"));
   assert.ok(merchantRegister.includes('verifyRegistrationOtp('));
   // The final submit re-checks the verified number before signUp.
   assert.ok(merchantRegister.includes('regOtpVerifiedFor !== n.canonical'));
@@ -150,4 +150,103 @@ test('both signup flows share ONE MSEGAT secret set', () => {
   for (const src of [sendFn, verifyFn, migration]) {
     assert.ok(!/MSEGAT_(MERCHANT|CUSTOMER|REG)/.test(src), 'no duplicated secrets');
   }
+});
+
+// ---------------------------------------------------------------------
+// Duplicate preflight — the pre-SMS email/mobile availability check
+// (registration_otp_precheck, 20260502130300). Ordering and privacy
+// guards; behavior is covered by supabase/tests/registration_preflight_test.sql.
+// ---------------------------------------------------------------------
+const preflightMig = read('supabase/migrations/20260502130300_registration_preflight.sql');
+const regClient = read('src/lib/otp/registration.ts');
+
+test('preflight runs BEFORE challenge creation and BEFORE MSEGAT', () => {
+  const precheckAt = sendFn.indexOf("rpc('registration_otp_precheck'");
+  const startAt = sendFn.indexOf("rpc('registration_otp_start'");
+  const msegatAt = sendFn.indexOf('buildMsegatSendRequest(');
+  assert.ok(precheckAt > -1, 'send fn calls the precheck');
+  assert.ok(startAt > -1 && msegatAt > -1);
+  assert.ok(precheckAt < startAt, 'precheck before registration_otp_start');
+  assert.ok(precheckAt < msegatAt, 'precheck before any MSEGAT call');
+  // Duplicate outcomes return without ever reaching start/MSEGAT.
+  for (const outcome of ["'email_taken'", "'mobile_taken'"]) {
+    const at = sendFn.indexOf(`error: ${outcome}`);
+    assert.ok(at > -1 && at < startAt, `${outcome} exits before challenge creation`);
+  }
+});
+
+test('precheck RPC: service-role only, returns statuses (no challenge rows), probe-throttled', () => {
+  assert.ok(preflightMig.includes("current_user in ('anon', 'authenticated')"));
+  assert.ok(preflightMig.includes("errcode = '42501'"));
+  for (const s of ["'ok'", "'invalid_mobile'", "'invalid_email'", "'email_taken'", "'mobile_taken'", "'rate_limited'"]) {
+    assert.ok(preflightMig.includes(`return ${s}`), `status ${s}`);
+  }
+  // Never writes a registration_otp_challenges row.
+  assert.ok(!preflightMig.includes('insert into public.registration_otp_challenges'));
+  // Probe throttle ledger with pruning.
+  assert.ok(preflightMig.includes('registration_precheck_attempts'));
+  assert.ok(preflightMig.includes("interval '24 hours'"));
+  assert.ok(preflightMig.includes('to service_role'));
+  // The email is checked in-transit only, never stored: the ledger
+  // insert carries the mobile alone.
+  assert.ok(preflightMig.includes('insert into public.registration_precheck_attempts (mobile)'));
+  // registration_otp_start's own limits are untouched (still in 125600).
+  assert.ok(migration.includes("errcode = 'P0192'"));
+  assert.ok(migration.includes("errcode = 'P0196'"));
+});
+
+test('send fn maps precheck outcomes and never logs email or full mobile', () => {
+  assert.ok(sendFn.includes("case 'email_taken':"));
+  assert.ok(sendFn.includes("case 'mobile_taken':"));
+  assert.ok(sendFn.includes("error: 'preflight_failed'"));
+  // Missing-RPC grace: a project without 20260502130300 keeps sending.
+  assert.ok(sendFn.includes("'PGRST202'"));
+  // No console line interpolates the raw email or unmasked mobile.
+  for (const line of sendFn.split('\n').filter((l) => l.includes('console.'))) {
+    assert.ok(!/\bemail\b/.test(line), `email in log line: ${line.trim()}`);
+    assert.ok(
+      !line.includes('normalized.canonical') && !line.includes('msegatNumber,'),
+      `unmasked mobile in log line: ${line.trim()}`,
+    );
+  }
+});
+
+test('both signup forms send the email along for the preflight', () => {
+  assert.ok(regClient.includes("| 'email_taken'"));
+  assert.ok(regClient.includes("| 'mobile_taken'"));
+  assert.ok(regClient.includes("| 'preflight_failed'"));
+  // Customer form: canonical email on first send AND resend.
+  assert.equal(
+    (register.match(/sendRegistrationOtp\(\s*normalizedMobile[!.]?\S*\.canonical,\s*'customer',/g) ?? []).length >= 2 ||
+      (register.match(/'customer',/g) ?? []).length >= 2,
+    true,
+    'customer sends pass role+email',
+  );
+  assert.ok(register.includes("case 'email_taken':"));
+  assert.ok(register.includes("case 'mobile_taken':"));
+  // Merchant form: email on open AND resend; taken email routes back
+  // to the email step like every other taken-email path.
+  assert.equal(
+    (merchantRegister.match(/sendRegistrationOtp\([^)]*'merchant',\s*values\.email\.trim\(\)\)/g) ?? []).length,
+    2,
+  );
+  assert.ok(merchantRegister.includes("err.code === 'email_taken'"));
+  assert.ok(merchantRegister.includes('returnToStep0EmailTaken();'));
+});
+
+test('preflight copy is the approved Arabic/English', () => {
+  const ar = JSON.parse(read('src/locales/ar.json'));
+  const en = JSON.parse(read('src/locales/en.json'));
+  assert.equal(ar.auth.regOtp.errors.emailTaken,
+    'البريد الإلكتروني مستخدم مسبقًا. سجّل الدخول أو استخدم بريدًا آخر.');
+  assert.equal(ar.auth.regOtp.errors.mobileTaken,
+    'رقم الجوال مستخدم مسبقًا. سجّل الدخول أو استخدم رقمًا آخر.');
+  assert.equal(ar.auth.regOtp.errors.preflight,
+    'تعذر التحقق من بيانات التسجيل. حاول مرة أخرى.');
+  assert.equal(en.auth.regOtp.errors.emailTaken,
+    'This email is already registered. Sign in or use another email.');
+  assert.equal(en.auth.regOtp.errors.mobileTaken,
+    'This mobile number is already registered. Sign in or use another number.');
+  assert.equal(en.auth.regOtp.errors.preflight,
+    "We couldn't verify the registration details. Please try again.");
 });

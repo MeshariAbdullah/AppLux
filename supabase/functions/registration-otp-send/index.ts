@@ -12,9 +12,15 @@
 // stored, returned exclusively to this service-role call and handed
 // straight to MSEGAT — never to the browser, never to logs.
 //
-// Deliberately reveals nothing about whether the mobile is already
-// registered (no account-existence oracle): duplicates surface only
-// at the actual signup, exactly like today.
+// PREFLIGHT (real-testing fix): before creating a challenge or calling
+// MSEGAT, registration_otp_precheck (service-role RPC,
+// 20260502130300) verifies the email/mobile can actually register —
+// a duplicate gets a clear error and costs NO SMS and NO challenge
+// row. The RPC answers only whether registration can proceed (own
+// per-mobile probe throttle server-side); the DB unique constraints
+// and GoTrue stay the final authority at the actual signup. On a
+// project that has not applied 20260502130300 yet (RPC missing) the
+// send proceeds exactly as before.
 // =====================================================================
 
 import { serve } from 'https://deno.land/std@0.177.0/http/server.ts';
@@ -61,7 +67,7 @@ serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
   if (req.method !== 'POST') return json({ error: 'method_not_allowed' }, { status: 405 });
 
-  let body: { mobile?: unknown; role?: unknown } = {};
+  let body: { mobile?: unknown; role?: unknown; email?: unknown } = {};
   try {
     body = await req.json();
   } catch {
@@ -73,19 +79,62 @@ serve(async (req) => {
   // default; merchant registration passes 'merchant'). Same secrets,
   // same delivery — the role only scopes the server-side stamp.
   const role = body.role === 'merchant' ? 'merchant' : 'customer';
+  // The signup email, for the duplicate preflight. Optional: an older
+  // client that omits it still gets the mobile check.
+  const email = typeof body.email === 'string' && body.email.trim() !== ''
+    ? body.email.trim()
+    : null;
 
   // Fail BEFORE creating a challenge when SMS delivery cannot happen.
   const cfg = readMsegatConfig();
   if (!cfg) return json({ error: 'otp_not_configured' }, { status: 503 });
 
-  // Generate the challenge (service role; cooldown + hourly cap are
-  // enforced inside the RPC). The plaintext code exists only in this
-  // call's result and the MSEGAT request below.
   const service = createClient(
     Deno.env.get('SUPABASE_URL')!,
     Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
     { auth: { persistSession: false } },
   );
+
+  // PREFLIGHT — duplicate email/mobile blocks HERE: no challenge row,
+  // no MSEGAT call, no SMS cost. Outcome codes only in logs (never the
+  // email or full mobile).
+  const { data: precheck, error: preErr } = await service.rpc('registration_otp_precheck', {
+    p_mobile: normalized.canonical,
+    p_account_role: role,
+    p_email: email,
+  });
+  if (preErr) {
+    const preCode = (preErr as { code?: string }).code ?? '';
+    if (preCode === 'PGRST202') {
+      // 20260502130300 not applied yet — behave exactly as before the
+      // preflight existed rather than blocking signups.
+      console.warn('[registration-otp-send] precheck RPC missing; proceeding without preflight');
+    } else {
+      console.error('[registration-otp-send] precheck failed', preCode || 'unknown');
+      return json({ error: 'preflight_failed' }, { status: 500 });
+    }
+  } else if (precheck !== 'ok') {
+    switch (precheck) {
+      case 'email_taken':
+        return json({ error: 'email_taken' }, { status: 409 });
+      case 'mobile_taken':
+        return json({ error: 'mobile_taken' }, { status: 409 });
+      case 'invalid_email':
+        return json({ error: 'invalid_email' }, { status: 400 });
+      case 'invalid_mobile':
+      case 'invalid_input':
+        return json({ error: 'invalid_mobile' }, { status: 400 });
+      case 'rate_limited':
+        return json({ error: 'send_limit' }, { status: 429 });
+      default:
+        console.error('[registration-otp-send] precheck unexpected status');
+        return json({ error: 'preflight_failed' }, { status: 500 });
+    }
+  }
+
+  // Generate the challenge (service role; cooldown + hourly cap are
+  // enforced inside the RPC). The plaintext code exists only in this
+  // call's result and the MSEGAT request below.
   const { data: rows, error: startErr } = await service.rpc('registration_otp_start', {
     p_mobile: normalized.canonical,
     p_account_role: role,

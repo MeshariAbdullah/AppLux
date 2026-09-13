@@ -30,6 +30,10 @@ export class RegistrationOtpError extends Error {
   constructor(
     public code:
       | 'invalid_mobile'
+      | 'invalid_email'
+      | 'email_taken'
+      | 'mobile_taken'
+      | 'preflight_failed'
       | 'cooldown'
       | 'send_limit'
       | 'no_active_challenge'
@@ -51,6 +55,10 @@ function mapInvokeError(err: unknown): RegistrationOtpError {
   const body = anyErr?.context?.body as { error?: string } | undefined;
   switch (body?.error) {
     case 'invalid_mobile': return new RegistrationOtpError('invalid_mobile');
+    case 'invalid_email': return new RegistrationOtpError('invalid_email');
+    case 'email_taken': return new RegistrationOtpError('email_taken');
+    case 'mobile_taken': return new RegistrationOtpError('mobile_taken');
+    case 'preflight_failed': return new RegistrationOtpError('preflight_failed');
     case 'cooldown': return new RegistrationOtpError('cooldown');
     case 'send_limit': return new RegistrationOtpError('send_limit');
     case 'no_active_challenge': return new RegistrationOtpError('no_active_challenge');
@@ -67,17 +75,29 @@ export type RegistrationAccountRole = 'customer' | 'merchant';
 /** Texts a 6-digit code to the mobile being registered (60s resend
  *  cooldown and hourly cap enforced server-side). `role` marks which
  *  signup flow is verifying — customer registration by default,
- *  merchant registration passes 'merchant'. */
+ *  merchant registration passes 'merchant'.
+ *
+ *  `email`: the signup email, for the SERVER-SIDE duplicate preflight
+ *  (registration_otp_precheck) — a taken email/mobile throws
+ *  'email_taken' / 'mobile_taken' BEFORE any SMS is sent or challenge
+ *  created. Pass it whenever the form has it. */
 export async function sendRegistrationOtp(
   mobileInput: string,
   role: RegistrationAccountRole = 'customer',
+  email?: string,
 ): Promise<void> {
   const n = normalizeMobile(mobileInput);
   if (!n) throw new RegistrationOtpError('invalid_mobile');
   const sb = requireSupabase();
   const { data, error } = await sb.functions.invoke<{ ok?: boolean }>(
     'registration-otp-send',
-    { body: { mobile: n.canonical, role } },
+    {
+      body: {
+        mobile: n.canonical,
+        role,
+        ...(email && email.trim() !== '' ? { email: email.trim() } : {}),
+      },
+    },
   );
   if (error) throw mapInvokeError(error);
   if (!data?.ok) throw new RegistrationOtpError('send_failed');
