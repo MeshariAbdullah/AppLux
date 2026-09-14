@@ -450,3 +450,43 @@ test('pull-to-refresh: indicator, refresh cycle, and short-pull cancel on Home',
   await page.goto('/merchant/login', { waitUntil: 'domcontentloaded' });
   await expect(page.locator('[data-testid="pull-indicator"]')).toHaveCount(0);
 });
+
+// =====================================================================
+// App Store readiness — the Privacy Policy entry must be reachable for
+// BOTH roles regardless of env configuration (guideline 5.1.1). The
+// row opens https://www.lend.sa/privacy externally; here we assert the
+// localized row exists and wires a window.open to the canonical URL.
+// =====================================================================
+
+test('privacy policy row: present on customer AND merchant profiles, opens the canonical URL', async ({ page }) => {
+  await blockExternal(page);
+  await page.addInitScript((seed) => {
+    window.localStorage.setItem('applux.session', JSON.stringify(seed.session));
+    window.localStorage.setItem('applux.merchant', JSON.stringify(seed.merchant));
+    // Capture window.open targets instead of opening tabs.
+    (window as unknown as { __opened: string[] }).__opened = [];
+    window.open = ((url: string) => {
+      (window as unknown as { __opened: string[] }).__opened.push(String(url));
+      return null;
+    }) as typeof window.open;
+  }, { session: DEMO_SESSION, merchant: DEMO_MERCHANT });
+  await page.setViewportSize({ width: 390, height: 844 });
+
+  // Customer profile.
+  await page.goto('/profile', { waitUntil: 'domcontentloaded' });
+  const row = page.getByText('سياسة الخصوصية', { exact: true });
+  await expect(row).toBeVisible();
+  await row.click();
+  await expect
+    .poll(async () => page.evaluate(() => (window as unknown as { __opened: string[] }).__opened))
+    .toContain('https://www.lend.sa/privacy');
+
+  // Merchant profile.
+  await page.goto('/merchant/profile', { waitUntil: 'domcontentloaded' });
+  const mRow = page.getByText('سياسة الخصوصية', { exact: true });
+  await expect(mRow).toBeVisible();
+  await mRow.click();
+  await expect
+    .poll(async () => page.evaluate(() => (window as unknown as { __opened: string[] }).__opened))
+    .toContain('https://www.lend.sa/privacy');
+});

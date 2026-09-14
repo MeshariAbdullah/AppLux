@@ -34,10 +34,11 @@ import { resolveMerchantName } from '@/lib/merchantName';
 // Reachable only by ACTIVE merchants (operational route guard).
 // =====================================================================
 
-const SUPPORT_URL =
-  (import.meta.env.VITE_SUPPORT_URL as string | undefined)?.trim() || '';
-const SUPPORT_EMAIL =
-  (import.meta.env.VITE_SUPPORT_EMAIL as string | undefined)?.trim() || '';
+// Legal/support links — privacy policy is always present (App Store
+// guideline 5.1.1; canonical URL baked into legalLinks.ts), support
+// rows stay env-gated.
+import { PRIVACY_POLICY_URL, SUPPORT_EMAIL, SUPPORT_URL } from '@/lib/legalLinks';
+import { openExternalUrl } from '@/lib/openExternal';
 
 export default function MerchantProfile() {
   const t = useT();
@@ -194,14 +195,28 @@ export default function MerchantProfile() {
               label={t('merchant.profile.representative')}
               value={repName}
             />
+            {/* Privacy policy — always present for every role (App
+                Store guideline 5.1.1). Opens the public page in the
+                system browser. */}
+            <Divider />
+            <button
+              type="button"
+              onClick={() => openExternalUrl(PRIVACY_POLICY_URL)}
+              className="flex w-full items-center gap-3 px-4 py-3.5 text-start hover:bg-beige-50 transition-colors"
+            >
+              <span className="flex-1 text-[13.5px] font-semibold text-ink-800">
+                {t('profile.privacyPolicy')}
+              </span>
+              <ChevronIcon size={14} className="text-ink-300 rtl:rotate-0 ltr:rotate-180" />
+            </button>
             {(SUPPORT_URL || SUPPORT_EMAIL) && (
               <>
                 <Divider />
                 <button
                   type="button"
                   onClick={() => {
-                    const target = SUPPORT_URL || `mailto:${SUPPORT_EMAIL}`;
-                    window.open(target, '_blank', 'noopener');
+                    if (SUPPORT_URL) openExternalUrl(SUPPORT_URL);
+                    else window.location.href = `mailto:${SUPPORT_EMAIL}`;
                   }}
                   className="flex w-full items-center gap-3 px-4 py-3.5 text-start hover:bg-beige-50 transition-colors"
                 >

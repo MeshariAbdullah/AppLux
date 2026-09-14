@@ -13,16 +13,11 @@ import { requestAccountDeletion, useSupabaseAuth } from '@/lib/supabase';
 import { cancelAccountDeletion } from '@/lib/supabase';
 import { cn } from '@/lib/cn';
 
-// App Store readiness — three external link / contact env vars surfaced
-// in the Profile tab. All are optional in dev (the corresponding row
-// hides when its URL is empty) but REQUIRED for any production build
-// shipped to App Store / Google Play. See .env.example.
-const PRIVACY_URL =
-  (import.meta.env.VITE_PRIVACY_POLICY_URL as string | undefined)?.trim() || '';
-const SUPPORT_URL =
-  (import.meta.env.VITE_SUPPORT_URL as string | undefined)?.trim() || '';
-const SUPPORT_EMAIL =
-  (import.meta.env.VITE_SUPPORT_EMAIL as string | undefined)?.trim() || '';
+// App Store readiness — legal/support links surfaced in the Profile
+// tab. The privacy policy carries a baked-in canonical URL (guideline
+// 5.1.1 — always reachable, env override only); support rows stay
+// env-gated and hide when unset. See src/lib/legalLinks.ts.
+import { PRIVACY_POLICY_URL, SUPPORT_EMAIL, SUPPORT_URL } from '@/lib/legalLinks';
 
 export default function Profile() {
   const t = useT();
@@ -207,16 +202,14 @@ export default function Profile() {
               }
               onClick={() => setLocale(locale === 'ar' ? 'en' : 'ar')}
             />
-            {PRIVACY_URL && (
-              <>
-                <Divider />
-                <Row
-                  label={t('profile.privacyPolicy')}
-                  dir={dir}
-                  onClick={() => openExternal(PRIVACY_URL)}
-                />
-              </>
-            )}
+            <Divider />
+            {/* Always present — App Store guideline 5.1.1 requires the
+                privacy policy to be reachable inside the app. */}
+            <Row
+              label={t('profile.privacyPolicy')}
+              dir={dir}
+              onClick={() => openExternal(PRIVACY_POLICY_URL)}
+            />
           </div>
 
           {/* ====== Card B — support + account control ====== */}
