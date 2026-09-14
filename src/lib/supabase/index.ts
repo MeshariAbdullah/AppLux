@@ -74,6 +74,7 @@ export {
   signOut,
   getCurrentSession,
   sendPasswordResetEmail,
+  passwordResetRedirectUrl,
   updatePassword,
 } from './auth';
 

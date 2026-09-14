@@ -256,7 +256,7 @@
       "send": "Send reset link",
       "sending": "Sending…",
       "successTitle": "Check your inbox",
-      "successBody": "If an account exists for {email}, a password-reset link is on its way. The link is valid for one hour.",
+      "successBody": "If an account exists for {email}, an email from Lend with your reset link is on its way. The link is valid for one hour.",
       "backToSignIn": "Back to sign in",
       "errorGeneric": "Couldn't send the reset link. Please try again."
     },

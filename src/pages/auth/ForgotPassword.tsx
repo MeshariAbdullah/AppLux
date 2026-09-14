@@ -5,7 +5,11 @@ import { Button, FormField, Input } from '@/components/ui';
 import { BadgeCheckIcon, ShieldIcon } from '@/components/icons';
 import { logEvent } from '@/lib/observability/log';
 import { useT } from '@/lib/i18n';
-import { sendPasswordResetEmail, useSupabaseAuth } from '@/lib/supabase';
+import {
+  passwordResetRedirectUrl,
+  sendPasswordResetEmail,
+  useSupabaseAuth,
+} from '@/lib/supabase';
 import {
   isMisconfiguredProduction,
   ProductionConfigError,
@@ -36,12 +40,13 @@ export default function ForgotPassword() {
     try {
       await sendPasswordResetEmail({
         email: email.trim(),
-        // The reset email link points back at our reset page on the
-        // same origin so detectSessionInUrl can pick up the recovery
-        // token. Using window.location.origin keeps this correct in
-        // every deploy environment (Vercel / Netlify / local) with no
-        // hard-coded URL.
-        redirectTo: `${window.location.origin}/auth/reset-password`,
+        // The reset email link points back at our reset page so
+        // detectSessionInUrl can pick up the recovery token. On web
+        // deploys that's the current origin; native (Capacitor)
+        // builds use VITE_APP_ORIGIN — the canonical deployed web
+        // origin — since capacitor://localhost is useless in an
+        // email link. See passwordResetRedirectUrl.
+        redirectTo: passwordResetRedirectUrl(),
       });
       setSent(true);
     } catch (err) {

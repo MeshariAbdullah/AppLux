@@ -208,6 +208,30 @@ export async function signOut(): Promise<void> {
 }
 
 /**
+ * The URL the password-reset email links back to.
+ *
+ * Web deploys: `window.location.origin` is already the deployed site,
+ * so the link lands on the same origin the user is on.
+ *
+ * Native (Capacitor) builds: the webview origin is
+ * `capacitor://localhost` / `https://localhost` — useless in an email
+ * link (and not allow-listable in Supabase's Redirect URLs). Set
+ * VITE_APP_ORIGIN to the canonical deployed web origin
+ * (e.g. https://app.lend.sa) so reset links from the iOS/Android app
+ * open the real website's reset page. When unset, falls back to the
+ * current origin (correct for every web deploy).
+ *
+ * The chosen origin + /auth/reset-password must be listed under
+ * Supabase → Authentication → URL Configuration → Redirect URLs,
+ * otherwise Supabase silently falls back to the project's Site URL.
+ */
+export function passwordResetRedirectUrl(): string {
+  const envOrigin = (import.meta.env.VITE_APP_ORIGIN as string | undefined)?.trim();
+  const origin = envOrigin ? envOrigin.replace(/\/+$/, '') : window.location.origin;
+  return `${origin}/auth/reset-password`;
+}
+
+/**
  * Kick off the forgot-password flow. Sends a one-time recovery email
  * to the address provided; the email link points at `redirectTo` and
  * carries the recovery token in the URL hash. Supabase's
