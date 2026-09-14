@@ -20,85 +20,15 @@ import { chromium } from '@playwright/test';
 import { readFileSync } from 'fs';
 import { fileURLToPath } from 'url';
 import path from 'path';
+import { MERCHANT, SESSION, buildShots } from './shots.mjs';
 
 const DIR = path.dirname(fileURLToPath(import.meta.url));
 const APP = process.env.APP_URL || 'http://127.0.0.1:4173';
 const CAPTURE_DIR = process.env.CAPTURE_DIR || path.join(DIR, '.captures-ipad');
 const OUT = path.join(DIR, 'ar-ipad');
 
-// Same fictional demo identities as the iPhone set.
-const SESSION = {
-  fullName: 'سارة العتيبي', dob: '1994-03-01', mobile: '512345678',
-  email: 'sara@example.com', city: 'riyadh', address: 'الرياض، حي الياسمين',
-  profession: 'employee', employer: 'شركة الأفق', income: '14000',
-  nafathVerified: false, createdAt: '2026-04-01T09:00:00.000Z',
-};
-const MERCHANT = {
-  id: 'm-demo-1', status: 'approved',
-  companyName: 'ميزون دو سواريه', commercialReg: '1010456789',
-  authorizedName: 'مشاعل القحطاني', authorizedId: '', iban: '',
-  city: 'riyadh', address: 'الرياض — بوليفارد لكجري',
-  contactEmail: 'hello@maison.example', contactPhone: '0550000000',
-  branches: [], submittedAt: '2026-03-01T09:00:00.000Z',
-  approvedAt: '2026-03-05T09:00:00.000Z', rejectedAt: null, rejectionReason: null,
-};
-
-// ---------------------------------------------------------------------
-// The 5-shot iPad story (approved headlines, campaign green phrase,
-// navy/beige alternation as on iPhone).
-// ---------------------------------------------------------------------
-const SHOTS = [
-  {
-    n: '01', locale: 'ar', bg: 'navy', lockup: true,
-    headline: [[{ t: 'كل إيجاراتك' }, { t: 'في مكان واحد', green: true }]],
-    sub: 'العروض والعقود والحالة بنظرة واحدة',
-    source: '/home — src/pages/Home.tsx (customer dashboard)',
-    capture: async (page) => {
-      await page.goto(`${APP}/home`, { waitUntil: 'domcontentloaded' });
-      await page.waitForTimeout(900);
-    },
-  },
-  {
-    n: '02', locale: 'ar', bg: 'beige',
-    headline: [[{ t: 'راجع العرض والعقد' }, { t: 'بوضوح', green: true }]],
-    sub: 'كل التفاصيل قبل ما توافق',
-    source: '/review/RM-88231 step العرض — src/pages/Review.tsx',
-    capture: async (page) => {
-      await page.goto(`${APP}/review/RM-88231`, { waitUntil: 'domcontentloaded' });
-      await page.waitForTimeout(900);
-    },
-  },
-  {
-    n: '03', locale: 'ar', bg: 'navy',
-    headline: [[{ t: 'تابع إيجارك' }, { t: 'خطوة بخطوة', green: true }]],
-    sub: 'المواعيد والحالة والعقد الموثّق',
-    source: '/track/contract/LND-Q7F3KD — src/pages/ContractTracking.tsx',
-    capture: async (page) => {
-      await page.goto(`${APP}/track/contract/LND-Q7F3KD`, { waitUntil: 'domcontentloaded' });
-      await page.waitForTimeout(900);
-    },
-  },
-  {
-    n: '04', locale: 'ar', bg: 'beige',
-    headline: [[{ t: 'إجراءات واضحة' }, { t: 'عند وجود ضرر', green: true }]],
-    sub: 'من البلاغ إلى التسوية بخطوات موثّقة',
-    source: '/merchant/damages — src/pages/merchant/MerchantDamages.tsx',
-    capture: async (page) => {
-      await page.goto(`${APP}/merchant/damages`, { waitUntil: 'domcontentloaded' });
-      await page.waitForTimeout(900);
-    },
-  },
-  {
-    n: '05', locale: 'ar', bg: 'navy',
-    headline: [[{ t: 'إدارة الإيجارات للمحل' }, { t: 'بسهولة', green: true }]],
-    sub: 'عقود رقمية لعملائك بدون ورق',
-    source: '/merchant/rentals — src/pages/merchant/MerchantRentals.tsx',
-    capture: async (page) => {
-      await page.goto(`${APP}/merchant/rentals`, { waitUntil: 'domcontentloaded' });
-      await page.waitForTimeout(900);
-    },
-  },
-];
+// The shared 6-shot campaign (appstore/shots.mjs) framed for iPad.
+const SHOTS = buildShots(APP, 'pad').map((s) => ({ ...s, locale: 'ar' }));
 
 // ---------------------------------------------------------------------
 // Local font service — identical to render.mjs.

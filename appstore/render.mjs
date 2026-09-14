@@ -1,5 +1,5 @@
 // =====================================================================
-// Lend — App Store screenshot generator (Arabic set).
+// Lend — App Store screenshot generator (Arabic iPhone set).
 // =====================================================================
 // End to end: boots the app (expects the Vite dev server on
 // APP_URL, default http://127.0.0.1:4173, in DEMO mode), captures the
@@ -24,116 +24,17 @@ import { chromium } from '@playwright/test';
 import { readFileSync } from 'fs';
 import { fileURLToPath } from 'url';
 import path from 'path';
+import { MERCHANT, SESSION, buildShots } from './shots.mjs';
 
 const DIR = path.dirname(fileURLToPath(import.meta.url));
 const APP = process.env.APP_URL || 'http://127.0.0.1:4173';
 const CAPTURE_DIR = process.env.CAPTURE_DIR || path.join(DIR, '.captures');
 const OUT = path.join(DIR, 'ar');
 
-// Fictional demo identities (customer session + approved merchant),
-// stored in the demo store's own localStorage format.
-const SESSION = {
-  fullName: 'سارة العتيبي', dob: '1994-03-01', mobile: '512345678',
-  email: 'sara@example.com', city: 'riyadh', address: 'الرياض، حي الياسمين',
-  profession: 'employee', employer: 'شركة الأفق', income: '14000',
-  nafathVerified: false, createdAt: '2026-04-01T09:00:00.000Z',
-};
-const MERCHANT = {
-  id: 'm-demo-1', status: 'approved',
-  companyName: 'ميزون دو سواريه', commercialReg: '1010456789',
-  authorizedName: 'مشاعل القحطاني', authorizedId: '', iban: '',
-  city: 'riyadh', address: 'الرياض — بوليفارد لكجري',
-  contactEmail: 'hello@maison.example', contactPhone: '0550000000',
-  branches: [], submittedAt: '2026-03-01T09:00:00.000Z',
-  approvedAt: '2026-03-05T09:00:00.000Z', rejectedAt: null, rejectionReason: null,
-};
-
-// ---------------------------------------------------------------------
-// The approved 5-shot plan (copy + real source screens).
-// ---------------------------------------------------------------------
-const SHOTS = [
-  {
-    n: '01', locale: 'ar', bg: 'navy', lockup: true, statusBg: '#F5F5F0',
-    headline: [[{ t: 'استأجر بثقة.' }], [{ t: 'ووثّق حقك.', green: true }]],
-    sub: 'إيجارات موثّقة من متاجر موثّقة',
-    source: '/home — src/pages/Home.tsx (pending-offer dashboard)',
-    capture: async (page) => {
-      await page.goto(`${APP}/home`, { waitUntil: 'domcontentloaded' });
-      await page.waitForTimeout(900);
-    },
-  },
-  {
-    n: '02', locale: 'ar', bg: 'beige', statusBg: '#FBFBF7',
-    headline: [[{ t: 'راجع العرض والعقد' }, { t: 'بوضوح', green: true }]],
-    sub: 'كل التفاصيل قبل ما توافق',
-    source: '/review/RM-88231 step العرض — src/pages/Review.tsx',
-    capture: async (page) => {
-      await page.goto(`${APP}/review/RM-88231`, { waitUntil: 'domcontentloaded' });
-      await page.waitForTimeout(900);
-    },
-  },
-  {
-    n: '03', locale: 'ar', bg: 'navy', statusBg: '#FBFBF7',
-    headline: [[{ t: 'وافق' }, { t: 'من التطبيق', green: true }]],
-    sub: 'كل خطوة موثّقة',
-    source: '/review/RM-88231 step التأكيد — src/pages/Review.tsx',
-    capture: async (page) => {
-      await page.goto(`${APP}/review/RM-88231`, { waitUntil: 'domcontentloaded' });
-      await page.waitForTimeout(900);
-      // Real flow: العرض → العقد → التأكيد, then tick the three
-      // acknowledgement rows (custom <button> toggles — the approval
-      // CTA arms). Never submits the approval itself.
-      await page.getByRole('button', { name: 'متابعة' }).click();
-      await page.waitForTimeout(500);
-      await page.getByRole('button', { name: 'متابعة' }).click();
-      await page.waitForTimeout(500);
-      for (const label of ['اطلعت', 'الالتزامات المالية', 'تفعيل الإيجار']) {
-        await page.locator('button', { hasText: label }).first().click();
-        await page.waitForTimeout(150);
-      }
-      // Clicking auto-scrolls; the whole step fits — back to the top
-      // so no text sits clipped at the fold.
-      await page.evaluate(() => document.querySelector('main').scrollTo(0, 0));
-      await page.waitForTimeout(400);
-    },
-  },
-  {
-    n: '04', locale: 'ar', bg: 'beige', statusBg: '#FBFBF7',
-    headline: [[{ t: 'تابع إيجارك' }, { t: 'من مكان واحد', green: true }]],
-    sub: 'المواعيد والحالة والعقد',
-    source: '/track/contract/LND-Q7F3KD — src/pages/ContractTracking.tsx (رحلة الإيجار + السجل الموثّق)',
-    capture: async (page) => {
-      await page.goto(`${APP}/track/contract/LND-Q7F3KD`, { waitUntil: 'domcontentloaded' });
-      await page.waitForTimeout(900);
-      // Scroll the app scroller so the journey timeline leads the
-      // frame (the hero card clamps long titles — kept out of shot).
-      await page.evaluate(() => {
-        const main = document.querySelector('main');
-        const label = [...main.querySelectorAll('*')]
-          .find((e) => e.childElementCount === 0 && e.textContent.trim() === 'رحلة الإيجار');
-        const card = label.closest('main > * > *') ?? label;
-        // The hero card clamps long titles (ellipsis) — keep it fully
-        // above the fold so the timeline leads the frame. The record
-        // card's optional-value rows render «—» in demo data; that is
-        // the app's real empty state, preferred over showing the
-        // clamped title.
-        main.scrollTo(0, card.getBoundingClientRect().top
-          - main.getBoundingClientRect().top + main.scrollTop - 14);
-      });
-      await page.waitForTimeout(500);
-    },
-  },
-  {
-    n: '05', locale: 'ar', bg: 'navy', statusBg: '#F5F5F0',
-    headline: [[{ t: 'للمتاجر: إيجارات منظّمة' }, { t: 'وموثّقة', green: true }]],
-    sub: 'عقود رقمية لعملائك بدون ورق',
-    source: '/merchant/home — src/pages/merchant/MerchantHome.tsx',
-    capture: async (page) => {
-      await page.goto(`${APP}/merchant/home`, { waitUntil: 'domcontentloaded' });
-      await page.waitForTimeout(900);
-    },
-  },
-];
+// The shared 6-shot campaign (appstore/shots.mjs) framed for iPhone.
+const SHOTS = buildShots(APP, 'phone').map((s) => ({
+  ...s, locale: 'ar', headline: s.headlinePhone ?? s.headline,
+}));
 
 // ---------------------------------------------------------------------
 // Local font service — used for BOTH the app capture (replacing the
