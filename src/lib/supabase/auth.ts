@@ -217,9 +217,9 @@ export async function signOut(): Promise<void> {
  * `capacitor://localhost` / `https://localhost` — useless in an email
  * link (and not allow-listable in Supabase's Redirect URLs). Set
  * VITE_APP_ORIGIN to the canonical deployed web origin
- * (e.g. https://app.lend.sa) so reset links from the iOS/Android app
- * open the real website's reset page. When unset, falls back to the
- * current origin (correct for every web deploy).
+ * (production: https://lendsa.vercel.app) so reset links from the
+ * iOS/Android app open the real website's reset page. When unset,
+ * falls back to the current origin (correct for every web deploy).
  *
  * The chosen origin + /auth/reset-password must be listed under
  * Supabase → Authentication → URL Configuration → Redirect URLs,

@@ -28,7 +28,7 @@ import {
 export default function ResetPassword() {
   const t = useT();
   const navigate = useNavigate();
-  const { configured, status, session } = useSupabaseAuth();
+  const { configured, status, session, signOut } = useSupabaseAuth();
   const [pwd, setPwd] = useState('');
   const [confirmPwd, setConfirmPwd] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -36,15 +36,24 @@ export default function ResetPassword() {
   const [error, setError] = useState<string | null>(null);
 
   // After a successful update, give the success screen a beat to
-  // register, then hand off to RootRedirect ('/') which routes by
-  // role.
+  // register, then end the recovery session and land on the login
+  // page so the user signs in with the NEW password (the recovery
+  // session was only ever for setting it). signOut() is hardened in
+  // auth.ts — the local session dies even if the network call fails.
   useEffect(() => {
     if (!done) return;
     const id = window.setTimeout(() => {
-      navigate('/', { replace: true });
+      void (async () => {
+        try {
+          await signOut();
+        } catch {
+          /* local sweep still ran — proceed to login */
+        }
+        navigate('/auth/login', { replace: true });
+      })();
     }, 1500);
     return () => window.clearTimeout(id);
-  }, [done, navigate]);
+  }, [done, navigate, signOut]);
 
   if (isMisconfiguredProduction(configured)) {
     return <ProductionConfigError />;

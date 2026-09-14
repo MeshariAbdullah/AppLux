@@ -1,9 +1,13 @@
 # Auth email branding — password reset from a Lend address
 
-Goal: the "Forgot password" email arrives **from Lend**
-(`no-reply@lend.sa` — or `support@lend.sa` if that is the approved
-sender), not from Supabase's default sender
-(`noreply@mail.app.supabase.io`).
+Goal: the "Forgot password" email arrives **from Lend**, not from
+Supabase's default sender (`noreply@mail.app.supabase.io`).
+
+**CONFIGURED (production)**: custom SMTP via **Resend**, sender
+**`Lend <info@lend.sa>`**, Site URL **`https://lendsa.vercel.app`**,
+redirect **`https://lendsa.vercel.app/auth/reset-password`**. The
+steps below remain as the runbook for re-doing or auditing that
+setup.
 
 The sender identity is a **Supabase Dashboard / DNS** concern — no
 code sends this email. The app's only code-side responsibilities are
@@ -27,8 +31,10 @@ provider may send as `@lend.sa`.
   `supabase.auth.resetPasswordForEmail(email, { redirectTo })`.
 * `redirectTo` comes from `passwordResetRedirectUrl()`:
   the current origin on web deploys, or **`VITE_APP_ORIGIN`** (set it
-  to the canonical web origin, e.g. `https://app.lend.sa`) — required
-  for the iOS/Android builds, where the webview origin
+  to the canonical web origin: `https://lendsa.vercel.app`, so the
+  link is exactly
+  `https://lendsa.vercel.app/auth/reset-password`) — required for the
+  iOS/Android builds, where the webview origin
   (`capacitor://localhost`) cannot appear in an email link.
 * `/auth/reset-password` (`src/pages/auth/ResetPassword.tsx`) consumes
   the recovery token via `detectSessionInUrl` + `PASSWORD_RECOVERY`
@@ -45,16 +51,14 @@ Settings”; on newer dashboards: **Authentication → Emails → SMTP
 Settings**):
 
 1. Toggle **Enable Custom SMTP**.
-2. **Sender email**: `no-reply@lend.sa` (or `support@lend.sa` — use
-   the mailbox that actually exists at the email provider).
-3. **Sender name**: `Lend` (or `ليند` if an Arabic display name is
-   preferred in inboxes).
-4. **Host / Port / Username / Password**: from the email provider
-   (e.g. Google Workspace relay, Zoho, Resend, SES, Postmark).
-   Typical: host `smtp.<provider>.com`, port `465` (SSL) or `587`
-   (STARTTLS), username = full mailbox or API user, password = the
-   provider's SMTP password/API key. **Enter these ONLY here — never
-   in the repo or Vercel env.**
+2. **Sender email**: `info@lend.sa` (the configured production
+   sender; any other Lend mailbox works as long as it exists at the
+   provider).
+3. **Sender name**: `Lend`.
+4. **Host / Port / Username / Password**: from the email provider —
+   production uses **Resend** (host `smtp.resend.com`, port `465`,
+   username `resend`, password = the Resend API key). **Enter these
+   ONLY here — never in the repo or Vercel env.**
 5. Save, then adjust **Rate limits** (Authentication → Rate Limits →
    "Rate limit for sending emails") — custom SMTP unlocks it; set a
    sane value (e.g. 30/hour) instead of the built-in mailer's cap.
@@ -63,13 +67,11 @@ Settings**):
 
 Dashboard → **Authentication → URL Configuration**:
 
-* **Site URL**: the production web origin, e.g. `https://app.lend.sa`.
+* **Site URL**: `https://lendsa.vercel.app` (the production web
+  origin).
 * **Redirect URLs** — must contain every origin the reset link may
   point at:
-  * `https://app.lend.sa/auth/reset-password` (production — match the
-    real deployed domain)
-  * `https://<project>.vercel.app/auth/reset-password` (if the Vercel
-    preview/prod domain is used)
+  * `https://lendsa.vercel.app/auth/reset-password` (production)
   * `http://localhost:5173/auth/reset-password` (local dev, optional)
 
   A `redirectTo` not in this list is silently replaced by the Site
@@ -135,12 +137,13 @@ sending domain the provider verifies matches `lend.sa`.
 
 1. App → Login → «نسيت كلمة المرور؟» → enter an existing account
    email → submit.
-2. Inbox: sender shows **Lend `<no-reply@lend.sa>`** (not Supabase),
+2. Inbox: sender shows **Lend `<info@lend.sa>`** (not Supabase),
    Arabic-first template.
-3. Open the link → lands on `<origin>/auth/reset-password` with the
-   form enabled (not the "invalid link" state).
-4. Set a new password → success screen → auto-redirect.
-5. Sign out, sign in with the NEW password → works; old password
-   refused.
+3. Open the link → lands on
+   `https://lendsa.vercel.app/auth/reset-password` with the form
+   enabled (not the "invalid link" state).
+4. Set a new password → success screen → auto-redirects to the login
+   page (the recovery session is signed out).
+5. Sign in with the NEW password → works; old password refused.
 6. Repeat once from the iOS build (link must open the production web
    origin from `VITE_APP_ORIGIN`).
