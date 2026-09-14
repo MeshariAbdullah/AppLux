@@ -91,6 +91,32 @@
   }
   .statusbar svg { display: block; }
   .screen img { display: block; width: 100%; height: auto; }
+
+  /* ---------- 13" iPad variant (2064×2752 portrait) ----------
+     Same campaign system, tablet proportions: the device is shown IN
+     FULL (no bottom bleed — nothing of the UI, nav included, is ever
+     cropped) and the status glyphs OVERLAY the capture's own light
+     shell gradient instead of stacking a flat bar above it, so there
+     is no color seam. */
+  body.ipad .head { padding: 4.4vw 7vw 0 7vw; }
+  body.ipad h1 { font-size: 6.4vw; line-height: 1.45; }
+  body.ipad .sub { font-size: 2.8vw; line-height: 1.7; }
+  body.ipad .lockup { margin-bottom: 2.4vw; gap: 1.2vw; }
+  body.ipad .lockup .word { font-size: 1.9vw; }
+  body.ipad .stage { margin: 2.6vw 0 3vw; align-items: center; }
+  body.ipad .device {
+    width: 73vw;
+    border: 0.5vw solid #0A1128; border-bottom: 0.5vw solid #0A1128;
+    border-radius: 2.6vw;
+    box-shadow: 0 2.2vw 5vw rgba(5, 8, 23, 0.3);
+  }
+  body.ipad .screen { border-radius: 2.1vw; position: relative; }
+  body.ipad .statusbar {
+    position: absolute; top: 0; left: 0; right: 0; z-index: 2;
+    background: transparent !important; color: #1B2951;
+    height: 3.4vw; padding: 0 2.4vw 0.4vw 2.4vw;
+  }
+  body.ipad .statusbar .time { font-size: 1.5vw; }
 </style>
 </head>
 <body>
@@ -117,8 +143,9 @@
   }
 
   // iOS-style status glyphs (RTL: time trailing-right, icons left).
-  function statusSvg() {
-    return `<svg width="6.5vw" height="2.6vw" viewBox="0 0 86 34" fill="currentColor">
+  // k scales the glyph block (iPad variant uses ~0.55).
+  function statusSvg(k = 1) {
+    return `<svg width="${6.5 * k}vw" height="${2.6 * k}vw" viewBox="0 0 86 34" fill="currentColor">
       <rect x="0"  y="18" width="6" height="10" rx="1.5"/>
       <rect x="9"  y="14" width="6" height="14" rx="1.5"/>
       <rect x="18" y="9"  width="6" height="19" rx="1.5"/>
@@ -128,7 +155,7 @@
       <circle cx="59.5" cy="23.5" r="3.4"/>
       <rect x="74" y="8" width="0" height="0"/>
     </svg>
-    <svg width="4.2vw" height="2.1vw" viewBox="0 0 56 28" style="margin-inline-start:1vw">
+    <svg width="${4.2 * k}vw" height="${2.1 * k}vw" viewBox="0 0 56 28" style="margin-inline-start:${1 * k}vw">
       <rect x="1" y="1" width="46" height="26" rx="8" fill="none" stroke="currentColor" stroke-opacity="0.4" stroke-width="2"/>
       <rect x="5" y="5" width="38" height="18" rx="5" fill="currentColor"/>
       <path d="M50 9 v10 a6 6 0 0 0 0 -10z" fill="currentColor" fill-opacity="0.4"/>
@@ -136,7 +163,7 @@
   }
 
   window.renderShot = function (p) {
-    document.body.className = p.bg;
+    document.body.className = p.bg + (p.variant === 'ipad' ? ' ipad' : '');
     document.documentElement.dir = p.locale === 'en' ? 'ltr' : 'rtl';
     const head = document.getElementById('head');
     let html = '';
@@ -152,7 +179,7 @@
     head.innerHTML = html;
     const bar = document.getElementById('statusbar');
     bar.style.background = p.statusBg;
-    bar.innerHTML = `<span class="time">9:41</span><span style="display:flex;align-items:center">${statusSvg()}</span>`;
+    bar.innerHTML = `<span class="time">9:41</span><span style="display:flex;align-items:center">${statusSvg(p.variant === 'ipad' ? 0.55 : 1)}</span>`;
     document.getElementById('shot').src = p.img;
     return new Promise((resolve) => {
       const img = document.getElementById('shot');
