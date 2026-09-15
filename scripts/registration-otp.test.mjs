@@ -122,7 +122,7 @@ test('renter/session OTP path is untouched by the registration flow', () => {
 });
 
 test('customer signup gates on the flag and uses the registration service', () => {
-  assert.ok(register.includes('isRegistrationOtpEnabled()'));
+  assert.ok(register.includes('registrationOtpState()'));
   assert.ok(register.includes('sendRegistrationOtp('));
   assert.ok(register.includes('verifyRegistrationOtp('));
   // Login must stay OTP-free.
@@ -130,11 +130,10 @@ test('customer signup gates on the flag and uses the registration service', () =
   assert.ok(!read('src/pages/merchant/MerchantLogin.tsx').includes('RegistrationOtp'));
 });
 
-test('merchant signup requires OTP when enabled, bypasses when off', () => {
-  // Same flag, merchant role — behind regOtpEnabled which requires
-  // isRegistrationOtpEnabled(), so flag-off keeps signup unchanged
-  // (the flag matrix above proves off → false).
-  assert.ok(merchantRegister.includes('configured && isRegistrationOtpEnabled()'));
+test('merchant signup requires OTP when enabled, fails closed when blocked', () => {
+  // Same flag, merchant role — behind regOtpState which comes from
+  // registrationOtpState() (the flag matrix above proves the states).
+  assert.ok(merchantRegister.includes("configured && regOtpState === 'enabled'"));
   assert.ok(merchantRegister.includes("sendRegistrationOtp(canonical, 'merchant', values.email.trim())")
     || merchantRegister.includes("sendRegistrationOtp(n.canonical, 'merchant', values.email.trim())"));
   assert.ok(merchantRegister.includes('verifyRegistrationOtp('));
@@ -249,4 +248,53 @@ test('preflight copy is the approved Arabic/English', () => {
     'This mobile number is already registered. Sign in or use another number.');
   assert.equal(en.auth.regOtp.errors.preflight,
     "We couldn't verify the registration details. Please try again.");
+});
+
+// ---------------------------------------------------------------------
+// FAIL-CLOSED registration (release-blocking incident): a production
+// build without VITE_REGISTRATION_OTP_PROVIDER must BLOCK registration
+// with a configuration error — never fall back to a direct signUp
+// where Supabase's email confirmation becomes the only gate.
+// ---------------------------------------------------------------------
+import { resolveRegistrationOtpState } from './.otp-flags-bundle.mjs';
+
+test('state matrix: missing flag blocks PROD, only sms-edge enables', () => {
+  // PROD build:
+  assert.equal(resolveRegistrationOtpState({}, true), 'blocked');
+  assert.equal(resolveRegistrationOtpState({ VITE_REGISTRATION_OTP_PROVIDER: '' }, true), 'blocked');
+  assert.equal(resolveRegistrationOtpState({ VITE_REGISTRATION_OTP_PROVIDER: 'off' }, true), 'blocked');
+  assert.equal(resolveRegistrationOtpState({ VITE_REGISTRATION_OTP_PROVIDER: 'sms-edge' }, true), 'enabled');
+  // DEV build keeps the legacy off mode (local development only):
+  assert.equal(resolveRegistrationOtpState({}, false), 'disabled');
+  assert.equal(resolveRegistrationOtpState({ VITE_REGISTRATION_OTP_PROVIDER: 'sms-edge' }, false), 'enabled');
+  // The renter/session flag never affects it.
+  assert.equal(resolveRegistrationOtpState({ VITE_RENTER_OTP_PROVIDER: 'sms-edge' }, true), 'blocked');
+});
+
+test('both signup forms refuse to submit while blocked, BEFORE any signUp', () => {
+  for (const [name, src, submitCall] of [
+    ['customer', register, 'performSignUp'],
+    ['merchant', merchantRegister, 'submitLive'],
+  ]) {
+    assert.ok(src.includes("regOtpState === 'blocked'"), `${name}: blocked state`);
+    const gate = src.indexOf("t('auth.regOtp.errors.buildMisconfigured')");
+    assert.ok(gate > -1, `${name}: shows the config error`);
+    // The blocked gate sits in the same submit path, before the
+    // account-creation call that follows it.
+    const submitAt = src.indexOf(`await ${submitCall}()`, gate);
+    assert.ok(submitAt > gate, `${name}: gate precedes ${submitCall}`);
+  }
+});
+
+test('the env var is documented where native builds are made', () => {
+  const envExample = read('.env.example');
+  assert.ok(envExample.includes('VITE_REGISTRATION_OTP_PROVIDER=sms-edge'));
+  assert.ok(read('docs/ios-testflight.md').includes('VITE_REGISTRATION_OTP_PROVIDER=sms-edge'));
+});
+
+test('blocked copy exists in both languages', () => {
+  const arL = JSON.parse(read('src/locales/ar.json'));
+  const enL = JSON.parse(read('src/locales/en.json'));
+  assert.ok(arL.auth.regOtp.errors.buildMisconfigured.includes('إعدادات غير مكتملة'));
+  assert.ok(enL.auth.regOtp.errors.buildMisconfigured.includes('missing required setup'));
 });

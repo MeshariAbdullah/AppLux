@@ -20,7 +20,7 @@ import { useStore } from '@/lib/store';
 import { normalizeDigits } from '@/lib/validation/customer';
 import { normalizeMobile } from '@/lib/mobile';
 import {
-  isRegistrationOtpEnabled,
+  registrationOtpState,
   RegistrationOtpError,
   sendRegistrationOtp,
   verifyRegistrationOtp,
@@ -500,7 +500,12 @@ export default function MerchantRegister() {
   // the contact mobile must be verified before advancing, and the
   // final submit re-checks the exact verified number.
   // ------------------------------------------------------------------
-  const regOtpEnabled = configured && isRegistrationOtpEnabled();
+  // Fail closed: 'blocked' (a PROD build missing the provider flag)
+  // refuses registration outright — it must NEVER fall back to a
+  // direct signUp that skips the mandatory SMS verification.
+  const regOtpState = registrationOtpState();
+  const regOtpEnabled = configured && regOtpState === 'enabled';
+  const regOtpBlocked = configured && regOtpState === 'blocked';
   const [regOtpStage, setRegOtpStage] = useState<'idle' | 'sent'>('idle');
   const [regOtpVerifiedFor, setRegOtpVerifiedFor] = useState<string | null>(null);
   const [regOtpCode, setRegOtpCode] = useState('');
@@ -684,6 +689,13 @@ export default function MerchantRegister() {
       return;
     }
     if (submitting || submitted) return; // double-submit guard
+    // FAIL CLOSED: this production build shipped without
+    // VITE_REGISTRATION_OTP_PROVIDER — refuse with a clear
+    // configuration error instead of silently bypassing the SMS gate.
+    if (regOtpBlocked) {
+      setErrors({ form: t('auth.regOtp.errors.buildMisconfigured') });
+      return;
+    }
     // Belt-and-suspenders: the account is never created without a
     // verified contact mobile while the flag is on (covers any path
     // back through the wizard that changed the number).

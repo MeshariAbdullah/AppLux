@@ -373,6 +373,7 @@
         "emailTaken": "This email is already registered. Sign in or use another email.",
         "mobileTaken": "This mobile number is already registered. Sign in or use another number.",
         "preflight": "We couldn't verify the registration details. Please try again.",
+        "buildMisconfigured": "Registration can't be completed because this app version is missing required setup. Update the app or contact Lend support.",
         "expired": "The code has expired — request a new one.",
         "cooldown": "A code was just sent — wait a moment before requesting another.",
         "sendLimit": "Too many codes were requested for this number — try again later.",

@@ -81,6 +81,18 @@ VITE_SUPABASE_ANON_KEY=YOUR_ANON_KEY
 # appear inside the live app and the build would be rejected.
 # VITE_DEMO_MODE=     ← leave commented / unset
 
+# OTP delivery providers — REQUIRED. Vercel env vars do NOT reach a
+# local `npm run build`; without this line a production build BLOCKS
+# registration with a configuration error (it fails closed — it never
+# skips the mandatory SMS verification, which is exactly the bug this
+# guards against).
+VITE_REGISTRATION_OTP_PROVIDER=sms-edge
+VITE_RENTER_OTP_PROVIDER=rpc-inapp
+
+# Password-reset email links must open the deployed web app, not the
+# Capacitor webview origin.
+VITE_APP_ORIGIN=https://lendsa.vercel.app
+
 # App Store readiness — Profile tab Privacy + Support rows.
 # Apple Guideline 5.1.1 requires the privacy policy URL.
 VITE_PRIVACY_POLICY_URL=https://lend.sa/privacy

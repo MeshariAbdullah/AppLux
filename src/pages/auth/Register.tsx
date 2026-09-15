@@ -9,7 +9,7 @@ import { useStore, emptyRegistration, type RegistrationDraft } from '@/lib/store
 import { useSupabaseAuth, updateProfile } from '@/lib/supabase';
 import { classifyMobile, sanitizeMobileInput, type MobileIssue } from '@/lib/mobile';
 import {
-  isRegistrationOtpEnabled,
+  registrationOtpState,
   RegistrationOtpError,
   sendRegistrationOtp,
   verifyRegistrationOtp,
@@ -430,7 +430,12 @@ function SupabaseRegister() {
   // OTP). Flow: validate form → send code → inline verify panel →
   // on success continue straight into the account creation.
   // ------------------------------------------------------------------
-  const regOtpEnabled = configured && isRegistrationOtpEnabled();
+  // Fail closed: 'blocked' (a PROD build missing the provider flag)
+  // refuses registration outright — it must NEVER fall back to a
+  // direct signUp that skips the mandatory SMS verification.
+  const regOtpState = registrationOtpState();
+  const regOtpEnabled = configured && regOtpState === 'enabled';
+  const regOtpBlocked = configured && regOtpState === 'blocked';
   const [otpStage, setOtpStage] = useState<'idle' | 'sent'>('idle');
   const [otpVerifiedFor, setOtpVerifiedFor] = useState<string | null>(null);
   const [otpCode, setOtpCode] = useState('');
@@ -552,6 +557,14 @@ function SupabaseRegister() {
       next.confirmPassword = t('auth.errors.passwordMismatch');
     setErrors(next);
     if (Object.keys(next).length > 0) return;
+
+    // FAIL CLOSED: this production build shipped without
+    // VITE_REGISTRATION_OTP_PROVIDER — refuse with a clear
+    // configuration error instead of silently bypassing the SMS gate.
+    if (regOtpBlocked) {
+      setErrors({ form: t('auth.regOtp.errors.buildMisconfigured') });
+      return;
+    }
 
     // Registration OTP gate: verify the mobile before the account is
     // created. Account creation continues automatically after a

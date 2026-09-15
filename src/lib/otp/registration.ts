@@ -19,11 +19,25 @@
 
 import { requireSupabase } from '@/lib/supabase';
 import { normalizeMobile } from '@/lib/mobile';
-import { buildTimeOtpEnv, resolveRegistrationOtpEnabled } from './flags';
+import {
+  buildTimeOtpEnv,
+  resolveRegistrationOtpEnabled,
+  resolveRegistrationOtpState,
+  type RegistrationOtpState,
+} from './flags';
 
 /** Signup shows the mobile-verification step only when this is true. */
 export function isRegistrationOtpEnabled(): boolean {
   return resolveRegistrationOtpEnabled(buildTimeOtpEnv());
+}
+
+/** Fail-closed registration state for THIS build: 'enabled' runs the
+ *  SMS gate, 'disabled' (DEV only) skips it, 'blocked' means a PROD
+ *  build shipped without VITE_REGISTRATION_OTP_PROVIDER — signup must
+ *  refuse with a configuration error, never fall back to a direct
+ *  auth.signUp that would bypass mobile verification. */
+export function registrationOtpState(): RegistrationOtpState {
+  return resolveRegistrationOtpState(buildTimeOtpEnv(), import.meta.env.PROD);
 }
 
 export class RegistrationOtpError extends Error {
