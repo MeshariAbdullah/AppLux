@@ -3256,5 +3256,13 @@
     "openExternal": "Open externally",
     "refresh": "Refresh link",
     "noInline": "This file type can't be previewed in-app — open it externally."
+  },
+  "business": {
+    "portalOnly": {
+      "title": "This portal is for rental businesses",
+      "body": "The Lend business portal is for partner store accounts. To access your customer account, use the Lend app.",
+      "siteCta": "Go to lend.sa",
+      "signOutCta": "Sign out"
+    }
   }
 }

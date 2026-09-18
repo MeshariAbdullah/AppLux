@@ -9,3 +9,4 @@
 .pull-to-refresh-bundle.mjs
 .session-policy-bundle.mjs
 .session-storage-bundle.mjs
+.site-mode-bundle.mjs

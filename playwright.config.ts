@@ -19,10 +19,22 @@ export default defineConfig({
       ? { executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE }
       : undefined,
   },
-  webServer: {
-    command: 'npm run dev -- --host 127.0.0.1 --port 4173 --strictPort',
-    url: 'http://127.0.0.1:4173',
-    reuseExistingServer: true,
-    timeout: 30_000,
-  },
+  webServer: [
+    // Full mode (default) — the existing responsive/behavior suite.
+    {
+      command: 'npm run dev -- --host 127.0.0.1 --port 4173 --strictPort',
+      url: 'http://127.0.0.1:4173',
+      reuseExistingServer: true,
+      timeout: 30_000,
+    },
+    // Business portal mode — same code, VITE_SITE_MODE=business
+    // (tests/site-mode.spec.ts targets this port explicitly).
+    {
+      command: 'npm run dev -- --host 127.0.0.1 --port 4174 --strictPort',
+      url: 'http://127.0.0.1:4174',
+      reuseExistingServer: true,
+      timeout: 30_000,
+      env: { VITE_SITE_MODE: 'business' },
+    },
+  ],
 });

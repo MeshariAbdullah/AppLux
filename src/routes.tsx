@@ -1,12 +1,29 @@
 import { Suspense, useEffect, type ReactElement } from 'react';
 import { Navigate, Route, Routes, useNavigate } from 'react-router-dom';
+import { Capacitor } from '@capacitor/core';
 import { AppLayout, MerchantAppLayout, AuthLayout } from '@/components/layout';
 import { useT } from '@/lib/i18n';
 import { lazyWithReload } from '@/lib/lazyWithReload';
+import { resolveSiteMode } from '@/lib/siteMode';
 import { useStore } from '@/lib/store';
 import { useSupabaseAuth } from '@/lib/supabase';
 import { RequireRole } from '@/components/auth/RequireRole';
 import { startPushRegistration } from '@/lib/push/registerPush';
+
+// ---------------------------------------------------------------------
+// Site mode — resolved ONCE at module load (it cannot change within a
+// running page). 'business' (business.lend.sa / VITE_SITE_MODE) keeps
+// ONLY the merchant area + shared auth utility routes registered;
+// native Capacitor is always 'full'. See src/lib/siteMode.ts.
+// ---------------------------------------------------------------------
+const SITE_MODE = resolveSiteMode(
+  { VITE_SITE_MODE: import.meta.env.VITE_SITE_MODE },
+  {
+    isNative: Capacitor.isNativePlatform(),
+    hostname: typeof window !== 'undefined' ? window.location.hostname : '',
+  },
+);
+const BUSINESS_PORTAL = SITE_MODE === 'business';
 
 // =====================================================================
 // Phase 5B route loading strategy.
@@ -146,18 +163,27 @@ function RootRedirect() {
   }, [configured, role]);
 
   if (!configured) {
+    if (BUSINESS_PORTAL) return <Navigate to="/merchant/welcome" replace />;
     return <Navigate to={demoSession ? '/home' : '/welcome'} replace />;
   }
   if (status === 'loading') return <RouteSpinner />;
-  if (status !== 'authenticated') return <Navigate to="/welcome" replace />;
+  if (status !== 'authenticated') {
+    return <Navigate to={BUSINESS_PORTAL ? '/merchant/welcome' : '/welcome'} replace />;
+  }
   if (profileLoading) return <RouteSpinner />;
   if (profileError) {
     return <ProfileLoadError onRetry={refresh} onSignOut={signOut} />;
   }
   if (!profile) {
     // Authenticated but profile row missing entirely — push back to
-    // /welcome rather than loop.
-    return <Navigate to="/welcome" replace />;
+    // the entry screen rather than loop.
+    return <Navigate to={BUSINESS_PORTAL ? '/merchant/welcome' : '/welcome'} replace />;
+  }
+  // Business portal: any authenticated NON-merchant account gets the
+  // portal-only screen — never a customer/admin surface (those routes
+  // are not even registered in this mode).
+  if (BUSINESS_PORTAL && role !== 'merchant') {
+    return <BusinessPortalOnly onSignOut={signOut} />;
   }
   if (role === 'merchant') {
     // Merchant separation M2: pending/rejected merchant accounts land
@@ -171,6 +197,44 @@ function RootRedirect() {
   }
   if (role === 'admin') return <Navigate to="/admin/home" replace />;
   return <Navigate to="/home" replace />;
+}
+
+/**
+ * Business portal, signed in with a non-merchant account: a clean
+ * dead-end explaining this portal is for rental businesses, with the
+ * way back (lend.sa) and a sign-out. Rendered by RootRedirect in
+ * business mode only — customer/admin routes are unregistered there,
+ * so this screen is the ONLY thing such a session can reach.
+ */
+function BusinessPortalOnly({ onSignOut }: { onSignOut: () => Promise<void> }) {
+  const t = useT();
+  return (
+    <div className="min-h-screen grid place-items-center px-6 py-10 bg-canvas">
+      <div className="max-w-sm w-full rounded-xl3 bg-white ring-1 ring-canvas-200 p-6 shadow-soft text-center space-y-3">
+        <h1 className="editorial-title text-[20px] text-ink-900">
+          {t('business.portalOnly.title')}
+        </h1>
+        <p className="text-[13px] text-ink-500 leading-relaxed">
+          {t('business.portalOnly.body')}
+        </p>
+        <div className="flex flex-col gap-2 pt-2">
+          <a
+            href="https://www.lend.sa"
+            className="w-full rounded-xl2 bg-lavender-600 text-white text-[13.5px] font-semibold py-2.5 hover:bg-lavender-700"
+          >
+            {t('business.portalOnly.siteCta')}
+          </a>
+          <button
+            type="button"
+            onClick={() => void onSignOut()}
+            className="w-full text-[12.5px] text-ink-500 underline underline-offset-4 decoration-canvas-300"
+          >
+            {t('business.portalOnly.signOutCta')}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 function RouteSpinner() {
@@ -244,13 +308,30 @@ export function AppRoutes() {
         <Route path="/" element={<RootRedirect />} />
 
       <Route element={<AuthLayout />}>
-        {/* Public auth screens */}
-        <Route path="/welcome" element={<Welcome />} />
-        <Route path="/auth" element={<AuthEntry />} />
-        <Route path="/auth/login" element={<Login />} />
-        <Route path="/auth/register" element={<Register />} />
-        <Route path="/auth/nafath" element={<Nafath />} />
-        <Route path="/auth/success" element={<RegisterSuccess />} />
+        {/* Customer entry/auth screens — FULL mode only. The business
+            portal registers redirects instead, so shared pages that
+            link to the customer sign-in (forgot/reset password) land
+            on the merchant equivalents without any page branching. */}
+        {!BUSINESS_PORTAL && (
+          <>
+            <Route path="/welcome" element={<Welcome />} />
+            <Route path="/auth" element={<AuthEntry />} />
+            <Route path="/auth/login" element={<Login />} />
+            <Route path="/auth/register" element={<Register />} />
+            <Route path="/auth/nafath" element={<Nafath />} />
+            <Route path="/auth/success" element={<RegisterSuccess />} />
+          </>
+        )}
+        {BUSINESS_PORTAL && (
+          <>
+            <Route path="/welcome" element={<Navigate to="/merchant/welcome" replace />} />
+            <Route path="/auth/login" element={<Navigate to="/merchant/login" replace />} />
+          </>
+        )}
+        {/* Shared auth utility routes — registered in BOTH modes:
+            password recovery and email verification serve merchant
+            accounts too (merchant login links forgot-password; the
+            reset email may land on either host). */}
         <Route path="/auth/forgot-password" element={<ForgotPassword />} />
         {/* Bug 2: email-OTP verification. Public — reachable both with
             no session (straight after signup) and with an unverified
@@ -313,7 +394,10 @@ export function AppRoutes() {
           <Route path="/merchant/session/new" element={<MerchantRentalSession />} />
         </Route>
 
-        {/* Admin area — guarded by role */}
+        {/* Admin area — guarded by role; FULL mode only (the business
+            portal registers no admin routes at all). */}
+        {!BUSINESS_PORTAL && (
+          <>
         <Route
           path="/admin/home"
           element={
@@ -420,9 +504,14 @@ export function AppRoutes() {
             </RequireRole>
           }
         />
+          </>
+        )}
       </Route>
 
-      {/* Customer area */}
+      {/* Customer area — FULL mode only. In business mode none of
+          these routes exist: deep links fall to the catch-all and the
+          customer shell (BottomNav included) can never mount. */}
+      {!BUSINESS_PORTAL && (
       <Route
         element={
           <RequireCustomer>
@@ -448,6 +537,7 @@ export function AppRoutes() {
         <Route path="/disputes" element={<MyDisputes />} />
         <Route path="/disputes/:id" element={<DisputeDetails />} />
       </Route>
+      )}
 
       {/* Phase 6C hidden diagnostics — reachable by direct URL or the
           seven-tap version-row gesture. Deliberately outside every
@@ -456,6 +546,9 @@ export function AppRoutes() {
           role. The page itself enforces that split. */}
       <Route path="/diagnostics" element={<Diagnostics />} />
 
+      {/* Catch-all. In business mode every unregistered path (all
+          customer/admin URLs included) funnels through '/' →
+          RootRedirect → the merchant entry or the portal-only screen. */}
       <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Suspense>

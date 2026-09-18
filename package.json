@@ -28,7 +28,8 @@
     "test:draft": "esbuild src/lib/merchantSessionDraft.ts --bundle --format=esm --outfile=scripts/.merchant-draft-bundle.mjs && node --test scripts/merchant-draft.test.mjs",
     "test:refresh": "esbuild src/lib/pullToRefresh.ts --bundle --format=esm --outfile=scripts/.pull-to-refresh-bundle.mjs && node --test scripts/pull-to-refresh.test.mjs",
     "test:session": "esbuild src/lib/session/policy.ts --bundle --format=esm --outfile=scripts/.session-policy-bundle.mjs && esbuild src/lib/session/storage.ts --bundle --format=esm --outfile=scripts/.session-storage-bundle.mjs && node --test scripts/session-duration.test.mjs",
-    "appstore:ar:ipad": "node appstore/render-ipad.mjs"
+    "appstore:ar:ipad": "node appstore/render-ipad.mjs",
+    "test:sitemode": "esbuild src/lib/siteMode.ts --bundle --format=esm --outfile=scripts/.site-mode-bundle.mjs && node --test scripts/site-mode.test.mjs"
   },
   "dependencies": {
     "@capacitor/core": "^7.0.0",
