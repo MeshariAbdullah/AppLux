@@ -75,8 +75,10 @@ export async function signUpMerchant({
     password,
     options: {
       // Confirmation links must return the merchant to the MERCHANT
-      // flow (login → pending), never the customer flow.
-      emailRedirectTo: `${window.location.origin}/merchant/login`,
+      // flow (login → pending), never the customer flow — and from a
+      // NATIVE build they must point at the deployed web origin
+      // (VITE_APP_ORIGIN), never capacitor://localhost.
+      emailRedirectTo: `${appWebOrigin()}/merchant/login`,
       data: {
         account_type: 'merchant',
         full_name: application.authorizedName,
@@ -208,27 +210,31 @@ export async function signOut(): Promise<void> {
 }
 
 /**
- * The URL the password-reset email links back to.
+ * The canonical WEB origin for links that leave the app (auth emails).
  *
- * Web deploys: `window.location.origin` is already the deployed site,
- * so the link lands on the same origin the user is on.
+ * Web deploys: `window.location.origin` — each host (app.lend.sa,
+ * business.lend.sa, staging) links back to itself.
  *
  * Native (Capacitor) builds: the webview origin is
  * `capacitor://localhost` / `https://localhost` — useless in an email
  * link (and not allow-listable in Supabase's Redirect URLs). Set
- * VITE_APP_ORIGIN to the canonical deployed web origin
- * (production: https://lendsa.vercel.app) so reset links from the
- * iOS/Android app open the real website's reset page. When unset,
- * falls back to the current origin (correct for every web deploy).
+ * VITE_APP_ORIGIN to the canonical production web origin
+ * (https://app.lend.sa) so email links from the iOS/Android app open
+ * the real website. When unset, falls back to the current origin
+ * (correct for every web deploy).
  *
- * The chosen origin + /auth/reset-password must be listed under
- * Supabase → Authentication → URL Configuration → Redirect URLs,
- * otherwise Supabase silently falls back to the project's Site URL.
+ * Every origin used here must be listed under Supabase →
+ * Authentication → URL Configuration → Redirect URLs, otherwise
+ * Supabase silently falls back to the project's Site URL.
  */
-export function passwordResetRedirectUrl(): string {
+export function appWebOrigin(): string {
   const envOrigin = (import.meta.env.VITE_APP_ORIGIN as string | undefined)?.trim();
-  const origin = envOrigin ? envOrigin.replace(/\/+$/, '') : window.location.origin;
-  return `${origin}/auth/reset-password`;
+  return envOrigin ? envOrigin.replace(/\/+$/, '') : window.location.origin;
+}
+
+/** The URL the password-reset email links back to. */
+export function passwordResetRedirectUrl(): string {
+  return `${appWebOrigin()}/auth/reset-password`;
 }
 
 /**

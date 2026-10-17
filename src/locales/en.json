@@ -1,7 +1,8 @@
 {
   "app": {
     "name": "Lend",
-    "tagline": "Rent what you need, contract it properly"
+    "tagline": "Rent what you need, contract it properly",
+    "stagingBadge": "Staging"
   },
   "brand": {
     "slogan": {

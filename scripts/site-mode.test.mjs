@@ -8,7 +8,13 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
-import { BUSINESS_HOSTNAME, resolveSiteMode } from './.site-mode-bundle.mjs';
+import {
+  APP_HOSTNAME,
+  BUSINESS_HOSTNAME,
+  STAGING_HOSTNAME,
+  resolveDeployEnv,
+  resolveSiteMode,
+} from './.site-mode-bundle.mjs';
 
 const root = path.resolve(import.meta.dirname, '..');
 const read = (p) => readFileSync(path.join(root, p), 'utf8');
@@ -67,6 +73,67 @@ test('everything else is full mode (fail-open toward the FULL app only)', () => 
   assert.equal(
     resolveSiteMode({}, { isNative: false, hostname: 'notbusiness.lend.sa' }),
     'full',
+  );
+});
+
+// ---------------------------------------------------------------------
+// Deploy env matrix (production/staging labeling — never changes WHAT
+// is served, only the staging badge)
+// ---------------------------------------------------------------------
+
+test('canonical hostnames are pinned', () => {
+  assert.equal(APP_HOSTNAME, 'app.lend.sa');
+  assert.equal(BUSINESS_HOSTNAME, 'business.lend.sa');
+  assert.equal(STAGING_HOSTNAME, 'lendsa.vercel.app');
+});
+
+test('native builds NEVER label as staging, whatever env leaked in', () => {
+  assert.equal(
+    resolveDeployEnv(
+      { VITE_DEPLOY_ENV: 'staging' },
+      { isNative: true, hostname: STAGING_HOSTNAME },
+    ),
+    'production',
+  );
+  assert.equal(resolveDeployEnv({}, { isNative: true, hostname: '' }), 'production');
+});
+
+test('explicit VITE_DEPLOY_ENV wins on web deploys', () => {
+  assert.equal(
+    resolveDeployEnv({ VITE_DEPLOY_ENV: 'staging' }, { isNative: false, hostname: 'app.lend.sa' }),
+    'staging',
+    'explicit staging labels even a lend.sa host (misconfig is visible, not hidden)',
+  );
+  assert.equal(
+    resolveDeployEnv(
+      { VITE_DEPLOY_ENV: 'production' },
+      { isNative: false, hostname: STAGING_HOSTNAME },
+    ),
+    'production',
+    'explicit production suppresses the hostname backstop',
+  );
+});
+
+test('lendsa.vercel.app hostname is labeled staging as a backstop', () => {
+  assert.equal(
+    resolveDeployEnv({}, { isNative: false, hostname: 'lendsa.vercel.app' }),
+    'staging',
+  );
+  assert.equal(
+    resolveDeployEnv({}, { isNative: false, hostname: 'LendSA.Vercel.APP' }),
+    'staging',
+    'case-insensitive',
+  );
+});
+
+test('everything else is production (= no staging marker)', () => {
+  for (const hostname of ['app.lend.sa', 'business.lend.sa', 'localhost', '127.0.0.1', 'preview-abc.vercel.app', '']) {
+    assert.equal(resolveDeployEnv({}, { isNative: false, hostname }), 'production', hostname);
+  }
+  assert.equal(
+    resolveDeployEnv({ VITE_DEPLOY_ENV: 'stage' }, { isNative: false, hostname: 'app.lend.sa' }),
+    'production',
+    'unknown env values are ignored',
   );
 });
 
@@ -130,6 +197,52 @@ test('root + catch-all + wrong-role handling in business mode', () => {
 test('native pinning is wired: isNativePlatform feeds the resolver', () => {
   assert.ok(routes.includes('Capacitor.isNativePlatform()'));
   assert.ok(routes.includes('resolveSiteMode('));
+});
+
+test('staging badge is gated on DEPLOY_ENV and only on it', () => {
+  assert.ok(routes.includes('const DEPLOY_ENV = resolveDeployEnv('), 'DEPLOY_ENV computed via the resolver');
+  assert.ok(routes.includes("{DEPLOY_ENV === 'staging' && <StagingBadge />}"), 'badge mounts only when staging');
+  assert.ok(routes.includes('data-testid="staging-badge"'));
+  // The label is localized, not hardcoded.
+  assert.ok(routes.includes("t('app.stagingBadge')"));
+});
+
+test('staging badge copy exists in both languages', () => {
+  const ar = JSON.parse(read('src/locales/ar.json'));
+  const en = JSON.parse(read('src/locales/en.json'));
+  assert.ok(ar.app.stagingBadge, 'ar');
+  assert.ok(en.app.stagingBadge, 'en');
+  assert.ok(/[؀-ۿ]/.test(ar.app.stagingBadge));
+});
+
+test('auth email links use appWebOrigin (VITE_APP_ORIGIN-aware), never a raw webview origin', () => {
+  const auth = read('src/lib/supabase/auth.ts');
+  assert.ok(auth.includes('export function appWebOrigin()'), 'appWebOrigin exists');
+  assert.ok(auth.includes('VITE_APP_ORIGIN'), 'reads the canonical origin env');
+  assert.ok(
+    auth.includes('emailRedirectTo: `${appWebOrigin()}/merchant/login`'),
+    'merchant signup confirmation goes through appWebOrigin',
+  );
+  assert.ok(
+    auth.includes('`${appWebOrigin()}/auth/reset-password`'),
+    'password reset goes through appWebOrigin',
+  );
+  // No email link may be built from window.location.origin directly —
+  // that is the capacitor://localhost bug class.
+  assert.ok(
+    !/emailRedirectTo:[^,\n]*window\.location\.origin/.test(auth),
+    'no raw window.location.origin in emailRedirectTo',
+  );
+});
+
+test('deployment docs + env template name the production origin', () => {
+  const envExample = read('.env.example');
+  assert.ok(envExample.includes('VITE_DEPLOY_ENV='), 'env template documents VITE_DEPLOY_ENV');
+  assert.ok(envExample.includes('https://app.lend.sa'), 'env template names the production origin');
+  const deployment = read('docs/deployment.md');
+  for (const needle of ['app.lend.sa', 'business.lend.sa', 'lendsa.vercel.app', 'production', 'staging']) {
+    assert.ok(deployment.includes(needle), `docs/deployment.md mentions ${needle}`);
+  }
 });
 
 test('portal-only copy exists in both languages', () => {

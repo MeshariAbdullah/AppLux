@@ -91,7 +91,7 @@ VITE_RENTER_OTP_PROVIDER=rpc-inapp
 
 # Password-reset email links must open the deployed web app, not the
 # Capacitor webview origin.
-VITE_APP_ORIGIN=https://lendsa.vercel.app
+VITE_APP_ORIGIN=https://app.lend.sa
 
 # App Store readiness — Profile tab Privacy + Support rows.
 # Apple Guideline 5.1.1 requires the privacy policy URL.

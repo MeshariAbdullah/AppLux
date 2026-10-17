@@ -4,7 +4,7 @@ import { Capacitor } from '@capacitor/core';
 import { AppLayout, MerchantAppLayout, AuthLayout } from '@/components/layout';
 import { useT } from '@/lib/i18n';
 import { lazyWithReload } from '@/lib/lazyWithReload';
-import { resolveSiteMode } from '@/lib/siteMode';
+import { resolveDeployEnv, resolveSiteMode } from '@/lib/siteMode';
 import { useStore } from '@/lib/store';
 import { useSupabaseAuth } from '@/lib/supabase';
 import { RequireRole } from '@/components/auth/RequireRole';
@@ -24,6 +24,18 @@ const SITE_MODE = resolveSiteMode(
   },
 );
 const BUSINESS_PORTAL = SITE_MODE === 'business';
+
+// Staging/testing deployments (lendsa.vercel.app, or any deploy with
+// VITE_DEPLOY_ENV=staging) carry a small persistent marker so a tester
+// can never mistake the environment for production. Native builds and
+// the production domains never show it; dev/localhost stays unlabeled.
+const DEPLOY_ENV = resolveDeployEnv(
+  { VITE_DEPLOY_ENV: import.meta.env.VITE_DEPLOY_ENV },
+  {
+    isNative: Capacitor.isNativePlatform(),
+    hostname: typeof window !== 'undefined' ? window.location.hostname : '',
+  },
+);
 
 // =====================================================================
 // Phase 5B route loading strategy.
@@ -237,6 +249,20 @@ function BusinessPortalOnly({ onSignOut }: { onSignOut: () => Promise<void> }) {
   );
 }
 
+/** Unmissable-but-unobtrusive staging marker (see DEPLOY_ENV above). */
+function StagingBadge() {
+  const t = useT();
+  return (
+    <div
+      aria-hidden
+      data-testid="staging-badge"
+      className="pointer-events-none fixed bottom-2 start-2 z-[70] rounded-full bg-amber-500/90 px-2.5 py-1 text-[10px] font-bold tracking-wide text-white shadow-soft"
+    >
+      {t('app.stagingBadge')}
+    </div>
+  );
+}
+
 function RouteSpinner() {
   return (
     <div className="min-h-[60vh] grid place-items-center">
@@ -304,6 +330,7 @@ export function AppRoutes() {
     // fails even after lazyWithReload's one-shot reload renders the
     // crash screen with a support code.
     <Suspense fallback={<RouteSpinner />}>
+      {DEPLOY_ENV === 'staging' && <StagingBadge />}
       <Routes>
         <Route path="/" element={<RootRedirect />} />
 

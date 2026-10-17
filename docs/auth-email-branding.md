@@ -4,8 +4,9 @@ Goal: the "Forgot password" email arrives **from Lend**, not from
 Supabase's default sender (`noreply@mail.app.supabase.io`).
 
 **CONFIGURED (production)**: custom SMTP via **Resend**, sender
-**`Lend <info@lend.sa>`**, Site URL **`https://lendsa.vercel.app`**,
-redirect **`https://lendsa.vercel.app/auth/reset-password`**. The
+**`Lend <info@lend.sa>`**, Site URL **`https://app.lend.sa`** (production;
+was lendsa.vercel.app before the domain launch), redirect
+allow-list per docs/deployment.md. The
 steps below remain as the runbook for re-doing or auditing that
 setup.
 
@@ -31,9 +32,9 @@ provider may send as `@lend.sa`.
   `supabase.auth.resetPasswordForEmail(email, { redirectTo })`.
 * `redirectTo` comes from `passwordResetRedirectUrl()`:
   the current origin on web deploys, or **`VITE_APP_ORIGIN`** (set it
-  to the canonical web origin: `https://lendsa.vercel.app`, so the
+  to the canonical production origin: `https://app.lend.sa`, so the
   link is exactly
-  `https://lendsa.vercel.app/auth/reset-password`) — required for the
+  `https://app.lend.sa/auth/reset-password`) — required for the
   iOS/Android builds, where the webview origin
   (`capacitor://localhost`) cannot appear in an email link.
 * `/auth/reset-password` (`src/pages/auth/ResetPassword.tsx`) consumes
@@ -67,11 +68,12 @@ Settings**):
 
 Dashboard → **Authentication → URL Configuration**:
 
-* **Site URL**: `https://lendsa.vercel.app` (the production web
-  origin).
+* **Site URL**: `https://app.lend.sa` (the production web origin).
 * **Redirect URLs** — must contain every origin the reset link may
   point at:
-  * `https://lendsa.vercel.app/auth/reset-password` (production)
+  * `https://app.lend.sa/auth/reset-password` (production)
+  * `https://business.lend.sa/auth/reset-password` (merchant portal)
+  * `https://lendsa.vercel.app/auth/reset-password` (staging)
   * `http://localhost:5173/auth/reset-password` (local dev, optional)
 
   A `redirectTo` not in this list is silently replaced by the Site
@@ -140,7 +142,7 @@ sending domain the provider verifies matches `lend.sa`.
 2. Inbox: sender shows **Lend `<info@lend.sa>`** (not Supabase),
    Arabic-first template.
 3. Open the link → lands on
-   `https://lendsa.vercel.app/auth/reset-password` with the form
+   `https://app.lend.sa/auth/reset-password` with the form
    enabled (not the "invalid link" state).
 4. Set a new password → success screen → auto-redirects to the login
    page (the recovery session is signed out).

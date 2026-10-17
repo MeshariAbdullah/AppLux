@@ -31,6 +31,12 @@ export type SiteMode = 'full' | 'business';
 
 export const BUSINESS_HOSTNAME = 'business.lend.sa';
 
+/** Canonical production hosts (DNS → the production Vercel project). */
+export const APP_HOSTNAME = 'app.lend.sa';
+
+/** The permanent staging/testing host (the original Vercel URL). */
+export const STAGING_HOSTNAME = 'lendsa.vercel.app';
+
 export type SiteModeEnv = { VITE_SITE_MODE?: string };
 
 export function resolveSiteMode(
@@ -44,4 +50,33 @@ export function resolveSiteMode(
   }
   if (env.VITE_SITE_MODE === 'business') return 'business';
   return 'full';
+}
+
+// ---------------------------------------------------------------------
+// Deploy environment — production vs staging labeling. Independent of
+// the site mode: it never changes WHAT is served, only whether the UI
+// carries the small staging marker (and lets diagnostics name the
+// environment). Resolution:
+//   1. native Capacitor            → 'production' (the shipped app
+//      never shows a staging marker, whatever env leaked in)
+//   2. VITE_DEPLOY_ENV staging/production → explicit per-project value
+//   3. hostname lendsa.vercel.app  → 'staging' (backstop: the staging
+//      host is labeled even if the env var is forgotten)
+//   4. otherwise                   → 'production' (which simply means
+//      "no staging marker" — dev/localhost stays unlabeled)
+// ---------------------------------------------------------------------
+
+export type DeployEnv = 'production' | 'staging';
+
+export type DeployEnvEnv = { VITE_DEPLOY_ENV?: string };
+
+export function resolveDeployEnv(
+  env: DeployEnvEnv,
+  runtime: { isNative: boolean; hostname: string },
+): DeployEnv {
+  if (runtime.isNative) return 'production';
+  if (env.VITE_DEPLOY_ENV === 'staging') return 'staging';
+  if (env.VITE_DEPLOY_ENV === 'production') return 'production';
+  if ((runtime.hostname || '').toLowerCase() === STAGING_HOSTNAME) return 'staging';
+  return 'production';
 }
