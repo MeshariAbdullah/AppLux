@@ -66,7 +66,7 @@ update public.profiles
        role = 'merchant',
        account_status = 'active',
        city = 'الرياض',
-       mobile = '0500000001'
+       mobile = '500000001'
  where id = '11111111-1111-1111-1111-111111110001';
 
 insert into public.merchants (
@@ -129,7 +129,7 @@ update public.profiles
        role = 'customer',
        account_status = 'active',
        city = 'الرياض',
-       mobile = '0551110001',
+       mobile = '551110001',
        national_id = '1011111101'
  where id = '22222222-2222-2222-2222-222222220001';
 
@@ -176,7 +176,7 @@ update public.profiles
        role = 'customer',
        account_status = 'active',
        city = 'الرياض',
-       mobile = '0551110002',
+       mobile = '551110002',
        national_id = '1011111102'
  where id = '22222222-2222-2222-2222-222222220002';
 
@@ -303,7 +303,7 @@ update public.profiles
        role = 'customer',
        account_status = 'active',
        city = 'جدة',
-       mobile = '0551110003',
+       mobile = '551110003',
        national_id = '1011111103'
  where id = '22222222-2222-2222-2222-222222220003';
 
@@ -490,7 +490,7 @@ update public.profiles
        role = 'customer',
        account_status = 'active',
        city = 'الرياض',
-       mobile = '0551110004',
+       mobile = '551110004',
        national_id = '1011111104'
  where id = '22222222-2222-2222-2222-222222220004';
 
@@ -610,6 +610,40 @@ values (
 on conflict (id) do update
   set status = excluded.status,
       settled_at = excluded.settled_at;
+
+-- ---------------------------------------------------------------------
+-- Auth identities — REQUIRED on a real Supabase project.
+-- ---------------------------------------------------------------------
+-- Supabase Auth (GoTrue v2) resolves email+password sign-in through
+-- auth.identities, not auth.users alone: a user inserted directly into
+-- auth.users without a matching 'email' identity cannot log in. Local
+-- Postgres replays (no GoTrue) don't notice; lend-test does. Idempotent:
+-- one 'email' identity per seeded user, derived from auth.users itself.
+-- auth.identities.email is a GENERATED column — never insert it.
+
+insert into auth.identities (
+  provider_id, user_id, identity_data, provider,
+  last_sign_in_at, created_at, updated_at
+)
+select
+  u.id::text,
+  u.id,
+  jsonb_build_object(
+    'sub', u.id::text,
+    'email', u.email,
+    'email_verified', true
+  ),
+  'email',
+  now(), now(), now()
+from auth.users u
+where u.id in (
+  '11111111-1111-1111-1111-111111110001',
+  '22222222-2222-2222-2222-222222220001',
+  '22222222-2222-2222-2222-222222220002',
+  '22222222-2222-2222-2222-222222220003',
+  '22222222-2222-2222-2222-222222220004'
+)
+on conflict (provider_id, provider) do nothing;
 
 commit;
 

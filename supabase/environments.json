@@ -1,0 +1,19 @@
+{
+  "_comment": [
+    "Supabase project refs for the environment guard (scripts/supabase-guard.sh).",
+    "A project ref is the 20-char id in the project's URL / Settings → General.",
+    "Refs are identifiers, not secrets — committing them is safe and is the point:",
+    "the guard compares the CLI's linked project against this file before every",
+    "db push / functions deploy, so a wrong `supabase link` fails closed.",
+    "NAMING HAZARD: the PRODUCTION project is named 'lend-staging' in the",
+    "Supabase dashboard; the STAGING project is 'lend-test'. Trust refs, not names."
+  ],
+  "staging": {
+    "project_name": "lend-test",
+    "project_ref": "FILL_ME_LEND_TEST_PROJECT_REF"
+  },
+  "production": {
+    "project_name": "lend-staging (despite the name, this is LIVE PRODUCTION)",
+    "project_ref": "FILL_ME_PRODUCTION_PROJECT_REF"
+  }
+}

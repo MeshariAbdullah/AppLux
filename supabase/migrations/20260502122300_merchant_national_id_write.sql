@@ -32,6 +32,16 @@
 -- ---------------------------------------------------------------------
 -- (1) Extend lookup_renter_by_mobile with has_national_id
 -- ---------------------------------------------------------------------
+-- REPLAY FIX (2026-10-25, staging bring-up): `create or replace` cannot
+-- change a function's OUT row type, so on a FRESH database this file
+-- died here against the (id, has_nafath) version from 20260502120600 —
+-- the only file in the chain that could not replay (verified by a full
+-- local replay of all 64 files). The drop below makes it replayable.
+-- End state is byte-identical to what production already runs, and the
+-- function is dropped-and-recreated again later in the chain anyway
+-- (122700, 125100), so re-running this file anywhere is also safe.
+drop function if exists public.lookup_renter_by_mobile(text);
+
 create or replace function public.lookup_renter_by_mobile(p_mobile text)
 returns table (
   id               uuid,

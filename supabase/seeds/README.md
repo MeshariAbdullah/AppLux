@@ -37,3 +37,22 @@ merchant. Targeted by UUID, so production data is untouched.
 2. Test the customer dashboard by signing in as each of the four emails.
 3. (When done) paste supabase/seeds/customer_scenarios_reset.sql → Run.
 ```
+
+## Supabase Auth compatibility (2026-10-25)
+
+Two fixes so the seeds work on a REAL Supabase project (lend-test), not
+just a local Postgres replay:
+
+* **`auth.identities` rows** — GoTrue v2 resolves email+password
+  sign-in through `auth.identities`; users inserted straight into
+  `auth.users` cannot log in without one. The seed now creates an
+  idempotent `email` identity per account (the reset script needs no
+  change — deleting `auth.users` cascades).
+* **Canonical mobiles** — `profiles_mobile_canonical` (migration
+  20260502120600) requires `^5[0-9]{8}$`; the seed's old `05…` values
+  violated it. Mobiles are now `500000001` / `551110001-4`.
+
+All identities remain fictional: `*@lend.test` emails, `10111111xx`
+national IDs, fixed UUIDs. Never run these against production — and on
+staging, `staging_bootstrap.sql`'s environment marker gives future
+scripts a mechanical way to refuse (see docs/staging-environment.md).

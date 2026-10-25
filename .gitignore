@@ -34,3 +34,4 @@ playwright-report/
 # App Store screenshot intermediates
 appstore/.captures/
 appstore/.captures-ipad/
+supabase/.temp/
