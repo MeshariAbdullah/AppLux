@@ -10,10 +10,10 @@
   ],
   "staging": {
     "project_name": "lend-test",
-    "project_ref": "FILL_ME_LEND_TEST_PROJECT_REF"
+    "project_ref": "hdwqavrwjwfgtdyjemfz"
   },
   "production": {
     "project_name": "lend-staging (despite the name, this is LIVE PRODUCTION)",
-    "project_ref": "FILL_ME_PRODUCTION_PROJECT_REF"
+    "project_ref": "wipczbvktvizqeeccdkm"
   }
 }
