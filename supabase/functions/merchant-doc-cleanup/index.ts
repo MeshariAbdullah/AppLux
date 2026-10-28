@@ -10,6 +10,15 @@
 // candidates via list_orphaned_upload_tickets(), removes the objects via
 // the Storage API, then finalizes each ticket.
 //
+// Caller auth (verify_jwt = false): the scheduler presents the project
+// secret key in the `apikey` header, checked against the
+// platform-injected SUPABASE_SECRET_KEYS — the same service-to-service
+// gate push-dispatch uses. Anonymous callers get 401; with the variable
+// absent or malformed NOBODY passes (fail closed). The deletion policy
+// itself stays DB-enforced either way: list_orphaned_upload_tickets()
+// (SECURITY DEFINER, revoked from anon/authenticated) only ever returns
+// unclaimed tickets older than 24h.
+//
 // Deploy (manual) + schedule daily via Supabase scheduled functions / cron.
 // Required secrets: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY.
 // =====================================================================
@@ -19,7 +28,30 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
 
 const BUCKET = 'merchant-documents';
 
-serve(async () => {
+// === caller gate (inlined; mirrors push-dispatch) ===
+function authorizeScheduledCaller(req: Request): Response | null {
+  let expected = '';
+  try {
+    const keys = JSON.parse(Deno.env.get('SUPABASE_SECRET_KEYS') ?? '{}');
+    expected = typeof keys['default'] === 'string' ? keys['default'] : '';
+  } catch {
+    expected = ''; // malformed env → fail closed
+  }
+  const apiKey = req.headers.get('apikey') ?? '';
+  if (!expected || !apiKey || apiKey !== expected) {
+    return new Response(JSON.stringify({ error: 'unauthorized' }), {
+      status: 401,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+  return null;
+}
+// === end caller gate ===
+
+serve(async (req) => {
+  const denied = authorizeScheduledCaller(req);
+  if (denied) return denied;
+
   const url = Deno.env.get('SUPABASE_URL');
   const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
   if (!url || !serviceKey) {
