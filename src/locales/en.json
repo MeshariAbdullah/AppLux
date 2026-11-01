@@ -752,6 +752,46 @@
     "renter_otp_ready": {
       "title": "New verification code",
       "body": "A verification code is available to complete a rental contract. Open the app to view it."
+    },
+    "offer_rejected": {
+      "title": "Customer rejected the offer",
+      "body": "The customer rejected the rental offer. Review the details or issue a new offer."
+    },
+    "offer_cancelled": {
+      "title": "Rental offer cancelled",
+      "body": "The store cancelled the offer before acceptance. Nothing is held against your eligibility."
+    },
+    "closure_requested": {
+      "title": "Early-closure request",
+      "body": "The other party declared the item was never handed over. Please confirm or object."
+    },
+    "return_declared": {
+      "title": "Customer return declaration",
+      "body": "The customer declared the item returned. You have 48 hours from verified notice delivery to confirm or object; otherwise the platform may automatically close the rental per its terms and conditions."
+    },
+    "return_reminder": {
+      "title": "Reminder: receipt confirmation pending",
+      "body": "Less than 24 hours remain to respond to the return declaration before automatic closure."
+    },
+    "return_final_warning": {
+      "title": "Final warning before automatic closure",
+      "body": "The window closes soon. Confirm receipt or submit an objection now."
+    },
+    "closure_confirmed": {
+      "title": "Closure confirmed",
+      "body": "The rental contract was closed after confirmation; eligibility was updated per the approved rules."
+    },
+    "closure_objected": {
+      "title": "Objection to the closure request",
+      "body": "The other party objected; the request moved to administrative review."
+    },
+    "closure_admin_resolved": {
+      "title": "Administrative decision on closure",
+      "body": "The administrative review decided on the closure request. See the contract details."
+    },
+    "contract_closed": {
+      "title": "Rental contract closed",
+      "body": "The rental was closed and your record and eligibility were updated per the recorded closure reason."
     }
   },
   "profile": {
@@ -1966,7 +2006,12 @@
         "title": "Offer not found",
         "body": "The offer may have been removed, or the link is incorrect.",
         "back": "Back to approvals"
-      }
+      },
+      "manageHint": "You can cancel this offer before the customer accepts, or issue a replacement that supersedes it and frees its hold automatically.",
+      "replaceCta": "Issue replacement offer",
+      "cancelCta": "Cancel offer",
+      "cancelConfirmTitle": "Cancel this offer",
+      "cancelConfirmBody": "The offer is permanently cancelled, the customer is notified, and the hold on their eligibility is released. This cannot be undone."
     },
     "damages": {
       "title": "Damage cases",
@@ -3015,6 +3060,11 @@
         "reasonRequired": "Please enter a dismissal reason.",
         "setupIncomplete": "The case could not be closed because required setup is incomplete. Apply the latest updates and try again."
       }
+    },
+    "closures": {
+      "title": "Exceptional closure requests",
+      "close": "Close contract",
+      "void": "Void request"
     }
   },
   "offer": {
@@ -3264,6 +3314,90 @@
       "body": "The Lend business portal is for partner store accounts. To access your customer account, use the Lend app.",
       "siteCta": "Go to lend.sa",
       "signOutCta": "Sign out"
+    }
+  },
+  "closure": {
+    "title": "Closure & requests",
+    "errors": {
+      "load": "Could not load closure state. Try again.",
+      "action": "Action failed. Try again."
+    },
+    "reason": {
+      "returned": "Returned on schedule",
+      "returned_early": "Returned early",
+      "not_handed_over": "Item never handed over"
+    },
+    "via": {
+      "merchant": "Closed by the merchant after receiving the item",
+      "mutual": "Closed with both parties' confirmation",
+      "auto": "Automatic procedural closure after the merchant missed the response window — not proof of physical receipt",
+      "admin": "Closed by administrative decision"
+    },
+    "kind": {
+      "non_handover": "Non-handover declaration",
+      "return_declared": "Customer return declaration"
+    },
+    "status": {
+      "open": "Awaiting response",
+      "confirmed": "Confirmed",
+      "objected": "Objected",
+      "admin_review": "In administrative review",
+      "auto_closed": "Auto-closed",
+      "voided": "Voided"
+    },
+    "nonHandover": {
+      "hint": "If the item was never handed over after acceptance, request an early closure confirmed by the other party. Nothing is ever recorded as handed over or returned when it wasn't.",
+      "cta": "Item not handed over — request early closure",
+      "confirmTitle": "Confirm early-closure request",
+      "confirmBody": "I declare the item was never handed over. The other party must confirm before the contract closes and the eligibility hold is released.",
+      "confirmCta": "Send request"
+    },
+    "declareReturn": {
+      "hint": "Returned the item? Record your declaration — the merchant has 48 hours from verified notice delivery to confirm or object.",
+      "cta": "I returned the item",
+      "sheetTitle": "Return declaration",
+      "sheetBody": "The merchant is notified immediately and has 48 hours from verified delivery to confirm or object. A declaration is not proof of physical receipt.",
+      "noteLabel": "Note (optional)",
+      "submit": "Record declaration"
+    },
+    "confirm": {
+      "non_handover": {
+        "title": "Confirm non-handover",
+        "body": "Confirming closes the contract as never-handed-over and releases the reserved eligibility. This cannot be undone.",
+        "cta": "Confirm & close contract"
+      },
+      "return_declared": {
+        "title": "Confirm item received",
+        "body": "Confirming receipt closes the rental and releases the customer's eligibility per the approved rules.",
+        "cta": "Confirm receipt & close"
+      }
+    },
+    "object": {
+      "cta": "Object",
+      "title": "Submit an objection",
+      "body": "An objection suspends automatic closure and routes the request to administrative review. Please explain why.",
+      "reasonLabel": "Objection reason",
+      "submit": "Submit objection"
+    },
+    "waitingCounterparty": "Waiting for the other party's confirmation.",
+    "awaitingDelivery": "The 48-hour window starts once notice delivery to the merchant is verified.",
+    "deadlineAt": "Merchant response window until {at}",
+    "adminReviewHint": "Escalated to administrative review; the team will contact both parties.",
+    "events": {
+      "title": "Event history",
+      "offer_rejected": "Customer rejected the offer",
+      "offer_cancelled": "Merchant cancelled the offer",
+      "offer_superseded": "Offer replaced by a new offer",
+      "early_closure_requested": "Early closure requested (non-handover)",
+      "return_declared": "Customer declared the item returned",
+      "notice_delivered": "Notice delivered — response window started",
+      "closure_confirmed": "Closure confirmed",
+      "closure_objected": "Closure objected",
+      "closure_admin_resolved": "Administrative decision on the request",
+      "closure_request_voided": "Closure request voided",
+      "auto_closure_blocked": "Automatic closure blocked",
+      "auto_closure_executed": "Automatic procedural closure (no response)",
+      "contract_closed": "Contract closed"
     }
   }
 }

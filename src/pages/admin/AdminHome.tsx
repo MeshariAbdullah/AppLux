@@ -10,9 +10,12 @@ import {
 } from '@/components/ui';
 import { LangToggle } from '@/components/auth/LangToggle';
 import {
+  adminResolveClosureRequest,
   demoMode,
+  listAdminClosureQueue,
   listAllDamageCases,
   useSupabaseAuth,
+  type AdminClosureQueueRow,
   type DamageCaseRow,
 } from '@/lib/supabase';
 import { adminPhaseLabelKey, adminPhaseTone } from './AdminCases';
@@ -133,6 +136,37 @@ export default function AdminHome() {
     () => liveCases.filter((c) => c.dispute_phase !== 'resolved'),
     [liveCases],
   );
+
+  // Package 1: exceptional closure queue (objections / escalations).
+  // Admin handles exceptions — routine undisputed closures never land here.
+  const [closureQueue, setClosureQueue] = useState<AdminClosureQueueRow[]>([]);
+  const [resolvingClosureId, setResolvingClosureId] = useState<string | null>(null);
+  useEffect(() => {
+    if (!configured) {
+      setClosureQueue([]);
+      return;
+    }
+    let cancelled = false;
+    listAdminClosureQueue()
+      .then((rows) => {
+        if (!cancelled) setClosureQueue(rows);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [configured, reloadKey]);
+  const resolveClosure = async (id: string, action: 'close' | 'void') => {
+    setResolvingClosureId(id);
+    try {
+      await adminResolveClosureRequest(id, action);
+      setClosureQueue((rows) => rows.filter((r) => r.id !== id));
+    } catch {
+      /* surfaced by the row staying in place; details in diagnostics */
+    } finally {
+      setResolvingClosureId(null);
+    }
+  };
   const activeClaimTotal = useMemo(
     () => openCases.reduce((sum, c) => sum + Number(c.claim_amount), 0),
     [openCases],
@@ -526,6 +560,48 @@ export default function AdminHome() {
               )}
             </Card>
           </section>
+
+          {/* Package 1: exceptional closure review queue */}
+          {closureQueue.length > 0 && (
+            <section>
+              <SectionHeader title={t('admin.closures.title')} />
+              <Card padded className="space-y-2">
+                {closureQueue.map((r) => (
+                  <div key={r.id} className="space-y-2 py-1.5">
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="min-w-0">
+                        <span className="block text-[13px] font-semibold text-ink-900 num" dir="ltr">
+                          {r.rental_contracts?.contract_number ?? r.contract_id.slice(0, 8)}
+                        </span>
+                        <span className="block text-[11.5px] text-ink-400">
+                          {t(`closure.kind.${r.kind}`)}
+                          {r.response_note ? ` — ${r.response_note}` : ''}
+                        </span>
+                      </span>
+                      <StatusChip size="sm" tone="warn" dot label={t(`closure.status.${r.status}`)} />
+                    </div>
+                    <div className="flex gap-2">
+                      <Button
+                        size="sm"
+                        loading={resolvingClosureId === r.id}
+                        onClick={() => void resolveClosure(r.id, 'close')}
+                      >
+                        {t('admin.closures.close')}
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        disabled={resolvingClosureId === r.id}
+                        onClick={() => void resolveClosure(r.id, 'void')}
+                      >
+                        {t('admin.closures.void')}
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </Card>
+            </section>
+          )}
 
           {/* Quick navigation to modules */}
           <section>

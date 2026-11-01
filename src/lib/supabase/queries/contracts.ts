@@ -79,17 +79,24 @@ export async function listMerchantContracts(
 
 /**
  * Close a rental contract through the lifecycle RPC. Idempotent. Atomically:
- *   1. flips the contract to status='ended' with ended_at=now()
- *   2. decrements rental_eligibility.used_amount by the contract total
+ *   1. flips the contract to status='ended' with ended_at=now(), a
+ *      server-DERIVED closure_reason (returned / returned_early) and the
+ *      optional inspection note (20260502130600)
+ *   2. releases rental_eligibility.used_amount by the item's original
+ *      value — the same exposure the activation committed (20260502124600)
  *   3. settles the linked promissory note when no live damage cases exist
  *
  * Damage-driven closure happens automatically via the AFTER INSERT trigger
  * on damage_cases (steps 1 + 2; note stays open as security for the claim).
  */
-export async function closeRentalContract(contractId: string): Promise<void> {
+export async function closeRentalContract(
+  contractId: string,
+  note?: string | null,
+): Promise<void> {
   const sb = requireSupabase();
   const { error } = await sb.rpc('close_rental_contract', {
     p_contract_id: contractId,
+    p_note: note && note.trim() !== '' ? note.trim() : null,
   });
   if (error) throw error;
 }

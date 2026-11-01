@@ -56,6 +56,8 @@ export type CreateInvoiceInput = {
    *  contract at acceptance (20260502125100). Contract data — never
    *  written to the customer's profile. */
   lesseeNationalId: string;
+  /** Explicit supersession: id of the issued/viewed offer this replaces. */
+  replacesInvoiceId?: string | null;
   items: Array<Omit<RentalInvoiceItemInsert, 'invoice_id'>>;
 };
 
@@ -106,6 +108,9 @@ export async function createInvoiceWithItems(
       lessee_national_id: input.lesseeNationalId,
       scan_token: scanToken,
       notes: input.notes ?? null,
+      // Explicit supersession (20260502130600): names the exact offer this
+      // one replaces; the BEFORE INSERT trigger atomically supersedes it.
+      replaces_invoice_id: input.replacesInvoiceId ?? null,
     })
     .select('*')
     .single();

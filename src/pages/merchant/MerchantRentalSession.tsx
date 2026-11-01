@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Header, Screen } from '@/components/layout';
 import {
   Button,
@@ -409,6 +409,9 @@ export default function MerchantRentalSession() {
   const t = useT();
   const { dir, formatCurrency, formatDate, locale } = useI18n();
   const navigate = useNavigate();
+  // Package 1: explicit supersession — /merchant/session/new?replaces=<invoiceId>
+  const [searchParams] = useSearchParams();
+  const replacesInvoiceId = searchParams.get('replaces');
   const supabaseAuth = useSupabaseAuth();
 
   const [session, setSession] = useState<SessionState>(INITIAL_SESSION);
@@ -1067,6 +1070,7 @@ export default function MerchantRentalSession() {
       const result = await createInvoiceWithItems({
         merchantId,
         customerUserId: session.verify.renter.id,
+        replacesInvoiceId: replacesInvoiceId ?? null,
         // Rental fee = daily × days. The new original_item_value is a
         // separate column that drives eligibility + note principal.
         subtotalAmount: rentalFee,

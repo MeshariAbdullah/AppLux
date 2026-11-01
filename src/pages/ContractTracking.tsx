@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Header, Screen } from '@/components/layout';
+import { ClosureRequestPanel } from '@/components/rental/ClosureRequestPanel';
 import {
   Button,
   Card,
@@ -912,6 +913,15 @@ export default function ContractTracking() {
                     damage and late-return clauses above — removed. */}
               </Card>
             </section>
+          )}
+
+          {/* Package 1: closure requests / return declaration / audit */}
+          {liveContract && (
+            <ClosureRequestPanel
+              role="customer"
+              contractId={liveContract.id}
+              onChanged={() => window.location.reload()}
+            />
           )}
         </div>
       </Screen>

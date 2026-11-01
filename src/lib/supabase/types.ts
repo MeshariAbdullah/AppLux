@@ -204,6 +204,12 @@ export type ContractStatusDB = 'pending' | 'active' | 'ended' | 'cancelled';
 export type NoteStatus = 'pending' | 'signed' | 'settled' | 'defaulted';
 
 export type RentalInvoiceRow = {
+  // Package 1 (20260502130600)
+  rejected_at?: string | null;
+  cancelled_at?: string | null;
+  superseded_at?: string | null;
+  replaces_invoice_id?: string | null;
+  superseded_by_invoice_id?: string | null;
   id: string;
   invoice_number: string;
   merchant_id: string;
@@ -292,6 +298,11 @@ export type RentalInvoiceItemInsert = Omit<RentalInvoiceItemRow, 'id' | 'created
 export type RentalInvoiceItemUpdate = Partial<RentalInvoiceItemRow>;
 
 export type RentalContractRow = {
+  // Package 1 (20260502130600)
+  closure_reason?: 'returned' | 'returned_early' | 'not_handed_over' | null;
+  closure_via?: 'merchant' | 'mutual' | 'auto' | 'admin' | null;
+  closure_note?: string | null;
+  closed_by?: string | null;
   id: string;
   contract_number: string;
   invoice_id: string;
@@ -528,6 +539,57 @@ export type DamageEvidenceInsert = Omit<DamageEvidenceRow, 'id' | 'uploaded_at'>
 //
 // Shape follows the GenericSchema contract from @supabase/postgrest-js
 // (Tables/Views/Functions records, each table carrying Relationships).
+// Package 1 (20260502130600) row shapes.
+export type ClosureRequestDbRow = {
+  id: string;
+  contract_id: string;
+  kind: 'non_handover' | 'return_declared';
+  status: 'open' | 'confirmed' | 'objected' | 'admin_review' | 'auto_closed' | 'voided';
+  requested_by: string;
+  requested_role: 'customer' | 'merchant' | 'admin';
+  declared_return_at: string | null;
+  request_note: string | null;
+  evidence_path: string | null;
+  deadline_at: string | null;
+  reminder_24_sent_at: string | null;
+  reminder_final_sent_at: string | null;
+  responded_by: string | null;
+  responded_at: string | null;
+  response_note: string | null;
+  resolved_at: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type ContractEventDbRow = {
+  id: string;
+  contract_id: string | null;
+  invoice_id: string | null;
+  request_id: string | null;
+  actor_user_id: string | null;
+  event: string;
+  from_state: string | null;
+  to_state: string | null;
+  reason: string | null;
+  note: string | null;
+  metadata: Record<string, unknown>;
+  created_at: string;
+};
+
+export type ClosureNoticeDeliveryRow = {
+  id: string;
+  request_id: string;
+  notice: string;
+  channel: string;
+  status: 'queued' | 'delivered' | 'failed';
+  attempt: number;
+  provider_ref: string | null;
+  queued_at: string;
+  delivered_at: string | null;
+  failed_at: string | null;
+  failure_reason: string | null;
+};
+
 export type Database = {
   public: {
     Tables: {
@@ -632,6 +694,26 @@ export type Database = {
           storage_path: string;
         };
         Update: Partial<ContractReceiptPhotoRow>;
+        Relationships: [];
+      };
+      // Package 1 (20260502130600) — read-only from the client; all
+      // writes happen inside SECURITY DEFINER RPCs.
+      contract_closure_requests: {
+        Row: ClosureRequestDbRow;
+        Insert: never;
+        Update: never;
+        Relationships: [];
+      };
+      contract_events: {
+        Row: ContractEventDbRow;
+        Insert: never;
+        Update: never;
+        Relationships: [];
+      };
+      closure_notice_deliveries: {
+        Row: ClosureNoticeDeliveryRow;
+        Insert: never;
+        Update: never;
         Relationships: [];
       };
     };
@@ -846,6 +928,30 @@ export type Database = {
       next_contract_number: { Args: Record<string, never>; Returns: string };
       next_note_number: { Args: Record<string, never>; Returns: string };
       next_case_number: { Args: Record<string, never>; Returns: string };
+      // Package 1 (20260502130600)
+      merchant_cancel_rental_offer: { Args: { p_invoice_id: string }; Returns: void };
+      request_contract_closure: {
+        Args: {
+          p_contract_id: string;
+          p_kind: 'non_handover' | 'return_declared';
+          p_declared_return_at?: string | null;
+          p_note?: string | null;
+          p_evidence_path?: string | null;
+        };
+        Returns: string;
+      };
+      confirm_contract_closure: {
+        Args: { p_request_id: string; p_note?: string | null };
+        Returns: string;
+      };
+      object_contract_closure: {
+        Args: { p_request_id: string; p_reason: string };
+        Returns: void;
+      };
+      admin_resolve_closure_request: {
+        Args: { p_request_id: string; p_action: 'close' | 'void'; p_note?: string | null };
+        Returns: void;
+      };
     };
   };
 };

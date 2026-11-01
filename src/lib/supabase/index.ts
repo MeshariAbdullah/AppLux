@@ -238,3 +238,21 @@ export {
   adaptUserRecord,
   synthesizePackageFromInvoice,
 } from './adapters';
+
+export {
+  merchantCancelRentalOffer,
+  requestContractClosure,
+  confirmContractClosure,
+  objectContractClosure,
+  adminResolveClosureRequest,
+  fetchLiveClosureRequest,
+  listContractEvents,
+  listAdminClosureQueue,
+} from './queries/closure';
+export type {
+  ClosureRequestKind,
+  ClosureRequestStatus,
+  ClosureRequestRow,
+  ContractEventRow,
+  AdminClosureQueueRow,
+} from './queries/closure';

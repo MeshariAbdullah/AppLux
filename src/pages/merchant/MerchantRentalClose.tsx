@@ -196,7 +196,7 @@ export default function MerchantRentalClose() {
         // this RPC is the ONLY clean-close path: raising a damage /
         // non-return case no longer touches the contract, and the RPC
         // itself refuses (P0022) while a case is unresolved.
-        await closeRentalContract(rental.id);
+        await closeRentalContract(rental.id, notes);
         // Phase 4A invalidation — IMMEDIATELY after mutation success,
         // before any navigation: drop the cached contract, its note
         // (settled server-side), and the merchant contracts list, so

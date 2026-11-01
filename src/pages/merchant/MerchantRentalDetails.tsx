@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { Header, Screen } from '@/components/layout';
+import { ClosureRequestPanel } from '@/components/rental/ClosureRequestPanel';
 import { Button, Card, CardDivider, EmptyState, SectionHeader, StatusChip, type StatusTone } from '@/components/ui';
 import {
   AlertIcon,
@@ -726,6 +727,14 @@ export default function MerchantRentalDetails() {
                 single access point for opening the contract or note. */}
           </div>
 
+          {/* Package 1: closure requests / return confirmation / audit */}
+          {liveRental && (
+            <ClosureRequestPanel
+              role="merchant"
+              contractId={liveRental.id}
+              onChanged={() => window.location.reload()}
+            />
+          )}
         </div>
       </Screen>
     </>

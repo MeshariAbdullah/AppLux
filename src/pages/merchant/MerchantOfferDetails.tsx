@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { Header, Screen } from '@/components/layout';
 import {
   Button,
+  ConfirmSheet,
   Card,
   CardDivider,
   EmptyState,
@@ -21,6 +22,8 @@ import {
   useSupabaseAuth,
   type InvoiceStatus,
 } from '@/lib/supabase';
+import { merchantCancelRentalOffer } from '@/lib/supabase';
+import { logEvent } from '@/lib/observability/log';
 
 // =====================================================================
 // MerchantOfferDetails — /merchant/approvals/:id
@@ -81,6 +84,8 @@ export default function MerchantOfferDetails() {
   })();
 
   const [liveOffer, setLiveOffer] = useState<OfferView | null>(null);
+  const [cancelOpen, setCancelOpen] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
   const [resolving, setResolving] = useState<boolean>(() =>
     Boolean(configured && id && !demoOffer),
   );
@@ -253,6 +258,55 @@ export default function MerchantOfferDetails() {
               </Button>
             </Card>
           )}
+
+          {/* Package 1: merchant actions on a live, unaccepted offer —
+              replacement (explicit supersession) and cancellation. */}
+          {liveOffer && id && (offer.status === 'issued' || offer.status === 'viewed') && (
+            <Card padded className="space-y-3">
+              <p className="text-[12.5px] text-ink-600 leading-relaxed">
+                {t('merchant.offer.manageHint')}
+              </p>
+              <Button
+                variant="secondary"
+                block
+                onClick={() => navigate(`/merchant/session/new?replaces=${id}`)}
+              >
+                {t('merchant.offer.replaceCta')}
+              </Button>
+              <Button
+                variant="danger"
+                block
+                disabled={cancelling}
+                onClick={() => setCancelOpen(true)}
+              >
+                {t('merchant.offer.cancelCta')}
+              </Button>
+            </Card>
+          )}
+
+          <ConfirmSheet
+            open={cancelOpen}
+            onClose={() => setCancelOpen(false)}
+            loading={cancelling}
+            tone="danger"
+            title={t('merchant.offer.cancelConfirmTitle')}
+            description={t('merchant.offer.cancelConfirmBody')}
+            confirmLabel={t('merchant.offer.cancelCta')}
+            cancelLabel={t('common.cancel')}
+            onConfirm={async () => {
+              if (!id) return;
+              setCancelling(true);
+              try {
+                await merchantCancelRentalOffer(id);
+                setLiveOffer((o) => (o ? { ...o, status: 'cancelled' } : o));
+                setCancelOpen(false);
+              } catch (err) {
+                logEvent('rpc_failure', 'warn', { op: 'merchant_cancel_rental_offer' }, err);
+              } finally {
+                setCancelling(false);
+              }
+            }}
+          />
         </div>
       </Screen>
     </>
