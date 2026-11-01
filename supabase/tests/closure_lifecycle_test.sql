@@ -615,6 +615,94 @@ begin
 end $$;
 
 -- =====================================================================
+-- 17b. High-value policy FAIL-CLOSED: policy ENABLED with threshold
+-- NULL (or unparseable) must treat every contract as high-value and
+-- escalate — never auto-close unrestricted on a misconfigured policy.
+-- =====================================================================
+do $$
+declare v_con uuid; v_req uuid; v_summary jsonb;
+begin
+  v_con := pg_temp.mk_active_contract(13);
+  perform pg_temp.as_user('bbbb2222-0000-4000-8000-0000000000c1');
+  v_req := public.request_contract_closure(v_con, 'return_declared');
+  perform public.record_notice_delivery(
+    (select id from public.closure_notice_deliveries where request_id = v_req), 'delivered');
+  update public.contract_closure_requests set deadline_at = now() - interval '1 minute' where id = v_req;
+
+  -- enabled, threshold deliberately NULL
+  update public.platform_settings
+     set value = '{"enabled": true, "threshold": null, "action": "exclude_auto_close"}'::jsonb
+   where key = 'high_value_rental_policy';
+  update public.platform_settings set value = '{"enabled": true}'::jsonb where key = 'auto_return_closure';
+  v_summary := public.process_return_declarations();
+  update public.platform_settings set value = '{"enabled": false}'::jsonb where key = 'auto_return_closure';
+
+  if (select status from public.contract_closure_requests where id = v_req) <> 'admin_review' then
+    raise exception 'FAIL: enabled policy with NULL threshold must fail closed (escalate)';
+  end if;
+  if (select status from public.rental_contracts where id = v_con) <> 'active' then
+    raise exception 'FAIL: contract auto-closed under a misconfigured high-value policy';
+  end if;
+
+  -- unparseable threshold must also fail closed (helper returns true)
+  update public.platform_settings
+     set value = '{"enabled": true, "threshold": "abc"}'::jsonb
+   where key = 'high_value_rental_policy';
+  if not public.is_high_value_contract((select c from public.rental_contracts c where c.id = v_con)) then
+    raise exception 'FAIL: unparseable threshold must fail closed';
+  end if;
+
+  -- restore shipped defaults + resolve the escalation (void)
+  update public.platform_settings
+     set value = '{"enabled": false, "threshold": null, "action": "exclude_auto_close"}'::jsonb
+   where key = 'high_value_rental_policy';
+  update public.profiles set role = 'admin' where id = 'bbbb1111-0000-4000-8000-0000000000a2';
+  perform pg_temp.as_user('bbbb1111-0000-4000-8000-0000000000a2');
+  perform public.admin_resolve_closure_request(v_req, 'void', 'اختبار: إلغاء الطلب');
+  update public.profiles set role = 'merchant' where id = 'bbbb1111-0000-4000-8000-0000000000a2';
+  perform pg_temp.as_user('bbbb1111-0000-4000-8000-0000000000a1');
+  perform public.close_rental_contract(v_con, null);
+  raise notice 'ok: 17b misconfigured high-value policy fails closed';
+end $$;
+
+-- =====================================================================
+-- 3d. Supersession trigger ordering under a BINDING eligibility
+-- ceiling: with C2 limited so two same-size offers cannot coexist, a
+-- plain second offer is refused (P0160) while an explicit replacement
+-- succeeds — proving the replaced offer's reservation is freed BEFORE
+-- the eligibility guard evaluates the new offer.
+-- =====================================================================
+do $$
+declare v_a uuid; v_repl uuid;
+begin
+  update public.rental_eligibility set limit_amount = 1500
+   where user_id = 'bbbb2222-0000-4000-8000-0000000000c2';
+
+  v_a := pg_temp.mk_invoice(20, 'bbbb3333-0000-4000-8000-0000000000a1',
+                            'bbbb2222-0000-4000-8000-0000000000c2', 300, 1400);
+
+  -- ceiling is binding: a second independent 1400 offer must bounce
+  perform pg_temp.expect_error(
+    format($q$select pg_temp.mk_invoice(21, %L, %L, 300, 1400)$q$,
+           'bbbb3333-0000-4000-8000-0000000000a1',
+           'bbbb2222-0000-4000-8000-0000000000c2'),
+    'P0160', '3d ceiling binds without supersession');
+
+  -- the explicit replacement at the SAME size succeeds only because the
+  -- supersede trigger (aa_) frees the old reservation first
+  v_repl := pg_temp.mk_invoice(22, 'bbbb3333-0000-4000-8000-0000000000a1',
+                               'bbbb2222-0000-4000-8000-0000000000c2', 300, 1400, v_a);
+  if (select status from public.rental_invoices where id = v_a) <> 'superseded'
+     or (select status from public.rental_invoices where id = v_repl) <> 'issued' then
+    raise exception 'FAIL: ceiling-bound replacement state wrong';
+  end if;
+
+  update public.rental_eligibility set limit_amount = 100000
+   where user_id = 'bbbb2222-0000-4000-8000-0000000000c2';
+  raise notice 'ok: 3d supersession frees the reservation ahead of the ceiling check';
+end $$;
+
+-- =====================================================================
 -- 22. Audit immutability + service-function ACLs + privilege audit
 -- =====================================================================
 do $$

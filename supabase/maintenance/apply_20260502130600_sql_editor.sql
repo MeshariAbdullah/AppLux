@@ -503,9 +503,13 @@ $$;
 revoke all on function public.finalize_contract_closure(uuid, public.contract_closure_via, text, public.contract_status)
   from public, anon, authenticated;
 
--- High-value exclusion for the automatic path only. Threshold NULL or
--- policy disabled → nothing is high-value (the mechanism exists; the
--- number is a Product Owner decision).
+-- High-value exclusion for the automatic path only. Policy disabled →
+-- nothing is high-value (the mechanism exists; the number is a Product
+-- Owner decision). FAIL-CLOSED on misconfiguration: when the policy is
+-- ENABLED but its threshold is unset or unparseable, EVERY contract is
+-- treated as high-value, so the automatic path escalates to admin
+-- review instead of silently running unrestricted. No monetary default
+-- is invented here.
 create or replace function public.is_high_value_contract(p_contract public.rental_contracts)
 returns boolean
 language plpgsql
@@ -513,16 +517,23 @@ stable
 security definer
 set search_path = public
 as $$
-declare v jsonb;
+declare
+  v jsonb;
+  v_threshold numeric;
 begin
   v := platform_setting('high_value_rental_policy');
   if v is null or coalesce((v->>'enabled')::boolean, false) = false then
     return false;
   end if;
   if v->>'threshold' is null then
-    return false;
+    return true;  -- enabled without a threshold: fail closed
   end if;
-  return coalesce(p_contract.original_item_value, 0) >= (v->>'threshold')::numeric;
+  begin
+    v_threshold := (v->>'threshold')::numeric;
+  exception when others then
+    return true;  -- unparseable threshold: fail closed
+  end;
+  return coalesce(p_contract.original_item_value, 0) >= v_threshold;
 end;
 $$;
 revoke all on function public.is_high_value_contract(public.rental_contracts)
