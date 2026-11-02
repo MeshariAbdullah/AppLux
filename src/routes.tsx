@@ -6,7 +6,7 @@ import { useT } from '@/lib/i18n';
 import { lazyWithReload } from '@/lib/lazyWithReload';
 import { resolveDeployEnv, resolveSiteMode } from '@/lib/siteMode';
 import { useStore } from '@/lib/store';
-import { useSupabaseAuth } from '@/lib/supabase';
+import { peekAuthLinkHint, useSupabaseAuth } from '@/lib/supabase';
 import { RequireRole } from '@/components/auth/RequireRole';
 import { startPushRegistration } from '@/lib/push/registerPush';
 
@@ -173,6 +173,16 @@ function RootRedirect() {
     const idle = w.requestIdleCallback ?? ((cb: () => void) => window.setTimeout(cb, 250));
     idle(() => void prefetch().catch(() => {}));
   }, [configured, role]);
+
+  // Invite / password-recovery email links redirect to the Site URL —
+  // this route. Before any role-based landing, honor the captured link
+  // hint (authLink.ts) and open the set-password form. Expired/used
+  // links carry an error hint instead and land on the same page's
+  // invalid-link state. Checked ahead of the loading gate so the form
+  // shows even while the recovery session is still hydrating.
+  if (configured && peekAuthLinkHint()) {
+    return <Navigate to="/auth/reset-password" replace />;
+  }
 
   if (!configured) {
     if (BUSINESS_PORTAL) return <Navigate to="/merchant/welcome" replace />;

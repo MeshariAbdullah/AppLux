@@ -256,3 +256,10 @@ export type {
   ContractEventRow,
   AdminClosureQueueRow,
 } from './queries/closure';
+
+// Auth email-link hint (invite / recovery routing) — see authLink.ts.
+export {
+  peekAuthLinkHint,
+  clearAuthLinkHint,
+} from './authLink';
+export type { AuthLinkHint } from './authLink';

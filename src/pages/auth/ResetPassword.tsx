@@ -6,7 +6,12 @@ import { AlertIcon, BadgeCheckIcon } from '@/components/icons';
 import { translateAuthError } from '@/lib/errors';
 import { logEvent } from '@/lib/observability/log';
 import { useT } from '@/lib/i18n';
-import { updatePassword, useSupabaseAuth } from '@/lib/supabase';
+import {
+  clearAuthLinkHint,
+  peekAuthLinkHint,
+  updatePassword,
+  useSupabaseAuth,
+} from '@/lib/supabase';
 import {
   isMisconfiguredProduction,
   ProductionConfigError,
@@ -34,6 +39,13 @@ export default function ResetPassword() {
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Captured once on mount: how this page was reached (invite link,
+  // recovery link, or a failed/expired link). The hint is cleared only
+  // at a terminal state below, so a signed-in arrival cannot bypass
+  // the password form by navigating away and back to '/'.
+  const [linkHint] = useState(peekAuthLinkHint);
+  const isInvite = linkHint?.type === 'invite';
+  const linkFailed = Boolean(linkHint?.errorCode);
 
   // After a successful update, give the success screen a beat to
   // register, then end the recovery session and land on the login
@@ -42,6 +54,7 @@ export default function ResetPassword() {
   // auth.ts — the local session dies even if the network call fails.
   useEffect(() => {
     if (!done) return;
+    clearAuthLinkHint();
     const id = window.setTimeout(() => {
       void (async () => {
         try {
@@ -55,6 +68,15 @@ export default function ResetPassword() {
     return () => window.clearTimeout(id);
   }, [done, navigate, signOut]);
 
+  // A failed link (expired / already used) or an arrival without a
+  // session renders the invalid-link state below — clear the hint at
+  // that point so the router stops sending this tab back here.
+  useEffect(() => {
+    if (done) return;
+    if (!configured || status === 'loading') return;
+    if (linkFailed || !session) clearAuthLinkHint();
+  }, [configured, status, session, linkFailed, done]);
+
   if (isMisconfiguredProduction(configured)) {
     return <ProductionConfigError />;
   }
@@ -65,7 +87,10 @@ export default function ResetPassword() {
     return null;
   }
 
-  const recoverySessionPresent = configured && Boolean(session);
+  // A failed link never carries a usable recovery session — even when
+  // an older session exists in this browser, show the invalid state
+  // rather than silently changing the password of whoever is signed in.
+  const recoverySessionPresent = configured && Boolean(session) && !linkFailed;
 
   if (done) {
     return (
@@ -143,14 +168,14 @@ export default function ResetPassword() {
 
   return (
     <>
-      <Header title={t('auth.resetPassword.title')} />
+      <Header title={t(isInvite ? 'auth.resetPassword.inviteTitle' : 'auth.resetPassword.title')} />
       <Screen width="narrow" className="bg-canvas">
         <div>
           <h1 className="editorial-title text-[24px] text-ink-900 leading-tight">
-            {t('auth.resetPassword.title')}
+            {t(isInvite ? 'auth.resetPassword.inviteTitle' : 'auth.resetPassword.title')}
           </h1>
           <p className="mt-2 text-[13.5px] text-ink-500 leading-relaxed">
-            {t('auth.resetPassword.subtitle')}
+            {t(isInvite ? 'auth.resetPassword.inviteSubtitle' : 'auth.resetPassword.subtitle')}
           </p>
         </div>
 

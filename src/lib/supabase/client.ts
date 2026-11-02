@@ -4,6 +4,7 @@ import {
   AUTH_STORAGE_KEY,
   migrateLegacyAuthStorage,
 } from '@/lib/session/storage';
+import { captureAuthLinkHint } from './authLink';
 
 // Vite injects these at build time. Either both are present (real backend)
 // or both are missing (demo mode — fall back to localStorage store).
@@ -49,6 +50,11 @@ if (supabaseConfigured) {
   // existing session to 'lend.auth' BEFORE the client is created so
   // currently signed-in users survive the key change. Idempotent.
   migrateLegacyAuthStorage();
+  // Snapshot invite/recovery link hints BEFORE the client consumes the
+  // URL fragment (detectSessionInUrl strips it once processed) — the
+  // router uses the hint to land on the set-password form instead of
+  // the role homepage. See authLink.ts.
+  captureAuthLinkHint();
   client = createClient<Database>(url!, anonKey!, {
     auth: {
       persistSession: true,

@@ -10,6 +10,7 @@ import {
 } from 'react';
 import type { Session, User } from '@supabase/supabase-js';
 import { getSupabase, supabaseConfigured } from './client';
+import { recordRecoveryEvent } from './authLink';
 import type {
   AppRole,
   ProfileRow,
@@ -263,6 +264,10 @@ function ConfiguredProvider({ children }: { children: ReactNode }) {
     });
 
     const { data: sub } = supabase.auth.onAuthStateChange((event, s) => {
+      // Recovery links that arrive without an observable URL fragment
+      // still announce themselves through this event — record the hint
+      // so the router lands on the set-password form (authLink.ts).
+      if (event === 'PASSWORD_RECOVERY') recordRecoveryEvent();
       setSession(s);
       if (s?.user) {
         startUserContextLoad(s.user.id);

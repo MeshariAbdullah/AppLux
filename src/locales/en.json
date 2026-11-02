@@ -273,7 +273,9 @@
       "invalidTitle": "This reset link isn't valid",
       "invalidBody": "The link has expired or was already used. Request a fresh one.",
       "tryAgain": "Request a new link",
-      "errorGeneric": "Couldn't update the password. Please try again."
+      "errorGeneric": "Couldn't update the password. Please try again.",
+      "inviteTitle": "Create your password",
+      "inviteSubtitle": "You have been invited to LEND. Choose a password for your account, then sign in with it."
     },
     "forgotComingSoon": "Password reset isn't ready yet — please ask Lend support if you can't sign in.",
     "noAccount": "Don't have an account?",
