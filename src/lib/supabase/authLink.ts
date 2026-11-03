@@ -81,6 +81,20 @@ export function clearAuthLinkHint(): void {
 }
 
 /**
+ * Record the link kind directly — used by the /auth/confirm page after
+ * it exchanges a token hash on explicit user interaction, so the
+ * reset-password page shows the right copy and the router keeps
+ * guarding against a homepage bypass until the password is set.
+ */
+export function recordLinkKind(kind: 'invite' | 'recovery'): void {
+  try {
+    window.sessionStorage.setItem(STORE_KEY, JSON.stringify({ type: kind }));
+  } catch {
+    /* degrade silently */
+  }
+}
+
+/**
  * Belt-and-braces for flows where the fragment was not observable:
  * the auth provider records a recovery hint when supabase-js emits
  * its PASSWORD_RECOVERY event.

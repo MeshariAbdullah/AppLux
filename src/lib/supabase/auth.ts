@@ -262,6 +262,26 @@ export async function sendPasswordResetEmail({
 }
 
 /**
+ * Exchange an email-link token hash for a session — called ONLY from
+ * the /auth/confirm page on an explicit user click. This is the
+ * prefetch-resistant path: the email carries `token_hash` to our own
+ * page instead of Supabase's /verify endpoint, so mailbox scanners
+ * (Outlook Safe Links etc.) that GET the URL consume nothing; the
+ * token is spent exclusively by this POST. The hash is never logged.
+ */
+export async function confirmEmailLinkToken({
+  tokenHash,
+  type,
+}: {
+  tokenHash: string;
+  type: 'invite' | 'recovery';
+}): Promise<void> {
+  const sb = requireSupabase();
+  const { error } = await sb.auth.verifyOtp({ token_hash: tokenHash, type });
+  if (error) throw error;
+}
+
+/**
  * Updates the signed-in user's password. Used by the reset-password
  * page after the recovery link has established a session.
  */

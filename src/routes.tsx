@@ -82,6 +82,7 @@ const RegisterSuccess = lazyWithReload(() => import('@/pages/auth/RegisterSucces
 const ForgotPassword = lazyWithReload(() => import('@/pages/auth/ForgotPassword'));
 const VerifyEmail = lazyWithReload(() => import('@/pages/auth/VerifyEmail'));
 const ResetPassword = lazyWithReload(() => import('@/pages/auth/ResetPassword'));
+const ConfirmLink = lazyWithReload(() => import('@/pages/auth/ConfirmLink'));
 
 // ---- Lazy: merchant area ----
 const MerchantWelcome = lazyWithReload(() => import('@/pages/merchant/MerchantWelcome'));
@@ -370,6 +371,7 @@ export function AppRoutes() {
             accounts too (merchant login links forgot-password; the
             reset email may land on either host). */}
         <Route path="/auth/forgot-password" element={<ForgotPassword />} />
+        <Route path="/auth/confirm" element={<ConfirmLink />} />
         {/* Bug 2: email-OTP verification. Public — reachable both with
             no session (straight after signup) and with an unverified
             session (guard redirect). */}

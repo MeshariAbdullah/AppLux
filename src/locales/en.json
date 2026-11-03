@@ -386,6 +386,15 @@
         "generic": "Could not verify the mobile number right now. Try again."
       },
       "verifyCtaMerchant": "Confirm code & continue"
+    },
+    "confirmLink": {
+      "title": "Confirm link",
+      "inviteHeadline": "Invitation to LEND",
+      "inviteBody": "Press continue to activate your invitation and create your password. The link can be used once.",
+      "recoveryHeadline": "Password recovery",
+      "recoveryBody": "Press continue to set a new password for your account. The link can be used once.",
+      "continue": "Continue",
+      "hint": "This step protects the link from being consumed automatically by email scanning systems."
     }
   },
   "register": {
