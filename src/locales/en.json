@@ -489,7 +489,9 @@
     "eligibilityCompact": {
       "available": "Available to rent",
       "ofLimit": "of {limit} ceiling",
-      "tierLabel": "Tier"
+      "tierLabel": "Tier",
+      "unavailable": "Couldn't refresh the available balance — pull to refresh.",
+      "loading": "Updating the available balance…"
     },
     "attention": {
       "title": "Invoice waiting for your review",
@@ -666,7 +668,8 @@
       "standard": "Active",
       "premium": "Premium",
       "elite": "Elite"
-    }
+    },
+    "unavailable": "Couldn't load the available balance and reserved amounts from the server. Try refreshing later."
   },
   "contracts": {
     "title": "My rentals",
@@ -1067,7 +1070,9 @@
       "request": "The merchant issued the offer and contract and sent them to you in-app.",
       "review": "Review the offer and contract, then approve to start the rental.",
       "started": "The contract is active — the rental period has begun.",
-      "closure": "The piece is returned to the merchant and the contract is closed."
+      "closure": "The piece is returned to the merchant and the contract is closed.",
+      "closureNotHandedOver": "The contract was closed without handing over the piece — the rental never started.",
+      "closureUnspecified": "The contract was closed. A return of the piece is only recorded here when it was documented."
     },
     "descriptions": {
       "request": "The merchant issued the offer and contract and sent them to you in-app.",
@@ -1839,7 +1844,9 @@
         "active": "Active",
         "due-soon": "Due soon",
         "overdue": "Overdue",
-        "returned": "Returned"
+        "returned": "Returned",
+        "closed": "Closed",
+        "not-handed-over": "Closed — not handed over"
       },
       "filterReview": "Customer review",
       "reviewStart": "Starts {date}"
@@ -1916,7 +1923,9 @@
         "activated": "Rental activated & you were notified",
         "payment-received": "Customer payment received",
         "due-reminder": "Payment reminder sent",
-        "returned": "Item returned"
+        "returned": "Item returned",
+        "closed": "Contract closed",
+        "not-handed-over": "Contract closed — item never handed over"
       },
       "actions": {
         "openContract": "Open contract details",

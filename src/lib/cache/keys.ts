@@ -86,6 +86,10 @@ export const cacheKeys = {
   invoice: (invoiceId: string) => `entity:invoice:${invoiceId}`,
   invoiceItems: (invoiceId: string) => `entity:invoiceItems:${invoiceId}`,
   eligibility: (uid: string) => `eligibility:${uid}`,
+  /** Authoritative limit/used/reserved/available snapshot
+   *  (get_my_eligibility_breakdown) — the only source Home may show
+   *  as the available amount (D-2). */
+  eligibilityBreakdown: (uid: string) => `eligibility:${uid}:breakdown`,
 
   // ---- admin-scoped (memory only — rows include PII; NEVER persist) ----
   adminUsers: (uid: string) => `admin:${uid}:users`,

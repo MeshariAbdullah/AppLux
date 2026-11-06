@@ -3,12 +3,14 @@ import { CACHE_TTL, cacheKeys } from '@/lib/cache/keys';
 import { useCachedQuery } from '@/lib/cache/useCachedQuery';
 import {
   fetchMerchantsByIds,
+  fetchMyEligibilityBreakdown,
   listCustomerContracts,
   listCustomerInvoices,
   listCustomerNotes,
   listInvoiceItemsByInvoiceIds,
 } from '@/lib/supabase';
 import type {
+  EligibilityBreakdown,
   MerchantRow,
   PromissoryNoteRow,
   RentalContractRow,
@@ -53,6 +55,14 @@ export type CustomerRentalData = {
    *  Missing entry = items still loading or unavailable; consumers
    *  fall back to the real reference number, never an invented name. */
   invoiceItemsByInvoiceId: Record<string, RentalInvoiceItemRow[]> | null;
+  /** D-2: authoritative eligibility snapshot (limit / used / reserved /
+   *  available) from get_my_eligibility_breakdown. `null` while loading
+   *  or unavailable — see breakdownState. Never derived client-side. */
+  breakdown: EligibilityBreakdown | null;
+  /** 'inert' (demo / signed out), 'loading' (nothing cached yet),
+   *  'ready', or 'unavailable' (RPC failed or returned no row) — the
+   *  UI must NOT substitute limit − used when unavailable. */
+  breakdownState: 'inert' | 'loading' | 'ready' | 'unavailable';
   /** True until all three lists AND the merchant batch have settled. */
   loading: boolean;
   /** Force-revalidate every query now (pull-to-refresh). Resolves when
@@ -82,6 +92,25 @@ export function useCustomerRentalData(
     () => listCustomerNotes(uid!),
     { ttlMs: CACHE_TTL.customerLists, refetchOnFocus: true },
   );
+
+  // D-2: the authoritative available-balance snapshot rides the same
+  // TTL / focus-revalidation / pull-to-refresh lifecycle as the lists
+  // and is invalidated at the same mutation sites (Review.tsx).
+  const breakdownQ = useCachedQuery(
+    uid ? cacheKeys.eligibilityBreakdown(uid) : null,
+    () => fetchMyEligibilityBreakdown(),
+    { ttlMs: CACHE_TTL.customerLists, refetchOnFocus: true },
+  );
+  const breakdown: EligibilityBreakdown | null = breakdownQ.data ?? null;
+  const breakdownState: CustomerRentalData['breakdownState'] = !uid
+    ? 'inert'
+    : breakdownQ.data === undefined
+      ? breakdownQ.loading
+        ? 'loading'
+        : 'unavailable'
+      : breakdownQ.data === null
+        ? 'unavailable'
+        : 'ready';
 
   const settle = <T,>(q: { data: T[] | undefined; loading: boolean; error: Error | null }):
     T[] | null => {
@@ -166,7 +195,7 @@ export function useCustomerRentalData(
       merchants === null ||
       invoiceItemsByInvoiceId === null);
 
-  const refreshAll = [inv.refresh, con.refresh, note.refresh, batch.refresh, itemsQ.refresh];
+  const refreshAll = [inv.refresh, con.refresh, note.refresh, batch.refresh, itemsQ.refresh, breakdownQ.refresh];
   const refresh = useCallback(
     async () => {
       await Promise.all(refreshAll.map((r) => r()));
@@ -183,6 +212,8 @@ export function useCustomerRentalData(
     noteRows,
     merchants,
     invoiceItemsByInvoiceId,
+    breakdown,
+    breakdownState,
     loading,
     refresh,
   };

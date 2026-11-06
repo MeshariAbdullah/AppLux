@@ -54,7 +54,12 @@ export type Contract = {
    *  inside the guided acceptance flow (Bugs 17/19). Optional for the
    *  demo store shape; live mode populates from rental_contracts. */
   receiptPhotosConfirmedAt?: string | null;
+  /** Server-derived closure reason (20260502130600). `undefined` on
+   *  demo seeds; `null` on live rows closed before Package 1 or by a
+   *  legacy path. The ONLY source that may read as a physical return. */
+  closureReason?: ContractClosureReason | null;
 };
+export type ContractClosureReason = 'returned' | 'returned_early' | 'not_handed_over';
 
 export type NoteStatus = 'signed' | 'pending' | 'defaulted';
 export type PromissoryNote = {
@@ -619,7 +624,11 @@ export type MerchantRentalTimelineKey =
   | 'activated'
   | 'payment-received'
   | 'due-reminder'
-  | 'returned';
+  | 'returned'
+  /** Contract ended with no documented return (legacy / unspecified). */
+  | 'closed'
+  /** Contract closed through the mutual non-handover path. */
+  | 'not-handed-over';
 export type MerchantRentalTimelineEvent = {
   key: MerchantRentalTimelineKey;
   at: string;
@@ -653,6 +662,8 @@ export type MerchantRental = {
   closureStatus?: MerchantClosureStatus;
   closedAt?: string;
   closureNotes?: string;
+  /** Server-derived closure reason; see Contract.closureReason. */
+  closureReason?: ContractClosureReason | null;
   damageCaseId?: string;
   /** Friendly public reference of the open case (DC-2026-…) — the only
    *  form ever RENDERED; damageCaseId stays routing-internal. */

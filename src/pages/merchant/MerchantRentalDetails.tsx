@@ -26,7 +26,7 @@ import { cachedFetch } from '@/lib/cache/memoryCache';
 import { ENABLE_PAYMENTS_AND_NOTES } from '@/lib/featureFlags';
 import { getInitials } from '@/lib/format/initials';
 import { isRentalFinalized } from '@/lib/format/rentalFinalization';
-import { rentalStatusTone as toneForStatus } from '@/lib/format/statusTones';
+import { rentalStatusTone as toneForStatus, rentalStatusLabelKey } from '@/lib/format/statusTones';
 import { useI18n, useT } from '@/lib/i18n';
 import { useStore } from '@/lib/store';
 import {
@@ -301,8 +301,13 @@ export default function MerchantRentalDetails() {
         : 'active';
   // A non-dismissed case on an ended contract means it ended through
   // the dispute path — the success-closure wording must never render.
+  // "Ended via dispute" is the LEGACY presentation: a contract ended with
+  // NO documented closure reason while a non-dismissed case exists (rows
+  // closed by the pre-D-1 dispute trigger). A contract closed through an
+  // authorized path after a settled case carries its own reason and
+  // renders as that closure — never as "ended through the dispute".
   const endedViaDispute = Boolean(
-    disputeCase && disputeCase.status !== 'dismissed',
+    disputeCase && disputeCase.status !== 'dismissed' && !rental.closureReason,
   );
   const rentalDays = (() => {
     const s = new Date(rental.startDate).getTime();
@@ -339,7 +344,7 @@ export default function MerchantRentalDetails() {
           <StatusChip
             tone={statusTone}
             dot
-            label={t(`merchant.rentals.status.${rental.status}`)}
+            label={t(rentalStatusLabelKey(rental))}
           />
         }
       />
@@ -964,6 +969,10 @@ function eventVisual(key: MerchantRentalTimelineKey): {
       return { icon: <ClockIcon size={14} />, tone: 'bg-warn-50 text-warn-600' };
     case 'returned':
       return { icon: <CheckIcon size={14} />, tone: 'bg-canvas-200 text-ink-600' };
+    case 'closed':
+      return { icon: <CheckIcon size={14} />, tone: 'bg-canvas-100 text-ink-500' };
+    case 'not-handed-over':
+      return { icon: <ClockIcon size={14} />, tone: 'bg-warn-50 text-warn-600' };
   }
 }
 

@@ -57,6 +57,10 @@ export type JourneyStep = {
   at: string | null;
   /** Documentation seal — only meaningful when status === 'completed'. */
   badge?: StageBadge;
+  /** Locale key overriding the stage's default description (used so a
+   *  closed contract never reads as "the piece was returned" unless the
+   *  server-derived closure reason documents a return — D-1). */
+  descriptionKey?: string;
 };
 
 export const RENTAL_STAGES: RentalStage[] = [
@@ -400,6 +404,9 @@ export function deriveSimpleJourney(input: {
   requestAt?: string | null;
   startedAt?: string | null;
   closedAt?: string | null;
+  /** Description key for the completed 'closure' stage; omitted =
+   *  the default copy (documented return). */
+  closureDescriptionKey?: string | null;
 }): JourneyStep[] {
   const idx = input.current === 'review' ? 1 : input.current === 'started' ? 2 : 3;
   const closed = input.current === 'closed';
@@ -425,6 +432,9 @@ export function deriveSimpleJourney(input: {
           : stage === 'started'
             ? input.startedAt ?? null
             : null,
+        ...(closed && stage === 'closure' && input.closureDescriptionKey
+          ? { descriptionKey: input.closureDescriptionKey }
+          : {}),
       };
     }
     return { stage, status: 'pending', at: null };
@@ -438,4 +448,20 @@ export function simpleCurrentFromUIContract(
   if (status === 'ended') return 'closed';
   if (status === 'active') return 'started';
   return 'review';
+}
+
+/**
+ * Description key for the simple journey's completed 'closure' stage.
+ * Only a server-documented return keeps the default "the piece is
+ * returned and the contract closed" copy; a non-handover closure and an
+ * unspecified / legacy close (null reason) read neutrally. `undefined`
+ * (demo seeds) keeps the default. (D-1 UI consistency, Package 2.)
+ */
+export function closureDescriptionKeyFor(
+  reason: 'returned' | 'returned_early' | 'not_handed_over' | null | undefined,
+): string | null {
+  if (reason === undefined) return null;
+  if (reason === 'returned' || reason === 'returned_early') return null;
+  if (reason === 'not_handed_over') return 'journey.simpleDescriptions.closureNotHandedOver';
+  return 'journey.simpleDescriptions.closureUnspecified';
 }

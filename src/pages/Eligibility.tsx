@@ -56,14 +56,21 @@ export default function Eligibility() {
   // limit/used/reserved/available. Falls back to the plain eligibility
   // row (reserved = 0) while the migration/RPC is not available.
   const [breakdown, setBreakdown] = useState<EligibilityBreakdown | null>(null);
+  // D-2: 'unavailable' means the RPC failed or returned no row — the
+  // page then shows a placeholder, never limit − used as if authoritative.
+  const [breakdownState, setBreakdownState] = useState<'loading' | 'ready' | 'unavailable'>('loading');
   useEffect(() => {
     if (!configured) return;
     let cancelled = false;
     fetchMyEligibilityBreakdown()
       .then((b) => {
-        if (!cancelled) setBreakdown(b);
+        if (cancelled) return;
+        setBreakdown(b);
+        setBreakdownState(b ? 'ready' : 'unavailable');
       })
-      .catch(() => undefined);
+      .catch(() => {
+        if (!cancelled) setBreakdownState('unavailable');
+      });
     return () => {
       cancelled = true;
     };
@@ -82,13 +89,20 @@ export default function Eligibility() {
 
   const limit = breakdown?.limit ?? eligibility?.limit ?? 0;
   const used = breakdown?.used ?? eligibility?.used ?? 0;
-  const reserved = breakdown?.reserved ?? 0;
-  // Never display a negative available balance.
-  const available = Math.max(0, breakdown?.available ?? limit - used - reserved);
+  // Reserved exposure is known only from the server breakdown.
+  const reserved: number | null = !configured ? 0 : (breakdown?.reserved ?? null);
+  // Available: demo store value in demo mode; otherwise ONLY the server
+  // figure (clamped at 0). null = unknown → placeholder, never limit − used.
+  const available: number | null = !configured
+    ? Math.max(0, limit - used)
+    : breakdown
+      ? Math.max(0, breakdown.available)
+      : null;
+  const breakdownUnavailable = configured && breakdownState === 'unavailable';
 
   const usagePct =
     active && limit > 0
-      ? Math.min(100, Math.round(((used + reserved) / limit) * 100))
+      ? Math.min(100, Math.round(((used + (reserved ?? 0)) / limit) * 100))
       : 0;
 
   return (
@@ -120,9 +134,14 @@ export default function Eligibility() {
                   <div className="text-[10.5px] font-semibold text-ink-500 uppercase tracking-[0.12em]">
                     {t('eligibility.remainingTitle')}
                   </div>
-                  <div className="mt-1 editorial-title text-[26px] leading-none text-ink-900 num">
-                    {fmtCurrency(available)}
+                  <div className="mt-1 editorial-title text-[26px] leading-none text-ink-900 num" data-state={configured ? breakdownState : 'ready'}>
+                    {available === null ? '—' : fmtCurrency(available)}
                   </div>
+                  {breakdownUnavailable && (
+                    <p className="mt-1 text-[11.5px] text-warn-700 leading-relaxed">
+                      {t('eligibility.unavailable')}
+                    </p>
+                  )}
                   {/* The calculation rule, spelled out in words. */}
                   <p className="mt-2 text-[11.5px] text-ink-500 leading-relaxed">
                     {t('eligibility.subtitle')}
@@ -161,11 +180,11 @@ export default function Eligibility() {
               />
               <EquationTile
                 label={t('eligibility.reserved')}
-                value={fmtCurrency(reserved)}
+                value={reserved === null ? '—' : fmtCurrency(reserved)}
               />
               <EquationTile
                 label={t('eligibility.remaining')}
-                value={fmtCurrency(available)}
+                value={available === null ? '—' : fmtCurrency(available)}
                 highlight
               />
             </div>

@@ -7,7 +7,7 @@ import { CACHE_TTL, cacheKeys } from '@/lib/cache/keys';
 import { useCachedQuery } from '@/lib/cache/useCachedQuery';
 import { getInitials } from '@/lib/format/initials';
 import { logEvent } from '@/lib/observability/log';
-import { rentalStatusTone as toneForStatus } from '@/lib/format/statusTones';
+import { rentalStatusTone as toneForStatus, rentalStatusLabelKey } from '@/lib/format/statusTones';
 import { useI18n, useT } from '@/lib/i18n';
 import { useStore } from '@/lib/store';
 import {
@@ -468,7 +468,7 @@ function RentalCard({ rental }: { rental: MerchantRental }) {
             size="sm"
             tone={tone}
             dot={false}
-            label={t(`merchant.rentals.status.${rental.status}`)}
+            label={t(rentalStatusLabelKey(rental))}
           />
         </div>
         <div className="text-[12.5px] text-ink-500 truncate">

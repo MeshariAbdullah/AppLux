@@ -54,6 +54,7 @@ import { ContractStatusChip } from '@/components/rental/StatusChips';
 import { RentalJourneyTimeline } from '@/components/rental/RentalJourneyTimeline';
 import { ENABLE_PAYMENTS_AND_NOTES } from '@/lib/featureFlags';
 import {
+  closureDescriptionKeyFor,
   deriveJourneyFromUIContract,
   deriveSimpleJourney,
   simpleCurrentFromUIContract,
@@ -640,6 +641,7 @@ export default function ContractTracking() {
                     current: simpleCurrentFromUIContract(contract.status),
                     requestAt: linkedInvoices[0]?.issuedAt ?? null,
                     startedAt: contract.startDate,
+                    closureDescriptionKey: closureDescriptionKeyFor(contract.closureReason),
                   })
             }
           />

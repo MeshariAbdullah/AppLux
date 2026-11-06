@@ -109,7 +109,7 @@ export function RentalJourneyTimeline({
               </div>
               <div className={cn('flex-1 min-w-0', !isLast && (isLead ? 'pb-5' : 'pb-4'))}>
                 <div className="flex items-start justify-between gap-3">
-                  <StageLabel stage={step.stage} status={step.status} />
+                  <StageLabel stage={step.stage} status={step.status} descriptionKey={step.descriptionKey} />
                   <div className="shrink-0 flex flex-col items-end gap-1">
                     {step.status === 'active' && (
                       <span className="inline-flex items-center gap-1 text-[10.5px] font-semibold text-lavender-700 bg-lavender-50 rounded-full px-2 py-0.5">
@@ -169,17 +169,21 @@ function StageDot({ status }: { status: StageStatus }) {
 function StageLabel({
   stage,
   status,
+  descriptionKey: overrideKey,
 }: {
   stage: JourneyStageKey;
   status: StageStatus;
+  descriptionKey?: string;
 }): ReactNode {
   const t = useT();
   // Current phase uses the simplified description set — the legacy
   // descriptions narrate payment / Nafath / note steps and are kept in
   // the locale files for flag restoration.
-  const descriptionKey = ENABLE_PAYMENTS_AND_NOTES
-    ? `journey.descriptions.${stage}`
-    : `journey.simpleDescriptions.${stage}`;
+  const descriptionKey =
+    overrideKey ??
+    (ENABLE_PAYMENTS_AND_NOTES
+      ? `journey.descriptions.${stage}`
+      : `journey.simpleDescriptions.${stage}`);
   return (
     <div className="min-w-0">
       <div

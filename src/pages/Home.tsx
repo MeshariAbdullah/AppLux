@@ -136,9 +136,34 @@ export default function Home() {
     noteRows,
     merchants,
     invoiceItemsByInvoiceId,
+    breakdown,
+    breakdownState,
     loading: liveLoading,
     refresh: refreshRentalData,
   } = useCustomerRentalData(configured, realSession?.user?.id);
+
+  // D-2: the available amount shown on Home is the server-side
+  // breakdown (limit − used − reserved). `limit − used` is NEVER shown
+  // as the available balance in live mode: when the RPC is still
+  // loading or unavailable the widget shows a placeholder instead.
+  // Demo mode keeps the demo store value; a live customer without an
+  // eligibility row keeps today's 0/0 empty state.
+  const availableState: 'loading' | 'ready' | 'unavailable' = !configured
+    ? 'ready'
+    : !dbEligibility
+      ? 'ready'
+      : breakdownState === 'ready'
+        ? 'ready'
+        : breakdownState === 'loading'
+          ? 'loading'
+          : 'unavailable';
+  const availableAmount: number | null = !configured
+    ? eligibility.remaining
+    : !dbEligibility
+      ? 0
+      : breakdownState === 'ready' && breakdown
+        ? Math.max(0, breakdown.available)
+        : null;
 
   const nameMap = useMemo(
     () => buildMerchantNameMap(merchants, locale),
@@ -312,6 +337,8 @@ export default function Home() {
               Live values + the only path to /eligibility. ====== */}
         <EligibilityCompact
           eligibility={eligibility}
+          available={availableAmount}
+          availableState={availableState}
           tierLabel={t(`eligibility.tiers.${eligibility.tier}`)}
           onOpen={() => navigate('/eligibility')}
           formatCurrency={formatCurrency}
@@ -412,6 +439,8 @@ export default function Home() {
 // through to /eligibility.
 function EligibilityCompact({
   eligibility,
+  available,
+  availableState,
   tierLabel,
   onOpen,
   formatCurrency,
@@ -424,6 +453,10 @@ function EligibilityCompact({
     remaining: number;
     tier: string;
   };
+  /** Authoritative available amount (server breakdown) or null while
+   *  loading / unavailable — never a client-side limit − used. */
+  available: number | null;
+  availableState: 'loading' | 'ready' | 'unavailable';
   tierLabel: string;
   onOpen: () => void;
   formatCurrency: (n: number) => string;
@@ -447,8 +480,12 @@ function EligibilityCompact({
             {t('home.eligibilityCompact.available')}
           </div>
           <div className="mt-0.5 flex items-baseline gap-1.5">
-            <span className="num text-[17px] font-bold text-navy-700 tracking-tight">
-              {formatCurrency(eligibility.remaining)}
+            <span
+              className="num text-[17px] font-bold text-navy-700 tracking-tight"
+              aria-busy={availableState === 'loading'}
+              data-state={availableState}
+            >
+              {availableState === 'ready' && available !== null ? formatCurrency(available) : '—'}
             </span>
             {eligibility.limit > 0 && (
               <span className="text-[10.5px] text-ink-400 num">
@@ -456,6 +493,16 @@ function EligibilityCompact({
               </span>
             )}
           </div>
+          {availableState === 'unavailable' && (
+            <div className="mt-1 text-[10.5px] text-warn-700 leading-snug">
+              {t('home.eligibilityCompact.unavailable')}
+            </div>
+          )}
+          {availableState === 'loading' && (
+            <div className="mt-1 text-[10.5px] text-ink-400 leading-snug">
+              {t('home.eligibilityCompact.loading')}
+            </div>
+          )}
         </div>
         <div className="flex items-center gap-2 shrink-0">
           <span className="inline-flex items-center text-[10.5px] font-bold text-green-700 bg-green-50 rounded-full px-2.5 py-1">

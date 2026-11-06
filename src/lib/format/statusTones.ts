@@ -92,3 +92,27 @@ export function overdueBucketTone(b: AdminOverdueBucket): StatusTone {
   if (b === '1-7' || b === '8-30') return 'warn';
   return 'danger';
 }
+
+/**
+ * Status LABEL key for a merchant rental chip. The internal status stays
+ * 'returned' for every finalised contract (finalisation logic depends on
+ * it), but the label may only say "مُرجَع" when the server-derived closure
+ * reason documents a return. `undefined` reason = demo seed → unchanged;
+ * `null` = live row with no documented return → neutral "closed";
+ * not_handed_over → its own label. (D-1 UI consistency, Package 2.)
+ */
+export function rentalStatusLabelKey(rental: {
+  status: string;
+  closureReason?: 'returned' | 'returned_early' | 'not_handed_over' | null;
+}): string {
+  if (rental.status !== 'returned' || rental.closureReason === undefined) {
+    return `merchant.rentals.status.${rental.status}`;
+  }
+  if (rental.closureReason === 'returned' || rental.closureReason === 'returned_early') {
+    return 'merchant.rentals.status.returned';
+  }
+  if (rental.closureReason === 'not_handed_over') {
+    return 'merchant.rentals.status.not-handed-over';
+  }
+  return 'merchant.rentals.status.closed';
+}

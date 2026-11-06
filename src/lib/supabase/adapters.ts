@@ -265,6 +265,7 @@ export function adaptContract(
     handoverPhotoPath: row.handover_photo_path,
     handoverAt: row.handover_at,
     receiptPhotosConfirmedAt: row.receipt_photos_confirmed_at,
+    closureReason: row.closure_reason ?? null,
   };
 }
 
@@ -413,13 +414,21 @@ export function adaptContractToMerchantRental(
   if (row.signed_at) {
     timeline.push({ key: 'activated', at: row.signed_at });
   }
-  // "تم إرجاع الأصل" is ONLY true for a clean close. Any non-dismissed
-  // damage/non-return case means the asset did not come back clean, so
-  // the event is suppressed even when ended_at is set (e.g. a settled
-  // claim ended the contract, or a legacy row closed by the old
-  // damage-insert trigger).
-  if (row.ended_at && !caseNonDismissed) {
-    timeline.push({ key: 'returned', at: row.ended_at });
+  // "تم إرجاع الأصل" is rendered ONLY when the server-derived closure
+  // reason says the asset came back (returned / returned_early —
+  // 20260502130600). A terminal dispute outcome never implies a return
+  // (D-1): a contract ended through the mutual non-handover path reads
+  // as such, and a legacy / unspecified close (NULL reason — e.g. rows
+  // ended by the pre-D-1 dispute trigger) reads as a neutral close.
+  const closureReason = row.closure_reason ?? null;
+  if (row.ended_at) {
+    if (closureReason === 'returned' || closureReason === 'returned_early') {
+      timeline.push({ key: 'returned', at: row.ended_at });
+    } else if (closureReason === 'not_handed_over') {
+      timeline.push({ key: 'not-handed-over', at: row.ended_at });
+    } else {
+      timeline.push({ key: 'closed', at: row.ended_at });
+    }
   }
 
   // When the contract is in a final state (ended / cancelled) the
@@ -467,6 +476,7 @@ export function adaptContractToMerchantRental(
     totalInstallments: 1,
     status,
     closureStatus,
+    closureReason,
     damageCaseId: caseNonDismissed ? damageCase.id : undefined,
     // Friendly DC-2026-… reference for display; the UUID above is for
     // routing only and must never be rendered as text.

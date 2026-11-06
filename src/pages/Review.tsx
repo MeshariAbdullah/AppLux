@@ -234,6 +234,8 @@ export default function Review() {
       if (supabaseUserId) {
         cacheInvalidate(cacheKeys.customerInvoices(supabaseUserId));
         cacheInvalidate(cacheKeys.customerInvoiceItems(supabaseUserId));
+        // Rejection releases the offer's reservation (D-2 freshness).
+        cacheInvalidate(cacheKeys.eligibilityBreakdown(supabaseUserId));
       }
       setRejectOpen(false);
       setRejectedDone(true);
@@ -350,6 +352,7 @@ export default function Review() {
         cacheInvalidate(cacheKeys.customerInvoiceItems(uid));
         cacheInvalidate(cacheKeys.customerNotes(uid));
         cacheInvalidate(cacheKeys.eligibility(uid));
+        cacheInvalidate(cacheKeys.eligibilityBreakdown(uid));
       }
       cacheInvalidate(cacheKeys.contract(contractId));
       // Eligibility hold changed — refresh the provider snapshot.
@@ -394,6 +397,8 @@ export default function Review() {
           cacheInvalidate(cacheKeys.customerInvoices(supabaseUserId));
           cacheInvalidate(cacheKeys.customerContracts(supabaseUserId));
           cacheInvalidate(cacheKeys.customerInvoiceItems(supabaseUserId));
+          // Acceptance moves the reservation onto the pending contract.
+          cacheInvalidate(cacheKeys.eligibilityBreakdown(supabaseUserId));
         }
         if (!ENABLE_PAYMENTS_AND_NOTES) {
           // Bugs 17/19: the guided flow moves IMMEDIATELY to the item
