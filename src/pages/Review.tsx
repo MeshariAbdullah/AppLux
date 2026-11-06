@@ -199,6 +199,12 @@ export default function Review() {
   const partyIncomplete =
     configured &&
     !(lessorLegalName && lessorCr && lesseeLegalName && lesseeNationalId);
+  // Customer suspension (20260502130800): the server refuses acceptance
+  // and activation with P0101 from the DB account_status; this client
+  // gate only disables the commit CTAs earlier with the business
+  // message. Rejecting the offer stays available — it discharges a
+  // pending obligation rather than creating one.
+  const suspended = configured && supabaseProfile?.account_status === 'suspended';
 
   const [step, setStep] = useState<ReviewStepKey>('invoice');
   const [acceptError, setAcceptError] = useState<string | null>(null);
@@ -510,6 +516,7 @@ export default function Review() {
               userName={lesseeName ?? undefined}
               onApproved={handleApproved}
               blocked={partyIncomplete}
+              suspended={suspended}
               onRejectRequest={
                 configured && liveInvoiceId ? () => setRejectOpen(true) : undefined
               }
@@ -527,6 +534,7 @@ export default function Review() {
               locked={receiptConfirmed}
               finalizing={finalizing || activating}
               onFinalize={handleFinalizePhotos}
+              suspended={suspended}
             />
           )}
           {receiptError && (
@@ -1129,6 +1137,7 @@ function ConfirmStep({
   userName,
   onApproved,
   blocked = false,
+  suspended = false,
   onRejectRequest,
 }: {
   pkg: ScannedPackage;
@@ -1140,6 +1149,10 @@ function ConfirmStep({
    *  the business message shows; the accept RPC would raise P0150 for
    *  the same condition anyway. */
   blocked?: boolean;
+  /** Customer account suspended (20260502130800) — acceptance is
+   *  disabled with the suspension notice; the server would raise P0101
+   *  anyway. Rejection stays available. */
+  suspended?: boolean;
   /** Opens the reject confirmation (live offers only). */
   onRejectRequest?: () => void;
 }) {
@@ -1159,7 +1172,7 @@ function ConfirmStep({
   }, []);
 
   const handleSign = () => {
-    if (!allAccepted || processing || blocked) return;
+    if (!allAccepted || processing || blocked || suspended) return;
     setProcessing(true);
     // Calm 600ms still moment — the content above the button quiets while
     // the system "records" the rental, then we hand off to Approval where
@@ -1271,12 +1284,20 @@ function ConfirmStep({
             {t('errors.contractPartyIncomplete')}
           </div>
         )}
+        {suspended && (
+          <div
+            role="status"
+            className="rounded-xl2 bg-warn-50 ring-1 ring-warn-500/25 px-4 py-3 text-[12.5px] text-warn-700 leading-relaxed"
+          >
+            {t('suspension.review.notice')}
+          </div>
+        )}
         <Button
           variant="primary"
           size="lg"
           block
           onClick={handleSign}
-          disabled={!allAccepted || processing || blocked}
+          disabled={!allAccepted || processing || blocked || suspended}
           loading={processing}
           leading={!processing ? <SignatureIcon size={18} /> : undefined}
         >

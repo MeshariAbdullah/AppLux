@@ -94,6 +94,11 @@ export function translateError(
     if (RPC_VALIDATION_CODES.has(code)) return t('errors.validation');
     if (RECEIPT_PHOTO_CODES[code]) return t(RECEIPT_PHOTO_CODES[code]);
     if (DELETION_BLOCKED_CODES[code]) return t(DELETION_BLOCKED_CODES[code]);
+    // Customer suspension (20260502130800): every new-obligation path
+    // (merchant lookup / OTP / issuance, acceptance, activation) is
+    // refused from the DB account_status — one business message for
+    // whichever side hits it.
+    if (code === 'P0101') return t('errors.customerSuspended');
     // Contract party identity incomplete (accept_rental_invoice,
     // 20260502123500) — dedicated business copy.
     if (code === 'P0150') return t('errors.contractPartyIncomplete');

@@ -736,6 +736,24 @@ export default function MerchantRentalSession() {
         renterId: existence.id,
       });
     } catch (err) {
+      // Suspended customer (20260502130800): the lookup itself refuses
+      // (P0101) so the merchant learns at step one — distinct copy, no
+      // retry hint, no session opened.
+      if ((err as { code?: unknown } | null)?.code === 'P0101') {
+        logEvent(
+          'rpc_failure',
+          'warn',
+          { op: 'lookup_renter_by_mobile', reason: 'customer_suspended' },
+          err,
+        );
+        updateVerify({
+          status: 'unverified',
+          renter: null,
+          renterId: null,
+          error: t('merchant.session.verify.errors.customerSuspended'),
+        });
+        return;
+      }
       // Backend or network error — don't surface the raw provider message;
       // give the merchant a calm, actionable line.
       logEvent('rpc_failure', 'warn', { op: 'lookup_renter_by_mobile' }, err);
@@ -756,6 +774,8 @@ export default function MerchantRentalSession() {
           return verifyMobileIssueMessage('invalid_format', t);
         case 'no_customer':
           return t('merchant.session.verify.notFound.body');
+        case 'customer_suspended':
+          return t('merchant.session.verify.errors.customerSuspended');
         case 'throttled':
           return t('merchant.session.verify.errors.otpThrottled');
         case 'no_active_challenge':

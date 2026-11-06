@@ -49,6 +49,7 @@ export function ReceiptPhotosStep({
   locked,
   finalizing,
   onFinalize,
+  suspended = false,
 }: {
   /** Supabase configured — uploads persist for real. */
   live: boolean;
@@ -61,6 +62,10 @@ export function ReceiptPhotosStep({
   finalizing: boolean;
   /** Confirm CTA — parent runs confirm RPC + activation + navigation. */
   onFinalize: () => Promise<void> | void;
+  /** Customer account suspended (20260502130800): uploading evidence
+   *  stays possible, but confirming/activating is disabled with the
+   *  suspension notice (the server raises P0101 regardless). */
+  suspended?: boolean;
 }) {
   const t = useT();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -290,6 +295,15 @@ export function ReceiptPhotosStep({
         </div>
       )}
 
+      {suspended && (
+        <div
+          role="status"
+          className="rounded-xl2 bg-warn-50 ring-1 ring-warn-500/25 px-3.5 py-2.5 text-[12.5px] text-warn-700 leading-relaxed"
+        >
+          {t('suspension.review.photosNotice')}
+        </div>
+      )}
+
       {/* Final action — confirm + activate. Guarded against double
           submission here AND idempotently server-side. */}
       <div className="pt-1 animate-reveal-up" style={{ animationDelay: '200ms' }}>
@@ -299,7 +313,7 @@ export function ReceiptPhotosStep({
           block
           className="!bg-navy-700 hover:!bg-navy-800 active:!bg-navy-800"
           onClick={() => void onFinalize()}
-          disabled={locked ? finalizing : !canConfirm}
+          disabled={suspended || (locked ? finalizing : !canConfirm)}
           loading={finalizing}
           leading={!finalizing ? <CheckIcon size={17} /> : undefined}
         >

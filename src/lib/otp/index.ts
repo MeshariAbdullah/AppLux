@@ -83,6 +83,7 @@ export class OtpError extends Error {
       | 'invalid_mobile'
       | 'invalid_code'
       | 'no_customer'
+      | 'customer_suspended'
       | 'no_active_challenge'
       | 'too_many_attempts'
       | 'throttled'
@@ -108,6 +109,9 @@ function mapRpcError(err: unknown): OtpError {
   const code = (err as { code?: unknown })?.code;
   const message = (err as { message?: string })?.message;
   if (code === 'P0030') return new OtpError('forbidden', message);
+  // Suspended customer (20260502130800): no verification challenge may
+  // be opened — the merchant gets the business message, not a retry.
+  if (code === 'P0101') return new OtpError('customer_suspended', message);
   if (code === '42501') return new OtpError('unauthorized', message);
   if (code === 'P0190') return new OtpError('invalid_mobile', message);
   if (code === 'P0191') return new OtpError('no_customer', message);

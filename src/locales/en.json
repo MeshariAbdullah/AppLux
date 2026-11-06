@@ -92,6 +92,7 @@
     "deletionFinancialObligation": "Sorry, you cannot delete your account while you have an unsettled financial obligation.",
     "deletionUnavailable": "Your account could not be deleted right now. Please try again later.",
     "contractPartyIncomplete": "The contract cannot be completed because one party's information is incomplete. Please contact support.",
+    "customerSuspended": "The customer account is suspended — new rental obligations can't be created. Existing contracts and disputes remain accessible.",
     "offerExceedsEligibility": "The offer cannot be issued because the rental amount exceeds the customer's available balance.",
     "acceptExceedsEligibility": "The offer cannot be accepted because its amount exceeds your available rental balance.",
     "offerExpiredAccept": "This offer has expired and can no longer be accepted.",
@@ -125,6 +126,23 @@
     "otpRequiredForIssue": "Issuing the offer requires a successful customer verification code. Complete the verification step and try again.",
     "disputeResponseWindowClosed": "The response window for this claim has closed. Non-response is documented in the case record and the case proceeds on the available information.",
     "settlementOverCap": "The settlement offer cannot exceed the original item value."
+  },
+  "suspension": {
+    "banner": {
+      "title": "Your account is suspended",
+      "summary": "New rentals are unavailable. Your existing contracts and disputes stay accessible.",
+      "details": "Details",
+      "hide": "Hide",
+      "noNewRentals": "You can't accept new offers, start new rentals, or be issued new offers while the account is suspended.",
+      "existingAccessible": "You can still view your contracts and invoices, declare returns, reject pending offers, and respond to disputes.",
+      "viewContracts": "View my contracts",
+      "contactSupport": "Contact Lend support to resolve the suspension",
+      "contactSupportFallback": "To resolve the suspension, contact Lend support from the Profile page."
+    },
+    "review": {
+      "notice": "Your account is suspended, so this offer can't be accepted or activated right now. You can still reject it. Contact Lend support to resolve the suspension.",
+      "photosNotice": "Your account is suspended — the rental can't be activated right now. Contact Lend support to resolve the suspension."
+    }
   },
   "welcome": {
     "eyebrow": "Lend",
@@ -1422,6 +1440,7 @@
           "mobileIncomplete": "That number isn't finished yet — Saudi mobiles are 9 digits starting with 5.",
           "mobileUnsupportedCountry": "Only Saudi mobile numbers (+966) are supported here.",
           "mobileVerifyFailed": "We couldn't verify this number right now. Please try again.",
+          "customerSuspended": "This customer's Lend account is suspended. You can't open a rental session or issue offers to them until Lend reactivates the account.",
           "forbidden": "Your account isn't authorised to verify renters. Contact Lend support.",
           "backendRequired": "Live backend is required to verify renters. Connect Supabase and try again.",
           "otpSendFailed": "We couldn't issue a verification code right now. Please try again.",

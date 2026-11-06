@@ -18,6 +18,17 @@ means every assertion held.
   expired / already-claimed receipt aborts, invalid map/unified aborts,
   and — critically — a failed signup does **not** consume the receipt so a
   retry is idempotent).
+- `customer_suspension_enforcement_test.sql` — customer suspension
+  enforcement (20260502130800): with `profiles.account_status = 'suspended'`
+  every new-obligation path is refused with `P0101` from the DB status
+  (merchant lookup / OTP start / direct or privileged offer insert /
+  draft→issued, acceptance, receipt confirmation, handover, both
+  activation RPCs, direct contract insert / status flip) while rejecting
+  offers, reading own rows under RLS, dispute objection / evidence /
+  settlement, return declaration and mutual non-handover closure stay
+  allowed; nothing is mutated by blocked attempts; reactivation (admin,
+  and the self-serve deletion grace window) restores every capability;
+  P0100, RLS policy counts, grants and the helper's ACL are asserted.
 
 ## Edge Function CORS
 
