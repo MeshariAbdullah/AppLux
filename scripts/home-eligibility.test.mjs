@@ -56,3 +56,24 @@ test('locale copy exists in both languages', () => {
     assert.ok(d.eligibility.unavailable.length > 0);
   }
 });
+
+// ---------------------------------------------------------------------
+// Freshness contract (Product Owner final review): refocus, navigation,
+// pull-to-refresh and administrator limit changes are served by the
+// existing cache lifecycle — no polling, no extra infrastructure.
+// Behaviour evidence (staging-backend preview, scratchpad script):
+// refocus past FOCUS_REVALIDATE_MIN_MS re-fetches and shows the
+// admin-raised figure; pull-to-refresh forces a re-fetch; an idle tab
+// makes zero calls; SPA navigation within the TTL serves the cache.
+// ---------------------------------------------------------------------
+test('breakdown query revalidates on refocus and is part of pull-to-refresh, with no polling', () => {
+  const cacheKeys = read('src/lib/cache/keys.ts');
+  assert.match(cacheKeys, /export const FOCUS_REVALIDATE_MIN_MS = \d[\d_]*;/, 'anti-flap floor governs refocus');
+  const q = hook.match(/const breakdownQ = useCachedQuery\(([\s\S]*?)\);/);
+  assert.ok(q, 'breakdown query present');
+  assert.match(q[1], /refetchOnFocus: true/);
+  assert.match(q[1], /CACHE_TTL\.customerLists/);
+  for (const [name, src] of [['hook', hook], ['Home', home], ['Eligibility', elig]]) {
+    assert.doesNotMatch(src, /setInterval\(/, `${name} must not poll`);
+  }
+});

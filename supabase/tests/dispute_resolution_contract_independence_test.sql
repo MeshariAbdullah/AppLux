@@ -126,7 +126,8 @@ begin
     raise exception 'FAIL %: expected exactly one dispute_terminal_recorded (got %)', p_label, v_n;
   end if;
   if (v_meta->>'lifecycle_unaffected')::boolean is not true
-     or (v_meta->>'asset_return_recorded')::boolean is not false
+     or (v_meta->>'return_not_inferred_from_dispute')::boolean is not true
+     or v_meta ? 'asset_return_recorded'
      or v_meta->>'contract_status' <> 'active' then
     raise exception 'FAIL %: terminal audit metadata wrong: %', p_label, v_meta;
   end if;

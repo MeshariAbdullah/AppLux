@@ -102,9 +102,11 @@ end $preflight$;
 --     to_state = the contract's CURRENT status (unchanged), with
 --     metadata {case_id, case_number, case_status, outcome,
 --     agreed_amount, contract_status, lifecycle_unaffected: true,
---     asset_return_recorded: false}. It states that the lifecycle was
---     NOT affected and never suggests the item was returned. The
---     metadata.case_id guard makes it emit at most once per case.
+--     return_not_inferred_from_dispute: true}. It states that the
+--     lifecycle was NOT affected and that the dispute outcome asserts
+--     NOTHING about physical return evidence — neither its presence nor
+--     its absence. The metadata.case_id guard makes it emit at most once
+--     per case.
 --   * Touches NO grants, NO RLS, NO other function. Historical rows
 --     closed by the old behaviour (e.g. staging LND-WMPSRN, ended with
 --     NULL closure fields) are deliberately left as they are — no
@@ -155,7 +157,7 @@ begin
           'agreed_amount', new.agreed_amount,
           'contract_status', v_contract.status,
           'lifecycle_unaffected', true,
-          'asset_return_recorded', false));
+          'return_not_inferred_from_dispute', true));
     end if;
 
     -- Canonical-model sync for out-of-band (direct SQL) status flips —
@@ -181,7 +183,7 @@ end;
 $$;
 
 comment on function public.on_damage_case_resolved() is
-  'D-1 (20260502130700): a terminal dispute outcome (settled / unresolved / dismissed) never ends the rental contract, never releases eligibility and never invokes a closure transition. Records one dispute_terminal_recorded contract_events row per qualifying transition (lifecycle_unaffected=true, asset_return_recorded=false) and keeps the dispute_phase synchronisation for out-of-band status flips. Contract closure happens only through the authorized asset-lifecycle paths of 20260502130600.';
+  'D-1 (20260502130700): a terminal dispute outcome (settled / unresolved / dismissed) never ends the rental contract, never releases eligibility and never invokes a closure transition. Records one dispute_terminal_recorded contract_events row per qualifying transition (lifecycle_unaffected=true, return_not_inferred_from_dispute=true — the outcome asserts nothing about physical return evidence) and keeps the dispute_phase synchronisation for out-of-band status flips. Contract closure happens only through the authorized asset-lifecycle paths of 20260502130600.';
 
 -- ---------------------------------------------------------------------
 -- Record the migration (CLI-compatible; atomic with the change above)
